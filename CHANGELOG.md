@@ -5,7 +5,26 @@
 
 ---
 
-## [2026-05-04] [planning] — Phase 3 complete: PLAN.md, AGENTS.md, STATUS.md, CHANGELOG.md created
+## [2026-05-04] [scaffolding] — Phase 1 complete: Next.js app scaffolded, all dependencies installed, test setup, all source files created
+
+- Next.js 16.2.4 app created at workspace root (TypeScript, Tailwind CSS v4, App Router, src/ dir, `@/*` import alias)
+- Installed: `@supabase/supabase-js`, `@supabase/ssr`, `zustand`, `nanoid`, `clsx`, `tailwind-merge`
+- Installed dev: `vitest`, `@vitejs/plugin-react`, `jsdom`, `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `vite-tsconfig-paths`
+- Created `vitest.config.ts` and `src/__tests__/setup.ts` — test runner configured with jsdom + RTL
+- Created `.env.local.example` with Supabase variable names
+- Created `supabase/migrations/001_initial_schema.sql` — full schema with RLS policies
+- Scaffolded 59 empty source files matching PLAN.md folder structure
+- Implemented: `src/types/vitals.ts`, `src/types/session.ts`, `src/types/scenario.ts`
+- Implemented: `src/lib/utils.ts` (cn helper + COLORS), `src/lib/session.ts` (nanoid code gen + validator)
+- Implemented: `src/lib/supabase/client.ts`, `src/lib/supabase/server.ts`, `src/lib/supabase/types.ts`
+- Implemented: `src/lib/realtime/events.ts` (BroadcastEvent union + channelName helper)
+- Created API route stubs: `POST /api/session/create`, `GET /api/session/join`
+- Created page shells: `/session/[code]/monitor`, `/session/[code]/instructor`
+- `tsc --noEmit` passes with 0 errors
+- Dev server starts at `localhost:3000` in <300ms
+
+---
+
 
 - Created `PLAN.md` with 11 development phases, full folder structure, dependency list, and key decisions table
 - Created `AGENTS.md` with 4 role definitions (UI, Simulation, Realtime, Instructor), coding conventions, data flow contracts, and props/type contracts per role
