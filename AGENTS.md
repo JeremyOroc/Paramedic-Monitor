@@ -1,4 +1,4 @@
-# Paramedic Monitor — Agent & Role Definitions
+# Paramedic Monitor — Agent Conventions
 
 ## UI Conventions
 
