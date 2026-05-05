@@ -118,5 +118,3 @@ This rule prevents wasted work and diverging implementations across team members
 | `STATUS.md` | Current state of the build — what's done, in progress, blocked |
 | `CHANGELOG.md` | Append-only log of completed changes |
 | `screenshots/SCREENSHOTS_SUMMARY.md` | Full UI reference extracted from Zoll X Series photos |
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
