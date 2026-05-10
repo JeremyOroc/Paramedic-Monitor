@@ -39,9 +39,10 @@ export function TopStatusBar({
           aria-label="Patient mode"
           aria-pressed={patientModeActive}
           className={cn(
-            'px-2 py-0.5 transition-colors',
-            'hover:bg-cyan-900/40',
-            patientModeActive && 'bg-cyan-bp text-black font-bold',
+            'px-2 py-0.5 transition-[filter,box-shadow] font-bold',
+            'bg-cyan-bp text-black',
+            'hover:brightness-110',
+            patientModeActive && 'ring-1 ring-white',
           )}
         >
           {MODE_LABEL[patientMode]}
