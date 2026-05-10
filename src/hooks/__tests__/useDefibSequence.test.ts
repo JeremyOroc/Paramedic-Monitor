@@ -125,7 +125,7 @@ describe('useDefibSequence', () => {
     const { result, rerender } = renderHook(
       ({ mode }: { mode: 'adult' | 'pediatric' | 'neonate' }) =>
         useDefibSequence({ patientMode: mode }),
-      { initialProps: { mode: 'adult' as const } },
+      { initialProps: { mode: 'adult' } as { mode: 'adult' | 'pediatric' | 'neonate' } },
     )
     expect(result.current.energy).toBe(120)
     rerender({ mode: 'neonate' })
