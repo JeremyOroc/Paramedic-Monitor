@@ -6,7 +6,9 @@
 ---
 
 ## Current Phase
-**Phase 1 — COMPLETE. Ready to begin Phase 2 (Landing Page + Session Routing).**
+**Monitor base UI + menu navigation — COMPLETE.** Next up: instructor/admin dashboard.
+
+> Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
 
 ---
 
@@ -33,18 +35,33 @@
   - [x] Page shells: `/session/[code]/monitor/page.tsx`, `/session/[code]/instructor/page.tsx`
   - [x] TypeScript: 0 errors (`tsc --noEmit` passes)
   - [x] Dev server: starts and serves at `localhost:3000` in <300ms
+- [x] **Monitor base UI + menu navigation — COMPLETE:**
+  - [x] Monitor lives at `/` (boilerplate replaced); session routes parked as stubs
+  - [x] Zoll palette added to Tailwind theme via `@theme inline` in `globals.css`
+  - [x] Reusable atoms: `VideoWaveform`, `SidebarButton`, `VitalBox`, `LeadCell`
+  - [x] Layout: `MonitorLayout` (CSS Grid), `TopStatusBar`, `SubBar`, `BottomStatusBar`
+  - [x] Main panels: `WaveformPanel`, `ECGCanvas` (placeholder), `SecondaryChannel`, `ApplyElectrodesBar`, `VitalsStrip`, `LeftSidebar`, `RightNavCluster`
+  - [x] Overlays: `TwelveLeadPage`, `PatientModeModal`
+  - [x] Defib state machine: `useDefibSequence` + `DefibButtonRow` (ANALYSE → CHARGE → SHOCK), shared `ProgressBar`
+  - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
+  - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
+  - [x] TypeScript clean; dev server serves at `localhost:3000`
 
 ---
 
 ## In Progress
-- Nothing yet — Phase 2 (Landing Page + Session Routing) is next
+- Nothing — next plan is the admin/instructor dashboard
 
 ---
 
 ## Blocked / Needs Input
-- [ ] **Supabase credentials** — Copy URL + anon key from your Supabase project into `.env.local` (copy from `.env.local.example`). Run `supabase/migrations/001_initial_schema.sql` in the Supabase SQL Editor. Enable Realtime on `vitals_snapshots` in the dashboard. Without this, Phase 2 API routes will not work.
-- [ ] **Waveform videos** — Paramedic friend needs to share Google Drive videos for: SpO2, EtCO2, 12-lead per rhythm (NSR, VF, VT, Asystole, PEA), CPR animation, BP animation. Needed for Phase 5 and Phase 9.
-- [ ] **Alarm thresholds** — Using: HR <40/>150 bpm, BP sys <90/>200 mmHg. Confirm with paramedic friend.
+- [ ] **Waveform image/gif assets** — User to provide gif/mp4 placeholder waveforms. Drop into `/public/waveforms/`:
+  - `ecg-placeholder.gif`, `spo2-placeholder.gif`, `etco2-placeholder.gif`
+  - `12lead/<rhythm>/<lead>.gif` for each rhythm × lead (I, II, III, aVR, aVL, aVF, V1–V6)
+  - The UI ships either way — `VideoWaveform` falls back to an empty area when the asset is missing.
+- [ ] **Supabase credentials** — Deferred. Will be needed once realtime / sessions phase begins. Copy URL + anon key into `.env.local`, run the migration, enable Realtime on `vitals_snapshots`.
+- [ ] **Paramedic-supplied waveform videos** — Real ECG/SpO2/EtCO2/12-lead videos for production fidelity (later phase).
+- [ ] **Alarm thresholds** — HR <40/>150 bpm, BP sys <90/>200 mmHg. Confirm with paramedic friend.
 - [ ] **Neonate joule default** — Set to 10J. Confirm with paramedic friend.
 
 ---
@@ -64,7 +81,6 @@
 ---
 
 ## Next Steps (for whoever picks this up)
-1. Add Supabase credentials to `.env.local` (see `.env.local.example`)
-2. Run `supabase/migrations/001_initial_schema.sql` in the Supabase SQL Editor
-3. Enable Realtime on `vitals_snapshots` in the Supabase dashboard
-4. Implement Phase 2: Landing Page + Session Routing (see PLAN.md)
+1. **Admin/instructor dashboard** — build the controls panel (vitals inputs with pending/Send flow, rhythm selector, defib panel, scenario builder skeleton). Components already scaffolded in `src/components/instructor/`. State via Zustand `instructorStore`. Local-only first; realtime wires in the next phase.
+2. **Realtime wiring** — Supabase Broadcast for instructor → monitor sync (vitals_update, defib_event, cpr_toggle).
+3. **Sessions** — restore `/session/[code]/...` routes; connect landing page (Create / Join).
