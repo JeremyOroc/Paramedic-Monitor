@@ -70,7 +70,12 @@ export default function MonitorPage() {
             spo2={DEFAULT_VITALS.spo2}
           />
         }
-        rightNav={<RightNavCluster onBack={() => setView('main')} />}
+        rightNav={
+          <RightNavCluster
+            onTwelveLead={() => setView('12lead')}
+            onBack={() => setView('main')}
+          />
+        }
         bottomBar={
           isTwelveLead ? null : (
             <BottomStatusBar

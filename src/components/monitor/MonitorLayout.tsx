@@ -39,7 +39,7 @@ export function MonitorLayout({
       className={cn(
         'w-screen h-screen overflow-hidden bg-black text-white',
         'min-w-[1024px]',
-        'grid grid-cols-[56px_1fr_220px_56px]',
+        'grid grid-cols-[56px_1fr_220px_120px]',
         rowsClass,
       )}
     >

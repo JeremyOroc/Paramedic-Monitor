@@ -10,6 +10,7 @@ type SidebarButtonProps = {
   active?: boolean
   disabled?: boolean
   ariaLabel: string
+  shape?: 'square' | 'fill'
 }
 
 export function SidebarButton({
@@ -19,6 +20,7 @@ export function SidebarButton({
   active = false,
   disabled = false,
   ariaLabel,
+  shape = 'square',
 }: SidebarButtonProps) {
   return (
     <button
@@ -29,7 +31,7 @@ export function SidebarButton({
       aria-pressed={active}
       className={cn(
         'flex flex-col items-center justify-center gap-0.5',
-        'w-full aspect-square',
+        shape === 'square' ? 'w-full aspect-square' : 'w-full h-full',
         'border border-neutral-800',
         'text-neutral-300 text-[10px] font-mono',
         'transition-colors',
