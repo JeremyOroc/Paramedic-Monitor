@@ -10,6 +10,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Zoll monitor palette — keep in sync with src/lib/utils.ts COLORS */
+  --color-monitor-bg: #000000;
+  --color-ecg-green: #00ff41;
+  --color-cyan-bp: #00ffff;
+  --color-purple-etco2: #cc44ff;
+  --color-yellow-spo2: #ffff00;
+  --color-alarm-red: #ff2020;
+  --color-pending-amber: #ffaa00;
+  --color-bottom-bar: #1a1a1a;
+  --color-sidebar-bg: #0d0d0d;
 }
 
 @media (prefers-color-scheme: dark) {

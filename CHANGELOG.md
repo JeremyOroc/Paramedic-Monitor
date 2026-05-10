@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-05-10] [ui] — Monitor base UI + menu navigation
+
+- Replaced Next.js boilerplate at `/` with the full Zoll X Series monitor layout
+- Implemented reusable atoms: `VideoWaveform`, `SidebarButton`, `VitalBox`, `LeadCell`
+- Implemented layout chrome: `MonitorLayout` (CSS Grid), `TopStatusBar`, `SubBar`, `BottomStatusBar`
+- Implemented main panels: `WaveformPanel`, `ECGCanvas` (placeholder image/video), `SecondaryChannel`, `ApplyElectrodesBar`, `VitalsStrip`, `LeftSidebar`, `RightNavCluster`
+- Implemented overlays: `TwelveLeadPage` (2×6 lead grid), `PatientModeModal` (Adulte/Pédiatrique/Néonatal)
+- Implemented defib state machine (`useDefibSequence`) and `DefibButtonRow` with progress bars + shock counter
+- Added shared `ProgressBar` for defib timing
+- Added Zoll palette to Tailwind theme (`@theme inline` in globals.css) so colors resolve as utility classes (`text-ecg-green`, `bg-pending-amber`, etc.)
+- Wired menu navigation: 12-lead overlay open/close, EtCO2/SpO2 channel swap, patient mode dropdown updates label + joule defaults, defib sequence enforces ANALYSE → CHARGE → SHOCK ordering
+- Vitals + waveforms hardcoded for now; gif/video assets to be dropped under `/public/waveforms/` (graceful fallback when missing)
+- Tests: 21 passing across `MonitorLayout`, `LeftSidebar`, `PatientModeModal`, `useDefibSequence`
+- TypeScript clean, dev server boots at `localhost:3000`
+
+---
+
 ## [2026-05-04] [scaffolding] — Phase 1 complete: Next.js app scaffolded, all dependencies installed, test setup, all source files created
 
 - Next.js 16.2.4 app created at workspace root (TypeScript, Tailwind CSS v4, App Router, src/ dir, `@/*` import alias)
