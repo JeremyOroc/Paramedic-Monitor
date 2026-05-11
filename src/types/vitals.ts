@@ -1,5 +1,9 @@
 export type Rhythm = 'nsr' | 'vf' | 'vt' | 'asystole' | 'pea'
 
+export type Spo2Waveform = 'normal' | 'weak' | 'off'
+
+export type Etco2Waveform = 'normal' | 'hypoventilation' | 'obstructed' | 'off'
+
 export type PatientMode = 'adult' | 'pediatric' | 'neonate'
 
 export type VitalsSnapshot = {
@@ -9,6 +13,8 @@ export type VitalsSnapshot = {
   etco2: number
   spo2: number
   rhythm: Rhythm
+  spo2_waveform: Spo2Waveform
+  etco2_waveform: Etco2Waveform
   patient_mode: PatientMode
   joules: number
   shock_count: number
@@ -23,6 +29,8 @@ export const DEFAULT_VITALS: VitalsSnapshot = {
   etco2: 35,
   spo2: 98,
   rhythm: 'nsr',
+  spo2_waveform: 'normal',
+  etco2_waveform: 'normal',
   patient_mode: 'adult',
   joules: 120,
   shock_count: 0,
