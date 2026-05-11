@@ -46,6 +46,13 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Physical shell refinement — COMPLETE:**
+  - [x] `DeviceShell` outer frame rebuilt with blue rim, rounded grey face, recessed screen, top power button, and subtler ZOLL branding
+  - [x] Left grey physical soft keys aligned with the inner screen's left sidebar labels; 12-lead and back soft keys wired to existing navigation
+  - [x] Right physical controls changed from a uniform grid to an irregular recessed navigation cluster
+  - [x] Bottom defib bay resized/repositioned to better match the reference: smaller ANALYZE / ENERGY SELECT / CHARGE, red step numbers, large round SHOCK
+  - [x] PACER button removed from the shell
+  - [x] Tests updated with PACER removal coverage; full tests, lint, TypeScript, and production build pass
 
 ---
 

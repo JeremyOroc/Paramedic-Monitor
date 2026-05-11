@@ -43,7 +43,12 @@ describe('DeviceShell', () => {
     expect(screen.getByRole('button', { name: 'Shock' })).toBeInTheDocument()
   })
 
-  it('renders 12-lead and Back buttons in the right nav panel', () => {
+  it('does not render the pacer button on the physical shell', () => {
+    render(<DeviceShell {...makeProps()} />)
+    expect(screen.queryByRole('button', { name: 'Pacer' })).not.toBeInTheDocument()
+  })
+
+  it('renders 12-lead and Back buttons on the physical shell', () => {
     render(<DeviceShell {...makeProps()} />)
     expect(screen.getByRole('button', { name: '12-lead view' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()

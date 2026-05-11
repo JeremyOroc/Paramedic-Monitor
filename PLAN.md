@@ -211,6 +211,9 @@ paramedic-monitor/
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
 11. Color reference: `#000000` bg, `#00ff41` ECG green, `#00ffff` cyan BP, `#cc44ff` purple EtCO2, `#ffff00` yellow SpO2
 
+**Testing:**
+- Component tests cover the physical shell chrome, defib control actions, 12-lead/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, and the absence of the removed PACER button.
+
 **Milestone:** Screenshot of app matches Zoll X Series reference photos. No interactivity yet.
 
 ---
