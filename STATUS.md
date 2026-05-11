@@ -48,11 +48,14 @@
   - [x] TypeScript clean; dev server serves at `localhost:3000`
 - [x] **Physical shell refinement — COMPLETE:**
   - [x] `DeviceShell` outer frame rebuilt with blue rim, rounded grey face, recessed screen, top power button, and subtler ZOLL branding
-  - [x] Left grey physical soft keys aligned with the inner screen's left sidebar labels; 12-lead and back soft keys wired to existing navigation
-  - [x] Right physical controls changed from a uniform grid to an irregular recessed navigation cluster
+  - [x] Left grey physical soft keys aligned with the inner screen's left sidebar labels; 12-lead, EtCO2, and back soft keys wired to existing navigation/channel behavior
+  - [x] Inner dark left sidebar labels changed to display-only controls
+  - [x] Right physical controls changed from a uniform grid to an irregular recessed navigation cluster with bell/camera/patient-event icon details
   - [x] Bottom defib bay resized/repositioned to better match the reference: smaller ANALYZE / ENERGY SELECT / CHARGE, red step numbers, large round SHOCK
-  - [x] PACER button removed from the shell
-  - [x] Tests updated with PACER removal coverage; full tests, lint, TypeScript, and production build pass
+  - [x] PACER button restored as an inert clickable physical button
+  - [x] Top white bar and green/red power toggle moved onto the blue outer rim
+  - [x] Right-side buttons standardized to rounded-square shapes with curved arrow glyphs; defib labels repositioned outside controls
+  - [x] Tests updated for inert PACER, physical EtCO2 soft key, and non-clickable inner sidebar labels; full tests, lint, TypeScript, and production build pass
 
 ---
 

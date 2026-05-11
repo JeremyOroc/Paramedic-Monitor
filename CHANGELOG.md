@@ -5,13 +5,47 @@
 
 ---
 
+## [2026-05-10] [ui] — Correct right-shell arrows and defib label placement
+
+- Standardized the right-side control buttons back to rounded-square shapes and moved the curvature into the arrow glyphs
+- Replaced the home glyph with an explicit house icon inside the upper-left right-shell button
+- Reduced the SHOCK button size to clear the SHOCK label
+- Made ENERGY SELECT thinner and changed its arrows to wider, flatter triangle shapes
+- Repositioned the red 1 and 2 labels so they float next to ENERGY SELECT and CHARGE instead of sitting inside the controls
+- Raised and slightly reduced ANALYZE and CHARGE for better vertical centering
+
+---
+
+## [2026-05-10] [ui] — Align top rim, power toggle, and shell button spacing
+
+- Moved the white top bar and power button onto the blue outer rim instead of the grey face
+- Added local power-button toggle behavior: green when on, red when off
+- Lengthened the ENERGY SELECT button and tightened its arrow/text spacing
+- Reduced and repositioned the red 1 / 2 / 3 labels toward the top-left of the energy, charge, and shock controls
+- Refined the right control cluster with smaller curved arrow buttons and expanded the darker grey panel to contain the patient-event button
+- Cleaned up the persisted store hydration hook so the full lint suite stays green
+
+---
+
+## [2026-05-10] [ui] — Tune Zoll shell controls and physical-button behavior
+
+- Restored the physical PACER button as an inert clickable control
+- Moved 12-lead, EtCO2, and Back behavior to the aligned grey physical soft keys; all other grey shell buttons now click without action
+- Converted the inner dark left sidebar labels to display-only controls so they no longer trigger navigation
+- Fixed ENERGY SELECT arrow spacing, raised the SHOCK label, and repositioned the red 1 / 2 / 3 labels beside energy select, charge, and shock
+- Updated right-side shell icons to bell, camera, and patient-event/bicep markers, with more curved home/down button shapes
+- Added plug and battery indicators at the lower-left shell LEDs
+- Tests updated for physical EtCO2 behavior, inert PACER, and non-clickable inner sidebar labels
+
+---
+
 ## [2026-05-10] [ui] — Refine Zoll physical shell controls
 
 - Rebuilt the monitor `DeviceShell` outer frame with a blue rim, rounded grey face, recessed screen, top branding, and power-button detail closer to the Zoll reference
 - Aligned the left grey physical soft keys with the inner screen's left sidebar labels and wired the 12-lead/back soft keys to existing navigation actions
 - Reworked the right physical navigation cluster into an irregular recessed control panel instead of a uniform button grid
 - Rebuilt the bottom defib control bay with smaller ANALYZE / ENERGY SELECT / CHARGE buttons, repositioned red step numbers, and a large round SHOCK button
-- Removed the PACER button from the physical shell
+- Removed the PACER button from the physical shell as part of this intermediate pass
 - Added a DeviceShell regression test confirming the PACER control stays removed
 - Cleaned up `useDefibSequence` hook lint issues without changing the defib sequence behavior
 - Tests: `npm run test:run`; lint: `npm run lint`; TypeScript: `npx tsc --noEmit`; build: `npm run build`
