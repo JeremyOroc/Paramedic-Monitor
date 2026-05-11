@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { DefibState } from '@/hooks/useDefibSequence'
 import { ProgressBar } from '@/components/shared/ProgressBar'
@@ -89,6 +89,8 @@ function DefibButton({
   )
 }
 
+type PowerState = 'on' | 'booting' | 'off'
+
 type DeviceShellProps = {
   screen: ReactNode
   defibState: DefibState
@@ -128,14 +130,26 @@ export function DeviceShell({
   onBack,
   twelveLeadActive = false,
 }: DeviceShellProps) {
-  const [powerOn, setPowerOn] = useState(true)
+  const [powerState, setPowerState] = useState<PowerState>('on')
+  const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function handlePowerToggle() {
+    if (powerState === 'booting') return
+    if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
+    if (powerState === 'on') {
+      setPowerState('off')
+    } else {
+      setPowerState('booting')
+      bootTimerRef.current = setTimeout(() => setPowerState('on'), 2000)
+    }
+  }
 
   return (
     <div className="grid h-screen w-screen min-w-[1024px] place-items-center overflow-hidden bg-[#101010]">
       <div className="relative aspect-[1.36] h-[96vh] max-h-[calc(98vw/1.36)]">
         <div className="absolute inset-0 overflow-hidden rounded-[72px] bg-[#06317f] shadow-[0_26px_55px_rgba(0,0,0,0.55),inset_0_0_0_12px_rgba(0,67,154,0.92),inset_0_0_30px_rgba(0,0,0,0.36)]">
           <div className="absolute left-[10%] top-[-2.6%] h-[7.5%] w-[22%] rounded-b-[18px] bg-[#f2f2f2] shadow-[inset_0_-8px_12px_rgba(0,0,0,0.18),0_4px_6px_rgba(0,0,0,0.22)]" />
-          <PowerButton powerOn={powerOn} onToggle={() => setPowerOn((on) => !on)} />
+          <PowerButton powerState={powerState} onToggle={handlePowerToggle} />
           <div className="absolute inset-[3.2%] grid grid-rows-[13%_1fr_21%] overflow-hidden rounded-[58px] border-[3px] border-[#0a2362] bg-[#c7c8c7] shadow-[inset_0_0_32px_rgba(255,255,255,0.54),inset_0_0_0_2px_rgba(78,78,78,0.2)]">
             <DeviceHeader />
             <div className="grid min-h-0 grid-cols-[10.5%_1fr_17.5%] gap-[1.4%] px-[2.8%]">
@@ -147,7 +161,8 @@ export function DeviceShell({
               />
               <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6vw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
                 <div className="h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
-                  {screen}
+                  {powerState === 'on' && screen}
+                  {powerState === 'booting' && <BootScreen />}
                 </div>
               </div>
               <RightControlCluster />
@@ -174,23 +189,25 @@ export function DeviceShell({
 }
 
 type PowerButtonProps = {
-  powerOn: boolean
+  powerState: PowerState
   onToggle: () => void
 }
 
-function PowerButton({ powerOn, onToggle }: PowerButtonProps) {
+function PowerButton({ powerState, onToggle }: PowerButtonProps) {
   return (
     <button
       type="button"
       aria-label="Power"
-      aria-pressed={powerOn}
+      aria-pressed={powerState === 'on'}
       onClick={onToggle}
       className="absolute right-[22%] top-[1.2%] z-20 grid h-[clamp(34px,4.2vw,62px)] w-[clamp(66px,7.2vw,108px)] place-items-center rounded-full bg-[#6f92d1] shadow-[inset_0_2px_4px_rgba(255,255,255,0.45),0_3px_7px_rgba(0,0,0,0.22)] focus:outline-none focus:ring-2 focus:ring-cyan-200"
     >
       <span
         className={cn(
           'grid h-[72%] w-[72%] place-items-center rounded-full shadow-[inset_0_4px_4px_rgba(255,255,255,0.32),inset_0_-5px_5px_rgba(0,0,0,0.22)] transition-colors',
-          powerOn ? 'bg-[#22b938]' : 'bg-[#d51b1b]',
+          powerState === 'on' && 'bg-[#22b938]',
+          powerState === 'off' && 'bg-[#d51b1b]',
+          powerState === 'booting' && 'animate-pulse bg-[#ffaa00]',
         )}
       >
         <svg viewBox="0 0 24 24" fill="none" className="h-[62%] w-[62%]" aria-hidden="true">
@@ -203,6 +220,62 @@ function PowerButton({ powerOn, onToggle }: PowerButtonProps) {
         </svg>
       </span>
     </button>
+  )
+}
+
+function BootScreen() {
+  const [prankCombo] = useState<1 | 2 | null>(() =>
+    Math.random() < 1 / 3 ? (Math.random() < 0.5 ? 1 : 2) : null
+  )
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    if (!audioRef.current) return
+    if (!videoRef.current) return
+
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 1
+    }
+    if (prankCombo === 1) {
+      audioRef.current.currentTime = 0.3
+      videoRef.current.playbackRate = 1.5
+    }
+    audioRef.current.play().catch(() => {})
+    const cutoff = setTimeout(() => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+    }, 2500)
+    return () => {
+      clearTimeout(cutoff)
+      if (audioRef.current) audioRef.current.pause()
+    }
+  }, [prankCombo])
+
+  return (
+    <div className="relative h-full w-full bg-black">
+      {prankCombo !== null && (
+        <>
+          <video
+            ref={videoRef}
+            src={prankCombo === 1 ? '/videos/jumpscare1.mov' : '/videos/jumpscare2.mov'}
+            autoPlay
+            muted
+            playsInline
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <audio
+            ref={audioRef}
+            src={prankCombo === 1 ? '/audio/jumpscare_fnaf2.mp3' : '/audio/jumpscare_fnaf1.mp3'}
+          />
+        </>
+      )}
+      <span className="absolute bottom-[8%] right-[6%] select-none font-mono text-[clamp(18px,2.4vw,36px)] font-black text-white">
+        ZOLL
+      </span>
+    </div>
   )
 }
 
