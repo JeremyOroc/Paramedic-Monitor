@@ -5,13 +5,25 @@
 
 ---
 
+## [2026-05-10] [ui] — Tune Zoll shell controls and physical-button behavior
+
+- Restored the physical PACER button as an inert clickable control
+- Moved 12-lead, EtCO2, and Back behavior to the aligned grey physical soft keys; all other grey shell buttons now click without action
+- Converted the inner dark left sidebar labels to display-only controls so they no longer trigger navigation
+- Fixed ENERGY SELECT arrow spacing, raised the SHOCK label, and repositioned the red 1 / 2 / 3 labels beside energy select, charge, and shock
+- Updated right-side shell icons to bell, camera, and patient-event/bicep markers, with more curved home/down button shapes
+- Added plug and battery indicators at the lower-left shell LEDs
+- Tests updated for physical EtCO2 behavior, inert PACER, and non-clickable inner sidebar labels
+
+---
+
 ## [2026-05-10] [ui] — Refine Zoll physical shell controls
 
 - Rebuilt the monitor `DeviceShell` outer frame with a blue rim, rounded grey face, recessed screen, top branding, and power-button detail closer to the Zoll reference
 - Aligned the left grey physical soft keys with the inner screen's left sidebar labels and wired the 12-lead/back soft keys to existing navigation actions
 - Reworked the right physical navigation cluster into an irregular recessed control panel instead of a uniform button grid
 - Rebuilt the bottom defib control bay with smaller ANALYZE / ENERGY SELECT / CHARGE buttons, repositioned red step numbers, and a large round SHOCK button
-- Removed the PACER button from the physical shell
+- Removed the PACER button from the physical shell as part of this intermediate pass
 - Added a DeviceShell regression test confirming the PACER control stays removed
 - Cleaned up `useDefibSequence` hook lint issues without changing the defib sequence behavior
 - Tests: `npm run test:run`; lint: `npm run lint`; TypeScript: `npx tsc --noEmit`; build: `npm run build`

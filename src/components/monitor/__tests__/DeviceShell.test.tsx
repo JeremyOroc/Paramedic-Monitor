@@ -19,6 +19,7 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onEnergyUp: vi.fn(),
     onEnergyDown: vi.fn(),
     onTwelveLead: vi.fn(),
+    onToggleEtco2: vi.fn(),
     onBack: vi.fn(),
     twelveLeadActive: false,
     ...overrides,
@@ -43,14 +44,18 @@ describe('DeviceShell', () => {
     expect(screen.getByRole('button', { name: 'Shock' })).toBeInTheDocument()
   })
 
-  it('does not render the pacer button on the physical shell', () => {
+  it('renders an inert pacer button on the physical shell', async () => {
+    const user = userEvent.setup()
     render(<DeviceShell {...makeProps()} />)
-    expect(screen.queryByRole('button', { name: 'Pacer' })).not.toBeInTheDocument()
+    const pacer = screen.getByRole('button', { name: 'Pacer' })
+    expect(pacer).toBeInTheDocument()
+    await user.click(pacer)
   })
 
-  it('renders 12-lead and Back buttons on the physical shell', () => {
+  it('renders 12-lead, EtCO2, and Back buttons on the physical shell', () => {
     render(<DeviceShell {...makeProps()} />)
     expect(screen.getByRole('button', { name: '12-lead view' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Toggle EtCO2' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
   })
 
@@ -60,6 +65,14 @@ describe('DeviceShell', () => {
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: '12-lead view' }))
     expect(props.onTwelveLead).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires onToggleEtco2 when the EtCO2 shell button is clicked', async () => {
+    const user = userEvent.setup()
+    const props = makeProps()
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(props.onToggleEtco2).toHaveBeenCalledTimes(1)
   })
 
   it('fires onBack when the Back button is clicked', async () => {

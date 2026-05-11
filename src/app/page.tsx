@@ -97,6 +97,9 @@ export default function MonitorPage() {
         onEnergyUp={defib.onEnergyUp}
         onEnergyDown={defib.onEnergyDown}
         onTwelveLead={() => setView('12lead')}
+        onToggleEtco2={() =>
+          setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
+        }
         onBack={() => setView('main')}
         twelveLeadActive={isTwelveLead}
       />

@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils'
 type PhysicalButtonProps = {
   ariaLabel: string
   onClick?: () => void
-  disabled?: boolean
   active?: boolean
   className?: string
   children?: ReactNode
@@ -17,7 +16,6 @@ type PhysicalButtonProps = {
 function PhysicalButton({
   ariaLabel,
   onClick,
-  disabled = false,
   active = false,
   className,
   children,
@@ -26,16 +24,14 @@ function PhysicalButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      onClick={onClick}
-      disabled={disabled}
+      onClick={onClick ?? (() => {})}
       className={cn(
         'flex items-center justify-center select-none',
         'rounded-[12px] border border-[#eef0f2] bg-[#d2d4d5]',
         'text-[#424242] shadow-[inset_3px_4px_5px_rgba(255,255,255,0.62),inset_-4px_-5px_6px_rgba(90,90,90,0.28),4px_5px_5px_rgba(60,60,60,0.22)]',
         'transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300',
         active && 'bg-[#4a90b8] text-white',
-        disabled && 'cursor-default',
-        !disabled && 'hover:bg-[#e0e2e3] active:bg-[#bec2c4]',
+        'hover:bg-[#e0e2e3] active:bg-[#bec2c4]',
         className,
       )}
     >
@@ -107,6 +103,7 @@ type DeviceShellProps = {
   onEnergyUp: () => void
   onEnergyDown: () => void
   onTwelveLead: () => void
+  onToggleEtco2: () => void
   onBack: () => void
   twelveLeadActive?: boolean
 }
@@ -126,6 +123,7 @@ export function DeviceShell({
   onEnergyUp,
   onEnergyDown,
   onTwelveLead,
+  onToggleEtco2,
   onBack,
   twelveLeadActive = false,
 }: DeviceShellProps) {
@@ -139,6 +137,7 @@ export function DeviceShell({
             <div className="grid min-h-0 grid-cols-[10.5%_1fr_17.5%] gap-[1.4%] px-[2.8%]">
               <LeftSoftKeys
                 onTwelveLead={onTwelveLead}
+                onToggleEtco2={onToggleEtco2}
                 onBack={onBack}
                 twelveLeadActive={twelveLeadActive}
               />
@@ -194,18 +193,24 @@ function DeviceHeader() {
 
 type LeftSoftKeysProps = {
   onTwelveLead: () => void
+  onToggleEtco2: () => void
   onBack: () => void
   twelveLeadActive: boolean
 }
 
-function LeftSoftKeys({ onTwelveLead, onBack, twelveLeadActive }: LeftSoftKeysProps) {
+function LeftSoftKeys({
+  onTwelveLead,
+  onToggleEtco2,
+  onBack,
+  twelveLeadActive,
+}: LeftSoftKeysProps) {
   const keys = [
-    { ariaLabel: 'Brightness soft key', disabled: true },
+    { ariaLabel: 'Brightness soft key' },
     { ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
-    { ariaLabel: 'EtCO2 soft key', disabled: true },
-    { ariaLabel: 'Treatment soft key', disabled: true },
-    { ariaLabel: 'Sync soft key', disabled: true },
-    { ariaLabel: 'Printer soft key', disabled: true },
+    { ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
+    { ariaLabel: 'Treatment soft key' },
+    { ariaLabel: 'Sync soft key' },
+    { ariaLabel: 'Printer soft key' },
     { ariaLabel: 'Back', onClick: onBack },
   ]
 
@@ -218,7 +223,6 @@ function LeftSoftKeys({ onTwelveLead, onBack, twelveLeadActive }: LeftSoftKeysPr
             <PhysicalButton
               ariaLabel={key.ariaLabel}
               onClick={key.onClick}
-              disabled={key.disabled}
               active={key.active}
               className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
             />
@@ -236,58 +240,50 @@ function RightControlCluster() {
     <div className="relative min-h-0">
       <PhysicalButton
         ariaLabel="Alarm acknowledge"
-        disabled
         className="absolute left-[23%] top-[1.5%] h-[22%] w-[54%] rounded-[24px] bg-[#474747] border-[#dfe1e2]"
       />
       <div className="absolute inset-x-[2%] bottom-[5%] top-[29%] rounded-[19px] bg-[#b9b9b8] shadow-[inset_7px_8px_10px_rgba(255,255,255,0.26),inset_-8px_-9px_10px_rgba(102,102,102,0.2)]">
         <PhysicalButton
           ariaLabel="Home"
-          disabled
-          className="absolute left-[10%] top-[10%] h-[13.5%] w-[39%] rounded-[13px] text-[clamp(16px,1.7vw,26px)]"
+          className="absolute left-[10%] top-[10%] h-[13.5%] w-[39%] rounded-tl-[18px] rounded-tr-[8px] rounded-br-[18px] rounded-bl-[8px] text-[clamp(16px,1.7vw,26px)]"
         >
           ⌂
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Alarm"
-          disabled
           className="absolute right-[7%] top-[0%] h-[18%] w-[40%] rounded-[13px] text-[clamp(15px,1.6vw,24px)]"
         >
-          ♫
+          🔔
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Enter"
-          disabled
           className="absolute left-[10%] top-[45%] h-[16%] w-[40%] rounded-[13px]"
         >
           <span className="h-[32%] w-[32%] rounded-full bg-[#4a4a4a]" />
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Move up"
-          disabled
           className="absolute right-[12%] top-[30%] h-[24%] w-[42%] rounded-[12px] text-[clamp(28px,3.2vw,48px)]"
         >
           ↗
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Move down"
-          disabled
-          className="absolute right-[12%] top-[58%] h-[24%] w-[42%] rounded-[12px] text-[clamp(28px,3.2vw,48px)]"
+          className="absolute right-[12%] top-[58%] h-[24%] w-[42%] rounded-tl-[10px] rounded-tr-[22px] rounded-br-[14px] rounded-bl-[24px] text-[clamp(28px,3.2vw,48px)]"
         >
           ↘
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Snapshot"
-          disabled
           className="absolute left-[10%] bottom-[8%] h-[14%] w-[39%] rounded-[13px] text-[clamp(16px,1.7vw,25px)]"
         >
-          ◫
+          📷
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Patient event"
-          disabled
           className="absolute right-[8%] bottom-[-7%] h-[14%] w-[39%] rotate-[-5deg] rounded-[13px] text-[clamp(15px,1.6vw,23px)]"
         >
-          ◢
+          💪
         </PhysicalButton>
       </div>
     </div>
@@ -326,17 +322,31 @@ function BottomDefibStrip({
   return (
     <div className="relative grid min-h-0 grid-cols-[38%_41%_21%] px-[3.2%] pb-[1.6%] pt-[1%]">
       <div className="relative">
-        <div className="absolute bottom-[18%] left-[5%] flex items-end gap-[clamp(12px,1.5vw,24px)] text-[#4d4d4d]">
-          <span className="h-[clamp(13px,1.4vw,22px)] w-[clamp(13px,1.4vw,22px)] rounded-full bg-[#656565] shadow-[inset_2px_2px_3px_rgba(255,255,255,0.3)]" />
-          <span className="h-[clamp(13px,1.4vw,22px)] w-[clamp(13px,1.4vw,22px)] rounded-full bg-[#656565] shadow-[inset_2px_2px_3px_rgba(255,255,255,0.3)]" />
+        <button
+          type="button"
+          aria-label="Pacer"
+          onClick={() => {}}
+          className="absolute bottom-[34%] right-[8%] grid h-[clamp(56px,9.6vh,104px)] w-[clamp(56px,9.6vh,104px)] place-items-center rounded-full border-[7px] border-[#10a99e] bg-[#4d575d] font-mono text-[clamp(11px,1.4vw,20px)] font-bold uppercase text-white shadow-[0_4px_0_rgba(0,74,75,0.58),inset_3px_5px_8px_rgba(255,255,255,0.22),inset_-5px_-7px_8px_rgba(0,0,0,0.34)] transition-colors hover:bg-[#5b666d] active:translate-y-px focus:outline-none focus:ring-2 focus:ring-cyan-300"
+        >
+          PACER
+        </button>
+        <div className="absolute bottom-[15%] left-[5%] flex items-end gap-[clamp(13px,1.7vw,26px)] text-[#4d4d4d]">
+          <div className="flex flex-col items-center gap-1">
+            <span className="h-[clamp(13px,1.4vw,22px)] w-[clamp(13px,1.4vw,22px)] rounded-full bg-[#656565] shadow-[inset_2px_2px_3px_rgba(255,255,255,0.3)]" />
+            <span className="text-[clamp(15px,1.7vw,25px)] leading-none">🔌</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="h-[clamp(13px,1.4vw,22px)] w-[clamp(13px,1.4vw,22px)] rounded-full bg-[#656565] shadow-[inset_2px_2px_3px_rgba(255,255,255,0.3)]" />
+            <span className="text-[clamp(15px,1.7vw,25px)] leading-none">🔋</span>
+          </div>
         </div>
       </div>
 
       <div className="relative rounded-t-[17px] bg-[#bbbbba] shadow-[inset_5px_7px_9px_rgba(255,255,255,0.24),inset_-6px_-7px_10px_rgba(94,94,94,0.18)]">
-        <span className="absolute left-[20%] top-[4%] z-10 font-mono text-[clamp(22px,3vw,44px)] font-bold text-[#d00000]">
+        <span className="absolute left-[31%] top-[5%] z-10 font-mono text-[clamp(22px,3vw,44px)] font-bold text-[#d00000]">
           1
         </span>
-        <span className="absolute left-[70%] top-[4%] z-10 font-mono text-[clamp(22px,3vw,44px)] font-bold text-[#d00000]">
+        <span className="absolute left-[76%] top-[5%] z-10 font-mono text-[clamp(22px,3vw,44px)] font-bold text-[#d00000]">
           2
         </span>
         <div className="absolute inset-x-[8%] bottom-[16%] flex items-end justify-between">
@@ -366,10 +376,10 @@ function BottomDefibStrip({
       </div>
 
       <div className="relative rounded-t-[17px] bg-[#bbbbba] shadow-[inset_5px_7px_9px_rgba(255,255,255,0.24),inset_-6px_-7px_10px_rgba(94,94,94,0.18)]">
-        <span className="absolute left-[8%] top-[4%] font-mono text-[clamp(22px,3vw,44px)] font-bold text-[#d00000]">
+        <span className="absolute left-[18%] top-[5%] z-10 font-mono text-[clamp(22px,3vw,44px)] font-bold text-[#d00000]">
           3
         </span>
-        <span className="absolute left-[36%] top-[7%] font-mono text-[clamp(12px,1.4vw,20px)] font-bold uppercase text-[#d00000]">
+        <span className="absolute left-[34%] top-[-3%] z-10 font-mono text-[clamp(12px,1.4vw,20px)] font-bold uppercase text-[#d00000]">
           SHOCK
         </span>
         <button
@@ -410,7 +420,7 @@ function EnergySelectButton({
   return (
     <div
       className={cn(
-        'relative flex h-[clamp(72px,10.5vh,116px)] w-[clamp(76px,7vw,106px)] flex-col items-center justify-center',
+        'grid h-[clamp(72px,10.5vh,116px)] w-[clamp(76px,7vw,106px)] grid-rows-[1fr_auto_1fr] place-items-center px-2 py-1.5',
         'rounded-[18px] border-[7px] border-[#efe4b4] bg-[#d7bd74]',
         'font-mono font-bold uppercase text-[#c41212]',
         'shadow-[0_4px_0_rgba(120,104,62,0.6),inset_3px_4px_4px_rgba(255,255,255,0.55),inset_-3px_-4px_5px_rgba(112,92,42,0.36)]',
@@ -422,11 +432,11 @@ function EnergySelectButton({
         aria-label="Increase energy"
         onClick={onEnergyUp}
         disabled={!canAdjustEnergy}
-        className="absolute top-[8%] text-[clamp(18px,2vw,30px)] leading-none disabled:cursor-default"
+        className="text-[clamp(15px,1.7vw,24px)] leading-none disabled:cursor-default"
       >
         ▲
       </button>
-      <span className="text-center text-[clamp(10px,1.2vw,16px)] leading-[1.05]">
+      <span className="text-center text-[clamp(8px,0.95vw,13px)] leading-[1.08]">
         ENERGY
         <br />
         SELECT
@@ -439,7 +449,7 @@ function EnergySelectButton({
         aria-label="Decrease energy"
         onClick={onEnergyDown}
         disabled={!canAdjustEnergy}
-        className="absolute bottom-[7%] text-[clamp(18px,2vw,30px)] leading-none disabled:cursor-default"
+        className="text-[clamp(15px,1.7vw,24px)] leading-none disabled:cursor-default"
       >
         ▼
       </button>
