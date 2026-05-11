@@ -22,7 +22,10 @@ export function useDefibSequence({
   chargeDurationMs = CHARGE_DURATION_MS,
 }: Options) {
   const [state, setState] = useState<DefibState>('idle')
-  const [energy, setEnergy] = useState<number>(JOULE_DEFAULTS[patientMode])
+  const [energyState, setEnergyState] = useState(() => ({
+    patientMode,
+    energy: JOULE_DEFAULTS[patientMode],
+  }))
   const [shockCount, setShockCount] = useState(0)
   const [progress, setProgress] = useState(0)
 
@@ -31,9 +34,10 @@ export function useDefibSequence({
   const startedAtRef = useRef<number>(0)
   const durationRef = useRef<number>(0)
 
-  useEffect(() => {
-    setEnergy(JOULE_DEFAULTS[patientMode])
-  }, [patientMode])
+  const energy =
+    energyState.patientMode === patientMode
+      ? energyState.energy
+      : JOULE_DEFAULTS[patientMode]
 
   const clearTimers = useCallback(() => {
     if (timerRef.current !== null) {
@@ -48,21 +52,20 @@ export function useDefibSequence({
 
   useEffect(() => clearTimers, [clearTimers])
 
-  const tickProgress = useCallback(() => {
-    const elapsed = Date.now() - startedAtRef.current
-    const ratio = Math.min(1, elapsed / durationRef.current)
-    setProgress(ratio)
-    if (ratio < 1) {
-      rafRef.current = requestAnimationFrame(tickProgress)
-    }
-  }, [])
-
   const runTimedPhase = useCallback(
     (durationMs: number, onComplete: () => void) => {
       clearTimers()
       startedAtRef.current = Date.now()
       durationRef.current = durationMs
       setProgress(0)
+      const tickProgress = () => {
+        const elapsed = Date.now() - startedAtRef.current
+        const ratio = Math.min(1, elapsed / durationRef.current)
+        setProgress(ratio)
+        if (ratio < 1) {
+          rafRef.current = requestAnimationFrame(tickProgress)
+        }
+      }
       rafRef.current = requestAnimationFrame(tickProgress)
       timerRef.current = setTimeout(() => {
         clearTimers()
@@ -70,7 +73,7 @@ export function useDefibSequence({
         onComplete()
       }, durationMs)
     },
-    [clearTimers, tickProgress],
+    [clearTimers],
   )
 
   const onAnalyse = useCallback(() => {
@@ -94,13 +97,33 @@ export function useDefibSequence({
 
   const onEnergyUp = useCallback(() => {
     if (state === 'analysing' || state === 'charging') return
-    setEnergy((e) => e + ENERGY_STEP)
-  }, [state])
+    setEnergyState((current) => {
+      const currentEnergy =
+        current.patientMode === patientMode
+          ? current.energy
+          : JOULE_DEFAULTS[patientMode]
+
+      return {
+        patientMode,
+        energy: currentEnergy + ENERGY_STEP,
+      }
+    })
+  }, [state, patientMode])
 
   const onEnergyDown = useCallback(() => {
     if (state === 'analysing' || state === 'charging') return
-    setEnergy((e) => Math.max(ENERGY_STEP, e - ENERGY_STEP))
-  }, [state])
+    setEnergyState((current) => {
+      const currentEnergy =
+        current.patientMode === patientMode
+          ? current.energy
+          : JOULE_DEFAULTS[patientMode]
+
+      return {
+        patientMode,
+        energy: Math.max(ENERGY_STEP, currentEnergy - ENERGY_STEP),
+      }
+    })
+  }, [state, patientMode])
 
   const canAnalyse = state === 'idle'
   const canCharge = state === 'analysed' || state === 'idle'
