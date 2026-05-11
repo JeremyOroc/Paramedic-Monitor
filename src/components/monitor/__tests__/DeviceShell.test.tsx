@@ -37,6 +37,17 @@ describe('DeviceShell', () => {
     expect(screen.getByText('monitor-screen')).toBeInTheDocument()
   })
 
+  it('toggles the physical power button between on and off', async () => {
+    const user = userEvent.setup()
+    render(<DeviceShell {...makeProps()} />)
+    const power = screen.getByRole('button', { name: 'Power' })
+    expect(power).toHaveAttribute('aria-pressed', 'true')
+    await user.click(power)
+    expect(power).toHaveAttribute('aria-pressed', 'false')
+    await user.click(power)
+    expect(power).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('renders the ANALYZE, CHARGE, and SHOCK buttons', () => {
     render(<DeviceShell {...makeProps()} />)
     expect(screen.getByRole('button', { name: 'Analyze rhythm' })).toBeInTheDocument()

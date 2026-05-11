@@ -209,13 +209,14 @@ paramedic-monitor/
 8. `BottomStatusBar` — "Mode Adult | 120 J Selected | ⚡ | 0"
 9. `DefibButtonRow` — ANALYSE | ▲▼ | CHARGE | SHOCK (styled, not wired)
    - Physical shell also includes an inert PACER button, matching the reference hardware
+   - Top-rim power button toggles green/red locally; it does not shut down the monitor UI
    - Grey physical soft keys own left-sidebar interactions: 12-lead, EtCO2 toggle, and Back
    - Inner dark sidebar labels are visual only and must not be clickable
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
 11. Color reference: `#000000` bg, `#00ff41` ECG green, `#00ffff` cyan BP, `#cc44ff` purple EtCO2, `#ffff00` yellow SpO2
 
 **Testing:**
-- Component tests cover the physical shell chrome, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
+- Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
 
 **Milestone:** Screenshot of app matches Zoll X Series reference photos. No interactivity yet.
 

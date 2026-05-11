@@ -12,11 +12,7 @@ export function useStoreHydration(): boolean {
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => {
     const promise = useMonitorStore.persist.rehydrate()
-    if (promise && typeof (promise as Promise<unknown>).then === 'function') {
-      void (promise as Promise<unknown>).then(() => setHydrated(true))
-    } else {
-      setHydrated(true)
-    }
+    void Promise.resolve(promise).then(() => setHydrated(true))
   }, [])
   return hydrated
 }
