@@ -1,45 +1,21 @@
-let _ctx: AudioContext | null = null
-let _buffer: AudioBuffer | null = null
-// Pre-fetch raw bytes at module load — no user gesture needed for fetch
-let _rawPromise: Promise<ArrayBuffer | null> | null = null
+const POOL_SIZE = 5
+const SRC = '/audio/button_click.mp3'
+
+let _pool: HTMLAudioElement[] = []
+let _poolIndex = 0
 
 if (typeof window !== 'undefined') {
-  _rawPromise = fetch('/audio/button_click.mp3')
-    .then((r) => r.arrayBuffer())
-    .catch(() => null)
-}
-
-function _play(): void {
-  if (!_ctx || !_buffer) return
-  const source = _ctx.createBufferSource()
-  source.buffer = _buffer
-  source.connect(_ctx.destination)
-  source.start(0)
+  _pool = Array.from({ length: POOL_SIZE }, () => {
+    const el = new Audio(SRC)
+    el.preload = 'auto'
+    return el
+  })
 }
 
 export function playButtonClick(): void {
-  if (typeof window === 'undefined') return
-
-  // AudioContext created on first user gesture — starts in running state
-  if (!_ctx) {
-    _ctx = new AudioContext()
-    // Decode from pre-fetched bytes, then play
-    _rawPromise?.then((raw) => {
-      if (!raw || !_ctx) return _ctx?.decodeAudioData(new ArrayBuffer(0))
-      return _ctx.decodeAudioData(raw)
-    }).then((buf) => {
-      if (buf) {
-        _buffer = buf
-        _play()
-      }
-    }).catch(() => {})
-    return
-  }
-
-  if (_ctx.state === 'suspended') {
-    _ctx.resume().then(() => _play()).catch(() => {})
-    return
-  }
-
-  _play()
+  if (_pool.length === 0) return
+  const el = _pool[_poolIndex]
+  _poolIndex = (_poolIndex + 1) % POOL_SIZE
+  el.currentTime = 0
+  el.play().catch(() => {})
 }

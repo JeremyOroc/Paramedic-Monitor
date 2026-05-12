@@ -1,19 +1,40 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export function useSessionTimer(isRunning: boolean): string {
-  const [seconds, setSeconds] = useState(0)
+  const [elapsed, setElapsed] = useState(0)
+  const startRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!isRunning) {
-      setSeconds(0)
+      setElapsed(0)
+      startRef.current = null
       return
     }
-    const id = setInterval(() => setSeconds((s) => s + 1), 1000)
-    return () => clearInterval(id)
+
+    startRef.current = Date.now()
+
+    function tick() {
+      if (startRef.current !== null) {
+        setElapsed(Math.floor((Date.now() - startRef.current) / 1000))
+      }
+    }
+
+    const id = setInterval(tick, 1000)
+
+    // Snap the display back to the correct value the moment the tab is visible again
+    function onVisible() {
+      if (document.visibilityState === 'visible') tick()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [isRunning])
 
-  const h = Math.floor(seconds / 3600)
-  const m = Math.floor((seconds % 3600) / 60)
-  const s = seconds % 60
+  const h = Math.floor(elapsed / 3600)
+  const m = Math.floor((elapsed % 3600) / 60)
+  const s = elapsed % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
