@@ -9,7 +9,7 @@ export function VitalsControls() {
       <VitalInput field="hr" label="FC" unit="bpm" min={0} max={300} />
       <VitalInput field="bp_sys" label="BP sys" unit="mmHg" min={0} max={300} />
       <VitalInput field="bp_dia" label="BP dia" unit="mmHg" min={0} max={300} />
-      <VitalInput field="etco2" label="EtCO2" unit="mmHg" min={0} max={100} />
+      <VitalInput field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
       <VitalInput field="spo2" label="SpO2" unit="%" min={0} max={100} />
     </section>
   )
