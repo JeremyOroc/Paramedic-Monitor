@@ -11,7 +11,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Zoll monitor palette — keep in sync with src/lib/utils.ts COLORS */
+  /* WAGAMI monitor palette — keep in sync with src/lib/utils.ts COLORS */
   --color-monitor-bg: #000000;
   --color-ecg-green: #00ff41;
   --color-cyan-bp: #00ffff;

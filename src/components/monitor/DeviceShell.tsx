@@ -273,7 +273,7 @@ function BootScreen() {
         </>
       )}
       <span className="absolute bottom-[8%] right-[6%] select-none font-mono text-[clamp(18px,2.4vw,36px)] font-black text-white">
-        ZOLL
+        WAGAMI
       </span>
     </div>
   )
@@ -283,7 +283,7 @@ function DeviceHeader() {
   return (
     <div className="relative flex items-start justify-center pt-[2.1%]">
       <span className="select-none text-[clamp(30px,4.6vw,68px)] font-black leading-none tracking-[0.02em] text-white/45">
-        ZOLL
+        WAGAMI
       </span>
     </div>
   )

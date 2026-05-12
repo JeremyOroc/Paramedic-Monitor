@@ -27,9 +27,9 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
 }
 
 describe('DeviceShell', () => {
-  it('renders the ZOLL wordmark', () => {
+  it('renders the WAGAMI wordmark', () => {
     render(<DeviceShell {...makeProps()} />)
-    expect(screen.getByText('ZOLL')).toBeInTheDocument()
+    expect(screen.getByText('WAGAMI')).toBeInTheDocument()
   })
 
   it('renders the screen slot content', () => {
