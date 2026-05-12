@@ -6,6 +6,7 @@ import {
   ETCO2_SWEEP_MS,
   RESP_CYCLE_MS,
   SPO2_SWEEP_MS,
+  getEcgRhythm,
   getEtco2Waveform,
   getSpo2Waveform,
   spo2AmplitudeFactor,
@@ -46,6 +47,14 @@ function zeroCrossings(data: Float32Array): number {
   return crossings
 }
 
+function maxAdjacentDelta(data: Float32Array): number {
+  let max = 0
+  for (let i = 1; i < data.length; i++) {
+    max = Math.max(max, Math.abs(data[i] - data[i - 1]))
+  }
+  return max
+}
+
 describe('ECG_RHYTHMS', () => {
   it.each(Object.entries(ECG_RHYTHMS))(
     '%s has normalized data and a valid cycleMs',
@@ -70,24 +79,45 @@ describe('ECG_RHYTHMS', () => {
     expect(sum).toBe(0)
   })
 
-  it('VT has a single dominant wide peak (not a sine)', () => {
+  it('VT is wide-complex and negative-dominant like the reference', () => {
     const data = ECG_RHYTHMS.vt.data
     const peak = peakOf(data)
     const trough = troughOf(data)
-    expect(peak).toBeGreaterThan(0.6)
-    expect(trough).toBeLessThan(-0.35)
-    // most of the cycle sits below half-peak — confirms wide-pulse shape, not sine
-    let aboveHalf = 0
-    for (let i = 0; i < data.length; i++) if (data[i] > peak * 0.5) aboveHalf++
-    expect(aboveHalf / data.length).toBeLessThan(0.45)
+    expect(ECG_RHYTHMS.vt.cycleMs).toBeGreaterThanOrEqual(420)
+    expect(ECG_RHYTHMS.vt.cycleMs).toBeLessThanOrEqual(480)
+    expect(trough).toBeLessThan(-0.65)
+    expect(peak).toBeGreaterThan(0.25)
+    expect(peak).toBeLessThan(0.65)
+    expect(Math.abs(trough)).toBeGreaterThan(peak * 1.4)
   })
 
-  it('VF is chaotic enough for the admin rhythm button', () => {
+  it('VT carries baked-in noise so the trace does not look synthetic', () => {
+    const delta = maxAdjacentDelta(ECG_RHYTHMS.vt.data)
+    expect(delta).toBeGreaterThan(0.02)
+    expect(delta).toBeLessThan(0.2)
+  })
+
+  it('getEcgRhythm("vt") varies beat-to-beat', () => {
+    const a = getEcgRhythm('vt').data
+    const b = getEcgRhythm('vt').data
+    let diff = 0
+    for (let i = 0; i < a.length; i++) diff += Math.abs(a[i] - b[i])
+    expect(diff).toBeGreaterThan(0.5)
+  })
+
+  it('getEcgRhythm returns stable references for non-VT rhythms', () => {
+    expect(getEcgRhythm('nsr')).toBe(ECG_RHYTHMS.nsr)
+    expect(getEcgRhythm('asystole')).toBe(ECG_RHYTHMS.asystole)
+    expect(getEcgRhythm('vf')).toBe(ECG_RHYTHMS.vf)
+    expect(getEcgRhythm('pea')).toBe(ECG_RHYTHMS.pea)
+  })
+
+  it('VF is coarse fibrillation, not artifact noise', () => {
     const data = ECG_RHYTHMS.vf.data
-    expect(ECG_RHYTHMS.vf.cycleMs).toBeGreaterThanOrEqual(400)
-    expect(peakOf(data)).toBeGreaterThan(0.45)
-    expect(troughOf(data)).toBeLessThan(-0.45)
-    expect(zeroCrossings(data)).toBeGreaterThan(8)
+    expect(ECG_RHYTHMS.vf.cycleMs).toBeLessThanOrEqual(360)
+    expect(peakOf(data)).toBeGreaterThan(0.65)
+    expect(troughOf(data)).toBeLessThan(-0.65)
+    expect(zeroCrossings(data)).toBeLessThanOrEqual(6)
   })
 })
 
