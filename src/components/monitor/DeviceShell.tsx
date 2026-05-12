@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import type { DefibState } from '@/hooks/useDefibSequence'
 import { ProgressBar } from '@/components/shared/ProgressBar'
 import { cn } from '@/lib/utils'
+import { playButtonClick } from '@/lib/audio'
 
 type PhysicalButtonProps = {
   ariaLabel: string
@@ -25,7 +26,7 @@ function PhysicalButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      onClick={onClick ?? (() => {})}
+      onClick={() => { playButtonClick(); onClick?.() }}
       className={cn(
         'flex items-center justify-center select-none',
         'rounded-[12px] border border-[#eef0f2] bg-[#d2d4d5]',
@@ -64,7 +65,7 @@ function DefibButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      onClick={onClick}
+      onClick={() => { if (!disabled) { playButtonClick(); onClick?.() } }}
       disabled={disabled}
       className={cn(
         'relative flex items-center justify-center',
@@ -109,6 +110,8 @@ type DeviceShellProps = {
   onToggleEtco2: () => void
   onBack: () => void
   twelveLeadActive?: boolean
+  onPowerOn?: () => void
+  onPowerOff?: () => void
 }
 
 export function DeviceShell({
@@ -129,6 +132,8 @@ export function DeviceShell({
   onToggleEtco2,
   onBack,
   twelveLeadActive = false,
+  onPowerOn,
+  onPowerOff,
 }: DeviceShellProps) {
   const [powerState, setPowerState] = useState<PowerState>('on')
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -137,10 +142,14 @@ export function DeviceShell({
     if (powerState === 'booting') return
     if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
     if (powerState === 'on') {
+      onPowerOff?.()
       setPowerState('off')
     } else {
       setPowerState('booting')
-      bootTimerRef.current = setTimeout(() => setPowerState('on'), 2000)
+      bootTimerRef.current = setTimeout(() => {
+        setPowerState('on')
+        onPowerOn?.()
+      }, 2000)
     }
   }
 
@@ -199,7 +208,7 @@ function PowerButton({ powerState, onToggle }: PowerButtonProps) {
       type="button"
       aria-label="Power"
       aria-pressed={powerState === 'on'}
-      onClick={onToggle}
+      onClick={() => { playButtonClick(); onToggle() }}
       className="absolute right-[22%] top-[1.2%] z-20 grid h-[clamp(34px,4.2vw,62px)] w-[clamp(66px,7.2vw,108px)] place-items-center rounded-full bg-[#6f92d1] shadow-[inset_0_2px_4px_rgba(255,255,255,0.45),0_3px_7px_rgba(0,0,0,0.22)] focus:outline-none focus:ring-2 focus:ring-cyan-200"
     >
       <span
@@ -423,7 +432,7 @@ function BottomDefibStrip({
         <button
           type="button"
           aria-label="Pacer"
-          onClick={() => {}}
+          onClick={() => { playButtonClick() }}
           className="absolute bottom-[34%] right-[8%] grid h-[clamp(56px,9.6vh,104px)] w-[clamp(56px,9.6vh,104px)] place-items-center rounded-full border-[7px] border-[#10a99e] bg-[#4d575d] font-mono text-[clamp(11px,1.4vw,20px)] font-bold uppercase text-white shadow-[0_4px_0_rgba(0,74,75,0.58),inset_3px_5px_8px_rgba(255,255,255,0.22),inset_-5px_-7px_8px_rgba(0,0,0,0.34)] transition-colors hover:bg-[#5b666d] active:translate-y-px focus:outline-none focus:ring-2 focus:ring-cyan-300"
         >
           PACER
@@ -485,7 +494,7 @@ function BottomDefibStrip({
         <button
           type="button"
           aria-label="Shock"
-          onClick={onShock}
+          onClick={() => { if (canShock) { playButtonClick(); onShock() } }}
           disabled={!canShock}
           className={cn(
             'absolute bottom-[13%] left-[27%] grid h-[clamp(72px,10.8vh,118px)] w-[clamp(72px,10.8vh,118px)] place-items-center rounded-full',

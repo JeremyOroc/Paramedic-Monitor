@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -12,6 +12,7 @@ import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
+import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -25,6 +26,26 @@ export default function MonitorPage() {
   const [secondary, setSecondary] = useState<SecondaryChannel>('spo2')
   const [patientMode, setPatientMode] = useState<PatientMode>(DEFAULT_VITALS.patient_mode)
   const [patientModalOpen, setPatientModalOpen] = useState(false)
+  const [isTimerRunning, setIsTimerRunning] = useState(true)
+  const [now, setNow] = useState<Date>(() => new Date())
+
+  const timeZone = (() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+      return tz || 'America/Toronto'
+    } catch {
+      return 'America/Toronto'
+    }
+  })()
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const date = now.toLocaleDateString('sv-SE', { timeZone })
+  const time = now.toLocaleTimeString('en-CA', { timeZone, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const sessionTimer = useSessionTimer(isTimerRunning)
 
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
@@ -36,13 +57,13 @@ export default function MonitorPage() {
     <MonitorLayout
       topBar={
         <TopStatusBar
-          date="2026-04-08"
-          time="08:07:01"
+          date={date}
+          time={time}
           patientMode={patientMode}
           patientModeActive={patientModalOpen}
           onPatientModeClick={() => setPatientModalOpen(true)}
           batteryPercent={85}
-          sessionTimer="00:00:10"
+          sessionTimer={sessionTimer}
         />
       }
       subBar={<SubBar />}
@@ -113,6 +134,8 @@ export default function MonitorPage() {
         }
         onBack={() => setView('main')}
         twelveLeadActive={isTwelveLead}
+        onPowerOn={() => setIsTimerRunning(true)}
+        onPowerOff={() => setIsTimerRunning(false)}
       />
       <PatientModeModal
         open={patientModalOpen}
