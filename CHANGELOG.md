@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-05-12] [ecg] — VT negative-dominant + per-beat variation
+
+- Earlier passes (the two entries directly below) left the VT trace looking too smooth and too symmetric compared to the supplied `Completed/Vtach/IMG_0029.jpeg` reference; this pass course-corrects.
+- `synthVT` rebuilt as: small pre-spike positive bump → wide deep negative dominant gaussian spike → positive rebound → small post-rebound notch → soft tail, plus low-amplitude baked-in noise and slow baseline wander so the trace no longer reads as synthetic.
+- New `getEcgRhythm(rhythm)` factory exported from `rhythms.ts`. For VT it returns a freshly-seeded `synthVT` each call so the renderer's per-cycle waveform swap produces visible beat-to-beat shape variation (±9% amplitude, ±7% width, small centroid shift). Other rhythms still return their stable static `ECG_RHYTHMS` entry.
+- ECGCanvas now uses `getEcgRhythm` instead of the static map. `ampJitter` 0.08 → 0.14 and `cycleJitter` 0.04 → 0.07 to make the variability visible without destabilizing NSR.
+- Updated VT tests: replaced the old "broad rounded peaks / maxAdjacentDelta < 0.02" assertions with negative-dominant (|trough| > peak·1.4), noise-present (maxAdjacentDelta 0.02–0.2), and beat-to-beat variation across two back-to-back factory calls.
+
+## [2026-05-12] [ecg] — Retune VTach to screenshot reference
+
+- Reshaped VTach from a single clean peak into broader rounded monomorphic complexes with plateau-like tops, small contour notching, and V-shaped downward drops
+- Slowed/stretched the VTach cycle so fewer, wider complexes appear across the monitor like the screenshot reference
+- Rounded the per-beat VTach curve further by removing the sharper notch/drop pieces and replacing them with smoother waveform components
+- Updated the VTach rhythm test to guard the broader rounded shape instead of only checking that the trace is not a sine wave
+- Updated `PLAN.md` and `STATUS.md` to lock the latest screenshot as the VT visual direction
+
+## [2026-05-12] [ecg] — Match VFib and VTach video references
+
+- Tuned VFib from artifact-like noise into a coarse rolling fibrillation waveform based on the supplied `Completed/Vfib` monitor videos
+- Tuned VTach into a smoother monomorphic wide-complex waveform based on the supplied `Completed/Vtach` monitor videos
+- Updated the rhythm tests so VFib stays high-amplitude/coarse and does not regress back into static-looking noise
+- Recorded the video-reference requirement in `PLAN.md` and completion status in `STATUS.md`
+
 ## [2026-05-12] [ecg+ui] — Rhythm video polish, EtCO2 150 scale, and narrower vitals
 
 - Retuned the live ECG canvas templates closer to the supplied monitor rhythm videos while preserving admin-controlled rhythm selection

@@ -229,6 +229,7 @@ paramedic-monitor/
 
 **Steps:**
 1. Build `rhythms.ts` — define `Float32Array` point data for: NSR, VF, VT, Asystole (flatline), PEA (same as NSR visually)
+   - VF/VT templates are tuned against the provided `Monitor videos/Graphs/12 lead graphs/Completed/Vfib` and `Completed/Vtach` references. VF should read as coarse rolling fibrillation, not static artifact/noise. VT (per the Lead II strip in `Completed/Vtach/IMG_0029.jpeg`) is negative-dominant: small positive pre-bump → wide deep negative spike → positive rebound → small notch, with low-amplitude baseline noise and visible beat-to-beat amplitude/width variation via `getEcgRhythm('vt')`. Do not regress VT back to a smooth symmetric rounded peak — the reference is sharp and noisy, not clean.
 2. Build `renderer.ts` — overwrite-scroll loop: `requestAnimationFrame`, erase band, draw segment, wrap at canvas edge
 3. Wire `ECGCanvas.tsx` — accepts `rhythm` + `hr` props, starts/stops loop on mount/unmount
 4. HR-driven cycle speed: `cycleMs = 60000 / hr` for NSR/PEA; fixed `cycleMs` for VF/VT
@@ -236,7 +237,7 @@ paramedic-monitor/
 6. Test all 5 rhythms locally by hardcoding rhythm changes
 
 **Testing:**
-- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR/PEA, wide-complex VT, chaotic VF, and flat asystole.
+- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR/PEA, wide-complex VT, coarse VF that does not look like artifact noise, and flat asystole.
 
 **Milestone:** Smooth scrolling ECG visible. All 5 rhythms render correctly. Rhythm switches are clean at beat boundary.
 

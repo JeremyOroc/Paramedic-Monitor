@@ -89,6 +89,17 @@
   - [x] Right vitals column narrowed to `96px`; vitals remain on the right side only
   - [x] Right-side vital numbers centered within the narrowed column
   - [x] Tests updated for 150 mmHg scale, mid-height 75 mmHg plateau, clamping, VT shape, and VF chaos
+- [x] **VFib/VTach video reference match — COMPLETE:**
+  - [x] Confirmed provided VFib and VTach reference files exist under `/Users/zaidtabana/Downloads/Monitor videos/Graphs/12 lead graphs/Completed/`
+  - [x] VFib template changed from noisy artifact-style jitter to coarse rolling fibrillation matching the video direction
+  - [x] VTach template reshaped and slowed into broad rounded monomorphic complexes with softer per-beat curves matching the latest screenshot reference
+  - [x] Rhythm tests updated to guard VFib against returning to artifact/noise behavior
+- [x] **VT negative-dominant + per-beat variation — COMPLETE:**
+  - [x] `synthVT` rewritten as pre-spike bump → deep negative dominant gaussian spike → positive rebound → notch → tail, with baked-in low-amp noise + slow wander
+  - [x] New `getEcgRhythm(rhythm)` factory: VT returns a freshly-seeded synth each cycle so beat-to-beat amplitude/width/centroid vary visibly; other rhythms still return their stable static entry
+  - [x] `ECGCanvas` switched to the factory; `ampJitter` 0.08 → 0.14, `cycleJitter` 0.04 → 0.07
+  - [x] Tests updated: negative-dominant (|trough| > peak·1.4), noise-present (maxAdjacentDelta 0.02–0.2), beat-to-beat variation across two factory calls
+  - [x] Type-check + 99/100 tests green (preexisting DeviceShell power-button failure unrelated)
 
 ---
 
