@@ -205,6 +205,8 @@ paramedic-monitor/
 4. `WaveformPanel` — ECG area (black, ~55% height), secondary channel area (~45% height)
 5. `ApplyElectrodesBar` — yellow bar "APPL. ELECT." + "Check Electrodes" text
 6. `VitalsStrip` — right column: FC green / PNI cyan / EtCO2 purple / SpO2 yellow / Searching
+   - Vitals must stay in the right-side column. Do not move HR, BP, EtCO2, or SpO2 into the bottom bar; bottom space is reserved for status/defib controls.
+   - Right vitals column width is `96px`; prefer tighter padding or smaller text over moving or hiding vitals.
 7. `RightNavCluster` — 6 nav buttons (alarm, home, back, enter●, forward, camera)
 8. `BottomStatusBar` — "Mode Adult | 120 J Selected | ⚡ | 0"
 9. `DefibButtonRow` — ANALYSE | ▲▼ | CHARGE | SHOCK (styled, not wired)
@@ -233,18 +235,21 @@ paramedic-monitor/
 5. Beat-boundary rhythm switching: pending rhythm waits until `phaseInCycle >= 1.0` then swaps
 6. Test all 5 rhythms locally by hardcoding rhythm changes
 
+**Testing:**
+- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR/PEA, wide-complex VT, chaotic VF, and flat asystole.
+
 **Milestone:** Smooth scrolling ECG visible. All 5 rhythms render correctly. Rhythm switches are clean at beat boundary.
 
 ---
 
-### Phase 5 — Video Waveforms (SpO2, EtCO2, 12-Lead Shell)
-**Goal:** Video-looped waveforms for non-ECG channels.
+### Phase 5 — Canvas Secondary Waveforms + 12-Lead Shell
+**Goal:** Live canvas SpO2/EtCO2 channels plus 12-lead shell.
 
 **Steps:**
 1. Add video files to `/public/waveforms/` (from paramedic's Google Drive)
-2. Build `VideoWaveform.tsx` — `<video loop muted autoplay playsinline>` wrapper with fallback `FaultOverlay`
+2. Build shared canvas renderer for SpO2 and EtCO2 channels
 3. Wire `SecondaryChannel.tsx` — shows `SpO2Channel` by default; switches to `EtCO2Channel` when `etco2Active = true`
-4. EtCO2 channel: video + Y-axis scale labels (0 / 20 / 63)
+4. EtCO2 channel: filled purple capnograph with Y-axis scale labels (150 / 75 / 0)
 5. Build `TwelveLeadPage.tsx` — 2×6 grid overlay (replaces WaveformPanel entirely)
 6. Each `LeadCell` — label + VideoWaveform pointing to `/public/waveforms/12lead/[rhythm]/[lead].mp4`; fault overlay if file missing
 7. Left sidebar CO2 button → toggles `etco2Active`
@@ -358,7 +363,8 @@ paramedic-monitor/
 | Decision | Choice |
 |----------|--------|
 | Main ECG rendering | Canvas + requestAnimationFrame |
-| SpO2 / EtCO2 / 12-lead | `<video loop muted autoplay>` files |
+| SpO2 / EtCO2 | Canvas + requestAnimationFrame |
+| 12-lead | `<video loop muted autoplay>` files |
 | CPR mode visual | Blue banner "Perform CPR" + CPR timer |
 | Post-shock outcome | Instructor controls manually — nothing auto-changes |
 | Send behavior | Staged commit — edits pending until Send |
