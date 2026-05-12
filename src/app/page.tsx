@@ -15,7 +15,6 @@ import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
-import { ecgSrc, etco2WaveformSrc, spo2WaveformSrc } from '@/lib/waveformPaths'
 
 type MonitorView = 'main' | '12lead'
 type SecondaryChannel = 'spo2' | 'etco2'
@@ -59,13 +58,16 @@ export default function MonitorPage() {
       }
       main={
         isTwelveLead ? (
-          <TwelveLeadPage rhythm={confirmed.rhythm} />
+          <TwelveLeadPage rhythm={confirmed.rhythm} hr={confirmed.hr} />
         ) : (
           <WaveformPanel
             secondaryChannel={secondary}
-            ecgSrc={ecgSrc(confirmed.rhythm)}
-            spo2Src={spo2WaveformSrc(confirmed.spo2_waveform)}
-            etco2Src={etco2WaveformSrc(confirmed.etco2_waveform)}
+            rhythm={confirmed.rhythm}
+            hr={confirmed.hr}
+            spo2={confirmed.spo2}
+            etco2={confirmed.etco2}
+            spo2Waveform={confirmed.spo2_waveform}
+            etco2Waveform={confirmed.etco2_waveform}
           />
         )
       }
