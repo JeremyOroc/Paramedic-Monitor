@@ -5,6 +5,54 @@
 
 ---
 
+## [2026-05-12] [ecg+ui] — Rhythm video polish, EtCO2 150 scale, and narrower vitals
+
+- Retuned the live ECG canvas templates closer to the supplied monitor rhythm videos while preserving admin-controlled rhythm selection
+- Matched the default ECG label/morphology to the provided pads reference: `Pads 1.0 cm/mV`, smaller R peak, and only a shallow post-R notch instead of a deep downward spike
+- Updated EtCO2 graph scaling from `0-63 mmHg` to the reference video's `0-150 mmHg` range; axis labels now read `150 / 75 / 0`
+- Raised the instructor EtCO2 input maximum to `150`
+- Narrowed the right vitals column to `96px`, centered the vital numbers, and reduced vital text/padding to remove the extra right-side space; vitals remain right-side only
+- Updated waveform tests for the 150 mmHg scale, 75 mmHg mid-height plateau, 150+ clamping, VT shape, and VF chaos
+
+## [2026-05-12] [ecg] — Reference-guided rhythm graph pass
+
+- Reworked the ECG rhythm templates for the admin rhythm buttons using the supplied rhythm references as the visual target
+- NSR/PEA now use a sharper QRS complex, smaller P wave, subtle ST segment, and light baseline movement so the trace reads less like a generic Gaussian demo
+- VT now renders as a wide-complex monomorphic rhythm with a broad dominant peak, terminal trough, and slight notching
+- VF now renders as a coarser chaotic trace with irregular amplitude and frequent zero crossings instead of a smooth repeated sine blend
+- Asystole remains a clean flatline
+- Locked the layout requirement in `PLAN.md`: vitals stay on the right column; bottom space remains for status/defib controls
+- Strengthened rhythm tests to guard VT shape and VF chaos; focused ECG tests and TypeScript pass
+
+## [2026-05-12] [ecg+ui] — Physiologically reactive waveforms + rhythm fidelity
+
+- EtCO2 plateau now tracks the EtCO2 mmHg vital on the 0-63 mmHg on-screen scale — sending 35 mmHg plateaus at the "35" tick; sending 63 saturates at the top; 0 stays flat
+- EtCO2 trace renders as a filled purple area under the curve (matches the Zoll capnograph reference video the user shared); new `fillStyle: 'area'` option on the renderer with full-alpha top-edge stroke
+- SpO2 pleth amplitude now scales with the SpO2 % vital: ≥95 = full, 85-95 = linear 0.7-1.0, 70-85 = linear 0.35-0.7, <70 = 0.25 (barely visible). "weak" shape compounds with the factor (×0.45)
+- Replaced static `SPO2_WAVEFORMS`/`ETCO2_WAVEFORMS` maps with `getSpo2Waveform(shape, %)` / `getEtco2Waveform(shape, mmHg)` factory functions — re-baked at each cycle wrap so changes are picked up at the next beat/breath boundary
+- Threaded `confirmed.spo2` + `confirmed.etco2` through `WaveformPanel` → `SecondaryChannel`
+- Decoupled `sweepMs` (paper speed across the canvas) from `cycleMs` (cardiac/respiratory cycle) in the renderer — previously the trace took one full cycle to cross the canvas, so only one QRS/breath was visible at a time. Now `sweepMs` is fixed per channel (ECG/SpO2 = 4000ms, EtCO2 = 15000ms) and multiple cycles fit across the screen at realistic Zoll paper speeds
+- VT shape rewritten from a sine wave to wide rounded peaks with a small undershoot — matches the user-supplied screenshot of real-life monomorphic VT
+- VF cycleMs slowed from 250 → 450ms and the shape rebuilt with multi-frequency drift + noise so it reads as chaotic instead of a fast periodic wave
+- Narrowed the right vitals column further: 180px → 140px (text-4xl numbers + "PNI/mmHg" header fit comfortably; freed horizontal space for the waveform area)
+- Tests: 31 ECG + vitals tests passing — covers EtCO2 plateau scaling, SpO2 amplitude scaling, VT wide-pulse shape, VF cycleMs floor, sweep-speed exposure
+- TypeScript clean, ESLint clean (one preexisting DeviceShell warning unchanged), dev server compiles without runtime errors
+
+---
+
+## [2026-05-11] [ecg+ui] — Live waveform graphs and vitals layout refinement
+
+- Implemented canvas overwrite-scroll renderer (`src/lib/ecg/renderer.ts`) — single rAF loop reused for ECG, SpO2, and EtCO2 channels; DPR-aware sizing via ResizeObserver; beat-boundary waveform swap so rhythm changes don't glitch mid-cycle
+- Implemented synthesized waveform data (`src/lib/ecg/rhythms.ts`) — NSR (P-QRS-T), VF (chaotic), VT (wide regular), asystole (flatline), PEA (NSR shape); SpO2 plethysmograph normal/weak; EtCO2 square/hypoventilation/shark-fin shapes
+- ECG always renders; secondary channel toggles between SpO2 (HR-paced yellow pleth) and EtCO2 (5s respiratory cycle purple capnograph) via the existing CO2 soft key
+- Deleted dead `src/lib/waveformPaths.ts` and the `ecgSrc`/`spo2Src`/`etco2Src` props on `WaveformPanel`; `VideoWaveform` retained for the 12-lead overlay only
+- Shrunk vital numbers from `text-5xl` → `text-4xl`; PNI now stacks systolic / divider / diastolic vertically (`text-3xl`) instead of inline `120/80`
+- Narrowed the right vitals column from 220px → 180px in `MonitorLayout` so the waveform area gets more horizontal space
+- Tests: 22 new tests (rhythms normalization, renderer rAF lifecycle, VitalBox stacked-mode divider, VitalsStrip stacked PNI output); full suite 84/85 passing (1 preexisting DeviceShell power-button failure unrelated to this change)
+- TypeScript clean (`npx tsc --noEmit`)
+
+---
+
 ## [2026-05-10] [ui] — Correct right-shell arrows and defib label placement
 
 - Standardized the right-side control buttons back to rounded-square shapes and moved the curvature into the arrow glyphs

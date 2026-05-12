@@ -30,7 +30,7 @@ export function VitalsStrip({
       />
       <VitalBox
         label="PNI"
-        value={`${bpSys}/${bpDia}`}
+        stackedValues={{ top: bpSys, bottom: bpDia }}
         unit="mmHg"
         color="cyanBP"
         className="flex-1 min-h-0"

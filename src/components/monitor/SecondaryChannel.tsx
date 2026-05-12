@@ -1,22 +1,77 @@
 'use client'
 
-import { VideoWaveform } from './VideoWaveform'
-import { cn } from '@/lib/utils'
+import { useEffect, useRef } from 'react'
+import { startRenderer } from '@/lib/ecg/renderer'
+import {
+  ETCO2_SWEEP_MS,
+  RESP_CYCLE_MS,
+  SPO2_SWEEP_MS,
+  getEtco2Waveform,
+  getSpo2Waveform,
+} from '@/lib/ecg/rhythms'
+import { COLORS, cn } from '@/lib/utils'
+import type { Etco2Waveform, Spo2Waveform } from '@/types/vitals'
 
 type SecondaryChannelProps = {
   channel: 'spo2' | 'etco2'
-  spo2Src?: string
-  etco2Src?: string
+  hr: number
+  spo2: number
+  etco2: number
+  spo2Waveform: Spo2Waveform
+  etco2Waveform: Etco2Waveform
   className?: string
 }
 
 export function SecondaryChannel({
   channel,
-  spo2Src = '/waveforms/spo2-placeholder.gif',
-  etco2Src = '/waveforms/etco2-placeholder.gif',
+  hr,
+  spo2,
+  etco2,
+  spo2Waveform,
+  etco2Waveform,
   className,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const channelRef = useRef(channel)
+  const hrRef = useRef(hr)
+  const spoNumRef = useRef(spo2)
+  const etcoNumRef = useRef(etco2)
+  const spoShapeRef = useRef(spo2Waveform)
+  const etcoShapeRef = useRef(etco2Waveform)
+
+  useEffect(() => {
+    channelRef.current = channel
+    hrRef.current = hr
+    spoNumRef.current = spo2
+    etcoNumRef.current = etco2
+    spoShapeRef.current = spo2Waveform
+    etcoShapeRef.current = etco2Waveform
+  })
+
+  useEffect(() => {
+    if (!canvasRef.current) return
+    const pick = () =>
+      channelRef.current === 'etco2'
+        ? getEtco2Waveform(etcoShapeRef.current, etcoNumRef.current)
+        : getSpo2Waveform(spoShapeRef.current, spoNumRef.current)
+    return startRenderer({
+      canvas: canvasRef.current,
+      color: isEtco2 ? COLORS.purpleEtCO2 : COLORS.yellowSpO2,
+      sweepMs: isEtco2 ? ETCO2_SWEEP_MS : SPO2_SWEEP_MS,
+      amplitude: isEtco2 ? 0.95 : 0.85,
+      fillStyle: isEtco2 ? 'area' : 'line',
+      ampJitter: isEtco2 ? 0.05 : 0.07,
+      cycleJitter: isEtco2 ? 0.06 : 0.03,
+      getWaveform: pick,
+      getCycleMs: () => {
+        const def = pick()
+        if (channelRef.current === 'etco2') return def.cycleMs ?? RESP_CYCLE_MS
+        return def.cycleMs ?? 60000 / Math.max(20, hrRef.current)
+      },
+    })
+  }, [isEtco2])
+
   return (
     <div className={cn('relative h-full w-full', className)}>
       <span
@@ -29,12 +84,12 @@ export function SecondaryChannel({
       </span>
       {isEtco2 && (
         <div className="absolute right-2 top-1 bottom-1 flex flex-col justify-between text-[10px] font-mono text-purple-etco2 z-10">
-          <span>63</span>
-          <span>20</span>
+          <span>150</span>
+          <span>75</span>
           <span>0</span>
         </div>
       )}
-      <VideoWaveform src={isEtco2 ? etco2Src : spo2Src} alt={isEtco2 ? 'EtCO2 waveform' : 'SpO2 waveform'} />
+      <canvas ref={canvasRef} className="block h-full w-full" />
     </div>
   )
 }

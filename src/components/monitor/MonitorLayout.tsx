@@ -30,7 +30,7 @@ export function MonitorLayout({
     <div
       className={cn(
         'w-full h-full overflow-hidden bg-black text-white',
-        'grid grid-cols-[56px_1fr_220px]',
+        'grid grid-cols-[56px_1fr_96px]',
         rowsClass,
       )}
     >
