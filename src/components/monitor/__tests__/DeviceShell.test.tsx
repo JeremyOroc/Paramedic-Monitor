@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DeviceShell } from '../DeviceShell'
 
@@ -27,6 +27,9 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
 }
 
 describe('DeviceShell', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
   it('renders the WAGAMI wordmark', () => {
     render(<DeviceShell {...makeProps()} />)
     expect(screen.getByText('WAGAMI')).toBeInTheDocument()
@@ -37,14 +40,17 @@ describe('DeviceShell', () => {
     expect(screen.getByText('monitor-screen')).toBeInTheDocument()
   })
 
-  it('toggles the physical power button between on and off', async () => {
-    const user = userEvent.setup()
+  it('toggles the physical power button between on and off', () => {
+    vi.useFakeTimers()
     render(<DeviceShell {...makeProps()} />)
     const power = screen.getByRole('button', { name: 'Power' })
     expect(power).toHaveAttribute('aria-pressed', 'true')
-    await user.click(power)
+    fireEvent.click(power)
     expect(power).toHaveAttribute('aria-pressed', 'false')
-    await user.click(power)
+    fireEvent.click(power) // → booting
+    expect(power).toHaveAttribute('aria-pressed', 'false')
+    // Advance past the 2-second boot timer
+    act(() => { vi.runAllTimers() })
     expect(power).toHaveAttribute('aria-pressed', 'true')
   })
 
