@@ -92,14 +92,31 @@
 - [x] **VFib/VTach video reference match — COMPLETE:**
   - [x] Confirmed provided VFib and VTach reference files exist under `/Users/zaidtabana/Downloads/Monitor videos/Graphs/12 lead graphs/Completed/`
   - [x] VFib template changed from noisy artifact-style jitter to coarse rolling fibrillation matching the video direction
-  - [x] VTach template reshaped and slowed into broad rounded monomorphic complexes with softer per-beat curves matching the latest screenshot reference
+  - [x] VTach template corrected to broad rounded box-like monomorphic complexes with soft tops and rounded low segments matching the latest screenshot reference
   - [x] Rhythm tests updated to guard VFib against returning to artifact/noise behavior
-- [x] **VT negative-dominant + per-beat variation — COMPLETE:**
+- [x] **VT negative-dominant + per-beat variation attempt — SUPERSEDED:**
   - [x] `synthVT` rewritten as pre-spike bump → deep negative dominant gaussian spike → positive rebound → notch → tail, with baked-in low-amp noise + slow wander
   - [x] New `getEcgRhythm(rhythm)` factory: VT returns a freshly-seeded synth each cycle so beat-to-beat amplitude/width/centroid vary visibly; other rhythms still return their stable static entry
   - [x] `ECGCanvas` switched to the factory; `ampJitter` 0.08 → 0.14, `cycleJitter` 0.04 → 0.07
   - [x] Tests updated: negative-dominant (|trough| > peak·1.4), noise-present (maxAdjacentDelta 0.02–0.2), beat-to-beat variation across two factory calls
   - [x] Type-check + 99/100 tests green (preexisting DeviceShell power-button failure unrelated)
+- [x] **VTach rounded screenshot correction — COMPLETE:**
+  - [x] Negative-dominant/noisy VTach attempt replaced with a rounded-box complex matching the screenshot silhouette
+  - [x] VT now uses soft rise, broad rounded top, smooth fall, and rounded low segment with only subtle beat-to-beat variation
+  - [x] ECG timing fixed so `getCycleMs` no longer regenerates a new VT waveform every animation tick
+  - [x] ECG amplitude/cycle jitter reduced to keep VT from drifting away from the reference shape
+  - [x] Tests updated to guard rounded VT shape and reject artifact-noisy adjacent jumps
+- [x] **Compact Pads-style VT tuning — COMPLETE:**
+  - [x] VT requirement updated from isolated upward complexes to the latest Pads screenshot style: continuous plateau-and-sharp-V trough rhythm
+  - [x] `VT_TUNING` added to centralize cycle speed, plateau height/wobble, trough depth/center/width, V sharpness, and jitter constants for easier fine-tuning
+  - [x] VT cycle tightened to `340ms` to show more beats across the ECG sweep, with varied upper plateaus and clean downward V troughs
+  - [x] Trough center, width, depth, and sharpness vary per beat so some V's are sharper and others are longer/wider
+  - [x] Rhythm tests updated to guard fast cycle timing, variable clean V troughs, non-flat plateau wobble, bounded beat-to-beat variation, and artifact-free adjacent deltas
+- [x] **VTach plateau smoothing — COMPLETE:**
+  - [x] VT plateau requirement refined to keep the rise/fall geometry but remove jagged plateau wobble
+  - [x] `synthVT` plateau contour changed from layered sine wobble/noise to a rounded, gently downward-sloping shelf
+  - [x] VT plateau apex shifted earlier in the rounded arc so the rest of the top slopes down toward the trough
+  - [x] Rhythm tests updated to guard an early-peaking rounded non-jagged plateau plus the existing deep sharp V trough
 
 ---
 

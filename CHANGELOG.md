@@ -5,6 +5,76 @@
 
 ---
 
+## [2026-05-13] [ecg] — Move VT plateau apex earlier
+
+- Shifted the VT plateau dome's apex earlier in the rounded arc using `VT_TUNING.plateauApexOffset`, so the rest of the plateau slopes downward into the V trough instead of cresting near the middle.
+- Strengthened the VT rhythm test to assert the visible plateau peaks in the first third of the arc and continues downward before the trough.
+- Updated `PLAN.md` and `STATUS.md` with the refined early-peak plateau requirement.
+
+## [2026-05-13] [ecg] — Smooth VT plateau contour
+
+- Refined the VT requirement in `PLAN.md`: keep the existing rise/fall geometry, but make the plateau itself rounded, non-jagged, and gently downward-sloping.
+- Replaced the VT plateau's layered sine wobble with a smooth periodic dome/shelf in `synthVT`; reduced fine wobble and micro-noise so the plateau reads as a clean rounded top before the same sharp downward V trough.
+- Updated the VT rhythm test to guard the rounded downward-sloping plateau and prevent jagged plateau regressions.
+
+## [2026-05-13] [ecg] — VT is now monomorphic (every beat identical)
+
+- Removed the `vtSeedCounter` mechanism in `getEcgRhythm`. VT now returns the static `ECG_RHYTHMS.vt` reference like every other rhythm — every cycle on the strip renders the same `synthVT(1)` beat, matching the monomorphic ventricular tachycardia reference image (small rounded positive bump → sharp deep downward V, repeating identically).
+- Replaced the two beat-variation tests with two monomorphism guards: `VT is monomorphic — every beat is identical` (asserts `===` reference and zero L1 diff between two consecutive `getEcgRhythm('vt')` calls) and `VT has a small positive plateau and a deep sharp downward V` (asserts trough magnitude > 1.2× peak, plateau spread < 0.18 — confirms the negative-dominant silhouette).
+- Added `vt` to the existing "stable references" test alongside `nsr`, `vf`, `asystole`, `pea`.
+
+## [2026-05-13] [ecg] — Compact Pads-style VT tuning
+
+- Added an exported `VT_TUNING` profile in `src/lib/ecg/rhythms.ts` so VT visual adjustments are named constants (`cycleMs`, plateau height/wobble, trough depth/center/width, V sharpness, jitter) instead of scattered magic numbers.
+- Rebuilt `synthVT` around an analytic VTach function: a continuous wobbly upper plateau minus a clean triangular V trough each cycle, so the trace reads as always moving up/down instead of isolated spikes.
+- Tightened VT timing to `340ms` so the ECG sweep shows many compact complexes across the screen, closer to the supplied Pads reference.
+- Added seeded variation to trough center, depth, half-width, and V sharpness so some V troughs are sharper and some are wider/longer without becoming noisy artifact.
+- Updated rhythm tests to guard the two explicit criteria: variable clean V troughs and non-flat plateau wobble, plus timing, envelope, and artifact-free adjacent deltas.
+
+## [2026-05-13] [ecg] — Independent V-arm variability on VT
+
+- Added `ascentVar` and `descentVar` per-beat shifts (each `±0.03` of cycle) that nudge the rise and descent shoulders along `t` *independently of `plateauVar`*. A beat can have a sharp fast descent paired with a gentle wide ascent (or any combination) — V's are no longer mirror-symmetric across the cycle.
+- Effect: V-arm spans vary by roughly ±25% from their nominal width, hitting the user's "20–40% longer or shorter" target. The trace no longer reads as "robotic" — successive V's visibly differ in width and angle.
+- Relaxed the smoothness guard upper bound on `maxAdjacentDelta` from `0.10` to `0.25` to accommodate steep V transitions on the sharpest beats (the secondary `largeDeltas > 0.04` count, capped at 80, remains the real noise detector).
+- Two new tests: `varies V-arm spans across beats` (max-min span > 12 samples on each side across 24 beats) and `produces asymmetric V arms on some beats` (>5/24 beats with |ascent - descent| > 6 samples).
+
+## [2026-05-13] [ecg] — VT peak/trough outliers: half-height and near-double beats, independently
+
+- Replaced the single `ampVar` with an outlier-style distribution: ~10% of beats are half-height (`0.50–0.65 × baseline`), ~10% are near-double (`1.30–1.50 ×`), and ~80% stay in the normal range (`0.85–1.15 ×`). Peak height range now ~0.20 to ~0.95 (was 0.30 to 0.70).
+- Added an independent `lowVar` for trough depth with the same outlier distribution — a beat can be tall with a shallow trough, or short with a deep trough. Trough range now ~-0.20 to ~-0.80.
+- New test `getEcgRhythm("vt") produces half-height and near-double outliers` samples 60 seeded beats and asserts the extremes hit both ends for peak and trough independently (min peak < 0.40, max peak > 0.65, max trough > -0.40, min trough < -0.55). Existing envelope test relaxed to bracket the new wider range.
+
+## [2026-05-13] [ecg] — Longer VT plateaus, tighter trough recovery, wider amplitude spread
+
+- Bumped `plateauVar` range from `[-0.025, +0.075]` to `[-0.025, +0.115]` — some beats now hold the plateau across ~45% of the cycle (was ~25% max). Most beats are visibly wider; ~1 in 6 are shorter.
+- Shifted the trough/recovery waypoints with a fraction of `plateauVar` (`w(0.72 + plateauVar * 0.5)`, `w(0.88 + plateauVar * 0.2)`) so extended plateaus compress the V+recovery region — the horizontal gap *between* successive plateaus is now noticeably shorter, matching the rapid-VT silhouette in the reference.
+- Widened `ampVar` from `[0.78, 1.12]` to `[0.65, 1.20]` for a "decent bit" more variety in peak height and trough depth beat-to-beat. Test envelope relaxed accordingly: peak in `[0.25, 0.85]`, trough in `[-0.85, -0.25]`, `roundedLow / data.length > 0.20` (was 0.25, since wider plateaus take samples away from the rounded low region).
+
+## [2026-05-13] [ecg] — Variable plateau width on VT peaks
+
+- Added `plateauVar` to `synthVT` (range `-0.025` to `+0.075` of cycle, asymmetric so most beats extend but ~1 in 4 are shorter). The pre-rise low and rise shoulder waypoints shift earlier by `plateauVar`; the descent shoulder and post-descent low shift later by the same amount — rise/descent slopes are preserved, only the plateau width changes per beat.
+- Apex inner waypoints (notch/twin-hump variants) keep their offsets relative to `apexT`; verified they stay inside the shoulder bracket even at max compression. Trough waypoints at `w(0.72)` / `w(0.88)` unchanged — the trough region absorbs the plateau's extra width (still ≥ 0.075 of cycle wide in the worst case).
+- New test `getEcgRhythm("vt") varies plateau width across beats` samples 24 seeded beats and asserts the spread in near-peak sample count (`> peak * 0.85`) is at least 20 samples — confirms the bi-directional `plateauVar` reaches both ends across many beats.
+
+## [2026-05-13] [ecg] — Per-beat apex variability on VT
+
+- `synthVT` now picks a seeded peak-shape variant for every beat: asymmetric single peak, mid-notch, or twin hump. The dominant apex also drifts ±0.02 horizontally and the notch dip is ~10% of peak height (`high * 0.86–0.90`).
+- Variants are spliced into the existing waypoint list between the rise (`w(0.18)`) and descent (`w(0.39)`) — `smoothPoints` handles arbitrary-length waypoint sequences so no other code changed. Pre-rise, trough, and tail waypoints are untouched.
+- New test `getEcgRhythm("vt") produces notched/twin-hump peaks on some beats` verifies that across 24 seeded beats at least one shows a true dip (≥4% below peak) between two near-peak (≥96% of peak) samples — false positives from soft-contour ripple are excluded by the strict thresholds.
+
+## [2026-05-13] [ecg] — Wider beat-to-beat variability in VT
+
+- Expanded `synthVT` per-beat envelope: amplitude now varies ~0.78–1.12 (was 0.92–1.04), added a ±0.11 positive/negative dominance tilt, ±14% horizontal width variation, and a wider phase shift. Result is the polymorphic look in the new reference (some beats taller / more positive-dominant, others narrower or deeper) without making any individual beat artifact-noisy.
+- Relaxed VT shape envelope tests to match: peak in [0.3, 0.8], trough in [-0.75, -0.3], beat-to-beat L1 diff bumped to [2, 120]. The "smooth, not artifact-noisy" max-adjacent-delta guard is untouched — within-beat smoothness is preserved.
+
+## [2026-05-12] [ecg] — Correct VTach to rounded screenshot silhouette
+
+- Replaced the noisy negative-dominant VTach generator with a smooth rounded-box complex matching the screenshot silhouette: soft rise, broad rounded top, smooth fall, and rounded low segment
+- Kept subtle beat-to-beat variation without artifact-like noise or sharp downward spikes
+- Fixed ECG timing so `getCycleMs` no longer calls the VT waveform factory every animation tick
+- Reduced ECG amplitude/cycle jitter so VT keeps the reference shape instead of wobbling away from it
+- Updated VTach tests to guard the rounded plateau/low-segment shape and reject noisy adjacent jumps
+
 ## [2026-05-12] [ecg] — VT negative-dominant + per-beat variation
 
 - Earlier passes (the two entries directly below) left the VT trace looking too smooth and too symmetric compared to the supplied `Completed/Vtach/IMG_0029.jpeg` reference; this pass course-corrects.
