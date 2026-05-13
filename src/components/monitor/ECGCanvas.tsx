@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { startRenderer } from '@/lib/ecg/renderer'
-import { ECG_RHYTHMS, ECG_SWEEP_MS } from '@/lib/ecg/rhythms'
+import { ECG_RHYTHMS, ECG_SWEEP_MS, getEcgRhythm } from '@/lib/ecg/rhythms'
 import { COLORS, cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
 
@@ -24,15 +24,16 @@ export function ECGCanvas({ rhythm, hr, className }: ECGCanvasProps) {
 
   useEffect(() => {
     if (!canvasRef.current) return
-    const pick = () => ECG_RHYTHMS[rhythmRef.current] ?? ECG_RHYTHMS.nsr
+    const pick = () => getEcgRhythm(rhythmRef.current)
     return startRenderer({
       canvas: canvasRef.current,
       color: COLORS.ecgGreen,
       sweepMs: ECG_SWEEP_MS,
-      ampJitter: 0.08,
-      cycleJitter: 0.04,
+      ampJitter: 0.05,
+      cycleJitter: 0.03,
       getWaveform: pick,
-      getCycleMs: () => pick().cycleMs ?? 60000 / Math.max(20, hrRef.current),
+      getCycleMs: () =>
+        ECG_RHYTHMS[rhythmRef.current].cycleMs ?? 60000 / Math.max(20, hrRef.current),
     })
   }, [])
 
