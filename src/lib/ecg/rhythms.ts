@@ -9,6 +9,21 @@ export const RESP_CYCLE_MS = 5000
 export const ETCO2_SCALE_MAX = 150
 const SAMPLES = 600
 
+export const VT_TUNING = {
+  cycleMs: 340,
+  plateau: [0.10, 0.18],
+  plateauDrop: [0.035, 0.06],
+  plateauApexOffset: 0.38,
+  plateauWobble: [0.004, 0.009],
+  troughDepth: [0.5, 0.68],
+  troughCenter: [0.48, 0.56],
+  troughHalfWidth: [0.22, 0.32],
+  vSharpness: [0.9, 1.35],
+  ampJitter: [0.92, 1.1],
+  fineWobble: 0.0015,
+  microNoise: 0.0004,
+} as const
+
 function flatLine(): Float32Array {
   return new Float32Array(SAMPLES)
 }
@@ -43,6 +58,13 @@ function triangle(t: number, start: number, peak: number, end: number): number {
   return 1 - (t - peak) / (end - peak)
 }
 
+type Range = readonly [number, number]
+
+function between(rand: () => number, range: Range): number {
+  const [min, max] = range
+  return min + rand() * (max - min)
+}
+
 function synthNSR(g: NsrGains = {}): Float32Array {
   const pGain = g.pGain ?? 1
   const qGain = g.qGain ?? 1
@@ -70,20 +92,40 @@ function synthNSR(g: NsrGains = {}): Float32Array {
 function synthVT(seed = 1): Float32Array {
   const out = new Float32Array(SAMPLES)
   const rand = mulberry32(seed)
-  const ampVar = 0.88 + rand() * 0.18
-  const widthVar = 0.92 + rand() * 0.14
-  const shiftVar = (rand() - 0.5) * 0.04
+  const ampVar = between(rand, VT_TUNING.ampJitter)
+  const microPhase = rand() * Math.PI * 2
+  const hashPhase = rand() * Math.PI * 2
+  const plateau = between(rand, VT_TUNING.plateau) * ampVar
+  const plateauDrop = between(rand, VT_TUNING.plateauDrop) * ampVar
+  const plateauWobble = between(rand, VT_TUNING.plateauWobble) * ampVar
+  const troughDepth = between(rand, VT_TUNING.troughDepth) * ampVar
+  const troughCenter = between(rand, VT_TUNING.troughCenter)
+  const plateauApex = (troughCenter + VT_TUNING.plateauApexOffset) % 1
+  const halfWidth = between(rand, VT_TUNING.troughHalfWidth)
+  const vSharpness = between(rand, VT_TUNING.vSharpness)
   for (let i = 0; i < SAMPLES; i++) {
     const t = i / SAMPLES
-    const preBump = 0.22 * gaussian(i, SAMPLES * (0.14 + shiftVar), SAMPLES * 0.06 * widthVar)
-    const mainSpike = -0.92 * ampVar * gaussian(i, SAMPLES * (0.32 + shiftVar), SAMPLES * 0.072 * widthVar)
-    const rebound = 0.46 * ampVar * gaussian(i, SAMPLES * (0.48 + shiftVar), SAMPLES * 0.07 * widthVar)
-    const notch = -0.11 * gaussian(i, SAMPLES * (0.60 + shiftVar), SAMPLES * 0.05)
-    const tail = 0.07 * gaussian(i, SAMPLES * 0.78, SAMPLES * 0.13)
-    const wander = 0.028 * Math.sin(t * Math.PI * 1.7 + seed * 0.31)
-    const hash = ((i * 9301 + 49297 + seed * 2371) >>> 0) % 233280
-    const noise = (hash / 233280 - 0.5) * 0.055
-    out[i] = preBump + mainSpike + rebound + notch + tail + wander + noise
+    const linearDistanceFromTrough = Math.abs(t - troughCenter)
+    const linearDistanceFromApex = Math.abs(t - plateauApex)
+    const circularDistanceFromApex = Math.min(
+      linearDistanceFromApex,
+      1 - linearDistanceFromApex,
+    )
+    const vProgress = Math.max(0, 1 - linearDistanceFromTrough / halfWidth)
+    const vTrough = Math.pow(vProgress, vSharpness)
+    const plateauDome = 1 - smoothstep(circularDistanceFromApex / 0.5)
+    const plateauContour =
+      plateau -
+      plateauDrop * (1 - plateauDome) +
+      plateauWobble * (plateauDome - 0.5)
+    const fineContour =
+      VT_TUNING.fineWobble * Math.sin(t * Math.PI * 4 + seed * 0.27) +
+      VT_TUNING.fineWobble * 0.35 * Math.sin(t * Math.PI * 6 + microPhase)
+    const microNoise =
+      VT_TUNING.microNoise *
+      Math.sin(t * Math.PI * 43 + hashPhase) *
+      (0.55 + 0.45 * Math.sin(t * Math.PI * 2 + microPhase))
+    out[i] = plateauContour + fineContour + microNoise - troughDepth * vTrough
   }
   return out
 }
@@ -186,17 +228,12 @@ function synthCapnoShark(baseline: number, peak: number): Float32Array {
 export const ECG_RHYTHMS: Record<Rhythm, WaveformDef> = {
   nsr:      { data: synthNSR(), cycleMs: null },
   vf:       { data: synthVF(),  cycleMs: 330 },
-  vt:       { data: synthVT(1), cycleMs: 450 },
+  vt:       { data: synthVT(1), cycleMs: VT_TUNING.cycleMs },
   asystole: { data: flatLine(), cycleMs: 1000 },
   pea:      { data: synthNSR(), cycleMs: null },
 }
 
-let vtSeedCounter = 1
 export function getEcgRhythm(rhythm: Rhythm): WaveformDef {
-  if (rhythm === 'vt') {
-    vtSeedCounter = (vtSeedCounter + 1) >>> 0 || 1
-    return { data: synthVT(vtSeedCounter), cycleMs: 450 }
-  }
   return ECG_RHYTHMS[rhythm] ?? ECG_RHYTHMS.nsr
 }
 
