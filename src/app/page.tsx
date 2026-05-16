@@ -11,6 +11,7 @@ import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
+import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
@@ -27,6 +28,7 @@ export default function MonitorPage() {
   const [secondary, setSecondary] = useState<SecondaryChannel>('spo2')
   const [patientMode, setPatientMode] = useState<PatientMode>(DEFAULT_VITALS.patient_mode)
   const [patientModalOpen, setPatientModalOpen] = useState(false)
+  const [callerInfoOpen, setCallerInfoOpen] = useState(false)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
   const [now, setNow] = useState<Date | null>(null)
 
@@ -53,72 +55,80 @@ export default function MonitorPage() {
 
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
+  const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
   const defib = useDefibSequence({ patientMode })
   const alarm = useAlarm(confirmed)
 
   const isTwelveLead = view === '12lead'
 
   const screen = (
-    <MonitorLayout
-      topBar={
-        <TopStatusBar
-          date={date}
-          time={time}
-          patientMode={patientMode}
-          patientModeActive={patientModalOpen}
-          onPatientModeClick={() => setPatientModalOpen(true)}
-          batteryPercent={85}
-          sessionTimer={sessionTimer}
-        />
-      }
-      subBar={<SubBar />}
-      sidebar={
-        <LeftSidebar
-          twelveLeadActive={isTwelveLead}
-          etco2Active={secondary === 'etco2'}
-          onTwelveLead={() => setView('12lead')}
-          onToggleEtco2={() =>
-            setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
-          }
-          onBack={() => setView('main')}
-        />
-      }
-      main={
-        isTwelveLead ? (
-          <TwelveLeadPage rhythm={confirmed.rhythm} hr={confirmed.hr} />
-        ) : (
-          <WaveformPanel
-            secondaryChannel={secondary}
-            rhythm={confirmed.rhythm}
-            hr={confirmed.hr}
-            spo2={confirmed.spo2}
-            etco2={confirmed.etco2}
-            spo2Waveform={confirmed.spo2_waveform}
-            etco2Waveform={confirmed.etco2_waveform}
-          />
-        )
-      }
-      vitals={
-        <VitalsStrip
-          hr={confirmed.hr}
-          bpSys={confirmed.bp_sys}
-          bpDia={confirmed.bp_dia}
-          etco2={confirmed.etco2}
-          spo2={confirmed.spo2}
-          activeAlarms={alarm.activeAlarms}
-          searching={false}
-        />
-      }
-      bottomBar={
-        isTwelveLead ? null : (
-          <BottomStatusBar
+    <div className="relative h-full w-full">
+      <MonitorLayout
+        topBar={
+          <TopStatusBar
+            date={date}
+            time={time}
             patientMode={patientMode}
-            joules={defib.energy}
-            shockCount={defib.shockCount}
+            patientModeActive={patientModalOpen}
+            onPatientModeClick={() => setPatientModalOpen(true)}
+            batteryPercent={85}
+            sessionTimer={sessionTimer}
           />
-        )
-      }
-    />
+        }
+        subBar={<SubBar />}
+        sidebar={
+          <LeftSidebar
+            twelveLeadActive={isTwelveLead}
+            etco2Active={secondary === 'etco2'}
+            onTwelveLead={() => setView('12lead')}
+            onToggleEtco2={() =>
+              setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
+            }
+            onBack={() => setView('main')}
+          />
+        }
+        main={
+          isTwelveLead ? (
+            <TwelveLeadPage rhythm={confirmed.rhythm} hr={confirmed.hr} />
+          ) : (
+            <WaveformPanel
+              secondaryChannel={secondary}
+              rhythm={confirmed.rhythm}
+              hr={confirmed.hr}
+              spo2={confirmed.spo2}
+              etco2={confirmed.etco2}
+              spo2Waveform={confirmed.spo2_waveform}
+              etco2Waveform={confirmed.etco2_waveform}
+            />
+          )
+        }
+        vitals={
+          <VitalsStrip
+            hr={confirmed.hr}
+            bpSys={confirmed.bp_sys}
+            bpDia={confirmed.bp_dia}
+            etco2={confirmed.etco2}
+            spo2={confirmed.spo2}
+            activeAlarms={alarm.activeAlarms}
+            searching={false}
+          />
+        }
+        bottomBar={
+          isTwelveLead ? null : (
+            <BottomStatusBar
+              patientMode={patientMode}
+              joules={defib.energy}
+              shockCount={defib.shockCount}
+            />
+          )
+        }
+      />
+      <CallerInfoModal
+        open={callerInfoOpen}
+        info={callerInfoConfirmed}
+        onClose={() => setCallerInfoOpen(false)}
+      />
+    </div>
   )
 
   return (
@@ -132,7 +142,10 @@ export default function MonitorPage() {
         canCharge={defib.canCharge}
         canShock={defib.canShock}
         canAdjustEnergy={defib.canAdjustEnergy}
-        onAnalyse={defib.onAnalyse}
+        onAnalyse={() => {
+          defib.onAnalyse()
+          setCallerInfoOpen(true)
+        }}
         onCharge={defib.onCharge}
         onShock={defib.onShock}
         onEnergyUp={defib.onEnergyUp}
