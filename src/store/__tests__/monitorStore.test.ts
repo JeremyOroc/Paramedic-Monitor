@@ -62,6 +62,32 @@ describe('monitorStore', () => {
     expect(s.confirmed).toEqual(def)
   })
 
+  it('resetVitalsToNormal resets only draft vital numbers', () => {
+    useMonitorStore.getState().setDraft('hr', 180)
+    useMonitorStore.getState().setDraft('bp_sys', 230)
+    useMonitorStore.getState().setDraft('bp_dia', 240)
+    useMonitorStore.getState().setDraft('etco2', 10)
+    useMonitorStore.getState().setDraft('spo2', 80)
+    useMonitorStore.getState().setDraft('rhythm', 'vf')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().setDraft('rhythm', 'vt')
+
+    useMonitorStore.getState().resetVitalsToNormal()
+
+    const s = useMonitorStore.getState()
+    expect(s.draft).toMatchObject({
+      hr: DEFAULT_VITALS.hr,
+      bp_sys: DEFAULT_VITALS.bp_sys,
+      bp_dia: DEFAULT_VITALS.bp_dia,
+      etco2: DEFAULT_VITALS.etco2,
+      spo2: DEFAULT_VITALS.spo2,
+      rhythm: 'vt',
+    })
+    expect(s.saved.hr).toBe(180)
+    expect(s.confirmed.hr).toBe(180)
+  })
+
   it('rhythm flows through the same draft → save → send pipeline', () => {
     useMonitorStore.getState().setDraft('rhythm', 'vf')
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('nsr')
