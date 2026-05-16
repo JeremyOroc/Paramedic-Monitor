@@ -6,11 +6,12 @@ export function useSessionTimer(isRunning: boolean): string {
 
   useEffect(() => {
     if (!isRunning) {
-      setElapsed(0)
       startRef.current = null
-      return
+      const resetId = setTimeout(() => setElapsed(0), 0)
+      return () => clearTimeout(resetId)
     }
 
+    const resetId = setTimeout(() => setElapsed(0), 0)
     startRef.current = Date.now()
 
     function tick() {
@@ -28,13 +29,15 @@ export function useSessionTimer(isRunning: boolean): string {
     document.addEventListener('visibilitychange', onVisible)
 
     return () => {
+      clearTimeout(resetId)
       clearInterval(id)
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [isRunning])
 
-  const h = Math.floor(elapsed / 3600)
-  const m = Math.floor((elapsed % 3600) / 60)
-  const s = elapsed % 60
+  const displayElapsed = isRunning ? elapsed : 0
+  const h = Math.floor(displayElapsed / 3600)
+  const m = Math.floor((displayElapsed % 3600) / 60)
+  const s = displayElapsed % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }

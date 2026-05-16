@@ -1,5 +1,7 @@
 'use client'
 
+import { getActiveAlarms, type AlarmChannel } from '@/types/vitals'
+
 import { VitalBox } from './VitalBox'
 
 type VitalsStripProps = {
@@ -8,7 +10,13 @@ type VitalsStripProps = {
   bpDia: number | string
   etco2: number | string
   spo2: number | string
+  activeAlarms?: AlarmChannel[]
   searching?: boolean
+}
+
+function toNumber(value: number | string): number {
+  if (typeof value === 'number') return value
+  return Number(value)
 }
 
 export function VitalsStrip({
@@ -17,8 +25,16 @@ export function VitalsStrip({
   bpDia,
   etco2,
   spo2,
+  activeAlarms,
   searching = true,
 }: VitalsStripProps) {
+  const alarms = activeAlarms ?? getActiveAlarms({
+    hr: toNumber(hr),
+    bp_sys: toNumber(bpSys),
+    bp_dia: toNumber(bpDia),
+    spo2: toNumber(spo2),
+  })
+
   return (
     <div className="h-full w-full flex flex-col bg-black">
       <VitalBox
@@ -26,6 +42,7 @@ export function VitalsStrip({
         value={hr}
         unit="bpm"
         color="ecgGreen"
+        alarming={alarms.includes('hr')}
         className="flex-1 min-h-0"
       />
       <VitalBox
@@ -33,6 +50,7 @@ export function VitalsStrip({
         stackedValues={{ top: bpSys, bottom: bpDia }}
         unit="mmHg"
         color="cyanBP"
+        alarming={alarms.includes('bp')}
         className="flex-1 min-h-0"
       />
       <VitalBox
@@ -47,6 +65,7 @@ export function VitalsStrip({
         value={spo2}
         unit="%"
         color="yellowSpO2"
+        alarming={alarms.includes('spo2')}
         className="flex-1 min-h-0"
       />
       {searching && (

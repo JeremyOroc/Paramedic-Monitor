@@ -12,10 +12,12 @@ import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
+import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
+import { formatMonitorClock } from '@/lib/monitorClock'
 
 type MonitorView = 'main' | '12lead'
 type SecondaryChannel = 'spo2' | 'etco2'
@@ -26,7 +28,7 @@ export default function MonitorPage() {
   const [patientMode, setPatientMode] = useState<PatientMode>(DEFAULT_VITALS.patient_mode)
   const [patientModalOpen, setPatientModalOpen] = useState(false)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
-  const [now, setNow] = useState<Date>(() => new Date())
+  const [now, setNow] = useState<Date | null>(null)
 
   const timeZone = (() => {
     try {
@@ -38,17 +40,21 @@ export default function MonitorPage() {
   })()
 
   useEffect(() => {
+    const firstTickId = setTimeout(() => setNow(new Date()), 0)
     const id = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(id)
+    return () => {
+      clearTimeout(firstTickId)
+      clearInterval(id)
+    }
   }, [])
 
-  const date = now.toLocaleDateString('sv-SE', { timeZone })
-  const time = now.toLocaleTimeString('en-CA', { timeZone, hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const { date, time } = formatMonitorClock(now, timeZone)
   const sessionTimer = useSessionTimer(isTimerRunning)
 
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const defib = useDefibSequence({ patientMode })
+  const alarm = useAlarm(confirmed)
 
   const isTwelveLead = view === '12lead'
 
@@ -99,6 +105,7 @@ export default function MonitorPage() {
           bpDia={confirmed.bp_dia}
           etco2={confirmed.etco2}
           spo2={confirmed.spo2}
+          activeAlarms={alarm.activeAlarms}
           searching={false}
         />
       }
