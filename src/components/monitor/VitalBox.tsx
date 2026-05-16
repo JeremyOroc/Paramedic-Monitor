@@ -27,6 +27,16 @@ const COLOR_CLASS: Record<VitalColor, string> = {
   yellowSpO2: 'text-yellow-spo2',
 }
 
+const VALUE_CLASS = [
+  'flex w-full items-center justify-center self-stretch text-center font-mono font-bold text-[2.1rem] leading-none tabular-nums',
+]
+
+const STACKED_VALUE_CLASS = [
+  'flex w-full flex-col items-center justify-center self-stretch text-center font-mono font-bold text-[1.75rem] leading-none tabular-nums',
+]
+
+const ALARM_FLASH_CLASS = 'vital-alarm-flash'
+
 export function VitalBox({
   label,
   value,
@@ -39,6 +49,7 @@ export function VitalBox({
 }: VitalBoxProps) {
   const colorClass = COLOR_CLASS[color]
   const valueColorClass = alarming ? 'text-alarm-red' : colorClass
+  const flashClass = alarming ? ALARM_FLASH_CLASS : null
   return (
     <div
       className={cn(
@@ -66,10 +77,8 @@ export function VitalBox({
       </div>
       {stackedValues ? (
         <div
-          className={cn(
-            'flex w-full flex-col items-center justify-center self-stretch text-center font-mono font-bold text-[1.75rem] leading-none tabular-nums',
-            valueColorClass,
-          )}
+          className={cn(STACKED_VALUE_CLASS, valueColorClass, flashClass)}
+          data-testid="vital-value"
         >
           <div>{stackedValues.top}</div>
           <hr className={cn('mx-auto my-1 w-4/5 border-t opacity-60', valueColorClass)} />
@@ -77,10 +86,8 @@ export function VitalBox({
         </div>
       ) : (
         <div
-          className={cn(
-            'flex w-full items-center justify-center self-stretch text-center font-mono font-bold text-[2.1rem] leading-none tabular-nums',
-            valueColorClass,
-          )}
+          className={cn(VALUE_CLASS, valueColorClass, flashClass)}
+          data-testid="vital-value"
         >
           {value}
         </div>

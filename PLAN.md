@@ -318,6 +318,7 @@ paramedic-monitor/
 
 **Monitor alarm behavior:**
 - Any alarming vital box turns white, with a red header, white header text, and red number text
+- The alarming vital value fades between full opacity and 0 opacity over a 1.9s loop; non-alarming vitals do not flash
 - BP uses one PNI box; either systolic or diastolic outside range alarms the whole box
 - Alarm audio loops while one or more vitals are alarming
 - Only one alarm sound may play at a time, even when multiple vitals are alarming

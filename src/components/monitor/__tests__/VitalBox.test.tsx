@@ -31,6 +31,13 @@ describe('VitalBox', () => {
     expect(screen.getByText('FC')).toHaveClass('text-white')
     expect(screen.getByText('bpm')).toHaveClass('text-white')
     expect(screen.getByText('38')).toHaveClass('text-alarm-red')
+    expect(screen.getByTestId('vital-value')).toHaveClass('vital-alarm-flash')
     expect(screen.getByText('FC').closest('[data-alarming="true"]')).toHaveClass('bg-white')
+  })
+
+  it('does not flash the value when the vital is normal', () => {
+    render(<VitalBox label="FC" value={80} unit="bpm" color="ecgGreen" />)
+
+    expect(screen.getByTestId('vital-value')).not.toHaveClass('vital-alarm-flash')
   })
 })

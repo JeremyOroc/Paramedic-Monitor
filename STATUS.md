@@ -52,6 +52,7 @@
   - [x] `useAlarm` starts one looping alarm sound while any vital is alarming, and stops it when all vitals normalize
   - [x] Alarm MP3 copied to `public/audio/alarm.mp3`
   - [x] Alarming vital boxes render white background, red header, white header text, and red number text; either BP value alarms the whole PNI box
+  - [x] Alarming vital values fade between visible and hidden over a 1.9s loop; non-alarming vitals remain steady
   - [x] Tests added for thresholds, hook play/stop behavior, and alarm visual styling; full suite passes (111 tests)
 - [x] **Admin vitals normal reset — COMPLETE:**
   - [x] Added a top-of-vitals `Normal` button in the admin dashboard

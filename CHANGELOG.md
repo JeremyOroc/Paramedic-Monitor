@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-05-16] [ui+alarm] — Flash alarming vital values
+
+- Added a value-only flash animation for alarming vitals, alternating the displayed number between full opacity and 0 opacity.
+- Slowed the value fade cycle to 1.9s so the alarm transition is smoother and less abrupt.
+- Kept the alarm header and box styling stable so only the affected vital value flashes.
+- Updated `VitalBox` tests to verify flashing is applied only when a vital is alarming.
+
 ## [2026-05-16] [ui] — Fix monitor clock hydration mismatch
 
 - Changed the monitor top-bar clock to render a stable placeholder during SSR and the first client render, then start the real local clock after mount.
