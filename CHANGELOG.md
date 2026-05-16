@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-05-16] [ui] — Fix monitor clock hydration mismatch
+
+- Changed the monitor top-bar clock to render a stable placeholder during SSR and the first client render, then start the real local clock after mount.
+- Added `src/lib/monitorClock.ts` so placeholder and timezone formatting behavior is tested directly.
+- This fixes the React hydration error where the server rendered one second and the browser hydrated on the next second.
+
+## [2026-05-16] [instructor] — Add Normal button for admin vitals
+
+- Added a top-of-vitals `Normal` button to the admin dashboard's `VitalsControls`.
+- Added `resetVitalsToNormal` in the monitor store so draft HR, BP systolic, BP diastolic, EtCO2, and SpO2 reset to `DEFAULT_VITALS` without changing rhythm/waveform selections.
+- Kept the existing Save → Send flow intact: the button updates draft values, and the monitor only changes after the instructor saves and sends.
+- Added store and component tests for the new reset behavior.
+
+## [2026-05-16] [ui+alarm] — Add vital threshold alarms and looping audio
+
+- Confirmed and recorded the client alarm thresholds in `PLAN.md`: HR <40/>140, BP systolic <90/>200, BP diastolic <25/>225, SpO2 <90, and no EtCO2 alarm.
+- Added centralized alarm evaluation plus `useAlarm`, which plays a single looping alarm while any vital is out of range and stops when all vitals normalize.
+- Copied the provided alarm MP3 to `public/audio/alarm.mp3` and wired it through `playAlarm()` / `pauseAlarm()`.
+- Added per-vital alarm styling: white box background, red header, white header text, and red numbers; systolic or diastolic alarms the whole PNI box.
+- Updated tests for threshold boundaries, multiple simultaneous alarms, hook play/stop behavior, and alarm UI styling. Full suite: 111 tests passing; lint passes.
+- Cleaned up related hook lint findings in `useSessionTimer` and `DeviceShell` so `npm run lint` completes successfully.
+
 ## [2026-05-13] [ecg] — Move VT plateau apex earlier
 
 - Shifted the VT plateau dome's apex earlier in the rounded arc using `VT_TUNING.plateauApexOffset`, so the rest of the plateau slopes downward into the V trough instead of cresting near the middle.

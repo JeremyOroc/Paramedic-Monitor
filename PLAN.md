@@ -51,7 +51,7 @@ paramedic-monitor/
 │   │       ├── vt/
 │   │       ├── asystole/
 │   │       └── pea/
-│   └── sounds/
+│   └── audio/
 │       └── alarm.mp3                 # looping alarm audio (from paramedic's drive)
 │
 ├── src/
@@ -267,6 +267,7 @@ paramedic-monitor/
 **Steps:**
 1. `InstructorLayout` — dark panel, responsive columns
 2. `VitalsControls` + `VitalInput` — inputs for HR, BP sys/dia, EtCO2, SpO2
+   - Include a top-of-vitals `Normal` button that resets draft vital numbers to normal defaults while preserving rhythm/waveform selections and the Save → Send workflow
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
 4. On input change → set `pendingFlags[field] = true` → field turns amber/orange (pending color)
 5. `SendButton` — sets `pendingFlags` all false, sets `confirmedVitals = draftVitals`
@@ -275,6 +276,10 @@ paramedic-monitor/
 8. `DefibPanel` — Patient mode selector (Adult/Pediatric/Neonate), energy numeric input + presets (50J, 100J, 120J, 150J, 200J), ANALYSE/CHARGE/SHOCK buttons
 9. `useDefibSequence` hook — state machine: `idle → analysing(5s) → charged → shocked → idle`; CHARGE only enabled after analysis; SHOCK only enabled after charge
 10. `PatientInfoForm` — age, sex, first/last/middle name, patient ID fields
+
+**Testing:**
+- Component tests cover the top-of-vitals `Normal` button and confirm it resets draft vital numbers without bypassing Send.
+- Store tests cover the `resetVitalsToNormal` action and verify it preserves non-vital fields.
 
 **Milestone:** Instructor panel fully interactive. Editing vitals turns fields amber. Send confirms them. Defib sequence enforces correct order with progress bars.
 
@@ -302,16 +307,29 @@ paramedic-monitor/
 ---
 
 ### Phase 8 — Alarms + Audio
-**Goal:** Alarm sounds trigger on threshold violations; instructor can acknowledge.
+**Goal:** Alarm sounds trigger on threshold violations and clear automatically when vitals normalize.
+
+**Confirmed thresholds:**
+- HR alarms below 40 bpm or above 140 bpm
+- BP alarms when systolic is below 90 mmHg or above 200 mmHg
+- BP alarms when diastolic is below 25 mmHg or above 225 mmHg
+- SpO2 alarms below 90%
+- EtCO2 has no alarm threshold for now
+
+**Monitor alarm behavior:**
+- Any alarming vital box turns white, with a red header, white header text, and red number text
+- BP uses one PNI box; either systolic or diastolic outside range alarms the whole box
+- Alarm audio loops while one or more vitals are alarming
+- Only one alarm sound may play at a time, even when multiple vitals are alarming
+- Alarm audio stops automatically when every vital returns to the normal range
 
 **Steps:**
 1. Build `audio.ts` — `playAlarm()`, `pauseAlarm()` helpers wrapping `<audio>` element
-2. `useAlarm` hook — monitors live vitals; triggers alarm when `hr < 40 || hr > 150 || bp_sys < 90 || bp_sys > 200`
-3. `AlarmOverlay` — flashing red border + alarm audio loop on student monitor
-4. Instructor alarm ack button → broadcasts `alarm_ack` → monitor silences alarm
-5. Alarm state resets automatically when vitals return to normal range
+2. `useAlarm` hook — monitors live vitals; triggers alarm for HR, BP, or SpO2 threshold violations
+3. Vital boxes render per-vital alarm styling on student monitor
+4. Alarm state resets automatically when vitals return to normal range
 
-**Milestone:** Instructor sets HR=220 → student monitor alarm triggers (visual + audio). Instructor acknowledges → silences.
+**Milestone:** Instructor sets HR=220 → student monitor alarm triggers (visual + audio). Returning all alarming vitals to normal silences it.
 
 ---
 
@@ -374,6 +392,6 @@ paramedic-monitor/
 | Session routing | `/session/[code]/instructor` vs `/session/[code]/monitor` |
 | Instructor exclusivity | One instructor per session via Supabase Presence |
 | Realtime mechanism | Supabase Broadcast (sub-100ms) + Postgres for late-joiner recovery |
-| Audio | Pre-recorded files in `/public/sounds/` |
-| Alarm thresholds | HR < 40 or > 150 bpm; BP sys < 90 or > 200 mmHg |
+| Audio | Pre-recorded files in `/public/audio/` |
+| Alarm thresholds | HR < 40 or > 140 bpm; BP sys < 90 or > 200 mmHg; BP dia < 25 or > 225 mmHg; SpO2 < 90%; no EtCO2 threshold |
 | Joule defaults | Adult 120J / Pediatric 50J / Neonate 10J |

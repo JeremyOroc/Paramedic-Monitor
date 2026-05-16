@@ -46,6 +46,22 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Vitals alarm system — COMPLETE:**
+  - [x] Confirmed client thresholds: HR <40/>140 bpm; BP systolic <90/>200 mmHg; BP diastolic <25/>225 mmHg; SpO2 <90%; no EtCO2 threshold
+  - [x] `getActiveAlarms` centralizes alarm evaluation for HR, BP, and SpO2
+  - [x] `useAlarm` starts one looping alarm sound while any vital is alarming, and stops it when all vitals normalize
+  - [x] Alarm MP3 copied to `public/audio/alarm.mp3`
+  - [x] Alarming vital boxes render white background, red header, white header text, and red number text; either BP value alarms the whole PNI box
+  - [x] Tests added for thresholds, hook play/stop behavior, and alarm visual styling; full suite passes (111 tests)
+- [x] **Admin vitals normal reset — COMPLETE:**
+  - [x] Added a top-of-vitals `Normal` button in the admin dashboard
+  - [x] `resetVitalsToNormal` resets draft HR/BP/EtCO2/SpO2 values to `DEFAULT_VITALS`
+  - [x] Rhythm and waveform selections are preserved; confirmed monitor values are not changed until Save → Send
+  - [x] Tests added for the store action and `VitalsControls` button behavior
+- [x] **Monitor clock hydration fix — COMPLETE:**
+  - [x] Monitor top bar renders a stable SSR/client placeholder before mount
+  - [x] Real local date/time starts after hydration, avoiding server/client second mismatches
+  - [x] `monitorClock` tests cover placeholder and timezone formatting behavior
 - [x] **Physical shell refinement — COMPLETE:**
   - [x] `DeviceShell` outer frame rebuilt with blue rim, rounded grey face, recessed screen, top power button, and subtler ZOLL branding
   - [x] Left grey physical soft keys aligned with the inner screen's left sidebar labels; 12-lead, EtCO2, and back soft keys wired to existing navigation/channel behavior
@@ -129,7 +145,6 @@
 - [ ] **12-lead waveform assets** — User to provide gif/mp4 12-lead waveforms in `/public/waveforms/12lead/<rhythm>/<lead>.gif` for each rhythm × lead (I, II, III, aVR, aVL, aVF, V1–V6). ECG/SpO2/EtCO2 are now canvas-rendered and no longer need assets.
 - [ ] **Supabase credentials** — Deferred. Will be needed once realtime / sessions phase begins. Copy URL + anon key into `.env.local`, run the migration, enable Realtime on `vitals_snapshots`.
 - [ ] **Paramedic-supplied waveform videos** — Real ECG/SpO2/EtCO2/12-lead videos for production fidelity (later phase).
-- [ ] **Alarm thresholds** — HR <40/>150 bpm, BP sys <90/>200 mmHg. Confirm with paramedic friend.
 - [ ] **Neonate joule default** — Set to 10J. Confirm with paramedic friend.
 
 ---
