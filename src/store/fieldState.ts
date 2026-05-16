@@ -1,3 +1,5 @@
+import { CALLER_INFO_FIELDS, type CallerInfo } from '@/types/callerInfo'
+
 import type { Vitals } from './monitorStore'
 
 export type FieldStatus = 'clean' | 'dirty' | 'pending'
@@ -37,4 +39,12 @@ export function hasPending(saved: Vitals, confirmed: Vitals): boolean {
     saved.spo2_waveform !== confirmed.spo2_waveform ||
     saved.etco2_waveform !== confirmed.etco2_waveform
   )
+}
+
+export function hasCallerInfoDirty(draft: CallerInfo, saved: CallerInfo): boolean {
+  return CALLER_INFO_FIELDS.some(({ field }) => draft[field] !== saved[field])
+}
+
+export function hasCallerInfoPending(saved: CallerInfo, confirmed: CallerInfo): boolean {
+  return CALLER_INFO_FIELDS.some(({ field }) => saved[field] !== confirmed[field])
 }

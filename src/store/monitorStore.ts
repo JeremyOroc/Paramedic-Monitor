@@ -8,6 +8,7 @@ import {
   type Rhythm,
   type Spo2Waveform,
 } from '@/types/vitals'
+import { DEFAULT_CALLER_INFO, type CallerInfo, type CallerInfoField } from '@/types/callerInfo'
 
 export type Vitals = {
   hr: number
@@ -35,7 +36,11 @@ export type MonitorState = {
   draft: Vitals
   saved: Vitals
   confirmed: Vitals
+  callerInfoDraft: CallerInfo
+  callerInfoSaved: CallerInfo
+  callerInfoConfirmed: CallerInfo
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
+  setCallerInfoDraft: (field: CallerInfoField, value: string) => void
   resetVitalsToNormal: () => void
   save: () => void
   send: () => void
@@ -50,8 +55,13 @@ export const useMonitorStore = create<MonitorState>()(
       draft: initial,
       saved: initial,
       confirmed: initial,
+      callerInfoDraft: DEFAULT_CALLER_INFO,
+      callerInfoSaved: DEFAULT_CALLER_INFO,
+      callerInfoConfirmed: DEFAULT_CALLER_INFO,
       setDraft: (field, value) =>
         set((s) => ({ draft: { ...s.draft, [field]: value } })),
+      setCallerInfoDraft: (field, value) =>
+        set((s) => ({ callerInfoDraft: { ...s.callerInfoDraft, [field]: value } })),
       resetVitalsToNormal: () =>
         set((s) => ({
           draft: {
@@ -63,9 +73,25 @@ export const useMonitorStore = create<MonitorState>()(
             spo2: DEFAULT_VITALS.spo2,
           },
         })),
-      save: () => set((s) => ({ saved: { ...s.draft } })),
-      send: () => set((s) => ({ confirmed: { ...s.saved } })),
-      reset: () => set({ draft: initial, saved: initial, confirmed: initial }),
+      save: () =>
+        set((s) => ({
+          saved: { ...s.draft },
+          callerInfoSaved: { ...s.callerInfoDraft },
+        })),
+      send: () =>
+        set((s) => ({
+          confirmed: { ...s.saved },
+          callerInfoConfirmed: { ...s.callerInfoSaved },
+        })),
+      reset: () =>
+        set({
+          draft: initial,
+          saved: initial,
+          confirmed: initial,
+          callerInfoDraft: DEFAULT_CALLER_INFO,
+          callerInfoSaved: DEFAULT_CALLER_INFO,
+          callerInfoConfirmed: DEFAULT_CALLER_INFO,
+        }),
     }),
     {
       name: STORAGE_KEY,
