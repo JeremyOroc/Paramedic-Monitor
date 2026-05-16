@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-05-16] [instructor+monitor] — Add caller info display on ANALYZE
+
+- Added caller-info draft/saved/confirmed state to the monitor store so dispatch details follow the existing Save → Send admin workflow.
+- Added `CallerInfoForm` to a separate admin dashboard tab with fields for Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, optional nameable extra rows added one at a time, and Heure.
+- Added `CallerInfoModal` on the monitor and wired the physical ANALYZE button to show the sent caller info while preserving the existing defib analyse sequence.
+- Updated Save/Send buttons so caller-info edits enable the same staged workflow as vitals/rhythm changes.
+- Added tests for caller-info form input, admin tab switching, store flow, Save/Send enablement, modal rendering, and MonitorPage ANALYZE display.
+
 ## [2026-05-16] [ui+alarm] — Flash alarming vital values
 
 - Added a value-only flash animation for alarming vitals, alternating the displayed number between full opacity and 0 opacity.

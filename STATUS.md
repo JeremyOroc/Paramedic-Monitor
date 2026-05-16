@@ -59,6 +59,11 @@
   - [x] `resetVitalsToNormal` resets draft HR/BP/EtCO2/SpO2 values to `DEFAULT_VITALS`
   - [x] Rhythm and waveform selections are preserved; confirmed monitor values are not changed until Save → Send
   - [x] Tests added for the store action and `VitalsControls` button behavior
+- [x] **Caller info on ANALYZE — COMPLETE:**
+  - [x] Admin dashboard includes a separate Caller Info tab with fields: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, optional nameable extra rows added one at a time, Heure
+  - [x] Caller info uses draft/saved/confirmed state and the existing Save → Send workflow
+  - [x] Monitor shows the sent caller info when the physical ANALYZE button is clicked
+  - [x] Tests added for form input, admin tab switching, Save/Send enablement, store flow, modal rendering, and MonitorPage ANALYZE display
 - [x] **Monitor clock hydration fix — COMPLETE:**
   - [x] Monitor top bar renders a stable SSR/client placeholder before mount
   - [x] Real local date/time starts after hydration, avoiding server/client second mismatches

@@ -268,6 +268,7 @@ paramedic-monitor/
 1. `InstructorLayout` — dark panel, responsive columns
 2. `VitalsControls` + `VitalInput` — inputs for HR, BP sys/dia, EtCO2, SpO2
    - Include a top-of-vitals `Normal` button that resets draft vital numbers to normal defaults while preserving rhythm/waveform selections and the Save → Send workflow
+   - Include `CallerInfoForm` in its own admin tab for dispatch/caller info shown on the monitor after ANALYZE: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, optional nameable extra rows added one at a time, Heure
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
 4. On input change → set `pendingFlags[field] = true` → field turns amber/orange (pending color)
 5. `SendButton` — sets `pendingFlags` all false, sets `confirmedVitals = draftVitals`
@@ -280,6 +281,8 @@ paramedic-monitor/
 **Testing:**
 - Component tests cover the top-of-vitals `Normal` button and confirm it resets draft vital numbers without bypassing Send.
 - Store tests cover the `resetVitalsToNormal` action and verify it preserves non-vital fields.
+- Component/page tests cover caller-info draft/save/send flow and ANALYZE-triggered monitor display.
+- Admin page tests cover tab switching between monitor controls and caller-info form.
 
 **Milestone:** Instructor panel fully interactive. Editing vitals turns fields amber. Send confirms them. Defib sequence enforces correct order with progress bars.
 
