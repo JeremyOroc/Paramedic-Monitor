@@ -24,4 +24,13 @@ describe('VitalBox', () => {
     expect(screen.queryByText('120/89')).toBeNull()
     expect(container.querySelector('hr')).not.toBeNull()
   })
+
+  it('uses the alarm visual treatment when alarming', () => {
+    render(<VitalBox label="FC" value={38} unit="bpm" color="ecgGreen" alarming />)
+
+    expect(screen.getByText('FC')).toHaveClass('text-white')
+    expect(screen.getByText('bpm')).toHaveClass('text-white')
+    expect(screen.getByText('38')).toHaveClass('text-alarm-red')
+    expect(screen.getByText('FC').closest('[data-alarming="true"]')).toHaveClass('bg-white')
+  })
 })

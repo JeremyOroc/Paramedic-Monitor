@@ -12,6 +12,7 @@ import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
+import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -49,6 +50,7 @@ export default function MonitorPage() {
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const defib = useDefibSequence({ patientMode })
+  const alarm = useAlarm(confirmed)
 
   const isTwelveLead = view === '12lead'
 
@@ -99,6 +101,7 @@ export default function MonitorPage() {
           bpDia={confirmed.bp_dia}
           etco2={confirmed.etco2}
           spo2={confirmed.spo2}
+          activeAlarms={alarm.activeAlarms}
           searching={false}
         />
       }

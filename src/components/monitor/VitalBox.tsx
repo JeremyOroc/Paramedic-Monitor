@@ -16,6 +16,7 @@ type VitalBoxProps = {
   unit?: string
   color: VitalColor
   subLabel?: string
+  alarming?: boolean
   className?: string
 }
 
@@ -33,46 +34,61 @@ export function VitalBox({
   unit,
   color,
   subLabel,
+  alarming = false,
   className,
 }: VitalBoxProps) {
   const colorClass = COLOR_CLASS[color]
+  const valueColorClass = alarming ? 'text-alarm-red' : colorClass
   return (
     <div
       className={cn(
         'grid grid-rows-[auto_1fr_auto]',
         'border-b border-neutral-800 px-1 py-1',
+        alarming && 'bg-white border-alarm-red',
         className,
       )}
+      data-alarming={alarming ? 'true' : 'false'}
     >
-      <div className="flex items-baseline justify-between">
-        <span className={cn('text-[10px] font-mono uppercase tracking-normal', colorClass)}>
+      <div
+        className={cn(
+          'flex items-baseline justify-between',
+          alarming && '-mx-1 -mt-1 bg-alarm-red px-1 py-1',
+        )}
+      >
+        <span className={cn('text-[10px] font-mono uppercase tracking-normal', alarming ? 'text-white' : colorClass)}>
           {label}
         </span>
-        {unit && <span className="text-[9px] font-mono text-neutral-500">{unit}</span>}
+        {unit && (
+          <span className={cn('text-[9px] font-mono', alarming ? 'text-white' : 'text-neutral-500')}>
+            {unit}
+          </span>
+        )}
       </div>
       {stackedValues ? (
         <div
           className={cn(
             'flex w-full flex-col items-center justify-center self-stretch text-center font-mono font-bold text-[1.75rem] leading-none tabular-nums',
-            colorClass,
+            valueColorClass,
           )}
         >
           <div>{stackedValues.top}</div>
-          <hr className={cn('mx-auto my-1 w-4/5 border-t opacity-60', colorClass)} />
+          <hr className={cn('mx-auto my-1 w-4/5 border-t opacity-60', valueColorClass)} />
           <div>{stackedValues.bottom}</div>
         </div>
       ) : (
         <div
           className={cn(
             'flex w-full items-center justify-center self-stretch text-center font-mono font-bold text-[2.1rem] leading-none tabular-nums',
-            colorClass,
+            valueColorClass,
           )}
         >
           {value}
         </div>
       )}
       {subLabel && (
-        <div className="text-[10px] font-mono text-neutral-400 mt-1">{subLabel}</div>
+        <div className={cn('text-[10px] font-mono mt-1', alarming ? 'text-alarm-red' : 'text-neutral-400')}>
+          {subLabel}
+        </div>
       )}
     </div>
   )
