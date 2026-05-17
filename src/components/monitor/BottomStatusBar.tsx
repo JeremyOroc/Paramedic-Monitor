@@ -136,7 +136,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
           )}
         </div>
         
-        <div className={cn("w-32 border border-white flex items-center justify-center space-x-2 bg-black", inEval ? 'opacity-0' : '')}>
+        <div className="w-32 border border-white flex items-center justify-center space-x-2 bg-black">
           <span className="text-yellow-400 text-3xl">⚡</span>
           <span className="text-white text-3xl font-bold">{shockCount}</span>
         </div>

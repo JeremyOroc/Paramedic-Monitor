@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { JOULE_DEFAULTS, type PatientMode } from '@/types/vitals'
+import { playSystemAudio } from '@/lib/audio'
 
 export type DefibState = 
   | 'idle'
@@ -14,8 +15,8 @@ export type DefibState =
   | 'charged'
   | 'delivered'
 
-const ANALYZE_ECG_MS = 2000
-const ANALYZE_CLEAR_MS = 2000
+const ANALYZE_ECG_MS = 2500
+const ANALYZE_CLEAR_MS = 2500
 const ANALYZE_RESULT_MS = 4000
 const CHARGE_DURATION_MS = 4000
 const DELIVERED_RESET_MS = 2000 // Just a generic reset or can stay without timer
@@ -89,13 +90,16 @@ export function useDefibSequence({
     if (state !== 'idle' && state !== 'cpr') return
     setState('analyzing_ecg')
     setCprStartTime(null)
+    playSystemAudio('stand_clear.mp3')
     runTimedPhase(ANALYZE_ECG_MS, () => {
       setState('analyzing_clear')
       runTimedPhase(ANALYZE_CLEAR_MS, () => {
         setState('analyzing_result')
+        playSystemAudio('shock_not_advised.mp3')
         runTimedPhase(ANALYZE_RESULT_MS, () => {
           setState('cpr')
           setCprStartTime(Date.now())
+          playSystemAudio('perform_cpr.mp3')
         })
       })
     })

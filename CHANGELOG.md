@@ -173,3 +173,7 @@
 
 - [ui] Aligned left sidebar labels to exactly trace physical outer shell buttons structurally utilizing CSS Grid constraints.
 - [state] Added dynamic logic to `BottomStatusBar` adjusting conditional bounding/styles during analytical sequences (e.g. blackout blocks for SHOCK NOT ADVISED state).
+
+- [state] Extended analyzer sequence timers to exactly 2.5s (ECG) + 2.5s (Clear) + 4.0s (Result).
+- [ui] Maintained shock count visibility unconditionally during all analysis phases. 
+- [audio] Added `playSystemAudio` to sequentially playback `stand_clear`, `shock_not_advised`, and `perform_cpr` MP3s synchronously with analysis transitions.
