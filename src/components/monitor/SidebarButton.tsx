@@ -26,7 +26,7 @@ export function SidebarButton({
 }: SidebarButtonProps) {
   const className = cn(
     'flex flex-col items-center justify-center gap-0.5',
-    shape === 'square' ? 'w-full aspect-square' : 'w-full h-full',
+    shape === 'square' ? 'w-full h-[clamp(43px,6.2vh,68px)]' : 'w-full h-full',
     'border border-neutral-800',
     'text-neutral-300 text-[10px] font-mono',
     interactive && 'transition-colors hover:bg-neutral-800 hover:text-white focus:outline-none focus:ring-1 focus:ring-cyan-400',

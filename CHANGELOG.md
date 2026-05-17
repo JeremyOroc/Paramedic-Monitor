@@ -166,3 +166,7 @@
 - Confirmed: separate routes for instructor vs student
 - Confirmed: CPR = blue banner overlay + timer (not waveform change)
 - Created `SCREENSHOTS_SUMMARY.md` with per-screenshot UI/feature breakdown
+
+- [ui] Refactored `useDefibSequence` and implemented dynamic `BottomStatusBar` and `EnergyScaleColumn` for Paramedic Monitor defib interactions (CPR sequence, Analyse sequences, etc)
+
+- [ui] Compressed Left Sidebar labels to match identically with physical buttons using `justify-between` and clamp alignments. Applied `min-h-0` overflow handling to Monitor Layout so ECG/SpO2 Graphs naturally compress downward to make room for the inner 110px Bottom Status Bar unconditionally.

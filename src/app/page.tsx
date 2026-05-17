@@ -10,6 +10,7 @@ import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
+import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
@@ -89,6 +90,7 @@ export default function MonitorPage() {
             etco2={confirmed.etco2}
             spo2Waveform={confirmed.spo2_waveform}
             etco2Waveform={confirmed.etco2_waveform}
+            showApplyElectrodes={false}
           />
         )
       }
@@ -102,12 +104,21 @@ export default function MonitorPage() {
           searching={false}
         />
       }
+      energyColumn={
+        !isTwelveLead && ['charge_prompt', 'charging', 'charged', 'delivered'].includes(defib.state) ? (
+          <EnergyScaleColumn
+            progress={defib.progress}
+            isCharged={defib.state === 'charged' || defib.state === 'delivered'}
+          />
+        ) : null
+      }
       bottomBar={
         isTwelveLead ? null : (
           <BottomStatusBar
-            patientMode={patientMode}
+            defibState={defib.state}
             joules={defib.energy}
             shockCount={defib.shockCount}
+            cprStartTime={defib.cprStartTime}
           />
         )
       }
