@@ -45,7 +45,7 @@ export function MonitorLayout({
       <div className={cn("row-start-1", showEnergy ? "col-span-4" : "col-span-3")}>{topBar}</div>
       <div className={cn("row-start-2", showEnergy ? "col-span-4" : "col-span-3")}>{subBar}</div>
       
-      <div className="row-start-3 col-start-1 border-r border-neutral-800 min-h-0 flex flex-col">{sidebar}</div>
+      <div className={cn("row-start-3 col-start-1 border-r border-neutral-800 min-h-0 flex flex-col", showBottom && "row-span-2")}>{sidebar}</div>
       <div className="row-start-3 col-start-2 overflow-hidden min-h-0 flex flex-col">{main}</div>
       
       {showEnergy && (

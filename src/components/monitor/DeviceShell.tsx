@@ -322,7 +322,7 @@ function LeftSoftKeys({
   ]
 
   return (
-    <div className="grid min-h-0 grid-rows-[56px_1fr_40px] py-[clamp(4px,0.65vh,9px)]">
+    <div className="grid min-h-0 grid-rows-[56px_1fr_54px] py-[clamp(4px,0.65vh,9px)]">
       <div />
       <div className="flex min-h-0 flex-col justify-between">
         {keys.map((key) => (

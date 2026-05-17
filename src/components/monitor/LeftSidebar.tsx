@@ -15,7 +15,7 @@ export function LeftSidebar({
   etco2Active,
 }: LeftSidebarProps) {
   return (
-    <div className="h-full w-full flex flex-col justify-between bg-sidebar-bg">
+    <div className="h-full w-full flex flex-col justify-between bg-sidebar-bg pb-[54px]">
       <SidebarButton icon="☼" label="LUM" ariaLabel="Brightness" interactive={false} />
       <SidebarButton
         icon="12L"

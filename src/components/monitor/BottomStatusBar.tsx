@@ -106,28 +106,37 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
     bannerText = "STAND CLEAR"
   } else if (defibState === 'analyzing_result') {
     bannerText = "SHOCK NOT ADVISED"
+    bannerBg = "bg-white text-[#ff2020]"
   } else if (defibState === 'idle') {
     bannerText = "APPL ELECT."
     bannerBg = "bg-yellow-500 text-black"
   }
 
+  const showJoulesSelected = defibState === 'cpr' || defibState === 'analyzing_ecg' || defibState === 'analyzing_clear'
+  const showCprTime = defibState === 'cpr' || defibState === 'idle'
+  const inEval = defibState === 'analyzing_result'
+
   return (
     <div className="w-full h-full flex flex-col p-1 gap-1 border-t border-t-neutral-600 font-sans">
-      <div className={cn("flex-1 border border-white flex items-center justify-center", bannerBg, defibState === 'idle' ? 'text-black' : 'text-white')}>
+      <div className={cn("flex-1 border border-white flex items-center justify-center", bannerBg, defibState === 'idle' ? 'text-black' : (defibState === 'analyzing_result' ? '' : 'text-white'))}>
         <span className="text-4xl font-bold">{bannerText}</span>
       </div>
       
       <div className="flex flex-1 gap-1 mt-1">
         <div className="w-64 border border-white flex items-center justify-center bg-black">
-          {defibState === 'cpr' && <span className="text-2xl font-bold text-white">{joules} J SELECTED</span>}
+          {showJoulesSelected && !inEval && <span className="text-2xl font-bold text-white">{joules} J SELECTED</span>}
         </div>
         
-        <div className="flex-1 border border-white bg-white flex flex-col items-center justify-center">
-          <span className="text-black text-xs font-bold leading-none">CPR Time</span>
-          <span className="text-black text-2xl font-bold leading-none">{defibState === 'cpr' ? cprTime : ""}</span>
+        <div className={cn("flex-1 border border-white flex flex-col items-center justify-center", showCprTime && !inEval ? "bg-white" : "bg-black")}>
+          {showCprTime && !inEval && (
+            <>
+              <span className="text-black text-xs font-bold leading-none">CPR Time</span>
+              <span className="text-black text-2xl font-bold leading-none">{cprTime}</span>
+            </>
+          )}
         </div>
         
-        <div className="w-32 border border-white flex items-center justify-center space-x-2 bg-black">
+        <div className={cn("w-32 border border-white flex items-center justify-center space-x-2 bg-black", inEval ? 'opacity-0' : '')}>
           <span className="text-yellow-400 text-3xl">⚡</span>
           <span className="text-white text-3xl font-bold">{shockCount}</span>
         </div>
