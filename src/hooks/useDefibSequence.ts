@@ -87,7 +87,13 @@ export function useDefibSequence({
   )
 
   const onAnalyse = useCallback(() => {
-    if (state !== 'idle' && state !== 'cpr') return
+    if (
+      state !== 'idle' &&
+      state !== 'cpr' &&
+      state !== 'charge_prompt' &&
+      state !== 'delivered'
+    )
+      return
     setState('analyzing_ecg')
     setCprStartTime(null)
     playSystemAudio('stand_clear.mp3')
@@ -122,7 +128,7 @@ export function useDefibSequence({
   }, [state])
 
   const onEnergyUp = useCallback(() => {
-    if (state === 'analysing' || state === 'charging') return
+    if (state.startsWith('analyzing') || state === 'charging') return
     setEnergyState((current) => {
       const currentEnergy =
         current.patientMode === patientMode
@@ -137,7 +143,7 @@ export function useDefibSequence({
   }, [state, patientMode])
 
   const onEnergyDown = useCallback(() => {
-    if (state === 'analysing' || state === 'charging') return
+    if (state.startsWith('analyzing') || state === 'charging') return
     setEnergyState((current) => {
       const currentEnergy =
         current.patientMode === patientMode
@@ -151,7 +157,11 @@ export function useDefibSequence({
     })
   }, [state, patientMode])
 
-  const canAnalyse = state === 'idle' || state === 'cpr' || state === 'delivered'
+  const canAnalyse =
+    state === 'idle' ||
+    state === 'cpr' ||
+    state === 'charge_prompt' ||
+    state === 'delivered'
   const canCharge = state === 'idle' || state === 'cpr' || state === 'charge_prompt' || state === 'delivered'
   const canShock = state === 'charged'
   const canAdjustEnergy = !state.startsWith('analyzing') && state !== 'charging'

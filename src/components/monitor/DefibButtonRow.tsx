@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react'
 import type { DefibState } from '@/hooks/useDefibSequence'
-import { ProgressBar } from '@/components/shared/ProgressBar'
 import { cn } from '@/lib/utils'
 
 type DefibButtonRowProps = {
@@ -23,7 +22,6 @@ type DefibButtonRowProps = {
 export function DefibButtonRow({
   state,
   energy,
-  progress,
   canAnalyse,
   canCharge,
   canShock,
@@ -40,8 +38,7 @@ export function DefibButtonRow({
         label="ANALYSE"
         onClick={onAnalyse}
         disabled={!canAnalyse}
-        active={state === 'analysing'}
-        progress={state === 'analysing' ? progress : undefined}
+        active={state.startsWith('analyzing')}
       />
       <div className="flex flex-col items-center justify-center bg-orange-700/80 text-white border border-orange-900">
         <div className="text-[10px] font-mono uppercase tracking-wider">Énergie</div>
@@ -72,7 +69,6 @@ export function DefibButtonRow({
         onClick={onCharge}
         disabled={!canCharge}
         active={state === 'charging'}
-        progress={state === 'charging' ? progress : undefined}
       />
       <ShockButton
         onClick={onShock}
@@ -88,13 +84,11 @@ function DefibButton({
   onClick,
   disabled,
   active,
-  progress,
 }: {
   label: ReactNode
   onClick: () => void
   disabled: boolean
   active: boolean
-  progress?: number
 }) {
   return (
     <button
@@ -106,16 +100,11 @@ function DefibButton({
         'bg-orange-700/80 text-white border border-orange-900',
         'font-mono font-bold uppercase tracking-wider',
         'hover:bg-orange-600 transition-colors',
-        'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-orange-700/80',
+        'disabled:cursor-not-allowed disabled:hover:bg-orange-700/80',
         active && 'bg-orange-500',
       )}
     >
       <span className="text-sm">{label}</span>
-      {typeof progress === 'number' && (
-        <div className="absolute inset-x-1 bottom-1">
-          <ProgressBar progress={progress} fillClassName="bg-yellow-spo2" />
-        </div>
-      )}
     </button>
   )
 }
@@ -140,8 +129,8 @@ function ShockButton({
         'bg-red-700 text-white border border-red-900',
         'font-mono font-bold uppercase tracking-wider text-sm',
         'hover:bg-red-600 transition-colors',
-        'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-700',
-        ready && 'bg-alarm-red animate-pulse',
+        'disabled:cursor-not-allowed disabled:hover:bg-red-700',
+        ready && 'bg-[#ffea00] text-[#ff2020] animate-pulse border-[#ff2020]',
       )}
     >
       <span className="mr-2">⚡</span>

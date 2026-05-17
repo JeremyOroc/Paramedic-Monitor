@@ -31,5 +31,5 @@ export function useCPRTimer(startTime: number | null) {
   const mins = Math.floor(timeLeft / 60)
   const secs = (timeLeft % 60).toString().padStart(2, '0')
 
-  return `${mins}:${secs}`
+  return { formatted: `${mins}:${secs}`, isDone: timeLeft === 0 }
 }

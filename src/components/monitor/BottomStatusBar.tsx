@@ -1,9 +1,10 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useRef } from 'react'
 import { DefibState } from '@/hooks/useDefibSequence'
 import { useCPRTimer } from '@/hooks/useCPRTimer'
 import { cn } from '@/lib/utils'
+import { playSystemAudio } from '@/lib/audio'
 
 type BottomStatusBarProps = {
   defibState: DefibState
@@ -13,7 +14,17 @@ type BottomStatusBarProps = {
 }
 
 export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }: BottomStatusBarProps) {
-  const cprTime = useCPRTimer(cprStartTime)
+  const { formatted: cprTime, isDone } = useCPRTimer(cprStartTime)
+  const prevIsDone = useRef(isDone)
+
+  useEffect(() => {
+    if (isDone && !prevIsDone.current) {
+      if (defibState === 'cpr') {
+        playSystemAudio('stop_cpr.mp3')
+      }
+    }
+    prevIsDone.current = isDone
+  }, [isDone, defibState])
 
   const isCharging = defibState === 'charging'
   const isCharged = defibState === 'charged'
@@ -29,7 +40,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
   if (isDefibLayout) {
     let defibBoxContent = (
       <>
-        <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs">Defibrillator</div>
+        <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs w-full text-center">Defibrillator</div>
         <div className="flex-1 flex flex-col items-center justify-center bg-black border border-white mx-1 mb-1 relative overflow-hidden">
           <span className="text-white text-xl font-bold">Confirm Energy</span>
           <span className="text-white text-xl font-bold">Press CHARGE</span>
@@ -40,8 +51,8 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
     if (isCharging) {
       defibBoxContent = (
         <>
-          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs">Defibrillator</div>
-          <div className="flex-1 flex flex-col items-center justify-center border border-yellow-spO2 mx-1 mb-1 animate-[chargePulse_0.2s_infinite]">
+          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs w-full text-center">Defibrillator</div>
+          <div className="flex-1 flex flex-col items-center justify-center border border-yellow-spO2 mx-1 mb-1 animate-[chargePulse_0.2s_infinite] overflow-hidden">
             <span className="text-xl font-bold uppercase">Charging</span>
           </div>
         </>
@@ -49,8 +60,8 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
     } else if (isCharged) {
       defibBoxContent = (
         <>
-          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs">Defibrillator</div>
-          <div className="flex-1 flex flex-col items-center justify-center bg-yellow-400 mx-1 mb-1">
+          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs w-full text-center">Defibrillator</div>
+          <div className="flex-1 flex flex-col items-center justify-center bg-yellow-400 mx-1 mb-1 overflow-hidden">
             <span className="text-black text-3xl font-bold uppercase tracking-wide">Charged</span>
           </div>
         </>
@@ -58,8 +69,8 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
     } else if (isDelivered) {
       defibBoxContent = (
         <>
-          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs">Defibrillator</div>
-          <div className="flex-1 flex flex-col items-center justify-center bg-ecg-green mx-1 mb-1">
+          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs w-full text-center">Defibrillator</div>
+          <div className="flex-1 flex flex-col items-center justify-center bg-ecg-green mx-1 mb-1 overflow-hidden">
             <span className="text-black text-xl font-bold tracking-wide">Delivered Energy</span>
             <span className="text-black text-2xl font-bold tracking-wide">{joules} J</span>
           </div>
@@ -70,7 +81,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
     return (
       <div className="w-full h-full flex bg-bottom-bar p-1 gap-1 border-t border-t-neutral-600 font-sans">
         {/* Left: Defib Info */}
-        <div className="flex-1 flex flex-col border border-white">
+        <div className="flex-[1.5] flex flex-col border border-white overflow-hidden">
           {defibBoxContent}
         </div>
 
@@ -85,8 +96,8 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
         </div>
 
         {/* Right: Selected Energy */}
-        <div className="flex-1 flex flex-col border border-white">
-          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold text-xs uppercase self-start w-full">Selected energy</div>
+        <div className="flex-1 flex flex-col border border-white overflow-hidden">
+          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold text-xs uppercase self-start w-full text-center">Selected energy</div>
           <div className={cn("flex-1 flex items-center justify-center mx-1 mb-1", isCharged && "bg-yellow-400 text-black", !isCharged && "bg-black text-white")}>
             <span className="text-6xl font-bold">{joules}</span>
             <span className="text-2xl font-bold mt-4 ml-1">J</span>
@@ -110,6 +121,9 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
   } else if (defibState === 'idle') {
     bannerText = "APPL ELECT."
     bannerBg = "bg-yellow-500 text-black"
+  } else if (defibState === 'cpr' && isDone) {
+    bannerText = "Stop CPR"
+    bannerBg = "bg-white text-black"
   }
 
   const showJoulesSelected = defibState === 'cpr' || defibState === 'analyzing_ecg' || defibState === 'analyzing_clear'
@@ -118,7 +132,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
 
   return (
     <div className="w-full h-full flex flex-col p-1 gap-1 border-t border-t-neutral-600 font-sans">
-      <div className={cn("flex-1 border border-white flex items-center justify-center", bannerBg, defibState === 'idle' ? 'text-black' : (defibState === 'analyzing_result' ? '' : 'text-white'))}>
+      <div className={cn("flex-1 border border-white flex items-center justify-center", bannerBg, defibState === 'idle' || (defibState === 'cpr' && isDone) ? 'text-black' : (defibState === 'analyzing_result' ? '' : 'text-white'))}>
         <span className="text-4xl font-bold">{bannerText}</span>
       </div>
       
