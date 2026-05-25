@@ -319,22 +319,22 @@ function LeftSoftKeys({
   ]
 
   return (
-    <div className="grid min-h-0 grid-rows-[56px_1fr_54px] py-[clamp(4px,0.65vh,9px)]">
-      <div />
-      <div className="flex min-h-0 flex-col justify-between">
-        {keys.map((key) => (
-          <div key={key.ariaLabel} className="flex items-center justify-end gap-[9px]">
-            <PhysicalButton
-              ariaLabel={key.ariaLabel}
-              onClick={key.onClick}
-              active={key.active}
-              className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
-            />
-            <div className="h-[clamp(8px,1.1vh,14px)] w-[clamp(11px,1.1vw,18px)] rounded-[3px] bg-[#aeb0b0] shadow-[inset_1px_1px_1px_rgba(255,255,255,0.38)]" />
-          </div>
-        ))}
-      </div>
-      <div />
+    // Mirror the on-screen LeftSidebar geometry so the physical soft keys line
+    // up 1:1 with the menu rows: same top offset (32px top bar + 24px sub bar,
+    // plus the screen bezel inset), same pb-[54px], same button height, same
+    // justify-between distribution over the shared device row.
+    <div className="relative z-10 flex h-full min-h-0 flex-col justify-between pt-[calc(clamp(5px,0.6vw,9px)+56px)] pb-[calc(clamp(5px,0.6vw,9px)+54px)]">
+      {keys.map((key) => (
+        <div key={key.ariaLabel} className="flex items-center justify-end gap-[9px]">
+          <PhysicalButton
+            ariaLabel={key.ariaLabel}
+            onClick={key.onClick}
+            active={key.active}
+            className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
+          />
+          <div className="h-[clamp(8px,1.1vh,14px)] w-[clamp(11px,1.1vw,18px)] rounded-[3px] bg-[#aeb0b0] shadow-[inset_1px_1px_1px_rgba(255,255,255,0.38)]" />
+        </div>
+      ))}
     </div>
   )
 }

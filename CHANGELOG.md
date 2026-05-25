@@ -5,6 +5,17 @@
 
 ---
 
+## [2026-05-25] [monitor] — Align physical left soft keys with on-screen menu rows
+
+- The physical left soft keys did not line up in size or vertical level with the on-screen `LeftSidebar` menu rows (LUM / 12L / CO₂ / MED / ANALYSE / PRINT / BACK).
+- Rebuilt `LeftSoftKeys` to mirror the sidebar's exact vertical math: same top offset (32px top bar + 24px sub bar + screen bezel), matching `pb-[54px]` (+ bezel), the same `h-[clamp(43px,6.2vh,68px)]` button height, and the same `justify-between` distribution over the shared device row — so the 7 keys land 1:1 on the 7 menu rows.
+
+## [2026-05-25] [monitor] — Fix unclickable Back soft key in 12-lead view
+
+- The left soft-key column reserved a `56px`/`54px` top/bottom spacer and sized 7 buttons up to `68px`, so on real viewport heights the bottom-most key (Back) overflowed its grid row and was painted over by `BottomDefibStrip`, intercepting its clicks — leaving no way out of the 12-lead view.
+- Gave `LeftSoftKeys` `relative z-10`, dropped the unused bottom spacer (`grid-rows-[56px_1fr_54px]` → `[56px_1fr]`), and shrank the buttons (`clamp(43px,6.2vh,68px)` → `clamp(40px,5.4vh,60px)`) so all 7 fit within the column and stay clickable above the defib strip. No outer-grid restructure.
+- Added a page-level regression test (`twelveLeadBackFlow.test.tsx`) using the real `DeviceShell`: entering 12-lead then clicking the physical Back returns to the main view.
+
 ## [2026-05-25] [monitor] — Wire left menu ANALYSE soft key to caller info modal
 
 - Added a dedicated `onLeftAnalyse` action on `DeviceShell` and mapped it to the left-side ANALYSE soft key (the key aligned with the monitor menu ANALYSE row).
