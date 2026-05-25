@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { DefibState } from '@/hooks/useDefibSequence'
-import { ProgressBar } from '@/components/shared/ProgressBar'
 import { cn } from '@/lib/utils'
 import { playButtonClick } from '@/lib/audio'
 
@@ -58,9 +57,8 @@ function DefibButton({
   onClick,
   disabled = false,
   active = false,
-  progress,
   className,
-}: DefibButtonProps) {
+}: Omit<DefibButtonProps, 'progress'>) {
   return (
     <button
       type="button"
@@ -74,18 +72,13 @@ function DefibButton({
         'font-mono text-[clamp(10px,1.2vw,16px)] font-bold uppercase text-[#c41212]',
         'shadow-[0_4px_0_rgba(120,104,62,0.6),inset_3px_4px_4px_rgba(255,255,255,0.55),inset_-3px_-4px_5px_rgba(112,92,42,0.36)]',
         'transition-colors focus:outline-none focus:ring-2 focus:ring-amber-200',
-        active && 'animate-pulse bg-[#eccf83]',
-        disabled && 'opacity-55 cursor-default',
+        active && 'bg-[#eccf83]',
+        disabled && 'cursor-default',
         !disabled && 'hover:bg-[#e6cc82] active:translate-y-px',
         className,
       )}
     >
       <span>{label}</span>
-      {typeof progress === 'number' && (
-        <div className="absolute inset-x-2 bottom-1.5">
-          <ProgressBar progress={progress} fillClassName="bg-amber-100" />
-        </div>
-      )}
     </button>
   )
 }
@@ -326,7 +319,7 @@ function LeftSoftKeys({
   ]
 
   return (
-    <div className="grid min-h-0 grid-rows-[56px_1fr_40px] py-[clamp(4px,0.65vh,9px)]">
+    <div className="grid min-h-0 grid-rows-[56px_1fr_54px] py-[clamp(4px,0.65vh,9px)]">
       <div />
       <div className="flex min-h-0 flex-col justify-between">
         {keys.map((key) => (
@@ -419,7 +412,6 @@ type BottomDefibStripProps = {
 function BottomDefibStrip({
   defibState,
   energy,
-  progress,
   canAnalyse,
   canCharge,
   canShock,
@@ -466,8 +458,7 @@ function BottomDefibStrip({
             ariaLabel="Analyze rhythm"
             onClick={onAnalyse}
             disabled={!canAnalyse}
-            active={defibState === 'analysing'}
-            progress={defibState === 'analysing' ? progress : undefined}
+            active={defibState.startsWith('analyzing')}
             className="scale-95"
           />
           <EnergySelectButton
@@ -482,7 +473,6 @@ function BottomDefibStrip({
             onClick={onCharge}
             disabled={!canCharge}
             active={defibState === 'charging'}
-            progress={defibState === 'charging' ? progress : undefined}
             className="scale-95"
           />
         </div>
@@ -502,12 +492,11 @@ function BottomDefibStrip({
           disabled={!canShock}
           className={cn(
             'absolute bottom-[13%] left-[27%] grid h-[clamp(72px,10.8vh,118px)] w-[clamp(72px,10.8vh,118px)] place-items-center rounded-full',
-            'border-[9px] border-[#ff6532] bg-[#d51b0f] text-white',
-            'shadow-[0_5px_0_rgba(114,30,18,0.55),inset_5px_7px_10px_rgba(255,116,84,0.42),inset_-6px_-8px_10px_rgba(105,0,0,0.36)]',
+            'border-[9px] bg-[#d51b0f] text-white',
             'transition-colors focus:outline-none focus:ring-2 focus:ring-red-200',
-            defibState === 'charged' && 'animate-pulse bg-[#ff2020]',
+            defibState === 'charged' ? 'border-[#ff2020] bg-[#ffea00] text-[#ff2020] shadow-[0_0_25px_rgba(255,32,32,0.8),inset_0_0_15px_rgba(255,100,50,0.8)] animate-pulse' : 'border-[#ff6532] shadow-[0_5px_0_rgba(114,30,18,0.55),inset_5px_7px_10px_rgba(255,116,84,0.42),inset_-6px_-8px_10px_rgba(105,0,0,0.36)]',
             !canShock && 'cursor-default',
-            canShock && 'hover:bg-[#eb2416] active:translate-y-px',
+            canShock && 'hover:bg-[#ffea00] active:translate-y-px',
           )}
         >
           <span className="text-[clamp(36px,5.2vw,76px)] leading-none">⚡</span>
@@ -537,7 +526,6 @@ function EnergySelectButton({
         'rounded-[18px] border-[7px] border-[#efe4b4] bg-[#d7bd74]',
         'font-mono font-bold uppercase text-[#c41212]',
         'shadow-[0_4px_0_rgba(120,104,62,0.6),inset_3px_4px_4px_rgba(255,255,255,0.55),inset_-3px_-4px_5px_rgba(112,92,42,0.36)]',
-        !canAdjustEnergy && 'opacity-55',
       )}
     >
       <button

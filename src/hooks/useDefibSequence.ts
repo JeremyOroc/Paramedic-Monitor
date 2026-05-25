@@ -2,24 +2,31 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { JOULE_DEFAULTS, type PatientMode } from '@/types/vitals'
+import { playSystemAudio } from '@/lib/audio'
 
-export type DefibState = 'idle' | 'analysing' | 'analysed' | 'charging' | 'charged'
+export type DefibState = 
+  | 'idle'
+  | 'analyzing_ecg'
+  | 'analyzing_clear'
+  | 'analyzing_result'
+  | 'cpr'
+  | 'charge_prompt'
+  | 'charging'
+  | 'charged'
+  | 'delivered'
 
-const ANALYSE_DURATION_MS = 5000
-const CHARGE_DURATION_MS = 3000
+const ANALYZE_ECG_MS = 2500
+const ANALYZE_CLEAR_MS = 2500
+const ANALYZE_RESULT_MS = 4000
+const CHARGE_DURATION_MS = 4000
 const ENERGY_STEP = 10
 
 type Options = {
   patientMode: PatientMode
-  /** Override timing in tests. */
-  analyseDurationMs?: number
-  chargeDurationMs?: number
 }
 
 export function useDefibSequence({
   patientMode,
-  analyseDurationMs = ANALYSE_DURATION_MS,
-  chargeDurationMs = CHARGE_DURATION_MS,
 }: Options) {
   const [state, setState] = useState<DefibState>('idle')
   const [energyState, setEnergyState] = useState(() => ({
@@ -28,6 +35,8 @@ export function useDefibSequence({
   }))
   const [shockCount, setShockCount] = useState(0)
   const [progress, setProgress] = useState(0)
+
+  const [cprStartTime, setCprStartTime] = useState<number | null>(null)
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -77,26 +86,48 @@ export function useDefibSequence({
   )
 
   const onAnalyse = useCallback(() => {
-    if (state !== 'idle') return
-    setState('analysing')
-    runTimedPhase(analyseDurationMs, () => setState('analysed'))
-  }, [state, analyseDurationMs, runTimedPhase])
+    if (
+      state !== 'idle' &&
+      state !== 'cpr' &&
+      state !== 'charge_prompt' &&
+      state !== 'delivered'
+    )
+      return
+    setState('analyzing_ecg')
+    setCprStartTime(null)
+    playSystemAudio('stand_clear.mp3')
+    runTimedPhase(ANALYZE_ECG_MS, () => {
+      setState('analyzing_clear')
+      runTimedPhase(ANALYZE_CLEAR_MS, () => {
+        setState('analyzing_result')
+        playSystemAudio('shock_not_advised.mp3')
+        runTimedPhase(ANALYZE_RESULT_MS, () => {
+          setState('cpr')
+          setCprStartTime(Date.now())
+          playSystemAudio('perform_cpr.mp3')
+        })
+      })
+    })
+  }, [state, runTimedPhase])
 
   const onCharge = useCallback(() => {
-    if (state !== 'analysed' && state !== 'idle') return
-    setState('charging')
-    runTimedPhase(chargeDurationMs, () => setState('charged'))
-  }, [state, chargeDurationMs, runTimedPhase])
+    if (state === 'charge_prompt') {
+      setState('charging')
+      runTimedPhase(CHARGE_DURATION_MS, () => setState('charged'))
+    } else if (state === 'cpr' || state === 'idle' || state === 'analyzing_result' || state === 'delivered') {
+      setState('charge_prompt')
+    }
+  }, [state, runTimedPhase])
 
   const onShock = useCallback(() => {
     if (state !== 'charged') return
     setShockCount((n) => n + 1)
-    setState('idle')
+    setState('delivered')
     setProgress(0)
   }, [state])
 
   const onEnergyUp = useCallback(() => {
-    if (state === 'analysing' || state === 'charging') return
+    if (state.startsWith('analyzing') || state === 'charging') return
     setEnergyState((current) => {
       const currentEnergy =
         current.patientMode === patientMode
@@ -111,7 +142,7 @@ export function useDefibSequence({
   }, [state, patientMode])
 
   const onEnergyDown = useCallback(() => {
-    if (state === 'analysing' || state === 'charging') return
+    if (state.startsWith('analyzing') || state === 'charging') return
     setEnergyState((current) => {
       const currentEnergy =
         current.patientMode === patientMode
@@ -125,16 +156,21 @@ export function useDefibSequence({
     })
   }, [state, patientMode])
 
-  const canAnalyse = state === 'idle'
-  const canCharge = state === 'analysed' || state === 'idle'
+  const canAnalyse =
+    state === 'idle' ||
+    state === 'cpr' ||
+    state === 'charge_prompt' ||
+    state === 'delivered'
+  const canCharge = state === 'idle' || state === 'cpr' || state === 'charge_prompt' || state === 'delivered'
   const canShock = state === 'charged'
-  const canAdjustEnergy = state !== 'analysing' && state !== 'charging'
+  const canAdjustEnergy = !state.startsWith('analyzing') && state !== 'charging'
 
   return {
     state,
     energy,
     shockCount,
     progress,
+    cprStartTime,
     canAnalyse,
     canCharge,
     canShock,
