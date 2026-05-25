@@ -108,6 +108,7 @@ type DeviceShellProps = {
   onEnergyDown: () => void
   onTwelveLead: () => void
   onToggleEtco2: () => void
+  onLeftAnalyse: () => void
   onBack: () => void
   twelveLeadActive?: boolean
   onPowerOn?: () => void
@@ -130,6 +131,7 @@ export function DeviceShell({
   onEnergyDown,
   onTwelveLead,
   onToggleEtco2,
+  onLeftAnalyse,
   onBack,
   twelveLeadActive = false,
   onPowerOn,
@@ -165,6 +167,7 @@ export function DeviceShell({
               <LeftSoftKeys
                 onTwelveLead={onTwelveLead}
                 onToggleEtco2={onToggleEtco2}
+                onLeftAnalyse={onLeftAnalyse}
                 onBack={onBack}
                 twelveLeadActive={twelveLeadActive}
               />
@@ -300,6 +303,7 @@ function DeviceHeader() {
 type LeftSoftKeysProps = {
   onTwelveLead: () => void
   onToggleEtco2: () => void
+  onLeftAnalyse: () => void
   onBack: () => void
   twelveLeadActive: boolean
 }
@@ -307,6 +311,7 @@ type LeftSoftKeysProps = {
 function LeftSoftKeys({
   onTwelveLead,
   onToggleEtco2,
+  onLeftAnalyse,
   onBack,
   twelveLeadActive,
 }: LeftSoftKeysProps) {
@@ -315,7 +320,7 @@ function LeftSoftKeys({
     { ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
     { ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
     { ariaLabel: 'Treatment soft key' },
-    { ariaLabel: 'Sync soft key' },
+    { ariaLabel: 'Analyse (sidebar)', onClick: onLeftAnalyse },
     { ariaLabel: 'Printer soft key' },
     { ariaLabel: 'Back', onClick: onBack },
   ]

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 
+import { cn } from '@/lib/utils'
 import { useMonitorStore } from '@/store/monitorStore'
 
 const PRIMARY_FIELDS = [
@@ -19,19 +20,23 @@ const EXTRA_FIELDS = [
   { labelField: 'extra3Label', valueField: 'extra3', fallbackLabel: 'Extra 3' },
 ] as const
 
+type CallerInfoDraft = ReturnType<typeof useMonitorStore.getState>['callerInfoDraft']
+
+function getInitialExtraCount(callerInfoDraft: CallerInfoDraft) {
+  return EXTRA_FIELDS.reduce((count, { labelField, valueField }, index) => {
+    const hasValue =
+      callerInfoDraft[labelField].trim() !== '' || callerInfoDraft[valueField].trim() !== ''
+
+    return hasValue ? index + 1 : count
+  }, 0)
+}
+
 export function CallerInfoForm() {
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
-  const [visibleExtraCount, setVisibleExtraCount] = useState(() => {
-    const lastFilledIndex = EXTRA_FIELDS.findLastIndex(
-      ({ labelField, valueField }) =>
-        callerInfoDraft[labelField].trim() !== '' ||
-        callerInfoDraft[valueField].trim() !== '',
-    )
-    return Math.max(0, lastFilledIndex + 1)
-  })
-  const visibleExtras = EXTRA_FIELDS.slice(0, visibleExtraCount)
-  const canAddExtra = visibleExtraCount < EXTRA_FIELDS.length
+  const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
+  const visibleExtraFields = EXTRA_FIELDS.slice(0, extraCount)
+  const extraLimitReached = extraCount >= EXTRA_FIELDS.length
 
   return (
     <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
@@ -61,7 +66,7 @@ export function CallerInfoForm() {
             )}
           </label>
         ))}
-        {visibleExtras.map(({ labelField, valueField, fallbackLabel }) => (
+        {visibleExtraFields.map(({ labelField, valueField, fallbackLabel }) => (
           <div key={valueField} className="grid gap-2 border-t border-neutral-800 pt-3">
             <label>
               <span className="sr-only">{fallbackLabel} title</span>
@@ -85,15 +90,17 @@ export function CallerInfoForm() {
             </label>
           </div>
         ))}
-        {canAddExtra && (
-          <button
-            type="button"
-            onClick={() => setVisibleExtraCount((count) => Math.min(EXTRA_FIELDS.length, count + 1))}
-            className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-left text-xs font-mono font-bold uppercase tracking-wider text-cyan-bp hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-cyan-bp"
-          >
-            Add Extra
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setExtraCount((count) => Math.min(count + 1, EXTRA_FIELDS.length))}
+          disabled={extraLimitReached}
+          className={cn(
+            'border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm font-semibold uppercase tracking-wider text-cyan-bp hover:border-cyan-bp focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+            extraLimitReached && 'cursor-not-allowed border-neutral-800 text-neutral-600 hover:border-neutral-800',
+          )}
+        >
+          Add extra
+        </button>
       </div>
     </section>
   )

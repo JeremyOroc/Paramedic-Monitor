@@ -8,7 +8,12 @@ import {
   type Rhythm,
   type Spo2Waveform,
 } from '@/types/vitals'
-import { DEFAULT_CALLER_INFO, type CallerInfo, type CallerInfoField } from '@/types/callerInfo'
+import {
+  DEFAULT_CALLER_INFO,
+  normalizeCallerInfo,
+  type CallerInfo,
+  type CallerInfoField,
+} from '@/types/callerInfo'
 
 export type Vitals = {
   hr: number
@@ -98,6 +103,17 @@ export const useMonitorStore = create<MonitorState>()(
       version: 2,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
+      merge: (persisted, current) => {
+        const persistedState = persisted as Partial<MonitorState> | undefined
+
+        return {
+          ...current,
+          ...persistedState,
+          callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
+          callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
+          callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),
+        }
+      },
     },
   ),
 )

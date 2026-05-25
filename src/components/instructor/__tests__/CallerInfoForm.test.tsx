@@ -21,8 +21,8 @@ describe('CallerInfoForm', () => {
     expect(screen.getByLabelText('Information')).toBeInTheDocument()
     expect(screen.getByLabelText('Mise a jour')).toBeInTheDocument()
     expect(screen.getByLabelText('Heure')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Add Extra' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Extra 1 title')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add extra' })).toBeEnabled()
   })
 
   it('updates caller info draft values', async () => {
@@ -40,7 +40,7 @@ describe('CallerInfoForm', () => {
     const user = userEvent.setup()
     render(<CallerInfoForm />)
 
-    await user.click(screen.getByRole('button', { name: 'Add Extra' }))
+    await user.click(screen.getByRole('button', { name: 'Add extra' }))
     await user.type(screen.getByLabelText('Extra 1 title'), 'Acces')
     await user.type(screen.getByLabelText('Extra 1 input'), 'Porte cote nord')
 
@@ -48,30 +48,38 @@ describe('CallerInfoForm', () => {
     expect(useMonitorStore.getState().callerInfoDraft.extra1).toBe('Porte cote nord')
     expect(screen.queryByText('Acces')).toBeNull()
     expect(screen.getByPlaceholderText('Title')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Input')).toBeInTheDocument()
+    expect(screen.getByLabelText('Extra 1 input')).toHaveAttribute('placeholder', 'Input')
   })
 
-  it('adds extra rows one at a time up to three rows', async () => {
+  it('adds extra rows one at a time and caps at three', async () => {
     const user = userEvent.setup()
     render(<CallerInfoForm />)
 
-    await user.click(screen.getByRole('button', { name: 'Add Extra' }))
+    const addExtra = screen.getByRole('button', { name: 'Add extra' })
+
+    await user.click(addExtra)
     expect(screen.getByLabelText('Extra 1 title')).toBeInTheDocument()
     expect(screen.queryByLabelText('Extra 2 title')).toBeNull()
+    expect(addExtra).toBeEnabled()
 
-    await user.click(screen.getByRole('button', { name: 'Add Extra' }))
+    await user.click(addExtra)
     expect(screen.getByLabelText('Extra 2 title')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Extra 3 title')).toBeNull()
+    expect(addExtra).toBeEnabled()
 
-    await user.click(screen.getByRole('button', { name: 'Add Extra' }))
+    await user.click(addExtra)
     expect(screen.getByLabelText('Extra 3 title')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Add Extra' })).toBeNull()
+    expect(addExtra).toBeDisabled()
   })
 
-  it('shows existing extra rows when draft data already exists', () => {
-    useMonitorStore.getState().setCallerInfoDraft('extra2Label', 'Contact')
+  it('reopens saved extra rows when caller info already has values', () => {
+    useMonitorStore.getState().setCallerInfoDraft('extra2Label', 'Code porte')
+
     render(<CallerInfoForm />)
 
     expect(screen.getByLabelText('Extra 1 title')).toBeInTheDocument()
     expect(screen.getByLabelText('Extra 2 title')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Extra 3 title')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Add extra' })).toBeEnabled()
   })
 })

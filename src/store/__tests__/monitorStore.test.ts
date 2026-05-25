@@ -88,6 +88,7 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().callerInfoConfirmed.extra1).toBe('Porte cote nord')
   })
 
+
   it('resetVitalsToNormal resets only draft vital numbers', () => {
     useMonitorStore.getState().setDraft('hr', 180)
     useMonitorStore.getState().setDraft('bp_sys', 230)

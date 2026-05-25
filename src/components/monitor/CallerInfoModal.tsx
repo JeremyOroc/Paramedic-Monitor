@@ -16,6 +16,10 @@ export function CallerInfoModal({ open, info, onClose }: CallerInfoModalProps) {
   if (!open) return null
 
   const hasInfo = hasCallerInfo(info)
+  const displayFields = CALLER_INFO_DISPLAY_FIELDS.filter(({ field, labelField }) => {
+    if (!labelField) return true
+    return info[field].trim() !== '' || info[labelField].trim() !== ''
+  })
 
   return (
     <div className="absolute inset-0 z-30 grid place-items-center bg-black/65 p-6">
@@ -36,7 +40,7 @@ export function CallerInfoModal({ open, info, onClose }: CallerInfoModalProps) {
         </header>
         <div className="grid gap-2 p-4 text-sm">
           {hasInfo ? (
-            CALLER_INFO_DISPLAY_FIELDS.map(({ field, label, labelField }) => (
+            displayFields.map(({ field, label, labelField }) => (
               <div key={field} className="grid grid-cols-[150px_1fr] gap-3 border-b border-neutral-800 pb-2 last:border-b-0 last:pb-0">
                 <span className="text-cyan-bp">
                   {labelField && info[labelField].trim() !== '' ? info[labelField] : label}
