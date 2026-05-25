@@ -265,6 +265,9 @@ export default function MonitorPage() {
         onLeftAnalyse={() => setCallerInfoOpen(true)}
         onBack={handleBack}
         onPatientInfo={openPatientInfo}
+        // TODO: capture the current 12-lead graphs and render them as a printout
+        // (pink grid paper, 3x4 lead layout + rhythm strip). Placeholder for now.
+        onCaptureTwelveLead={() => {}}
         onMoveUp={() => moveSelection('up')}
         onMoveDown={() => moveSelection('down')}
         onEnter={handleEnter}

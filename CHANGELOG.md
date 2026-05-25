@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-05-25] [monitor] — Add 12-lead Capture soft key (placeholder)
+
+- Added a **Capture** key to slot 1 of the 12-lead left menu (on-screen `LeftSidebar`
+  label + physical `LeftSoftKeys`), wired to a new `onCaptureTwelveLead` handler.
+- The handler is a placeholder for now; it will later capture the current 12-lead graphs
+  and render them as a printout (pink grid paper, 3×4 lead layout + rhythm strip).
+- Tests: Capture key renders in 12-lead and fires its handler; remaining slots stay inert.
+
 ## [2026-05-25] [monitor] — Patient Info panel no longer covers the left menu
 
 - The Patient Info overlay now starts after the 56px left sidebar (`left-[56px]` instead of

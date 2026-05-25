@@ -23,6 +23,7 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onLeftAnalyse: vi.fn(),
     onBack: vi.fn(),
     onPatientInfo: vi.fn(),
+    onCaptureTwelveLead: vi.fn(),
     onMoveUp: vi.fn(),
     onMoveDown: vi.fn(),
     onEnter: vi.fn(),
@@ -125,8 +126,8 @@ describe('DeviceShell', () => {
 
   it('keeps all physical left soft keys visible in 12-lead view', () => {
     render(<DeviceShell {...makeProps({ twelveLeadActive: true })} />)
-    // hardware keys stay present even where the 12-lead menu has no item
-    expect(screen.getByRole('button', { name: 'Soft key 1' })).toBeInTheDocument()
+    // slot 1 is the Capture key; the still-unassigned slots remain present too
+    expect(screen.getByRole('button', { name: 'Capture 12-lead' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Soft key 3' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Soft key 6' })).toBeInTheDocument()
   })
@@ -139,16 +140,24 @@ describe('DeviceShell', () => {
     expect(props.onPatientInfo).toHaveBeenCalledTimes(1)
   })
 
+  it('fires onCaptureTwelveLead when the slot-1 key is clicked in 12-lead view', async () => {
+    const user = userEvent.setup()
+    const props = makeProps({ twelveLeadActive: true })
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Capture 12-lead' }))
+    expect(props.onCaptureTwelveLead).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps unmapped 12-lead soft keys inert', async () => {
     const user = userEvent.setup()
     const props = makeProps({ twelveLeadActive: true })
     render(<DeviceShell {...props} />)
-    await user.click(screen.getByRole('button', { name: 'Soft key 1' }))
     await user.click(screen.getByRole('button', { name: 'Soft key 3' }))
+    await user.click(screen.getByRole('button', { name: 'Soft key 4' }))
     expect(props.onPatientInfo).toHaveBeenCalledTimes(0)
     expect(props.onBack).toHaveBeenCalledTimes(0)
+    expect(props.onCaptureTwelveLead).toHaveBeenCalledTimes(0)
     expect(props.onToggleEtco2).toHaveBeenCalledTimes(0)
-    expect(props.onTwelveLead).toHaveBeenCalledTimes(0)
   })
 
   it('wires the right-cluster Move up / Move down / Enter buttons', async () => {

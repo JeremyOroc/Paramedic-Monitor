@@ -20,7 +20,7 @@ export function LeftSidebar({
   if (twelveLeadActive) {
     return (
       <div className="h-full w-full flex flex-col justify-between bg-sidebar-bg pb-[54px]">
-        <SidebarSlotSpacer />
+        <SidebarButton icon="📷" label="CAPTURE" ariaLabel="Capture 12-lead" interactive={false} />
         <SidebarButton icon="ⓘ" label="PT INFO" ariaLabel="Patient Info" interactive={false} />
         <SidebarSlotSpacer />
         <SidebarSlotSpacer />

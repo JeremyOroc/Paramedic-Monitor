@@ -104,6 +104,7 @@ type DeviceShellProps = {
   onLeftAnalyse: () => void
   onBack: () => void
   onPatientInfo: () => void
+  onCaptureTwelveLead: () => void
   onMoveUp: () => void
   onMoveDown: () => void
   onEnter: () => void
@@ -131,6 +132,7 @@ export function DeviceShell({
   onLeftAnalyse,
   onBack,
   onPatientInfo,
+  onCaptureTwelveLead,
   onMoveUp,
   onMoveDown,
   onEnter,
@@ -171,6 +173,7 @@ export function DeviceShell({
                 onLeftAnalyse={onLeftAnalyse}
                 onBack={onBack}
                 onPatientInfo={onPatientInfo}
+                onCaptureTwelveLead={onCaptureTwelveLead}
                 twelveLeadActive={twelveLeadActive}
               />
               <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6vw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
@@ -312,6 +315,7 @@ type LeftSoftKeysProps = {
   onLeftAnalyse: () => void
   onBack: () => void
   onPatientInfo: () => void
+  onCaptureTwelveLead: () => void
   twelveLeadActive: boolean
 }
 
@@ -328,6 +332,7 @@ function LeftSoftKeys({
   onLeftAnalyse,
   onBack,
   onPatientInfo,
+  onCaptureTwelveLead,
   twelveLeadActive,
 }: LeftSoftKeysProps) {
   // 7 fixed hardware soft keys, top to bottom — always rendered, never hidden.
@@ -345,7 +350,7 @@ function LeftSoftKeys({
   ]
 
   const twelveLeadKeys: SoftKey[] = [
-    { id: 'slot1', ariaLabel: 'Soft key 1' },
+    { id: 'capture', ariaLabel: 'Capture 12-lead', onClick: onCaptureTwelveLead },
     { id: 'patient-info', ariaLabel: 'Patient Info', onClick: onPatientInfo },
     { id: 'slot3', ariaLabel: 'Soft key 3' },
     { id: 'slot4', ariaLabel: 'Soft key 4' },
