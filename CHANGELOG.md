@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-05-25] [monitor] — Collapse left menu to BACK only in 12-lead view
+
+- When the 12-lead view is active, `LeftSidebar` now hides the LUM / 12L / CO₂ / MED / ANALYSE / PRINT rows and shows only the BACK control, pinned to the bottom (aligned with the physical Back soft key).
+- The full menu returns when leaving 12-lead view.
+- Updated the `LeftSidebar` test to assert the collapsed 12-lead layout.
+
 ## [2026-05-25] [monitor] — Align physical left soft keys with on-screen menu rows
 
 - The physical left soft keys did not line up in size or vertical level with the on-screen `LeftSidebar` menu rows (LUM / 12L / CO₂ / MED / ANALYSE / PRINT / BACK).

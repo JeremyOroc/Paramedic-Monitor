@@ -14,6 +14,16 @@ export function LeftSidebar({
   twelveLeadActive,
   etco2Active,
 }: LeftSidebarProps) {
+  // In 12-lead view the menu collapses to just BACK, pinned to the bottom so it
+  // stays aligned with the physical Back soft key.
+  if (twelveLeadActive) {
+    return (
+      <div className="h-full w-full flex flex-col justify-end bg-sidebar-bg pb-[54px]">
+        <SidebarButton icon="←" label="BACK" ariaLabel="Back" interactive={false} />
+      </div>
+    )
+  }
+
   return (
     <div className="h-full w-full flex flex-col justify-between bg-sidebar-bg pb-[54px]">
       <SidebarButton icon="☼" label="LUM" ariaLabel="Brightness" interactive={false} />

@@ -50,11 +50,14 @@ describe('LeftSidebar', () => {
     expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument()
   })
 
-  it('marks the 12-lead label as active when twelveLeadActive is true', () => {
+  it('collapses to only the Back control in 12-lead view', () => {
     setup({ twelveLeadActive: true })
-    expect(screen.getByLabelText('12-lead view')).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(screen.getByLabelText('Back')).toBeInTheDocument()
+    expect(screen.queryByLabelText('12-lead view')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Toggle EtCO2')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Brightness')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Medications')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Analyse (sidebar)')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Print')).not.toBeInTheDocument()
   })
 })
