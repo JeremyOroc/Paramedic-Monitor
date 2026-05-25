@@ -10,6 +10,21 @@ const MED_PAGES: Record<1 | 2 | 3, string[]> = {
 
 const NEXT_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
 
+const MED_ABBREVS: Record<string, string> = {
+  'O2':         'O2',
+  'AAS':        'AAS',
+  'Nitro':      'NTG',
+  'Epi':        'EPI',
+  'Salbutamol': 'SALB',
+  'Glucagon':   'GLUC',
+  'Midazolam':  'MIDAZ',
+  'Nalaxone':   'NALX',
+  'Zofran':     'ZOF',
+  'Tylenol':    'TYL',
+  'Advil':      'ADV',
+  'Fentanyl':   'FENT',
+}
+
 type LeftSidebarProps = {
   twelveLeadActive: boolean
   etco2Active: boolean
@@ -34,8 +49,7 @@ export function LeftSidebar({
         {meds.map((med) => (
           <SidebarButton
             key={med}
-            icon="℞"
-            label={med}
+            icon={<span className="text-lg font-bold leading-none">{MED_ABBREVS[med] ?? med}</span>}
             ariaLabel={`Administer ${med}`}
             interactive={false}
             active={activeMed === med}
