@@ -23,6 +23,15 @@ describe('SendButton', () => {
     expect(screen.getByRole('button', { name: 'Send' })).not.toBeDisabled()
   })
 
+  it('enables once caller info has been saved', () => {
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
+      useMonitorStore.getState().save()
+    })
+    render(<SendButton />)
+    expect(screen.getByRole('button', { name: 'Send' })).not.toBeDisabled()
+  })
+
   it('fires send and disables again afterward', async () => {
     const user = userEvent.setup()
     act(() => {
@@ -33,6 +42,19 @@ describe('SendButton', () => {
     const btn = screen.getByRole('button', { name: 'Send' })
     await user.click(btn)
     expect(useMonitorStore.getState().confirmed.hr).toBe(150)
+    expect(btn).toBeDisabled()
+  })
+
+  it('sends caller info and disables again afterward', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('problem', 'Chute')
+      useMonitorStore.getState().save()
+    })
+    render(<SendButton />)
+    const btn = screen.getByRole('button', { name: 'Send' })
+    await user.click(btn)
+    expect(useMonitorStore.getState().callerInfoConfirmed.problem).toBe('Chute')
     expect(btn).toBeDisabled()
   })
 })

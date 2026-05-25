@@ -1,14 +1,16 @@
 'use client'
 
 import { useMonitorStore } from '@/store/monitorStore'
-import { hasPending } from '@/store/fieldState'
+import { hasCallerInfoPending, hasPending } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
 
 export function SendButton() {
   const saved = useMonitorStore((s) => s.saved)
   const confirmed = useMonitorStore((s) => s.confirmed)
+  const callerInfoSaved = useMonitorStore((s) => s.callerInfoSaved)
+  const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
   const send = useMonitorStore((s) => s.send)
-  const disabled = !hasPending(saved, confirmed)
+  const disabled = !hasPending(saved, confirmed) && !hasCallerInfoPending(callerInfoSaved, callerInfoConfirmed)
 
   return (
     <button

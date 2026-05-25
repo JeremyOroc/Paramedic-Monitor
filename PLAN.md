@@ -212,7 +212,7 @@ paramedic-monitor/
 9. `DefibButtonRow` — ANALYSE | ▲▼ | CHARGE | SHOCK (styled, not wired)
    - Physical shell also includes an inert PACER button, matching the reference hardware
    - Top-rim power button toggles green/red locally; it does not shut down the monitor UI
-   - Grey physical soft keys own left-sidebar interactions: 12-lead, EtCO2 toggle, and Back
+  - Grey physical soft keys own left-sidebar interactions: 12-lead, EtCO2 toggle, left-menu ANALYSE (opens caller info modal only), and Back
    - Inner dark sidebar labels are visual only and must not be clickable
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
 11. Color reference: `#000000` bg, `#00ff41` ECG green, `#00ffff` cyan BP, `#cc44ff` purple EtCO2, `#ffff00` yellow SpO2
@@ -268,6 +268,7 @@ paramedic-monitor/
 1. `InstructorLayout` — dark panel, responsive columns
 2. `VitalsControls` + `VitalInput` — inputs for HR, BP sys/dia, EtCO2, SpO2
    - Include a top-of-vitals `Normal` button that resets draft vital numbers to normal defaults while preserving rhythm/waveform selections and the Save → Send workflow
+   - Include `CallerInfoForm` in its own admin tab for dispatch/caller info shown on the monitor after ANALYZE: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button that reveals up to three optional title/input extra rows
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
 4. On input change → set `pendingFlags[field] = true` → field turns amber/orange (pending color)
 5. `SendButton` — sets `pendingFlags` all false, sets `confirmedVitals = draftVitals`
@@ -280,6 +281,9 @@ paramedic-monitor/
 **Testing:**
 - Component tests cover the top-of-vitals `Normal` button and confirm it resets draft vital numbers without bypassing Send.
 - Store tests cover the `resetVitalsToNormal` action and verify it preserves non-vital fields.
+- Component/page tests cover caller-info draft/save/send flow and ANALYZE-triggered monitor display.
+- Caller-info form tests cover adding optional extra rows one at a time and capping the form at three extras.
+- Admin page tests cover tab switching between monitor controls and caller-info form.
 
 **Milestone:** Instructor panel fully interactive. Editing vitals turns fields amber. Send confirms them. Defib sequence enforces correct order with progress bars.
 

@@ -20,6 +20,7 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onEnergyDown: vi.fn(),
     onTwelveLead: vi.fn(),
     onToggleEtco2: vi.fn(),
+    onLeftAnalyse: vi.fn(),
     onBack: vi.fn(),
     twelveLeadActive: false,
     ...overrides,
@@ -98,6 +99,28 @@ describe('DeviceShell', () => {
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Back' }))
     expect(props.onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('fires onLeftAnalyse when the left ANALYSE shell button is clicked', async () => {
+    const user = userEvent.setup()
+    const props = makeProps()
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Analyse (sidebar)' }))
+    expect(props.onLeftAnalyse).toHaveBeenCalledTimes(1)
+    expect(props.onAnalyse).toHaveBeenCalledTimes(0)
+  })
+
+  it('keeps non-mapped left shell buttons inert', async () => {
+    const user = userEvent.setup()
+    const props = makeProps()
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Brightness soft key' }))
+    await user.click(screen.getByRole('button', { name: 'Treatment soft key' }))
+    await user.click(screen.getByRole('button', { name: 'Printer soft key' }))
+    expect(props.onTwelveLead).toHaveBeenCalledTimes(0)
+    expect(props.onToggleEtco2).toHaveBeenCalledTimes(0)
+    expect(props.onLeftAnalyse).toHaveBeenCalledTimes(0)
+    expect(props.onBack).toHaveBeenCalledTimes(0)
   })
 
   it('fires onAnalyse when ANALYZE is clicked and canAnalyse is true', async () => {
