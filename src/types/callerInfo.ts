@@ -40,13 +40,13 @@ export const CALLER_INFO_FIELDS: ReadonlyArray<{
   { field: 'problem', label: 'Probleme', multiline: true },
   { field: 'information', label: 'Information', multiline: true },
   { field: 'update', label: 'Mise a jour', multiline: true },
+  { field: 'time', label: 'Heure' },
   { field: 'extra1Label', label: 'Extra 1 name' },
   { field: 'extra1', label: 'Extra 1' },
   { field: 'extra2Label', label: 'Extra 2 name' },
   { field: 'extra2', label: 'Extra 2' },
   { field: 'extra3Label', label: 'Extra 3 name' },
   { field: 'extra3', label: 'Extra 3' },
-  { field: 'time', label: 'Heure' },
 ]
 
 export const CALLER_INFO_DISPLAY_FIELDS: ReadonlyArray<{
@@ -59,11 +59,18 @@ export const CALLER_INFO_DISPLAY_FIELDS: ReadonlyArray<{
   { field: 'problem', label: 'Probleme' },
   { field: 'information', label: 'Information' },
   { field: 'update', label: 'Mise a jour' },
+  { field: 'time', label: 'Heure' },
   { field: 'extra1', label: 'Extra 1', labelField: 'extra1Label' },
   { field: 'extra2', label: 'Extra 2', labelField: 'extra2Label' },
   { field: 'extra3', label: 'Extra 3', labelField: 'extra3Label' },
-  { field: 'time', label: 'Heure' },
 ]
+
+export function normalizeCallerInfo(info: Partial<CallerInfo> | null | undefined): CallerInfo {
+  return {
+    ...DEFAULT_CALLER_INFO,
+    ...(info ?? {}),
+  }
+}
 
 export function hasCallerInfo(info: CallerInfo): boolean {
   return CALLER_INFO_FIELDS.some(({ field }) => info[field].trim() !== '')

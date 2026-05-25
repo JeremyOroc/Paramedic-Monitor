@@ -53,6 +53,8 @@ describe('CallerInfoModal', () => {
     expect(screen.getByText('Acces')).toBeInTheDocument()
     expect(screen.getByText('Porte cote nord')).toBeInTheDocument()
     expect(screen.queryByText('Extra 1')).toBeNull()
+    expect(screen.queryByText('Extra 2')).toBeNull()
+    expect(screen.queryByText('Extra 3')).toBeNull()
   })
 
   it('falls back to generic extra labels when custom names are empty', () => {
@@ -69,6 +71,26 @@ describe('CallerInfoModal', () => {
 
     expect(screen.getByText('Extra 1')).toBeInTheDocument()
     expect(screen.getByText('Porte cote nord')).toBeInTheDocument()
+  })
+
+  it('renders extra rows after Heure in display order', () => {
+    render(
+      <CallerInfoModal
+        open
+        info={{
+          ...DEFAULT_CALLER_INFO,
+          time: '14:45',
+          extra1Label: 'Acces',
+          extra1: 'Porte cote nord',
+        }}
+        onClose={vi.fn()}
+      />,
+    )
+
+    const panelText = screen.getByLabelText('Caller info').textContent ?? ''
+    expect(panelText.indexOf('Heure')).toBeGreaterThan(-1)
+    expect(panelText.indexOf('Acces')).toBeGreaterThan(-1)
+    expect(panelText.indexOf('Heure')).toBeLessThan(panelText.indexOf('Acces'))
   })
 
   it('closes when the close button is clicked', async () => {

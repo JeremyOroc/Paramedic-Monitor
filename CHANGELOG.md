@@ -5,6 +5,20 @@
 
 ---
 
+## [2026-05-25] [monitor] — Wire left menu ANALYSE soft key to caller info modal
+
+- Added a dedicated `onLeftAnalyse` action on `DeviceShell` and mapped it to the left-side ANALYSE soft key (the key aligned with the monitor menu ANALYSE row).
+- Wired the monitor page to open `CallerInfoModal` from that left soft key without starting the defib analyse sequence.
+- Kept the bottom defib `ANALYZE` button behavior unchanged (still runs analyse sequence and opens caller info).
+- Added tests for left soft-key ANALYSE behavior and for keeping non-mapped left soft keys inert.
+
+## [2026-05-16] [instructor] — Refine caller info extras
+
+- Changed the Caller Info tab so extra rows are not shown by default.
+- Added an `Add extra` button at the bottom of the form that reveals one optional title/input row at a time and caps at three extras.
+- Kept existing saved extra values visible when reopening the Caller Info form.
+- Updated caller-info form tests for progressive extra-row behavior.
+
 ## [2026-05-16] [instructor+monitor] — Add caller info display on ANALYZE
 
 - Added caller-info draft/saved/confirmed state to the monitor store so dispatch details follow the existing Save → Send admin workflow.

@@ -154,6 +154,7 @@ export default function MonitorPage() {
         onToggleEtco2={() =>
           setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
         }
+        onLeftAnalyse={() => setCallerInfoOpen(true)}
         onBack={() => setView('main')}
         twelveLeadActive={isTwelveLead}
         onPowerOn={() => setIsTimerRunning(true)}
