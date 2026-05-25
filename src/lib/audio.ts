@@ -6,6 +6,9 @@ let _pool: HTMLAudioElement[] = []
 let _poolIndex = 0
 let _alarm: HTMLAudioElement | null = null
 
+// Map for arbitrary system audio files
+const _systemAudioPools: Record<string, HTMLAudioElement[]> = {}
+
 if (typeof window !== 'undefined') {
   _pool = Array.from({ length: POOL_SIZE }, () => {
     const el = new Audio(BUTTON_CLICK_SRC)
@@ -16,6 +19,24 @@ if (typeof window !== 'undefined') {
   _alarm = new Audio(ALARM_SRC)
   _alarm.preload = 'auto'
   _alarm.loop = true
+}
+
+export function playSystemAudio(filename: string): void {
+  if (typeof window === 'undefined') return
+  const src = `/audio/${filename}`
+  if (!_systemAudioPools[src]) {
+    _systemAudioPools[src] = Array.from({ length: 2 }, () => {
+      const el = new Audio(src)
+      el.preload = 'auto'
+      return el
+    })
+  }
+  
+  const pool = _systemAudioPools[src]
+  // Find a free element or just use the first/next one
+  const freeEl = pool.find(el => el.paused) || pool[0]
+  freeEl.currentTime = 0
+  freeEl.play().catch(() => {})
 }
 
 export function playButtonClick(): void {

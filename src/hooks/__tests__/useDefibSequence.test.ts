@@ -29,61 +29,65 @@ describe('useDefibSequence', () => {
     expect(result.current.energy).toBe(50)
   })
 
-  it('transitions idle → analysing → analysed', () => {
+  it('transitions idle → analyzing_ecg → analyzing_clear → analyzing_result → cpr', () => {
     const { result } = renderHook(() =>
-      useDefibSequence({ patientMode: 'adult', analyseDurationMs: 1000 }),
+      useDefibSequence({ patientMode: 'adult' }),
     )
     act(() => result.current.onAnalyse())
-    expect(result.current.state).toBe('analysing')
+    expect(result.current.state).toBe('analyzing_ecg')
     expect(result.current.canAnalyse).toBe(false)
 
     act(() => {
-      vi.advanceTimersByTime(1000)
+      vi.advanceTimersByTime(2500)
     })
-    expect(result.current.state).toBe('analysed')
+    expect(result.current.state).toBe('analyzing_clear')
+
+    act(() => {
+      vi.advanceTimersByTime(2500)
+    })
+    expect(result.current.state).toBe('analyzing_result')
+
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+    expect(result.current.state).toBe('cpr')
     expect(result.current.canCharge).toBe(true)
   })
 
-  it('transitions analysed → charging → charged', () => {
+  it('transitions charge_prompt → charging → charged', () => {
     const { result } = renderHook(() =>
       useDefibSequence({
         patientMode: 'adult',
-        analyseDurationMs: 100,
-        chargeDurationMs: 200,
       }),
     )
-    act(() => result.current.onAnalyse())
-    act(() => {
-      vi.advanceTimersByTime(100)
-    })
     act(() => result.current.onCharge())
-    expect(result.current.state).toBe('charging')
+    expect(result.current.state).toBe('charge_prompt')
     expect(result.current.canShock).toBe(false)
 
+    act(() => result.current.onCharge())
+    expect(result.current.state).toBe('charging')
+
     act(() => {
-      vi.advanceTimersByTime(200)
+      vi.advanceTimersByTime(4000)
     })
     expect(result.current.state).toBe('charged')
     expect(result.current.canShock).toBe(true)
   })
 
-  it('SHOCK increments counter and returns to idle', () => {
+  it('SHOCK increments counter and returns to delivered', () => {
     const { result } = renderHook(() =>
       useDefibSequence({
         patientMode: 'adult',
-        analyseDurationMs: 100,
-        chargeDurationMs: 100,
       }),
     )
-    act(() => result.current.onAnalyse())
-    act(() => vi.advanceTimersByTime(100))
     act(() => result.current.onCharge())
-    act(() => vi.advanceTimersByTime(100))
+    act(() => result.current.onCharge())
+    act(() => vi.advanceTimersByTime(4000))
     expect(result.current.canShock).toBe(true)
 
     act(() => result.current.onShock())
     expect(result.current.shockCount).toBe(1)
-    expect(result.current.state).toBe('idle')
+    expect(result.current.state).toBe('delivered')
     expect(result.current.canShock).toBe(false)
   })
 
@@ -110,9 +114,9 @@ describe('useDefibSequence', () => {
     expect(result.current.energy).toBe(10)
   })
 
-  it('blocks energy adjustment during analysing/charging', () => {
+  it('blocks energy adjustment during analyzing/charging', () => {
     const { result } = renderHook(() =>
-      useDefibSequence({ patientMode: 'adult', analyseDurationMs: 1000 }),
+      useDefibSequence({ patientMode: 'adult' }),
     )
     act(() => result.current.onAnalyse())
     expect(result.current.canAdjustEnergy).toBe(false)

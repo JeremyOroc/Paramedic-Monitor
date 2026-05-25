@@ -10,6 +10,7 @@ import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
+import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
@@ -95,26 +96,43 @@ export default function MonitorPage() {
             etco2={confirmed.etco2}
             spo2Waveform={confirmed.spo2_waveform}
             etco2Waveform={confirmed.etco2_waveform}
+            showApplyElectrodes={false}
           />
         )
       }
       vitals={
-        <VitalsStrip
-          hr={confirmed.hr}
-          bpSys={confirmed.bp_sys}
-          bpDia={confirmed.bp_dia}
-          etco2={confirmed.etco2}
-          spo2={confirmed.spo2}
-          activeAlarms={alarm.activeAlarms}
-          searching={false}
-        />
+        ['charge_prompt', 'charging', 'charged', 'delivered'].includes(defib.state) ? null : (
+          <VitalsStrip
+            hr={confirmed.hr}
+            bpSys={confirmed.bp_sys}
+            bpDia={confirmed.bp_dia}
+            etco2={confirmed.etco2}
+            spo2={confirmed.spo2}
+            activeAlarms={alarm.activeAlarms}
+            searching={false}
+          />
+        )
+      }
+      energyColumn={
+        !isTwelveLead ? (
+          ['charge_prompt', 'charging', 'charged'].includes(defib.state) ? (
+            <EnergyScaleColumn
+              progress={defib.progress}
+              isCharged={defib.state === 'charged'}
+              selectedEnergy={defib.energy}
+            />
+          ) : defib.state === 'delivered' ? (
+            <div className="w-full h-full bg-black border-l border-neutral-800 flex flex-col" />
+          ) : null
+        ) : null
       }
       bottomBar={
         isTwelveLead ? null : (
           <BottomStatusBar
-            patientMode={patientMode}
+            defibState={defib.state}
             joules={defib.energy}
             shockCount={defib.shockCount}
+            cprStartTime={defib.cprStartTime}
           />
         )
       }
