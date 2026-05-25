@@ -61,7 +61,7 @@ export type MonitorState = {
   reset: () => void
 }
 
-const STORAGE_KEY = 'paramedic-monitor.v1'
+export const STORAGE_KEY = 'paramedic-monitor.v1'
 
 export const useMonitorStore = create<MonitorState>()(
   persist(
@@ -118,6 +118,10 @@ export const useMonitorStore = create<MonitorState>()(
       version: 3,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
+      // A migrate fn must exist for older persisted versions, otherwise persist
+      // logs "couldn't be migrated" (surfaced as a Next dev error overlay).
+      // Passthrough is enough — `merge` below fills/normalizes new fields.
+      migrate: (persistedState) => persistedState as MonitorState,
       merge: (persisted, current) => {
         const persistedState = persisted as Partial<MonitorState> | undefined
 

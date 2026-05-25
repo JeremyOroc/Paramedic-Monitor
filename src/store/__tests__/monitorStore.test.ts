@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useMonitorStore } from '../monitorStore'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { useMonitorStore, STORAGE_KEY } from '../monitorStore'
 import { fieldStatus, hasDirty, hasPending } from '../fieldState'
 import { DEFAULT_VITALS } from '@/types/vitals'
 import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
@@ -160,6 +160,41 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setPatientSex('F')
     useMonitorStore.getState().reset()
     expect(useMonitorStore.getState().patientInfo).toEqual(DEFAULT_PATIENT_INFO)
+  })
+})
+
+describe('persist migration', () => {
+  afterEach(() => {
+    localStorage.removeItem(STORAGE_KEY)
+    useMonitorStore.getState().reset()
+    vi.restoreAllMocks()
+  })
+
+  it('migrates a version-2 payload without error and seeds patientInfo', async () => {
+    // Persisted state from before patientInfo existed (version 2).
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        state: {
+          confirmed: { ...DEFAULT_VITALS, hr: 137 },
+          callerInfoConfirmed: { ...DEFAULT_CALLER_INFO, address: '5 Rue Test' },
+        },
+      }),
+    )
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await useMonitorStore.persist.rehydrate()
+
+    const migrationErrors = errorSpy.mock.calls.filter((args) =>
+      String(args[0]).includes("couldn't be migrated"),
+    )
+    expect(migrationErrors).toHaveLength(0)
+
+    const s = useMonitorStore.getState()
+    expect(s.confirmed.hr).toBe(137) // preserved from the old payload
+    expect(s.callerInfoConfirmed.address).toBe('5 Rue Test')
+    expect(s.patientInfo).toEqual(DEFAULT_PATIENT_INFO) // seeded by merge
   })
 })
 

@@ -5,6 +5,17 @@
 
 ---
 
+## [2026-05-25] [monitor] — Fix persist migration error on store version bump
+
+- Bumping the persist `version` 2 → 3 (Patient Info) without a `migrate` function made
+  Zustand log "State loaded from storage couldn't be migrated…" — surfaced as a Next.js
+  dev error overlay for anyone with previously-persisted state.
+- Added a passthrough `migrate` to the `persist` options; the existing `merge` already
+  seeds `patientInfo` and normalizes caller info, so old vitals/caller-info are preserved
+  and `patientInfo` defaults are filled.
+- Exported `STORAGE_KEY` and added a regression test that rehydrates a version-2 payload
+  and asserts no migration error + seeded defaults.
+
 ## [2026-05-25] [monitor] — Patient Info menu in 12-lead view
 
 - Added a **Patient Info** submenu, available only in the 12-lead view, opened by the
