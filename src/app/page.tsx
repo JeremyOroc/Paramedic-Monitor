@@ -13,10 +13,15 @@ import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
 import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
+import {
+  PatientInfoPanel,
+  type PatientInfoField,
+} from '@/components/monitor/PatientInfoPanel'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
+import { clampAge, toggleSex, type PatientSex } from '@/types/patientInfo'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { formatMonitorClock } from '@/lib/monitorClock'
@@ -30,6 +35,10 @@ export default function MonitorPage() {
   const [patientMode, setPatientMode] = useState<PatientMode>(DEFAULT_VITALS.patient_mode)
   const [patientModalOpen, setPatientModalOpen] = useState(false)
   const [callerInfoOpen, setCallerInfoOpen] = useState(false)
+  const [patientInfoOpen, setPatientInfoOpen] = useState(false)
+  const [selectedField, setSelectedField] = useState<PatientInfoField>('age')
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState<number | PatientSex | null>(null)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
   const [now, setNow] = useState<Date | null>(null)
 
@@ -57,10 +66,84 @@ export default function MonitorPage() {
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
+  const patientInfo = useMonitorStore((s) => s.patientInfo)
+  const setPatientAge = useMonitorStore((s) => s.setPatientAge)
+  const setPatientSex = useMonitorStore((s) => s.setPatientSex)
   const defib = useDefibSequence({ patientMode })
   const alarm = useAlarm(confirmed)
 
   const isTwelveLead = view === '12lead'
+
+  // Patient Info menu (12-lead only): two-step edit driven by the right cluster.
+  // Browse highlights a field; Enter starts editing a draft; arrows change the
+  // draft; Enter commits to the store; Back cancels the edit or closes the panel.
+  function openPatientInfo() {
+    setPatientInfoOpen(true)
+    setSelectedField('age')
+    setEditing(false)
+    setEditValue(null)
+  }
+
+  function adjustEditValue(direction: 'up' | 'down') {
+    if (selectedField === 'age') {
+      const delta = direction === 'up' ? 1 : -1
+      setEditValue((v) => clampAge((typeof v === 'number' ? v : patientInfo.age) + delta))
+    } else {
+      setEditValue((v) => toggleSex(v === 'M' || v === 'F' ? v : patientInfo.sex))
+    }
+  }
+
+  function moveSelection(direction: 'up' | 'down') {
+    if (!patientInfoOpen) return
+    if (editing) {
+      // up increments / down decrements the current field's draft
+      adjustEditValue(direction)
+      return
+    }
+    // Two fields only: up highlights Age, down highlights Sex (clamped, no wrap).
+    setSelectedField(direction === 'up' ? 'age' : 'sex')
+  }
+
+  function handleEnter() {
+    if (!patientInfoOpen) return
+    if (!editing) {
+      setEditValue(selectedField === 'age' ? patientInfo.age : patientInfo.sex)
+      setEditing(true)
+      return
+    }
+    // commit the draft to the persisted store
+    if (selectedField === 'age' && typeof editValue === 'number') {
+      setPatientAge(editValue)
+    } else if (selectedField === 'sex' && (editValue === 'M' || editValue === 'F')) {
+      setPatientSex(editValue)
+    }
+    setEditing(false)
+    setEditValue(null)
+  }
+
+  function handleBack() {
+    if (editing) {
+      // cancel: discard the draft, stay in the panel (browse)
+      setEditing(false)
+      setEditValue(null)
+      return
+    }
+    if (patientInfoOpen) {
+      setPatientInfoOpen(false)
+      return
+    }
+    setView('main')
+  }
+
+  // Values shown in the panel: the draft for the field being edited, else stored.
+  const displayAge =
+    editing && selectedField === 'age' && typeof editValue === 'number'
+      ? editValue
+      : patientInfo.age
+  const displaySex: PatientSex =
+    editing && selectedField === 'sex' && (editValue === 'M' || editValue === 'F')
+      ? editValue
+      : patientInfo.sex
 
   const screen = (
     <div className="relative h-full w-full">
@@ -146,6 +229,13 @@ export default function MonitorPage() {
         info={callerInfoConfirmed}
         onClose={() => setCallerInfoOpen(false)}
       />
+      <PatientInfoPanel
+        open={patientInfoOpen}
+        age={displayAge}
+        sex={displaySex}
+        selectedField={selectedField}
+        editing={editing}
+      />
     </div>
   )
 
@@ -173,7 +263,11 @@ export default function MonitorPage() {
           setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
         }
         onLeftAnalyse={() => setCallerInfoOpen(true)}
-        onBack={() => setView('main')}
+        onBack={handleBack}
+        onPatientInfo={openPatientInfo}
+        onMoveUp={() => moveSelection('up')}
+        onMoveDown={() => moveSelection('down')}
+        onEnter={handleEnter}
         twelveLeadActive={isTwelveLead}
         onPowerOn={() => setIsTimerRunning(true)}
         onPowerOff={() => setIsTimerRunning(false)}

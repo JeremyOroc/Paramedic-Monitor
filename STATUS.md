@@ -59,6 +59,12 @@
   - [x] `resetVitalsToNormal` resets draft HR/BP/EtCO2/SpO2 values to `DEFAULT_VITALS`
   - [x] Rhythm and waveform selections are preserved; confirmed monitor values are not changed until Save → Send
   - [x] Tests added for the store action and `VitalsControls` button behavior
+- [x] **Patient Info menu (12-lead) — COMPLETE:**
+  - [x] Second left soft key (12-lead view only) opens a `PatientInfoPanel` overlaying the bottom 2/3 of the screen
+  - [x] Edits Patient Age (clamp 0–120, default 40) and Patient Sex (M/F), driven by the right cluster's Move up/down arrows + center dot (Enter)
+  - [x] Two-step edit with a draft: Enter starts editing, arrows change the draft, Enter commits to the store; Back cancels the edit, closes the panel, then exits 12-lead
+  - [x] `patientInfo` persisted in `monitorStore` (`setPatientAge`/`setPatientSex`, persist v3); 12-lead left menu = Patient Info (slot 2) + Back, aligned on-screen and on the physical shell
+  - [x] Tests: patientInfo helpers, store, panel, DeviceShell keys/nav, and an end-to-end page flow
 - [x] **Caller info on ANALYZE — COMPLETE:**
   - [x] Admin dashboard includes a separate Caller Info tab with fields: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button capped at three optional title/input rows
   - [x] Caller info uses draft/saved/confirmed state and the existing Save → Send workflow

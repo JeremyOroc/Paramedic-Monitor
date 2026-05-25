@@ -14,11 +14,18 @@ export function LeftSidebar({
   twelveLeadActive,
   etco2Active,
 }: LeftSidebarProps) {
-  // In 12-lead view the menu collapses to just BACK, pinned to the bottom so it
-  // stays aligned with the physical Back soft key.
+  // In 12-lead view the menu collapses to Patient Info (slot 2) + Back (bottom).
+  // The other slots stay as empty spacers so both controls land on the same
+  // levels as the main-view menu — and align 1:1 with the physical soft keys.
   if (twelveLeadActive) {
     return (
-      <div className="h-full w-full flex flex-col justify-end bg-sidebar-bg pb-[54px]">
+      <div className="h-full w-full flex flex-col justify-between bg-sidebar-bg pb-[54px]">
+        <SidebarSlotSpacer />
+        <SidebarButton icon="ⓘ" label="PT INFO" ariaLabel="Patient Info" interactive={false} />
+        <SidebarSlotSpacer />
+        <SidebarSlotSpacer />
+        <SidebarSlotSpacer />
+        <SidebarSlotSpacer />
         <SidebarButton icon="←" label="BACK" ariaLabel="Back" interactive={false} />
       </div>
     )
@@ -47,4 +54,10 @@ export function LeftSidebar({
       <SidebarButton icon="←" label="BACK" ariaLabel="Back" interactive={false} />
     </div>
   )
+}
+
+// Empty soft-key slot — same height as a square SidebarButton so the populated
+// keys stay on their fixed levels under flex justify-between.
+function SidebarSlotSpacer() {
+  return <div aria-hidden="true" className="w-full h-[clamp(43px,6.2vh,68px)]" />
 }

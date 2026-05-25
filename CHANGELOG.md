@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-05-25] [monitor] — Patient Info menu in 12-lead view
+
+- Added a **Patient Info** submenu, available only in the 12-lead view, opened by the
+  second left soft key. It overlays the bottom 2/3 of the screen and edits two fields:
+  **Patient Age** (clamp 0–120, default 40) and **Patient Sex** (M / F).
+- Driven entirely by the right control cluster's three buttons: **Move up / Move down**
+  arrows and the center **dot (Enter)**. Two-step model — browse highlights a field,
+  Enter starts editing a draft, arrows change the draft, Enter commits to the store. Back
+  cancels an in-progress edit (revert); Back again closes the panel; a final Back exits
+  12-lead.
+- Age/Sex persist in `monitorStore` (`patientInfo`, persist version bumped 2 → 3) via new
+  `setPatientAge` / `setPatientSex` actions.
+- 12-lead left menu now shows **Patient Info** (slot 2) + **Back** (bottom) on both the
+  on-screen `LeftSidebar` and the physical `LeftSoftKeys`, kept aligned via empty spacers.
+- New: `src/types/patientInfo.ts`, `PatientInfoPanel.tsx`. Tests added for the helpers,
+  store, panel, `DeviceShell` keys/nav wiring, and an end-to-end page flow.
+
 ## [2026-05-25] [monitor] — Collapse left menu to BACK only in 12-lead view
 
 - When the 12-lead view is active, `LeftSidebar` now hides the LUM / 12L / CO₂ / MED / ANALYSE / PRINT rows and shows only the BACK control, pinned to the bottom (aligned with the physical Back soft key).

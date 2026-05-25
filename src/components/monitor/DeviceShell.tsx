@@ -103,6 +103,10 @@ type DeviceShellProps = {
   onToggleEtco2: () => void
   onLeftAnalyse: () => void
   onBack: () => void
+  onPatientInfo: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onEnter: () => void
   twelveLeadActive?: boolean
   onPowerOn?: () => void
   onPowerOff?: () => void
@@ -126,6 +130,10 @@ export function DeviceShell({
   onToggleEtco2,
   onLeftAnalyse,
   onBack,
+  onPatientInfo,
+  onMoveUp,
+  onMoveDown,
+  onEnter,
   twelveLeadActive = false,
   onPowerOn,
   onPowerOff,
@@ -162,6 +170,7 @@ export function DeviceShell({
                 onToggleEtco2={onToggleEtco2}
                 onLeftAnalyse={onLeftAnalyse}
                 onBack={onBack}
+                onPatientInfo={onPatientInfo}
                 twelveLeadActive={twelveLeadActive}
               />
               <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6vw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
@@ -170,7 +179,11 @@ export function DeviceShell({
                   {powerState === 'booting' && <BootScreen />}
                 </div>
               </div>
-              <RightControlCluster />
+              <RightControlCluster
+                onMoveUp={onMoveUp}
+                onMoveDown={onMoveDown}
+                onEnter={onEnter}
+              />
             </div>
             <BottomDefibStrip
               defibState={defibState}
@@ -298,7 +311,15 @@ type LeftSoftKeysProps = {
   onToggleEtco2: () => void
   onLeftAnalyse: () => void
   onBack: () => void
+  onPatientInfo: () => void
   twelveLeadActive: boolean
+}
+
+type SoftKey = {
+  id: string
+  ariaLabel?: string
+  onClick?: () => void
+  active?: boolean
 }
 
 function LeftSoftKeys({
@@ -306,17 +327,33 @@ function LeftSoftKeys({
   onToggleEtco2,
   onLeftAnalyse,
   onBack,
+  onPatientInfo,
   twelveLeadActive,
 }: LeftSoftKeysProps) {
-  const keys = [
-    { ariaLabel: 'Brightness soft key' },
-    { ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
-    { ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
-    { ariaLabel: 'Treatment soft key' },
-    { ariaLabel: 'Analyse (sidebar)', onClick: onLeftAnalyse },
-    { ariaLabel: 'Printer soft key' },
-    { ariaLabel: 'Back', onClick: onBack },
+  // 7 slots, top to bottom. In 12-lead view the menu collapses to Patient Info
+  // (slot 2) + Back (slot 7); the remaining slots stay as empty spacers so the
+  // populated keys land on the same levels — and align with the on-screen menu.
+  const mainKeys: SoftKey[] = [
+    { id: 'brightness', ariaLabel: 'Brightness soft key' },
+    { id: '12lead', ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
+    { id: 'etco2', ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
+    { id: 'treatment', ariaLabel: 'Treatment soft key' },
+    { id: 'analyse', ariaLabel: 'Analyse (sidebar)', onClick: onLeftAnalyse },
+    { id: 'printer', ariaLabel: 'Printer soft key' },
+    { id: 'back', ariaLabel: 'Back', onClick: onBack },
   ]
+
+  const twelveLeadKeys: SoftKey[] = [
+    { id: 'slot1' },
+    { id: 'patient-info', ariaLabel: 'Patient Info', onClick: onPatientInfo },
+    { id: 'slot3' },
+    { id: 'slot4' },
+    { id: 'slot5' },
+    { id: 'slot6' },
+    { id: 'back', ariaLabel: 'Back', onClick: onBack },
+  ]
+
+  const keys = twelveLeadActive ? twelveLeadKeys : mainKeys
 
   return (
     // Mirror the on-screen LeftSidebar geometry so the physical soft keys line
@@ -325,13 +362,18 @@ function LeftSoftKeys({
     // justify-between distribution over the shared device row.
     <div className="relative z-10 flex h-full min-h-0 flex-col justify-between pt-[calc(clamp(5px,0.6vw,9px)+56px)] pb-[calc(clamp(5px,0.6vw,9px)+54px)]">
       {keys.map((key) => (
-        <div key={key.ariaLabel} className="flex items-center justify-end gap-[9px]">
-          <PhysicalButton
-            ariaLabel={key.ariaLabel}
-            onClick={key.onClick}
-            active={key.active}
-            className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
-          />
+        <div key={key.id} className="flex items-center justify-end gap-[9px]">
+          {key.ariaLabel ? (
+            <PhysicalButton
+              ariaLabel={key.ariaLabel}
+              onClick={key.onClick}
+              active={key.active}
+              className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
+            />
+          ) : (
+            // empty slot — preserve the row height so populated keys keep their level
+            <div aria-hidden="true" className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]" />
+          )}
           <div className="h-[clamp(8px,1.1vh,14px)] w-[clamp(11px,1.1vw,18px)] rounded-[3px] bg-[#aeb0b0] shadow-[inset_1px_1px_1px_rgba(255,255,255,0.38)]" />
         </div>
       ))}
@@ -339,7 +381,13 @@ function LeftSoftKeys({
   )
 }
 
-function RightControlCluster() {
+type RightControlClusterProps = {
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onEnter: () => void
+}
+
+function RightControlCluster({ onMoveUp, onMoveDown, onEnter }: RightControlClusterProps) {
   return (
     <div className="relative min-h-0">
       <PhysicalButton
@@ -361,18 +409,21 @@ function RightControlCluster() {
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Enter"
+          onClick={onEnter}
           className="absolute left-[10%] top-[45%] h-[16%] w-[40%] rounded-[13px]"
         >
           <span className="h-[32%] w-[32%] rounded-full bg-[#4a4a4a]" />
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Move up"
+          onClick={onMoveUp}
           className="absolute right-[13%] top-[30%] h-[18%] w-[35%] rounded-[13px]"
         >
           <CurvedArrowIcon direction="up" />
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Move down"
+          onClick={onMoveDown}
           className="absolute right-[13%] top-[56%] h-[18%] w-[35%] rounded-[13px]"
         >
           <CurvedArrowIcon direction="down" />

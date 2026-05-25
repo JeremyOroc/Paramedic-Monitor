@@ -50,8 +50,9 @@ describe('LeftSidebar', () => {
     expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument()
   })
 
-  it('collapses to only the Back control in 12-lead view', () => {
+  it('collapses to Patient Info + Back in 12-lead view', () => {
     setup({ twelveLeadActive: true })
+    expect(screen.getByLabelText('Patient Info')).toBeInTheDocument()
     expect(screen.getByLabelText('Back')).toBeInTheDocument()
     expect(screen.queryByLabelText('12-lead view')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Toggle EtCO2')).not.toBeInTheDocument()

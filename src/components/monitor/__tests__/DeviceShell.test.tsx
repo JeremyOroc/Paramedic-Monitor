@@ -22,6 +22,10 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onToggleEtco2: vi.fn(),
     onLeftAnalyse: vi.fn(),
     onBack: vi.fn(),
+    onPatientInfo: vi.fn(),
+    onMoveUp: vi.fn(),
+    onMoveDown: vi.fn(),
+    onEnter: vi.fn(),
     twelveLeadActive: false,
     ...overrides,
   }
@@ -110,6 +114,35 @@ describe('DeviceShell', () => {
     expect(props.onAnalyse).toHaveBeenCalledTimes(0)
   })
 
+  it('shows Patient Info (slot 2) + Back on the left shell in 12-lead view', () => {
+    render(<DeviceShell {...makeProps({ twelveLeadActive: true })} />)
+    expect(screen.getByRole('button', { name: 'Patient Info' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
+    // main-view keys are gone
+    expect(screen.queryByRole('button', { name: '12-lead view' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Toggle EtCO2' })).not.toBeInTheDocument()
+  })
+
+  it('fires onPatientInfo when the slot-2 key is clicked in 12-lead view', async () => {
+    const user = userEvent.setup()
+    const props = makeProps({ twelveLeadActive: true })
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Patient Info' }))
+    expect(props.onPatientInfo).toHaveBeenCalledTimes(1)
+  })
+
+  it('wires the right-cluster Move up / Move down / Enter buttons', async () => {
+    const user = userEvent.setup()
+    const props = makeProps()
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Move up' }))
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    await user.click(screen.getByRole('button', { name: 'Enter' }))
+    expect(props.onMoveUp).toHaveBeenCalledTimes(1)
+    expect(props.onMoveDown).toHaveBeenCalledTimes(1)
+    expect(props.onEnter).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps non-mapped left shell buttons inert', async () => {
     const user = userEvent.setup()
     const props = makeProps()
@@ -157,11 +190,5 @@ describe('DeviceShell', () => {
   it('displays the current energy level', () => {
     render(<DeviceShell {...makeProps({ energy: 200 })} />)
     expect(screen.getByText('200')).toBeInTheDocument()
-  })
-
-  it('highlights the 12-lead button when twelveLeadActive is true', () => {
-    render(<DeviceShell {...makeProps({ twelveLeadActive: true })} />)
-    const btn = screen.getByRole('button', { name: '12-lead view' })
-    expect(btn).toHaveClass('bg-[#4a90b8]')
   })
 })
