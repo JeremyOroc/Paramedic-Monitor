@@ -43,4 +43,32 @@ describe('PatientInfoPanel', () => {
     const ageRow = screen.getByText('Patient Age').closest('li')
     expect(ageRow).toHaveAttribute('data-editing', 'true')
   })
+
+  it('puts the blue cursor on the label while browsing', () => {
+    setup({ selectedField: 'age', editing: false })
+    const label = screen.getByText('Patient Age')
+    const valueCell = screen.getByText('63').parentElement as HTMLElement
+    expect(label).toHaveClass('bg-[#2f6df6]')
+    expect(valueCell).not.toHaveClass('bg-[#2f6df6]')
+    expect(valueCell).toHaveClass('bg-black')
+  })
+
+  it('moves the blue cursor to the value while editing', () => {
+    setup({ selectedField: 'age', editing: true })
+    const label = screen.getByText('Patient Age')
+    const valueCell = screen.getByText('63').parentElement as HTMLElement
+    expect(valueCell).toHaveClass('bg-[#2f6df6]')
+    expect(label).not.toHaveClass('bg-[#2f6df6]')
+  })
+
+  it('never gives a label cell a black background', () => {
+    setup({ selectedField: 'age', editing: false })
+    expect(screen.getByText('Patient Age')).not.toHaveClass('bg-black')
+    expect(screen.getByText('Patient Sex')).not.toHaveClass('bg-black')
+  })
+
+  it('renders no up/down arrows when editing', () => {
+    setup({ selectedField: 'age', editing: true })
+    expect(screen.queryByText('▲▼')).not.toBeInTheDocument()
+  })
 })

@@ -55,23 +55,19 @@ export function PatientInfoPanel({
                 <span
                   className={cn(
                     'px-3 py-2 text-lg font-bold',
-                    selected ? 'bg-black text-white' : 'text-black',
+                    // blue cursor sits on the label while browsing the options
+                    selected && !editing ? 'bg-[#2f6df6] text-white' : 'text-black',
                   )}
                 >
                   {label}
                 </span>
                 <span
                   className={cn(
-                    'flex items-center justify-center gap-2 px-3 py-2 text-lg font-bold text-white',
-                    selected ? 'bg-[#2f6df6]' : 'bg-black',
-                    isEditing && 'outline outline-2 outline-pending-amber',
+                    'flex items-center justify-center px-3 py-2 text-lg font-bold text-white',
+                    // blue cursor jumps to the value while editing the field
+                    isEditing ? 'bg-[#2f6df6]' : 'bg-black',
                   )}
                 >
-                  {isEditing && (
-                    <span aria-hidden="true" className="text-pending-amber">
-                      ▲▼
-                    </span>
-                  )}
                   <span>{values[field]}</span>
                 </span>
               </li>

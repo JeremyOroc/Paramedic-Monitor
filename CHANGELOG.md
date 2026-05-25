@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-05-25] [monitor] — Patient Info: blue cursor moves between label and value
+
+- The selection highlight is now a single blue cell that moves with the mode: while
+  browsing, the current option's **left label** is blue; once you Enter to edit, the blue
+  jumps to the **right value** cell.
+- Labels no longer use a black background, and the `▲▼` arrows / amber editing outline are
+  removed — the blue alone indicates position and edit state.
+- Tests updated for the label-vs-value cursor and the removed arrows.
+
 ## [2026-05-25] [monitor] — Keep physical left soft keys always visible
 
 - The physical left soft keys are fixed hardware and now render all 7 in every view; in
