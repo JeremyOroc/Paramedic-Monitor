@@ -45,6 +45,46 @@ export const JOULE_DEFAULTS: Record<PatientMode, number> = {
 }
 
 export const ALARM_THRESHOLDS = {
-  hr:     { low: 40,  high: 150 },
+  hr:     { low: 40,  high: 140 },
   bp_sys: { low: 90,  high: 200 },
+  bp_dia: { low: 25,  high: 225 },
+  spo2:   { low: 90 },
 } as const
+
+export type AlarmChannel = 'hr' | 'bp' | 'spo2'
+
+type AlarmVitals = Pick<VitalsSnapshot, 'hr' | 'bp_sys' | 'bp_dia' | 'spo2'>
+
+function isBelow(value: number, low: number): boolean {
+  return Number.isFinite(value) && value < low
+}
+
+function isAbove(value: number, high: number): boolean {
+  return Number.isFinite(value) && value > high
+}
+
+export function getActiveAlarms(vitals: AlarmVitals): AlarmChannel[] {
+  const active: AlarmChannel[] = []
+
+  if (
+    isBelow(vitals.hr, ALARM_THRESHOLDS.hr.low) ||
+    isAbove(vitals.hr, ALARM_THRESHOLDS.hr.high)
+  ) {
+    active.push('hr')
+  }
+
+  if (
+    isBelow(vitals.bp_sys, ALARM_THRESHOLDS.bp_sys.low) ||
+    isAbove(vitals.bp_sys, ALARM_THRESHOLDS.bp_sys.high) ||
+    isBelow(vitals.bp_dia, ALARM_THRESHOLDS.bp_dia.low) ||
+    isAbove(vitals.bp_dia, ALARM_THRESHOLDS.bp_dia.high)
+  ) {
+    active.push('bp')
+  }
+
+  if (isBelow(vitals.spo2, ALARM_THRESHOLDS.spo2.low)) {
+    active.push('spo2')
+  }
+
+  return active
+}

@@ -51,7 +51,7 @@ paramedic-monitor/
 │   │       ├── vt/
 │   │       ├── asystole/
 │   │       └── pea/
-│   └── sounds/
+│   └── audio/
 │       └── alarm.mp3                 # looping alarm audio (from paramedic's drive)
 │
 ├── src/
@@ -229,6 +229,7 @@ paramedic-monitor/
 
 **Steps:**
 1. Build `rhythms.ts` — define `Float32Array` point data for: NSR, VF, VT, Asystole (flatline), PEA (same as NSR visually)
+   - VF/VT templates are tuned against the provided `Monitor videos/Graphs/12 lead graphs/Completed/Vfib` and `Completed/Vtach` references plus the latest user-supplied Pads screenshot. VF should read as coarse rolling fibrillation, not static artifact/noise. VT should match the Pads screenshot as a continuous plateau-and-trough rhythm: a smooth rounded upper plateau whose apex arrives early in the arc, then gently slopes downward into clean sharp V troughs. The VT rise/fall geometry should remain stable while plateau contour is tuned. VT should not look like isolated upward spikes, giant negative artifacts, centered plateau humps, jagged plateau noise, or square capnography blocks. VT tuning lives in `VT_TUNING` so plateau, trough, timing, V sharpness, and jitter can be adjusted without rewriting the generator.
 2. Build `renderer.ts` — overwrite-scroll loop: `requestAnimationFrame`, erase band, draw segment, wrap at canvas edge
 3. Wire `ECGCanvas.tsx` — accepts `rhythm` + `hr` props, starts/stops loop on mount/unmount
 4. HR-driven cycle speed: `cycleMs = 60000 / hr` for NSR/PEA; fixed `cycleMs` for VF/VT
@@ -236,7 +237,8 @@ paramedic-monitor/
 6. Test all 5 rhythms locally by hardcoding rhythm changes
 
 **Testing:**
-- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR/PEA, wide-complex VT, chaotic VF, and flat asystole.
+- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR/PEA, wide-complex VT, coarse VF that does not look like artifact noise, and flat asystole.
+- VT tests additionally guard the Pads-style criteria: cycle timing stays fast enough to show many beats across the screen, each cycle has a clean V-shaped trough, and the upper plateau is rounded, non-jagged, early-peaking, and gently downward-sloping.
 
 **Milestone:** Smooth scrolling ECG visible. All 5 rhythms render correctly. Rhythm switches are clean at beat boundary.
 
@@ -265,6 +267,7 @@ paramedic-monitor/
 **Steps:**
 1. `InstructorLayout` — dark panel, responsive columns
 2. `VitalsControls` + `VitalInput` — inputs for HR, BP sys/dia, EtCO2, SpO2
+   - Include a top-of-vitals `Normal` button that resets draft vital numbers to normal defaults while preserving rhythm/waveform selections and the Save → Send workflow
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
 4. On input change → set `pendingFlags[field] = true` → field turns amber/orange (pending color)
 5. `SendButton` — sets `pendingFlags` all false, sets `confirmedVitals = draftVitals`
@@ -273,6 +276,10 @@ paramedic-monitor/
 8. `DefibPanel` — Patient mode selector (Adult/Pediatric/Neonate), energy numeric input + presets (50J, 100J, 120J, 150J, 200J), ANALYSE/CHARGE/SHOCK buttons
 9. `useDefibSequence` hook — state machine: `idle → analysing(5s) → charged → shocked → idle`; CHARGE only enabled after analysis; SHOCK only enabled after charge
 10. `PatientInfoForm` — age, sex, first/last/middle name, patient ID fields
+
+**Testing:**
+- Component tests cover the top-of-vitals `Normal` button and confirm it resets draft vital numbers without bypassing Send.
+- Store tests cover the `resetVitalsToNormal` action and verify it preserves non-vital fields.
 
 **Milestone:** Instructor panel fully interactive. Editing vitals turns fields amber. Send confirms them. Defib sequence enforces correct order with progress bars.
 
@@ -300,16 +307,30 @@ paramedic-monitor/
 ---
 
 ### Phase 8 — Alarms + Audio
-**Goal:** Alarm sounds trigger on threshold violations; instructor can acknowledge.
+**Goal:** Alarm sounds trigger on threshold violations and clear automatically when vitals normalize.
+
+**Confirmed thresholds:**
+- HR alarms below 40 bpm or above 140 bpm
+- BP alarms when systolic is below 90 mmHg or above 200 mmHg
+- BP alarms when diastolic is below 25 mmHg or above 225 mmHg
+- SpO2 alarms below 90%
+- EtCO2 has no alarm threshold for now
+
+**Monitor alarm behavior:**
+- Any alarming vital box turns white, with a red header, white header text, and red number text
+- The alarming vital value fades between full opacity and 0 opacity over a 1.9s loop; non-alarming vitals do not flash
+- BP uses one PNI box; either systolic or diastolic outside range alarms the whole box
+- Alarm audio loops while one or more vitals are alarming
+- Only one alarm sound may play at a time, even when multiple vitals are alarming
+- Alarm audio stops automatically when every vital returns to the normal range
 
 **Steps:**
 1. Build `audio.ts` — `playAlarm()`, `pauseAlarm()` helpers wrapping `<audio>` element
-2. `useAlarm` hook — monitors live vitals; triggers alarm when `hr < 40 || hr > 150 || bp_sys < 90 || bp_sys > 200`
-3. `AlarmOverlay` — flashing red border + alarm audio loop on student monitor
-4. Instructor alarm ack button → broadcasts `alarm_ack` → monitor silences alarm
-5. Alarm state resets automatically when vitals return to normal range
+2. `useAlarm` hook — monitors live vitals; triggers alarm for HR, BP, or SpO2 threshold violations
+3. Vital boxes render per-vital alarm styling on student monitor
+4. Alarm state resets automatically when vitals return to normal range
 
-**Milestone:** Instructor sets HR=220 → student monitor alarm triggers (visual + audio). Instructor acknowledges → silences.
+**Milestone:** Instructor sets HR=220 → student monitor alarm triggers (visual + audio). Returning all alarming vitals to normal silences it.
 
 ---
 
@@ -372,6 +393,6 @@ paramedic-monitor/
 | Session routing | `/session/[code]/instructor` vs `/session/[code]/monitor` |
 | Instructor exclusivity | One instructor per session via Supabase Presence |
 | Realtime mechanism | Supabase Broadcast (sub-100ms) + Postgres for late-joiner recovery |
-| Audio | Pre-recorded files in `/public/sounds/` |
-| Alarm thresholds | HR < 40 or > 150 bpm; BP sys < 90 or > 200 mmHg |
+| Audio | Pre-recorded files in `/public/audio/` |
+| Alarm thresholds | HR < 40 or > 140 bpm; BP sys < 90 or > 200 mmHg; BP dia < 25 or > 225 mmHg; SpO2 < 90%; no EtCO2 threshold |
 | Joule defaults | Adult 120J / Pediatric 50J / Neonate 10J |

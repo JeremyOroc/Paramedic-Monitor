@@ -36,6 +36,7 @@ export type MonitorState = {
   saved: Vitals
   confirmed: Vitals
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
+  resetVitalsToNormal: () => void
   save: () => void
   send: () => void
   reset: () => void
@@ -51,6 +52,17 @@ export const useMonitorStore = create<MonitorState>()(
       confirmed: initial,
       setDraft: (field, value) =>
         set((s) => ({ draft: { ...s.draft, [field]: value } })),
+      resetVitalsToNormal: () =>
+        set((s) => ({
+          draft: {
+            ...s.draft,
+            hr: DEFAULT_VITALS.hr,
+            bp_sys: DEFAULT_VITALS.bp_sys,
+            bp_dia: DEFAULT_VITALS.bp_dia,
+            etco2: DEFAULT_VITALS.etco2,
+            spo2: DEFAULT_VITALS.spo2,
+          },
+        })),
       save: () => set((s) => ({ saved: { ...s.draft } })),
       send: () => set((s) => ({ confirmed: { ...s.saved } })),
       reset: () => set({ draft: initial, saved: initial, confirmed: initial }),

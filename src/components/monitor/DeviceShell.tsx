@@ -233,26 +233,25 @@ function BootScreen() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
   useEffect(() => {
-    if (!audioRef.current) return
-    if (!videoRef.current) return
+    const audio = audioRef.current
+    const video = videoRef.current
 
-    if (videoRef.current) {
-      videoRef.current.playbackRate = 1
-    }
+    if (!audio) return
+    if (!video) return
+
+    video.playbackRate = 1
     if (prankCombo === 1) {
-      audioRef.current.currentTime = 0.3
-      videoRef.current.playbackRate = 1.5
+      audio.currentTime = 0.3
+      video.playbackRate = 1.5
     }
-    audioRef.current.play().catch(() => {})
+    audio.play().catch(() => {})
     const cutoff = setTimeout(() => {
-      if (audioRef.current) {
-        audioRef.current.pause()
-        audioRef.current.currentTime = 0
-      }
+      audio.pause()
+      audio.currentTime = 0
     }, 2500)
     return () => {
       clearTimeout(cutoff)
-      if (audioRef.current) audioRef.current.pause()
+      audio.pause()
     }
   }, [prankCombo])
 

@@ -46,3 +46,16 @@ body {
     color: #fff;
   }
 }
+
+@keyframes vital-alarm-flash {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.vital-alarm-flash {
+  animation: vital-alarm-flash 1.9s ease-in-out infinite;
+}
