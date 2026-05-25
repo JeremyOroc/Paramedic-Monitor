@@ -114,13 +114,21 @@ describe('DeviceShell', () => {
     expect(props.onAnalyse).toHaveBeenCalledTimes(0)
   })
 
-  it('shows Patient Info (slot 2) + Back on the left shell in 12-lead view', () => {
+  it('maps slot 2 → Patient Info and slot 7 → Back in 12-lead view', () => {
     render(<DeviceShell {...makeProps({ twelveLeadActive: true })} />)
     expect(screen.getByRole('button', { name: 'Patient Info' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument()
-    // main-view keys are gone
+    // the main-view functions are not mapped here
     expect(screen.queryByRole('button', { name: '12-lead view' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Toggle EtCO2' })).not.toBeInTheDocument()
+  })
+
+  it('keeps all physical left soft keys visible in 12-lead view', () => {
+    render(<DeviceShell {...makeProps({ twelveLeadActive: true })} />)
+    // hardware keys stay present even where the 12-lead menu has no item
+    expect(screen.getByRole('button', { name: 'Soft key 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Soft key 3' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Soft key 6' })).toBeInTheDocument()
   })
 
   it('fires onPatientInfo when the slot-2 key is clicked in 12-lead view', async () => {
@@ -129,6 +137,18 @@ describe('DeviceShell', () => {
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Patient Info' }))
     expect(props.onPatientInfo).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps unmapped 12-lead soft keys inert', async () => {
+    const user = userEvent.setup()
+    const props = makeProps({ twelveLeadActive: true })
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Soft key 1' }))
+    await user.click(screen.getByRole('button', { name: 'Soft key 3' }))
+    expect(props.onPatientInfo).toHaveBeenCalledTimes(0)
+    expect(props.onBack).toHaveBeenCalledTimes(0)
+    expect(props.onToggleEtco2).toHaveBeenCalledTimes(0)
+    expect(props.onTwelveLead).toHaveBeenCalledTimes(0)
   })
 
   it('wires the right-cluster Move up / Move down / Enter buttons', async () => {

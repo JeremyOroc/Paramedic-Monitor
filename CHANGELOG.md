@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-05-25] [monitor] — Keep physical left soft keys always visible
+
+- The physical left soft keys are fixed hardware and now render all 7 in every view; in
+  12-lead they no longer collapse into empty spacers.
+- The on-screen `LeftSidebar` still supplies the per-view label/action beside each key. A
+  physical key with no on-screen counterpart in the current view is inert (no-op) — in
+  12-lead that means slot 2 → Patient Info, slot 7 → Back, and the rest present-but-inert.
+- Tests: assert all hardware keys stay visible in 12-lead and that unmapped keys do nothing.
+
 ## [2026-05-25] [monitor] — Fix persist migration error on store version bump
 
 - Bumping the persist `version` 2 → 3 (Patient Info) without a `migrate` function made

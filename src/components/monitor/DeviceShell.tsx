@@ -330,9 +330,10 @@ function LeftSoftKeys({
   onPatientInfo,
   twelveLeadActive,
 }: LeftSoftKeysProps) {
-  // 7 slots, top to bottom. In 12-lead view the menu collapses to Patient Info
-  // (slot 2) + Back (slot 7); the remaining slots stay as empty spacers so the
-  // populated keys land on the same levels — and align with the on-screen menu.
+  // 7 fixed hardware soft keys, top to bottom — always rendered, never hidden.
+  // The on-screen LeftSidebar supplies the per-view label/action beside each key;
+  // a key with no on-screen counterpart in the current view is inert (no onClick).
+  // In 12-lead view that means slot 2 → Patient Info, slot 7 → Back, rest inert.
   const mainKeys: SoftKey[] = [
     { id: 'brightness', ariaLabel: 'Brightness soft key' },
     { id: '12lead', ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
@@ -344,12 +345,12 @@ function LeftSoftKeys({
   ]
 
   const twelveLeadKeys: SoftKey[] = [
-    { id: 'slot1' },
+    { id: 'slot1', ariaLabel: 'Soft key 1' },
     { id: 'patient-info', ariaLabel: 'Patient Info', onClick: onPatientInfo },
-    { id: 'slot3' },
-    { id: 'slot4' },
-    { id: 'slot5' },
-    { id: 'slot6' },
+    { id: 'slot3', ariaLabel: 'Soft key 3' },
+    { id: 'slot4', ariaLabel: 'Soft key 4' },
+    { id: 'slot5', ariaLabel: 'Soft key 5' },
+    { id: 'slot6', ariaLabel: 'Soft key 6' },
     { id: 'back', ariaLabel: 'Back', onClick: onBack },
   ]
 
@@ -363,17 +364,12 @@ function LeftSoftKeys({
     <div className="relative z-10 flex h-full min-h-0 flex-col justify-between pt-[calc(clamp(5px,0.6vw,9px)+56px)] pb-[calc(clamp(5px,0.6vw,9px)+54px)]">
       {keys.map((key) => (
         <div key={key.id} className="flex items-center justify-end gap-[9px]">
-          {key.ariaLabel ? (
-            <PhysicalButton
-              ariaLabel={key.ariaLabel}
-              onClick={key.onClick}
-              active={key.active}
-              className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
-            />
-          ) : (
-            // empty slot — preserve the row height so populated keys keep their level
-            <div aria-hidden="true" className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]" />
-          )}
+          <PhysicalButton
+            ariaLabel={key.ariaLabel ?? key.id}
+            onClick={key.onClick}
+            active={key.active}
+            className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
+          />
           <div className="h-[clamp(8px,1.1vh,14px)] w-[clamp(11px,1.1vw,18px)] rounded-[3px] bg-[#aeb0b0] shadow-[inset_1px_1px_1px_rgba(255,255,255,0.38)]" />
         </div>
       ))}
