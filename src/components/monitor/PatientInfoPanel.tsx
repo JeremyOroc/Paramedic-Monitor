@@ -35,7 +35,8 @@ export function PatientInfoPanel({
   return (
     <section
       aria-label="Patient Info"
-      className="absolute inset-x-0 bottom-0 z-30 flex h-2/3 flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
+      // start after the 56px left sidebar so the menu buttons stay visible
+      className="absolute left-[56px] right-0 bottom-0 z-30 flex h-2/3 flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
     >
       <header className="bg-white px-5 py-2 text-black">
         <h2 className="text-lg font-bold">Patient Info</h2>

@@ -71,4 +71,11 @@ describe('PatientInfoPanel', () => {
     setup({ selectedField: 'age', editing: true })
     expect(screen.queryByText('▲▼')).not.toBeInTheDocument()
   })
+
+  it('starts after the left sidebar so the menu stays visible', () => {
+    setup()
+    const panel = screen.getByRole('region', { name: 'Patient Info' })
+    expect(panel).toHaveClass('left-[56px]')
+    expect(panel).not.toHaveClass('inset-x-0')
+  })
 })

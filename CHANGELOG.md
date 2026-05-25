@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-05-25] [monitor] — Patient Info panel no longer covers the left menu
+
+- The Patient Info overlay now starts after the 56px left sidebar (`left-[56px]` instead of
+  `inset-x-0`), so the left soft-key menu stays visible while the panel is open.
+
 ## [2026-05-25] [monitor] — Patient Info: blue cursor moves between label and value
 
 - The selection highlight is now a single blue cell that moves with the mode: while
