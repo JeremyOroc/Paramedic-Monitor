@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useMonitorStore } from '../monitorStore'
 import { fieldStatus, hasDirty, hasPending } from '../fieldState'
 import { DEFAULT_VITALS } from '@/types/vitals'
+import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
 
 const defaultsAsVitals = () => ({
   hr: DEFAULT_VITALS.hr,
@@ -25,6 +26,9 @@ describe('monitorStore', () => {
     expect(s.draft).toEqual(def)
     expect(s.saved).toEqual(def)
     expect(s.confirmed).toEqual(def)
+    expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
+    expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
+    expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
   })
 
   it('setDraft updates only draft', () => {
@@ -60,7 +64,30 @@ describe('monitorStore', () => {
     expect(s.draft).toEqual(def)
     expect(s.saved).toEqual(def)
     expect(s.confirmed).toEqual(def)
+    expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
+    expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
+    expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
   })
+
+  it('caller info flows through the same draft → save → send pipeline', () => {
+    useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
+    useMonitorStore.getState().setCallerInfoDraft('problem', 'Douleur thoracique')
+    useMonitorStore.getState().setCallerInfoDraft('extra1Label', 'Acces')
+    useMonitorStore.getState().setCallerInfoDraft('extra1', 'Porte cote nord')
+    expect(useMonitorStore.getState().callerInfoSaved.address).toBe('')
+    expect(useMonitorStore.getState().callerInfoConfirmed.address).toBe('')
+
+    useMonitorStore.getState().save()
+    expect(useMonitorStore.getState().callerInfoSaved.address).toBe('123 Rue Principale')
+    expect(useMonitorStore.getState().callerInfoConfirmed.address).toBe('')
+
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().callerInfoConfirmed.address).toBe('123 Rue Principale')
+    expect(useMonitorStore.getState().callerInfoConfirmed.problem).toBe('Douleur thoracique')
+    expect(useMonitorStore.getState().callerInfoConfirmed.extra1Label).toBe('Acces')
+    expect(useMonitorStore.getState().callerInfoConfirmed.extra1).toBe('Porte cote nord')
+  })
+
 
   it('resetVitalsToNormal resets only draft vital numbers', () => {
     useMonitorStore.getState().setDraft('hr', 180)

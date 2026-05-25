@@ -19,7 +19,6 @@ const ANALYZE_ECG_MS = 2500
 const ANALYZE_CLEAR_MS = 2500
 const ANALYZE_RESULT_MS = 4000
 const CHARGE_DURATION_MS = 4000
-const DELIVERED_RESET_MS = 2000 // Just a generic reset or can stay without timer
 const ENERGY_STEP = 10
 
 type Options = {

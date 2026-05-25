@@ -7,25 +7,27 @@ export function useCPRTimer(startTime: number | null) {
 
   useEffect(() => {
     if (!startTime) {
-      setTimeLeft(120)
-      return
+      const resetTimer = setTimeout(() => setTimeLeft(120), 0)
+      return () => clearTimeout(resetTimer)
     }
 
-    const interval = setInterval(() => {
+    const updateTimeLeft = () => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000)
       const remaining = Math.max(0, 120 - elapsed)
       setTimeLeft(remaining)
-      
+
       if (remaining === 0) {
         clearInterval(interval)
       }
-    }, 1000)
+    }
 
-    // Run once immediately to avoid 1s delay
-    const elapsed = Math.floor((Date.now() - startTime) / 1000)
-    setTimeLeft(Math.max(0, 120 - elapsed))
+    const interval = setInterval(updateTimeLeft, 1000)
+    const firstTick = setTimeout(updateTimeLeft, 0)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      clearTimeout(firstTick)
+    }
   }, [startTime])
 
   const mins = Math.floor(timeLeft / 60)

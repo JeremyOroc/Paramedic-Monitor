@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-05-25] [monitor] — Wire left menu ANALYSE soft key to caller info modal
+
+- Added a dedicated `onLeftAnalyse` action on `DeviceShell` and mapped it to the left-side ANALYSE soft key (the key aligned with the monitor menu ANALYSE row).
+- Wired the monitor page to open `CallerInfoModal` from that left soft key without starting the defib analyse sequence.
+- Kept the bottom defib `ANALYZE` button behavior unchanged (still runs analyse sequence and opens caller info).
+- Added tests for left soft-key ANALYSE behavior and for keeping non-mapped left soft keys inert.
+
+## [2026-05-16] [instructor] — Refine caller info extras
+
+- Changed the Caller Info tab so extra rows are not shown by default.
+- Added an `Add extra` button at the bottom of the form that reveals one optional title/input row at a time and caps at three extras.
+- Kept existing saved extra values visible when reopening the Caller Info form.
+- Updated caller-info form tests for progressive extra-row behavior.
+
+## [2026-05-16] [instructor+monitor] — Add caller info display on ANALYZE
+
+- Added caller-info draft/saved/confirmed state to the monitor store so dispatch details follow the existing Save → Send admin workflow.
+- Added `CallerInfoForm` to a separate admin dashboard tab with fields for Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, optional nameable extra rows added one at a time, and Heure.
+- Added `CallerInfoModal` on the monitor and wired the physical ANALYZE button to show the sent caller info while preserving the existing defib analyse sequence.
+- Updated Save/Send buttons so caller-info edits enable the same staged workflow as vitals/rhythm changes.
+- Added tests for caller-info form input, admin tab switching, store flow, Save/Send enablement, modal rendering, and MonitorPage ANALYZE display.
+
 ## [2026-05-16] [ui+alarm] — Flash alarming vital values
 
 - Added a value-only flash animation for alarming vitals, alternating the displayed number between full opacity and 0 opacity.
