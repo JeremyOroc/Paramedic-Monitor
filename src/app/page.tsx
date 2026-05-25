@@ -161,10 +161,7 @@ export default function MonitorPage() {
         canCharge={defib.canCharge}
         canShock={defib.canShock}
         canAdjustEnergy={defib.canAdjustEnergy}
-        onAnalyse={() => {
-          defib.onAnalyse()
-          setCallerInfoOpen(true)
-        }}
+        onAnalyse={defib.onAnalyse}
         onCharge={defib.onCharge}
         onShock={defib.onShock}
         onEnergyUp={defib.onEnergyUp}
