@@ -7,6 +7,7 @@ const ECG_RHYTHMS: ReadonlyArray<{ value: Rhythm; label: string }> = [
   { value: 'nsr', label: 'NSR' },
   { value: 'vf', label: 'VF' },
   { value: 'vt', label: 'VT' },
+  { value: 'torsades', label: 'Torsades' },
   { value: 'asystole', label: 'Asystole' },
   { value: 'pea', label: 'PEA' },
 ]

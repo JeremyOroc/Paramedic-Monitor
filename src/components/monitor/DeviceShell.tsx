@@ -494,7 +494,7 @@ function BottomDefibStrip({
             'absolute bottom-[13%] left-[27%] grid h-[clamp(72px,10.8vh,118px)] w-[clamp(72px,10.8vh,118px)] place-items-center rounded-full',
             'border-[9px] bg-[#d51b0f] text-white',
             'transition-colors focus:outline-none focus:ring-2 focus:ring-red-200',
-            defibState === 'charged' ? 'border-[#ff2020] bg-[#ffea00] text-[#ff2020] shadow-[0_0_25px_rgba(255,32,32,0.8),inset_0_0_15px_rgba(255,100,50,0.8)] animate-pulse' : 'border-[#ff6532] shadow-[0_5px_0_rgba(114,30,18,0.55),inset_5px_7px_10px_rgba(255,116,84,0.42),inset_-6px_-8px_10px_rgba(105,0,0,0.36)]',
+            defibState === 'charged' || defibState === 'shock_advised' ? 'border-[#ff2020] bg-[#ffea00] text-[#ff2020] shadow-[0_0_25px_rgba(255,32,32,0.8),inset_0_0_15px_rgba(255,100,50,0.8)] animate-pulse' : 'border-[#ff6532] shadow-[0_5px_0_rgba(114,30,18,0.55),inset_5px_7px_10px_rgba(255,116,84,0.42),inset_-6px_-8px_10px_rgba(105,0,0,0.36)]',
             !canShock && 'cursor-default',
             canShock && 'hover:bg-[#ffea00] active:translate-y-px',
           )}

@@ -57,7 +57,7 @@ export default function MonitorPage() {
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
-  const defib = useDefibSequence({ patientMode })
+  const defib = useDefibSequence({ patientMode, rhythm: confirmed.rhythm })
   const alarm = useAlarm(confirmed)
 
   const isTwelveLead = view === '12lead'
@@ -137,6 +137,7 @@ export default function MonitorPage() {
               joules={defib.energy}
               shockCount={defib.shockCount}
               cprStartTime={defib.cprStartTime}
+              lastDeliveredJoules={defib.lastDeliveredJoules}
             />
           )
         }
@@ -160,10 +161,7 @@ export default function MonitorPage() {
         canCharge={defib.canCharge}
         canShock={defib.canShock}
         canAdjustEnergy={defib.canAdjustEnergy}
-        onAnalyse={() => {
-          defib.onAnalyse()
-          setCallerInfoOpen(true)
-        }}
+        onAnalyse={defib.onAnalyse}
         onCharge={defib.onCharge}
         onShock={defib.onShock}
         onEnergyUp={defib.onEnergyUp}
