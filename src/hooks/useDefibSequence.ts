@@ -97,8 +97,7 @@ export function useDefibSequence({
       state !== 'idle' &&
       state !== 'cpr' &&
       state !== 'charge_prompt' &&
-      state !== 'delivered' &&
-      state !== 'check_patient'
+      state !== 'delivered'
     )
       return
     rhythmAtAnalyzeRef.current = rhythm

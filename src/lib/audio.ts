@@ -1,6 +1,6 @@
 const POOL_SIZE = 5
 const BUTTON_CLICK_SRC = '/audio/button_click.mp3'
-const ALARM_SRC = '/audio/alarm.mp3'
+const ALARM_SRC = '/audio/fnaf2_hallway.mp3'
 
 let _pool: HTMLAudioElement[] = []
 let _poolIndex = 0
