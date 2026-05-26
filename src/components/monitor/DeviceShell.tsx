@@ -6,6 +6,12 @@ import type { DefibState } from '@/hooks/useDefibSequence'
 import { cn } from '@/lib/utils'
 import { playButtonClick } from '@/lib/audio'
 
+const MED_PAGES: Record<1 | 2 | 3, string[]> = {
+  1: ['O2', 'AAS', 'Nitro', 'Epi'],
+  2: ['Salbutamol', 'Glucagon', 'Midazolam', 'Nalaxone'],
+  3: ['Zofran', 'Tylenol', 'Advil', 'Fentanyl'],
+}
+
 type PhysicalButtonProps = {
   ariaLabel: string
   onClick?: () => void
@@ -101,11 +107,18 @@ type DeviceShellProps = {
   onEnergyDown: () => void
   onTwelveLead: () => void
   onToggleEtco2: () => void
+  onTreatment: () => void
   onLeftAnalyse: () => void
   onBack: () => void
   twelveLeadActive?: boolean
   onPowerOn?: () => void
   onPowerOff?: () => void
+  medicationMode?: boolean
+  medicationPage?: 1 | 2 | 3
+  onMedClick?: (name: string) => void
+  onMedPageChange?: () => void
+  onMedInfo?: () => void
+  onMedBack?: () => void
 }
 
 export function DeviceShell({
@@ -124,11 +137,18 @@ export function DeviceShell({
   onEnergyDown,
   onTwelveLead,
   onToggleEtco2,
+  onTreatment,
   onLeftAnalyse,
   onBack,
   twelveLeadActive = false,
   onPowerOn,
   onPowerOff,
+  medicationMode = false,
+  medicationPage = 1,
+  onMedClick,
+  onMedPageChange,
+  onMedInfo,
+  onMedBack,
 }: DeviceShellProps) {
   const [powerState, setPowerState] = useState<PowerState>('on')
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -160,9 +180,16 @@ export function DeviceShell({
               <LeftSoftKeys
                 onTwelveLead={onTwelveLead}
                 onToggleEtco2={onToggleEtco2}
+                onTreatment={onTreatment}
                 onLeftAnalyse={onLeftAnalyse}
                 onBack={onBack}
                 twelveLeadActive={twelveLeadActive}
+                medicationMode={medicationMode}
+                medicationPage={medicationPage}
+                onMedClick={onMedClick ?? (() => {})}
+                onMedPageChange={onMedPageChange ?? (() => {})}
+                onMedInfo={onMedInfo ?? (() => {})}
+                onMedBack={onMedBack ?? (() => {})}
               />
               <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6vw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
                 <div className="h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
@@ -296,27 +323,54 @@ function DeviceHeader() {
 type LeftSoftKeysProps = {
   onTwelveLead: () => void
   onToggleEtco2: () => void
+  onTreatment: () => void
   onLeftAnalyse: () => void
   onBack: () => void
   twelveLeadActive: boolean
+  medicationMode: boolean
+  medicationPage: 1 | 2 | 3
+  onMedClick: (name: string) => void
+  onMedPageChange: () => void
+  onMedInfo: () => void
+  onMedBack: () => void
 }
 
 function LeftSoftKeys({
   onTwelveLead,
   onToggleEtco2,
+  onTreatment,
   onLeftAnalyse,
   onBack,
   twelveLeadActive,
+  medicationMode,
+  medicationPage,
+  onMedClick,
+  onMedPageChange,
+  onMedInfo,
+  onMedBack,
 }: LeftSoftKeysProps) {
-  const keys = [
-    { ariaLabel: 'Brightness soft key' },
-    { ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
-    { ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
-    { ariaLabel: 'Treatment soft key' },
-    { ariaLabel: 'Analyse (sidebar)', onClick: onLeftAnalyse },
-    { ariaLabel: 'Printer soft key' },
-    { ariaLabel: 'Back', onClick: onBack },
-  ]
+  const keys = medicationMode
+    ? (() => {
+        const meds = MED_PAGES[medicationPage]
+        return [
+          { ariaLabel: `Administer ${meds[0]}`, onClick: () => onMedClick(meds[0]) },
+          { ariaLabel: `Administer ${meds[1]}`, onClick: () => onMedClick(meds[1]) },
+          { ariaLabel: `Administer ${meds[2]}`, onClick: () => onMedClick(meds[2]) },
+          { ariaLabel: `Administer ${meds[3]}`, onClick: () => onMedClick(meds[3]) },
+          { ariaLabel: 'Medication info', onClick: onMedInfo },
+          { ariaLabel: 'Next medication page', onClick: onMedPageChange },
+          { ariaLabel: 'Exit medications', onClick: onMedBack },
+        ]
+      })()
+    : [
+        { ariaLabel: 'Brightness soft key' },
+        { ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
+        { ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
+        { ariaLabel: 'Treatment soft key', onClick: onTreatment },
+        { ariaLabel: 'Analyse (sidebar)', onClick: onLeftAnalyse },
+        { ariaLabel: 'Printer soft key' },
+        { ariaLabel: 'Back', onClick: onBack },
+      ]
 
   return (
     <div className="grid min-h-0 grid-rows-[56px_1fr_54px] py-[clamp(4px,0.65vh,9px)]">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -13,6 +13,7 @@ import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
 import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
+import { MedicationLogModal, type MedicationLogEntry } from '@/components/monitor/MedicationLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
@@ -31,6 +32,12 @@ export default function MonitorPage() {
   const [patientModalOpen, setPatientModalOpen] = useState(false)
   const [callerInfoOpen, setCallerInfoOpen] = useState(false)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
+  const [medicationMode, setMedicationMode] = useState(false)
+  const [medicationPage, setMedicationPage] = useState<1 | 2 | 3>(1)
+  const [medicationLog, setMedicationLog] = useState<MedicationLogEntry[]>([])
+  const [medInfoOpen, setMedInfoOpen] = useState(false)
+  const [flashedMed, setFlashedMed] = useState<string | null>(null)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [now, setNow] = useState<Date | null>(null)
 
   const timeZone = (() => {
@@ -60,6 +67,27 @@ export default function MonitorPage() {
   const defib = useDefibSequence({ patientMode, rhythm: confirmed.rhythm })
   const alarm = useAlarm(confirmed)
 
+  const NEXT_MED_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
+
+  function handleTreatment() {
+    setMedicationMode(true)
+  }
+
+  function handleMedClick(name: string) {
+    setMedicationLog((prev) => [...prev, { name, time: sessionTimer }])
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+    setFlashedMed(name)
+    flashTimerRef.current = setTimeout(() => setFlashedMed(null), 400)
+  }
+
+  function handleMedPageChange() {
+    setMedicationPage((p) => NEXT_MED_PAGE[p])
+  }
+
+  function handleMedBack() {
+    setMedicationMode(false)
+  }
+
   const isTwelveLead = view === '12lead'
 
   const screen = (
@@ -81,11 +109,9 @@ export default function MonitorPage() {
           <LeftSidebar
             twelveLeadActive={isTwelveLead}
             etco2Active={secondary === 'etco2'}
-            onTwelveLead={() => setView('12lead')}
-            onToggleEtco2={() =>
-              setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
-            }
-            onBack={() => setView('main')}
+            medicationMode={medicationMode}
+            medicationPage={medicationPage}
+            activeMed={flashedMed}
           />
         }
         main={
@@ -147,6 +173,11 @@ export default function MonitorPage() {
         info={callerInfoConfirmed}
         onClose={() => setCallerInfoOpen(false)}
       />
+      <MedicationLogModal
+        open={medInfoOpen}
+        log={medicationLog}
+        onClose={() => setMedInfoOpen(false)}
+      />
     </div>
   )
 
@@ -170,11 +201,18 @@ export default function MonitorPage() {
         onToggleEtco2={() =>
           setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
         }
+        onTreatment={handleTreatment}
         onLeftAnalyse={() => setCallerInfoOpen(true)}
         onBack={() => setView('main')}
         twelveLeadActive={isTwelveLead}
         onPowerOn={() => setIsTimerRunning(true)}
         onPowerOff={() => setIsTimerRunning(false)}
+        medicationMode={medicationMode}
+        medicationPage={medicationPage}
+        onMedClick={handleMedClick}
+        onMedPageChange={handleMedPageChange}
+        onMedInfo={() => setMedInfoOpen(true)}
+        onMedBack={handleMedBack}
       />
       <PatientModeModal
         open={patientModalOpen}
