@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -8,6 +8,8 @@ import { SubBar } from '@/components/monitor/SubBar'
 import { LeftSidebar } from '@/components/monitor/LeftSidebar'
 import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
+import { TwelveLeadPrintout } from '@/components/monitor/TwelveLeadPrintout'
+import { AcquiringDialog } from '@/components/monitor/AcquiringDialog'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
@@ -20,7 +22,7 @@ import {
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
-import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
+import { DEFAULT_VITALS, type PatientMode, type Rhythm } from '@/types/vitals'
 import { clampAge, toggleSex, type PatientSex } from '@/types/patientInfo'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -28,6 +30,10 @@ import { formatMonitorClock } from '@/lib/monitorClock'
 
 type MonitorView = 'main' | '12lead'
 type SecondaryChannel = 'spo2' | 'etco2'
+type CaptureState = 'idle' | 'acquiring' | 'result'
+
+// Time for the "Acquiring 12-Lead" progress bar to fill before the printout shows.
+const ACQUIRE_MS = 4000
 
 export default function MonitorPage() {
   const [view, setView] = useState<MonitorView>('main')
@@ -41,6 +47,10 @@ export default function MonitorPage() {
   const [editValue, setEditValue] = useState<number | PatientSex | null>(null)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
   const [now, setNow] = useState<Date | null>(null)
+  const [captureState, setCaptureState] = useState<CaptureState>('idle')
+  const [capturedRhythm, setCapturedRhythm] = useState<Rhythm>(DEFAULT_VITALS.rhythm)
+  const [capturedHr, setCapturedHr] = useState<number>(DEFAULT_VITALS.hr)
+  const captureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const timeZone = (() => {
     try {
@@ -83,6 +93,30 @@ export default function MonitorPage() {
     setEditing(false)
     setEditValue(null)
   }
+
+  // 12-lead Capture: freeze the current rhythm/HR, show the "Acquiring" card for
+  // ACQUIRE_MS, then swap the live grid for a static printout. Transient — nothing
+  // is persisted; each press is a fresh capture. Back cancels/dismisses (handleBack).
+  function clearCaptureTimer() {
+    if (captureTimerRef.current) {
+      clearTimeout(captureTimerRef.current)
+      captureTimerRef.current = null
+    }
+  }
+
+  function startCapture() {
+    clearCaptureTimer()
+    setPatientInfoOpen(false)
+    setCapturedRhythm(confirmed.rhythm)
+    setCapturedHr(confirmed.hr)
+    setCaptureState('acquiring')
+    captureTimerRef.current = setTimeout(() => {
+      captureTimerRef.current = null
+      setCaptureState('result')
+    }, ACQUIRE_MS)
+  }
+
+  useEffect(() => clearCaptureTimer, [])
 
   function adjustEditValue(direction: 'up' | 'down') {
     if (selectedField === 'age') {
@@ -128,10 +162,23 @@ export default function MonitorPage() {
       setEditValue(null)
       return
     }
+    if (captureState === 'acquiring') {
+      // cancel the in-progress acquisition — no printout
+      clearCaptureTimer()
+      setCaptureState('idle')
+      return
+    }
+    if (captureState === 'result') {
+      // dismiss the printout, back to the live 12-lead grid
+      setCaptureState('idle')
+      return
+    }
     if (patientInfoOpen) {
       setPatientInfoOpen(false)
       return
     }
+    clearCaptureTimer()
+    setCaptureState('idle')
     setView('main')
   }
 
@@ -236,6 +283,18 @@ export default function MonitorPage() {
         selectedField={selectedField}
         editing={editing}
       />
+      {/* Capture overlays take over the entire monitor display; only the
+          physical Back key (on DeviceShell, outside the screen) responds. */}
+      {isTwelveLead && captureState === 'acquiring' && (
+        <div className="absolute inset-0 z-40">
+          <AcquiringDialog durationMs={ACQUIRE_MS} />
+        </div>
+      )}
+      {isTwelveLead && captureState === 'result' && (
+        <div className="absolute inset-0 z-40">
+          <TwelveLeadPrintout rhythm={capturedRhythm} hr={capturedHr} />
+        </div>
+      )}
     </div>
   )
 
@@ -265,9 +324,8 @@ export default function MonitorPage() {
         onLeftAnalyse={() => setCallerInfoOpen(true)}
         onBack={handleBack}
         onPatientInfo={openPatientInfo}
-        // TODO: capture the current 12-lead graphs and render them as a printout
-        // (pink grid paper, 3x4 lead layout + rhythm strip). Placeholder for now.
-        onCaptureTwelveLead={() => {}}
+        onCaptureTwelveLead={startCapture}
+        captureLock={isTwelveLead && captureState !== 'idle'}
         onMoveUp={() => moveSelection('up')}
         onMoveDown={() => moveSelection('down')}
         onEnter={handleEnter}

@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-05-28] [monitor] — Implement 12-lead Capture (acquire dialog + printout)
+
+- Pressing **Capture** in the 12-lead view now freezes the current rhythm/HR and shows a
+  centered "Acquiring 12-Lead" card with a green progress bar that fills over ~4s
+  (`AcquiringDialog`, `ACQUIRE_MS` in `page.tsx`).
+- When the bar fills, a static **tan/salmon ECG-paper printout takes over the entire monitor
+  display**: clinical 3×4 layout (I/aVR/V1/V4, II/aVL/V2/V5, III/aVF/V3/V6) + a Lead II rhythm
+  strip (`TwelveLeadPrintout` + `lib/ecg/staticTrace.ts:drawLeadRow`). Each row is drawn as **one
+  continuous trace** across its four leads (single full-width canvas) so the baseline connects
+  with no seams; grid is a single uniform square pattern. Traces are rendered fresh from
+  `getLeadWaveform(capturedRhythm, lead)` so morphology matches what was on screen.
+- **During capture, only Back works** — every other physical control is inert via a new
+  `captureLock` prop on `DeviceShell` (handlers no-op, defib row disabled). Back is a physical
+  key outside the screen, so it still dismisses.
+- **Back** precedence extended: cancels an in-progress acquisition (no printout) or dismisses
+  the printout back to the live 12-lead grid. Captures are **transient** — nothing persisted;
+  every press is a fresh capture.
+- Added printout colors to `COLORS` (`utils.ts`) and `@theme inline` (`globals.css`): tan paper,
+  uniform grid, dark ink, acquire green. Acquire bar is a slightly-rounded rectangle.
+- Tests: `twelveLeadCaptureFlow` (acquire→printout→dismiss, mid-acquire cancel, lock-to-Back),
+  `DeviceShell` (`captureLock`), `TwelveLeadPrintout` (12 leads + rhythm strip), `AcquiringDialog`.
+
 ## [2026-05-25] [monitor] — Add 12-lead Capture soft key (placeholder)
 
 - Added a **Capture** key to slot 1 of the 12-lead left menu (on-screen `LeftSidebar`

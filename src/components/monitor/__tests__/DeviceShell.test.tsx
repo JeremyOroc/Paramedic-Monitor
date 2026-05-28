@@ -148,6 +148,28 @@ describe('DeviceShell', () => {
     expect(props.onCaptureTwelveLead).toHaveBeenCalledTimes(1)
   })
 
+  it('locks every control except Back when captureLock is set', async () => {
+    const user = userEvent.setup()
+    const props = makeProps({ twelveLeadActive: true, captureLock: true })
+    render(<DeviceShell {...props} />)
+
+    await user.click(screen.getByRole('button', { name: 'Capture 12-lead' }))
+    await user.click(screen.getByRole('button', { name: 'Patient Info' }))
+    await user.click(screen.getByRole('button', { name: 'Enter' }))
+    await user.click(screen.getByRole('button', { name: 'Move up' }))
+    expect(props.onCaptureTwelveLead).toHaveBeenCalledTimes(0)
+    expect(props.onPatientInfo).toHaveBeenCalledTimes(0)
+    expect(props.onEnter).toHaveBeenCalledTimes(0)
+    expect(props.onMoveUp).toHaveBeenCalledTimes(0)
+
+    // Defib controls are disabled too.
+    expect(screen.getByRole('button', { name: 'Analyze rhythm' })).toBeDisabled()
+
+    // Back still works.
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(props.onBack).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps unmapped 12-lead soft keys inert', async () => {
     const user = userEvent.setup()
     const props = makeProps({ twelveLeadActive: true })

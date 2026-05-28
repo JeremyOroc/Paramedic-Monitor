@@ -109,6 +109,8 @@ type DeviceShellProps = {
   onMoveDown: () => void
   onEnter: () => void
   twelveLeadActive?: boolean
+  /** When true (e.g. during a 12-lead capture), every control except Back is inert. */
+  captureLock?: boolean
   onPowerOn?: () => void
   onPowerOff?: () => void
 }
@@ -137,11 +139,19 @@ export function DeviceShell({
   onMoveDown,
   onEnter,
   twelveLeadActive = false,
+  captureLock = false,
   onPowerOn,
   onPowerOff,
 }: DeviceShellProps) {
   const [powerState, setPowerState] = useState<PowerState>('on')
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // During a 12-lead capture every control except Back is inert: handlers become
+  // no-ops and the defib row is fully disabled. Back stays live so the user can
+  // dismiss the capture and return to the 12-lead view.
+  const noop = () => {}
+  const lock = <T,>(fn: T): T | (() => void) => (captureLock ? noop : fn)
+  const allow = (flag: boolean) => (captureLock ? false : flag)
 
   function handlePowerToggle() {
     if (powerState === 'booting') return
@@ -168,12 +178,12 @@ export function DeviceShell({
             <DeviceHeader />
             <div className="grid min-h-0 grid-cols-[10.5%_1fr_17.5%] gap-[1.4%] px-[2.8%]">
               <LeftSoftKeys
-                onTwelveLead={onTwelveLead}
-                onToggleEtco2={onToggleEtco2}
-                onLeftAnalyse={onLeftAnalyse}
+                onTwelveLead={lock(onTwelveLead)}
+                onToggleEtco2={lock(onToggleEtco2)}
+                onLeftAnalyse={lock(onLeftAnalyse)}
                 onBack={onBack}
-                onPatientInfo={onPatientInfo}
-                onCaptureTwelveLead={onCaptureTwelveLead}
+                onPatientInfo={lock(onPatientInfo)}
+                onCaptureTwelveLead={lock(onCaptureTwelveLead)}
                 twelveLeadActive={twelveLeadActive}
               />
               <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6vw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
@@ -183,24 +193,24 @@ export function DeviceShell({
                 </div>
               </div>
               <RightControlCluster
-                onMoveUp={onMoveUp}
-                onMoveDown={onMoveDown}
-                onEnter={onEnter}
+                onMoveUp={lock(onMoveUp)}
+                onMoveDown={lock(onMoveDown)}
+                onEnter={lock(onEnter)}
               />
             </div>
             <BottomDefibStrip
               defibState={defibState}
               energy={energy}
               progress={progress}
-              canAnalyse={canAnalyse}
-              canCharge={canCharge}
-              canShock={canShock}
-              canAdjustEnergy={canAdjustEnergy}
-              onAnalyse={onAnalyse}
-              onCharge={onCharge}
-              onShock={onShock}
-              onEnergyUp={onEnergyUp}
-              onEnergyDown={onEnergyDown}
+              canAnalyse={allow(canAnalyse)}
+              canCharge={allow(canCharge)}
+              canShock={allow(canShock)}
+              canAdjustEnergy={allow(canAdjustEnergy)}
+              onAnalyse={lock(onAnalyse)}
+              onCharge={lock(onCharge)}
+              onShock={lock(onShock)}
+              onEnergyUp={lock(onEnergyUp)}
+              onEnergyDown={lock(onEnergyDown)}
             />
           </div>
         </div>

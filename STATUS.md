@@ -65,6 +65,13 @@
   - [x] Two-step edit with a draft: Enter starts editing, arrows change the draft, Enter commits to the store; Back cancels the edit, closes the panel, then exits 12-lead
   - [x] `patientInfo` persisted in `monitorStore` (`setPatientAge`/`setPatientSex`, persist v3); 12-lead left menu = Patient Info (slot 2) + Back, aligned on-screen and on the physical shell
   - [x] Tests: patientInfo helpers, store, panel, DeviceShell keys/nav, and an end-to-end page flow
+- [x] **12-lead Capture — COMPLETE:**
+  - [x] Capture soft key (slot 1, 12-lead only) freezes the current rhythm/HR and shows a centered "Acquiring 12-Lead" card with a green progress bar that fills over ~4s (`AcquiringDialog`)
+  - [x] On completion a static tan/salmon ECG-paper printout **takes over the entire monitor display**: clinical 3×4 layout (I/aVR/V1/V4, II/aVL/V2/V5, III/aVF/V3/V6) + Lead II rhythm strip (`TwelveLeadPrintout`, `lib/ecg/staticTrace.ts:drawLeadRow`); each row is one continuous trace (no seams), uniform square grid
+  - [x] During capture **only Back works** — all other controls inert via `captureLock` on `DeviceShell` (defib row disabled, handlers no-op)
+  - [x] Transient (no persistence) — Back cancels an in-progress acquisition or dismisses the printout back to the live 12-lead grid; every press is a fresh capture of the current state
+  - [x] Printout colors added to `COLORS` (`utils.ts`) + `@theme` (`globals.css`): tan paper, uniform grid, dark ink, acquire green
+  - [x] Tests: capture flow (acquire → printout → dismiss, mid-acquire cancel, lock-to-Back), `DeviceShell` captureLock, printout layout, acquiring dialog
 - [x] **Caller info on ANALYZE — COMPLETE:**
   - [x] Admin dashboard includes a separate Caller Info tab with fields: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button capped at three optional title/input rows
   - [x] Caller info uses draft/saved/confirmed state and the existing Save → Send workflow
