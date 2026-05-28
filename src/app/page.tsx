@@ -21,7 +21,7 @@ import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { formatMonitorClock } from '@/lib/monitorClock'
-import { setAudioMuted } from '@/lib/audio'
+import { setAudioMuted, playChargeBeep, pauseChargeBeep, playShockReadyBeep, pauseShockReadyBeep } from '@/lib/audio'
 
 type MonitorView = 'main' | '12lead'
 type SecondaryChannel = 'spo2' | 'etco2'
@@ -76,6 +76,24 @@ export default function MonitorPage() {
     },
   })
   const alarm = useAlarm(confirmed, isPoweredOn, isMuted)
+
+  useEffect(() => {
+    if (defib.state === 'charging' && !isMuted) {
+      playChargeBeep()
+      return pauseChargeBeep
+    }
+    pauseChargeBeep()
+    return undefined
+  }, [defib.state, isMuted])
+
+  useEffect(() => {
+    if (defib.state === 'charged' && !isMuted) {
+      playShockReadyBeep()
+      return pauseShockReadyBeep
+    }
+    pauseShockReadyBeep()
+    return undefined
+  }, [defib.state, isMuted])
 
   function handleToggleMute() {
     setIsMuted((prev) => {
