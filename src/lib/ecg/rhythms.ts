@@ -225,12 +225,41 @@ function synthCapnoShark(baseline: number, peak: number): Float32Array {
   return out
 }
 
+function synthTorsades(): Float32Array {
+  // Torsades de Pointes: fast polymorphic VT with sinusoidal amplitude envelope
+  // ~200 bpm → ~300ms cycle. The QRS amplitude twists over ~12 beats (≈3.6s envelope).
+  const out = new Float32Array(SAMPLES)
+  const rand = mulberry32(7)
+  const BEATS = 12 // number of QRS beats per template cycle
+  for (let i = 0; i < SAMPLES; i++) {
+    const t = i / SAMPLES
+    // Sinusoidal amplitude envelope: one full twist per template
+    const envelope = Math.sin(t * Math.PI * 2)
+    // Each beat is a narrow biphasic spike
+    let beat = 0
+    for (let b = 0; b < BEATS; b++) {
+      const beatCenter = (b + 0.5) / BEATS
+      const dist = t - beatCenter
+      // Primary spike
+      beat += envelope * 0.7 * Math.exp(-Math.pow(dist / 0.025, 2))
+      // Opposite polarity tail
+      beat -= envelope * 0.35 * Math.exp(-Math.pow((dist - 0.022) / 0.018, 2))
+    }
+    // Fine noise
+    beat += (rand() - 0.5) * 0.04
+    out[i] = beat
+  }
+  return out
+}
+
+
 export const ECG_RHYTHMS: Record<Rhythm, WaveformDef> = {
-  nsr:      { data: synthNSR(), cycleMs: null },
-  vf:       { data: synthVF(),  cycleMs: 330 },
-  vt:       { data: synthVT(1), cycleMs: VT_TUNING.cycleMs },
-  asystole: { data: flatLine(), cycleMs: 1000 },
-  pea:      { data: synthNSR(), cycleMs: null },
+  nsr:      { data: synthNSR(),      cycleMs: null },
+  vf:       { data: synthVF(),       cycleMs: 330 },
+  vt:       { data: synthVT(1),      cycleMs: VT_TUNING.cycleMs },
+  torsades: { data: synthTorsades(), cycleMs: 300 },
+  asystole: { data: flatLine(),      cycleMs: 1000 },
+  pea:      { data: synthNSR(),      cycleMs: null },
 }
 
 export function getEcgRhythm(rhythm: Rhythm): WaveformDef {

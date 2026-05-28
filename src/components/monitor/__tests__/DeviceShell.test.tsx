@@ -20,6 +20,7 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onEnergyDown: vi.fn(),
     onTwelveLead: vi.fn(),
     onToggleEtco2: vi.fn(),
+    onTreatment: vi.fn(),
     onLeftAnalyse: vi.fn(),
     onBack: vi.fn(),
     onPatientInfo: vi.fn(),

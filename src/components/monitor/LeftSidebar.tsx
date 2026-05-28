@@ -2,18 +2,81 @@
 
 import { SidebarButton } from './SidebarButton'
 
+const MED_PAGES: Record<1 | 2 | 3, string[]> = {
+  1: ['O2', 'AAS', 'Nitro', 'Epi'],
+  2: ['Salbutamol', 'Glucagon', 'Midazolam', 'Nalaxone'],
+  3: ['Zofran', 'Tylenol', 'Advil', 'Fentanyl'],
+}
+
+const NEXT_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
+
+const MED_ABBREVS: Record<string, string> = {
+  'O2':         'O2',
+  'AAS':        'AAS',
+  'Nitro':      'NTG',
+  'Epi':        'EPI',
+  'Salbutamol': 'SALB',
+  'Glucagon':   'GLUC',
+  'Midazolam':  'MIDAZ',
+  'Nalaxone':   'NALX',
+  'Zofran':     'ZOF',
+  'Tylenol':    'TYL',
+  'Advil':      'ADV',
+  'Fentanyl':   'FENT',
+}
+
 type LeftSidebarProps = {
   twelveLeadActive: boolean
   etco2Active: boolean
-  onTwelveLead?: () => void
-  onToggleEtco2?: () => void
-  onBack?: () => void
+  medicationMode?: boolean
+  medicationPage?: 1 | 2 | 3
+  activeMed?: string | null
 }
 
 export function LeftSidebar({
   twelveLeadActive,
   etco2Active,
+  medicationMode = false,
+  medicationPage = 1,
+  activeMed = null,
 }: LeftSidebarProps) {
+  if (medicationMode) {
+    const meds = MED_PAGES[medicationPage]
+    const nextPage = NEXT_PAGE[medicationPage]
+
+    return (
+      <div className="h-full w-full flex flex-col justify-between bg-sidebar-bg pb-[54px]">
+        {meds.map((med) => (
+          <SidebarButton
+            key={med}
+            icon={<span className="text-lg font-bold leading-none">{MED_ABBREVS[med] ?? med}</span>}
+            ariaLabel={`Administer ${med}`}
+            interactive={false}
+            active={activeMed === med}
+          />
+        ))}
+        <SidebarButton
+          icon="ℹ"
+          label="INFO"
+          ariaLabel="Medication log"
+          interactive={false}
+        />
+        <SidebarButton
+          icon="▶"
+          label={`Pg ${nextPage}`}
+          ariaLabel={`Go to medication page ${nextPage}`}
+          interactive={false}
+        />
+        <SidebarButton
+          icon="←"
+          label="BACK"
+          ariaLabel="Exit medications"
+          interactive={false}
+        />
+      </div>
+    )
+  }
+
   // In 12-lead view the menu collapses to Patient Info (slot 2) + Back (bottom).
   // The other slots stay as empty spacers so both controls land on the same
   // levels as the main-view menu — and align 1:1 with the physical soft keys.

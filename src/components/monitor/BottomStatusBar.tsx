@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { DefibState } from '@/hooks/useDefibSequence'
 import { useCPRTimer } from '@/hooks/useCPRTimer'
 import { cn } from '@/lib/utils'
@@ -11,11 +11,53 @@ type BottomStatusBarProps = {
   joules: number
   shockCount: number
   cprStartTime: number | null
+  lastDeliveredJoules?: number | null
 }
 
-export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }: BottomStatusBarProps) {
+export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, lastDeliveredJoules }: BottomStatusBarProps) {
   const { formatted: cprTime, isDone } = useCPRTimer(cprStartTime)
   const prevIsDone = useRef(isDone)
+  const [checkPatient, setCheckPatient] = useState(false)
+  const checkPatientTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Stop CPR → Check Patient after 5 seconds
+  useEffect(() => {
+    if (isDone && defibState === 'cpr') {
+      if (!checkPatient) {
+        checkPatientTimerRef.current = setTimeout(() => setCheckPatient(true), 5000)
+      }
+    } else {
+      if (checkPatientTimerRef.current) {
+        clearTimeout(checkPatientTimerRef.current)
+        checkPatientTimerRef.current = null
+      }
+      setCheckPatient(false)
+    }
+    return () => {
+      if (checkPatientTimerRef.current) clearTimeout(checkPatientTimerRef.current)
+    }
+  }, [isDone, defibState, checkPatient])
+
+  const [showDeliveredFlash, setShowDeliveredFlash] = useState(false)
+  const deliveredTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Show "J DELIVERED" for 4 seconds when entering CPR from shock_advised
+  useEffect(() => {
+    if (defibState === 'cpr' && lastDeliveredJoules != null) {
+      setShowDeliveredFlash(true)
+      deliveredTimerRef.current = setTimeout(() => setShowDeliveredFlash(false), 4000)
+    } else {
+      if (deliveredTimerRef.current) {
+        clearTimeout(deliveredTimerRef.current)
+        deliveredTimerRef.current = null
+      }
+      setShowDeliveredFlash(false)
+    }
+    return () => {
+      if (deliveredTimerRef.current) clearTimeout(deliveredTimerRef.current)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defibState, lastDeliveredJoules])
 
   useEffect(() => {
     if (isDone && !prevIsDone.current) {
@@ -110,39 +152,60 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime }
   // CPR Layout
   let bannerBg = "bg-blue-600"
   let bannerText = "Perform CPR"
+  let bannerTextColor = "text-white"
   
   if (defibState === 'analyzing_ecg') {
     bannerText = "ANALYZING ECG"
   } else if (defibState === 'analyzing_clear') {
     bannerText = "STAND CLEAR"
+  } else if (defibState === 'shock_advised') {
+    bannerText = "SHOCK ADVISED"
+    bannerBg = "bg-white"
+    bannerTextColor = "text-[#ff2020]"
   } else if (defibState === 'analyzing_result') {
     bannerText = "SHOCK NOT ADVISED"
-    bannerBg = "bg-white text-[#ff2020]"
+    bannerBg = "bg-white"
+    bannerTextColor = "text-[#ff2020]"
   } else if (defibState === 'idle') {
     bannerText = "APPL ELECT."
-    bannerBg = "bg-yellow-500 text-black"
+    bannerBg = "bg-yellow-500"
+    bannerTextColor = "text-black"
   } else if (defibState === 'cpr' && isDone) {
-    bannerText = "Stop CPR"
-    bannerBg = "bg-white text-black"
+    bannerText = checkPatient ? "Check Patient" : "Stop CPR"
+    bannerBg = "bg-white"
+    bannerTextColor = "text-black"
   }
 
-  const showJoulesSelected = defibState === 'cpr' || defibState === 'analyzing_ecg' || defibState === 'analyzing_clear'
-  const showCprTime = defibState === 'cpr' || defibState === 'idle'
+  const isShockAdvised = defibState === 'shock_advised'
   const inEval = defibState === 'analyzing_result'
+  const showJoulesSelected = !isShockAdvised && (defibState === 'cpr' || defibState === 'analyzing_ecg' || defibState === 'analyzing_clear')
+  const showCprTime = defibState === 'cpr' || defibState === 'idle'
+  const showDelivered = defibState === 'cpr' && lastDeliveredJoules != null && showDeliveredFlash
 
   return (
     <div className="w-full h-full flex flex-col p-1 gap-1 border-t border-t-neutral-600 font-sans">
-      <div className={cn("flex-1 border border-white flex items-center justify-center", bannerBg, defibState === 'idle' || (defibState === 'cpr' && isDone) ? 'text-black' : (defibState === 'analyzing_result' ? '' : 'text-white'))}>
+      <div className={cn("flex-1 border border-white flex items-center justify-center", bannerBg, bannerTextColor)}>
         <span className="text-4xl font-bold">{bannerText}</span>
       </div>
       
       <div className="flex flex-1 gap-1 mt-1">
-        <div className="w-64 border border-white flex items-center justify-center bg-black">
-          {showJoulesSelected && !inEval && <span className="text-2xl font-bold text-white">{joules} J SELECTED</span>}
-        </div>
+        {/* Bottom-left box */}
+        {isShockAdvised ? (
+          <div className="w-64 border border-white flex items-center justify-center bg-[#cc0000]">
+            <span className="text-2xl font-bold text-white">{joules} J READY</span>
+          </div>
+        ) : showDelivered ? (
+          <div className="w-64 border border-white flex items-center justify-center bg-[#67FEC8]">
+            <span className="text-2xl font-bold text-black">{lastDeliveredJoules} J DELIVERED</span>
+          </div>
+        ) : (
+          <div className="w-64 border border-white flex items-center justify-center bg-black">
+            {showJoulesSelected && !inEval && <span className="text-2xl font-bold text-white">{joules} J SELECTED</span>}
+          </div>
+        )}
         
-        <div className={cn("flex-1 border border-white flex flex-col items-center justify-center", showCprTime && !inEval ? "bg-white" : "bg-black")}>
-          {showCprTime && !inEval && (
+        <div className={cn("flex-1 border border-white flex flex-col items-center justify-center", showCprTime && !inEval && !isShockAdvised ? "bg-white" : "bg-black")}>
+          {showCprTime && !inEval && !isShockAdvised && (
             <>
               <span className="text-black text-xs font-bold leading-none">CPR Time</span>
               <span className="text-black text-2xl font-bold leading-none">{cprTime}</span>

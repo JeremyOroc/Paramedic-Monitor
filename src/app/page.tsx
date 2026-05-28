@@ -19,6 +19,7 @@ import {
   PatientInfoPanel,
   type PatientInfoField,
 } from '@/components/monitor/PatientInfoPanel'
+import { EventLogModal, type EventLogEntry } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
@@ -27,6 +28,7 @@ import { clampAge, toggleSex, type PatientSex } from '@/types/patientInfo'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { formatMonitorClock } from '@/lib/monitorClock'
+import { setAudioMuted, playChargeBeep, pauseChargeBeep, playShockReadyBeep, pauseShockReadyBeep } from '@/lib/audio'
 
 type MonitorView = 'main' | '12lead'
 type SecondaryChannel = 'spo2' | 'etco2'
@@ -46,6 +48,14 @@ export default function MonitorPage() {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState<number | PatientSex | null>(null)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
+  const [medicationMode, setMedicationMode] = useState(false)
+  const [medicationPage, setMedicationPage] = useState<1 | 2 | 3>(1)
+  const [eventLog, setEventLog] = useState<EventLogEntry[]>([])
+  const [eventLogOpen, setEventLogOpen] = useState(false)
+  const [flashedMed, setFlashedMed] = useState<string | null>(null)
+  const [isPoweredOn, setIsPoweredOn] = useState(true)
+  const [isMuted, setIsMuted] = useState(false)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [now, setNow] = useState<Date | null>(null)
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
   const [capturedRhythm, setCapturedRhythm] = useState<Rhythm>(DEFAULT_VITALS.rhythm)
@@ -79,8 +89,61 @@ export default function MonitorPage() {
   const patientInfo = useMonitorStore((s) => s.patientInfo)
   const setPatientAge = useMonitorStore((s) => s.setPatientAge)
   const setPatientSex = useMonitorStore((s) => s.setPatientSex)
-  const defib = useDefibSequence({ patientMode })
-  const alarm = useAlarm(confirmed)
+  const defib = useDefibSequence({
+    patientMode,
+    rhythm: confirmed.rhythm,
+    onAnalyzeResult(result) {
+      const name = result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock'
+      setEventLog((prev) => [...prev, { name, time: sessionTimer }])
+    },
+  })
+  const alarm = useAlarm(confirmed, isPoweredOn, isMuted)
+
+  useEffect(() => {
+    if (defib.state === 'charging' && !isMuted) {
+      playChargeBeep()
+      return pauseChargeBeep
+    }
+    pauseChargeBeep()
+    return undefined
+  }, [defib.state, isMuted])
+
+  useEffect(() => {
+    if (defib.state === 'charged' && !isMuted) {
+      playShockReadyBeep()
+      return pauseShockReadyBeep
+    }
+    pauseShockReadyBeep()
+    return undefined
+  }, [defib.state, isMuted])
+
+  function handleToggleMute() {
+    setIsMuted((prev) => {
+      setAudioMuted(!prev)
+      return !prev
+    })
+  }
+
+  const NEXT_MED_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
+
+  function handleTreatment() {
+    setMedicationMode(true)
+  }
+
+  function handleMedClick(name: string) {
+    setEventLog((prev) => [...prev, { name, time: sessionTimer }])
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+    setFlashedMed(name)
+    flashTimerRef.current = setTimeout(() => setFlashedMed(null), 400)
+  }
+
+  function handleMedPageChange() {
+    setMedicationPage((p) => NEXT_MED_PAGE[p])
+  }
+
+  function handleMedBack() {
+    setMedicationMode(false)
+  }
 
   const isTwelveLead = view === '12lead'
 
@@ -211,11 +274,9 @@ export default function MonitorPage() {
           <LeftSidebar
             twelveLeadActive={isTwelveLead}
             etco2Active={secondary === 'etco2'}
-            onTwelveLead={() => setView('12lead')}
-            onToggleEtco2={() =>
-              setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
-            }
-            onBack={() => setView('main')}
+            medicationMode={medicationMode}
+            medicationPage={medicationPage}
+            activeMed={flashedMed}
           />
         }
         main={
@@ -267,6 +328,7 @@ export default function MonitorPage() {
               joules={defib.energy}
               shockCount={defib.shockCount}
               cprStartTime={defib.cprStartTime}
+              lastDeliveredJoules={defib.lastDeliveredJoules}
             />
           )
         }
@@ -282,6 +344,11 @@ export default function MonitorPage() {
         sex={displaySex}
         selectedField={selectedField}
         editing={editing}
+      />
+      <EventLogModal
+        open={eventLogOpen}
+        log={eventLog}
+        onClose={() => setEventLogOpen(false)}
       />
       {/* Capture overlays take over the entire monitor display; only the
           physical Back key (on DeviceShell, outside the screen) responds. */}
@@ -309,10 +376,7 @@ export default function MonitorPage() {
         canCharge={defib.canCharge}
         canShock={defib.canShock}
         canAdjustEnergy={defib.canAdjustEnergy}
-        onAnalyse={() => {
-          defib.onAnalyse()
-          setCallerInfoOpen(true)
-        }}
+        onAnalyse={defib.onAnalyse}
         onCharge={defib.onCharge}
         onShock={defib.onShock}
         onEnergyUp={defib.onEnergyUp}
@@ -321,6 +385,7 @@ export default function MonitorPage() {
         onToggleEtco2={() =>
           setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
         }
+        onTreatment={handleTreatment}
         onLeftAnalyse={() => setCallerInfoOpen(true)}
         onBack={handleBack}
         onPatientInfo={openPatientInfo}
@@ -330,8 +395,32 @@ export default function MonitorPage() {
         onMoveDown={() => moveSelection('down')}
         onEnter={handleEnter}
         twelveLeadActive={isTwelveLead}
-        onPowerOn={() => setIsTimerRunning(true)}
-        onPowerOff={() => setIsTimerRunning(false)}
+        isMuted={isMuted}
+        onToggleMute={handleToggleMute}
+        onPowerOn={() => {
+          setIsTimerRunning(true)
+          setIsPoweredOn(true)
+        }}
+        onPowerOff={() => {
+          setIsTimerRunning(false)
+          setIsPoweredOn(false)
+          setIsMuted(false)
+          setAudioMuted(false)
+          defib.reset()
+          setEventLog([])
+          setMedicationMode(false)
+          setMedicationPage(1)
+          setFlashedMed(null)
+          setPatientModalOpen(false)
+          setCallerInfoOpen(false)
+          setEventLogOpen(false)
+        }}
+        medicationMode={medicationMode}
+        medicationPage={medicationPage}
+        onMedClick={handleMedClick}
+        onMedPageChange={handleMedPageChange}
+        onMedInfo={() => setEventLogOpen(true)}
+        onMedBack={handleMedBack}
       />
       <PatientModeModal
         open={patientModalOpen}
