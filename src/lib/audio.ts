@@ -5,6 +5,12 @@ const ALARM_SRC = '/audio/fnaf2_hallway.mp3'
 let _pool: HTMLAudioElement[] = []
 let _poolIndex = 0
 let _alarm: HTMLAudioElement | null = null
+let _muted = false
+
+export function setAudioMuted(muted: boolean): void {
+  _muted = muted
+  if (muted) pauseAlarm()
+}
 
 // Map for arbitrary system audio files
 const _systemAudioPools: Record<string, HTMLAudioElement[]> = {}
@@ -23,6 +29,7 @@ if (typeof window !== 'undefined') {
 
 export function playSystemAudio(filename: string): void {
   if (typeof window === 'undefined') return
+  if (_muted) return
   const src = `/audio/${filename}`
   if (!_systemAudioPools[src]) {
     _systemAudioPools[src] = Array.from({ length: 2 }, () => {
@@ -41,6 +48,7 @@ export function playSystemAudio(filename: string): void {
 
 export function playButtonClick(): void {
   if (_pool.length === 0) return
+  if (_muted) return
   const el = _pool[_poolIndex]
   _poolIndex = (_poolIndex + 1) % POOL_SIZE
   el.currentTime = 0
@@ -49,6 +57,7 @@ export function playButtonClick(): void {
 
 export function playAlarm(): void {
   if (!_alarm) return
+  if (_muted) return
   if (!_alarm.paused) return
   _alarm.currentTime = 0
   _alarm.play().catch(() => {})

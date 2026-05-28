@@ -12,19 +12,19 @@ type UseAlarmResult = {
   isAlarming: boolean
 }
 
-export function useAlarm(vitals: AlarmVitals, isPoweredOn: boolean): UseAlarmResult {
+export function useAlarm(vitals: AlarmVitals, isPoweredOn: boolean, isMuted: boolean): UseAlarmResult {
   const activeAlarms = getActiveAlarms(vitals)
   const isAlarming = activeAlarms.length > 0
 
   useEffect(() => {
-    if (isAlarming && isPoweredOn) {
+    if (isAlarming && isPoweredOn && !isMuted) {
       playAlarm()
       return pauseAlarm
     }
 
     pauseAlarm()
     return undefined
-  }, [isAlarming, isPoweredOn])
+  }, [isAlarming, isPoweredOn, isMuted])
 
   return { activeAlarms, isAlarming }
 }

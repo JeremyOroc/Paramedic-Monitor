@@ -21,6 +21,7 @@ import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { formatMonitorClock } from '@/lib/monitorClock'
+import { setAudioMuted } from '@/lib/audio'
 
 type MonitorView = 'main' | '12lead'
 type SecondaryChannel = 'spo2' | 'etco2'
@@ -38,6 +39,7 @@ export default function MonitorPage() {
   const [eventLogOpen, setEventLogOpen] = useState(false)
   const [flashedMed, setFlashedMed] = useState<string | null>(null)
   const [isPoweredOn, setIsPoweredOn] = useState(true)
+  const [isMuted, setIsMuted] = useState(false)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [now, setNow] = useState<Date | null>(null)
 
@@ -73,7 +75,14 @@ export default function MonitorPage() {
       setEventLog((prev) => [...prev, { name, time: sessionTimer }])
     },
   })
-  const alarm = useAlarm(confirmed, isPoweredOn)
+  const alarm = useAlarm(confirmed, isPoweredOn, isMuted)
+
+  function handleToggleMute() {
+    setIsMuted((prev) => {
+      setAudioMuted(!prev)
+      return !prev
+    })
+  }
 
   const NEXT_MED_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
 
@@ -213,6 +222,8 @@ export default function MonitorPage() {
         onLeftAnalyse={() => setCallerInfoOpen(true)}
         onBack={() => setView('main')}
         twelveLeadActive={isTwelveLead}
+        isMuted={isMuted}
+        onToggleMute={handleToggleMute}
         onPowerOn={() => {
           setIsTimerRunning(true)
           setIsPoweredOn(true)
@@ -220,6 +231,8 @@ export default function MonitorPage() {
         onPowerOff={() => {
           setIsTimerRunning(false)
           setIsPoweredOn(false)
+          setIsMuted(false)
+          setAudioMuted(false)
           defib.reset()
           setEventLog([])
           setMedicationMode(false)
