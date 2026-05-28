@@ -119,6 +119,8 @@ type DeviceShellProps = {
   onMedPageChange?: () => void
   onMedInfo?: () => void
   onMedBack?: () => void
+  isMuted?: boolean
+  onToggleMute?: () => void
 }
 
 export function DeviceShell({
@@ -149,6 +151,8 @@ export function DeviceShell({
   onMedPageChange,
   onMedInfo,
   onMedBack,
+  isMuted = false,
+  onToggleMute,
 }: DeviceShellProps) {
   const [powerState, setPowerState] = useState<PowerState>('on')
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -197,7 +201,7 @@ export function DeviceShell({
                   {powerState === 'booting' && <BootScreen />}
                 </div>
               </div>
-              <RightControlCluster />
+              <RightControlCluster isMuted={isMuted} onToggleMute={onToggleMute ?? (() => {})} />
             </div>
             <BottomDefibStrip
               defibState={defibState}
@@ -393,7 +397,12 @@ function LeftSoftKeys({
   )
 }
 
-function RightControlCluster() {
+type RightControlClusterProps = {
+  isMuted: boolean
+  onToggleMute: () => void
+}
+
+function RightControlCluster({ isMuted, onToggleMute }: RightControlClusterProps) {
   return (
     <div className="relative min-h-0">
       <PhysicalButton
@@ -409,9 +418,11 @@ function RightControlCluster() {
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Alarm"
+          onClick={onToggleMute}
+          active={isMuted}
           className="absolute right-[7%] top-[0%] h-[18%] w-[40%] rounded-[13px] text-[clamp(15px,1.6vw,24px)]"
         >
-          🔔
+          {isMuted ? '🔕' : '🔔'}
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Enter"
