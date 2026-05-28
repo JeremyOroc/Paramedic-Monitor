@@ -110,7 +110,7 @@ export function useDefibSequence({
       runTimedPhase(ANALYZE_CLEAR_MS, () => {
         if (SHOCKABLE_RHYTHMS.has(rhythmAtAnalyzeRef.current)) {
           setState('shock_advised')
-          playSystemAudio('jumpscare_fnaf2.mp3')
+          playSystemAudio('press_shock.mp3')
         } else {
           setState('analyzing_result')
           playSystemAudio('shock_not_advised.mp3')
