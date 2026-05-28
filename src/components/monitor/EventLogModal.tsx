@@ -4,18 +4,18 @@ import { useEffect, useState } from 'react'
 
 const ITEMS_PER_PAGE = 8
 
-export type MedicationLogEntry = {
+export type EventLogEntry = {
   name: string
   time: string
 }
 
-type MedicationLogModalProps = {
+type EventLogModalProps = {
   open: boolean
-  log: MedicationLogEntry[]
+  log: EventLogEntry[]
   onClose: () => void
 }
 
-export function MedicationLogModal({ open, log, onClose }: MedicationLogModalProps) {
+export function EventLogModal({ open, log, onClose }: EventLogModalProps) {
   const [page, setPage] = useState(1)
 
   useEffect(() => {
@@ -31,15 +31,15 @@ export function MedicationLogModal({ open, log, onClose }: MedicationLogModalPro
   return (
     <div className="absolute inset-0 z-30 grid place-items-center bg-black/65 p-6">
       <section
-        aria-label="Medication log"
+        aria-label="Event log"
         className="w-full max-w-[520px] border-2 border-ecg-green bg-black font-mono text-white shadow-[0_0_24px_rgba(0,255,65,0.35)]"
       >
         <header className="flex items-center justify-between bg-ecg-green px-4 py-2 text-black">
-          <h2 className="text-sm font-bold uppercase tracking-wider">Medication Log</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wider">Event Log</h2>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close medication log"
+            aria-label="Close event log"
             className="grid h-7 w-7 place-items-center border border-black/50 text-base font-bold hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-black"
           >
             X
@@ -57,7 +57,7 @@ export function MedicationLogModal({ open, log, onClose }: MedicationLogModalPro
               </div>
             ))
           ) : (
-            <p className="text-neutral-400">No medications administered.</p>
+            <p className="text-neutral-400">No events recorded.</p>
           )}
         </div>
         {showPagination && (

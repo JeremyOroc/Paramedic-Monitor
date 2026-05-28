@@ -27,11 +27,13 @@ const ENERGY_STEP = 10
 type Options = {
   patientMode: PatientMode
   rhythm: Rhythm
+  onAnalyzeResult?: (result: 'shock' | 'no_shock') => void
 }
 
 export function useDefibSequence({
   patientMode,
   rhythm,
+  onAnalyzeResult,
 }: Options) {
   const [state, setState] = useState<DefibState>('idle')
   const [energyState, setEnergyState] = useState(() => ({
@@ -49,6 +51,9 @@ export function useDefibSequence({
   const durationRef = useRef<number>(0)
   // Capture rhythm at analyze time so mid-analyze changes don't affect the result
   const rhythmAtAnalyzeRef = useRef<Rhythm>(rhythm)
+  // Always up-to-date callback ref — avoids stale closures inside timed phases
+  const onAnalyzeResultRef = useRef(onAnalyzeResult)
+  onAnalyzeResultRef.current = onAnalyzeResult
 
   const energy =
     energyState.patientMode === patientMode
@@ -110,9 +115,11 @@ export function useDefibSequence({
       runTimedPhase(ANALYZE_CLEAR_MS, () => {
         if (SHOCKABLE_RHYTHMS.has(rhythmAtAnalyzeRef.current)) {
           setState('shock_advised')
+          onAnalyzeResultRef.current?.('shock')
           playSystemAudio('press_shock.mp3')
         } else {
           setState('analyzing_result')
+          onAnalyzeResultRef.current?.('no_shock')
           playSystemAudio('shock_not_advised.mp3')
           runTimedPhase(ANALYZE_RESULT_MS, () => {
             setState('cpr')

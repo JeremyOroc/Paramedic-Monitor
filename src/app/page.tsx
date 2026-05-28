@@ -13,7 +13,7 @@ import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal } from '@/components/monitor/PatientModeModal'
 import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
-import { MedicationLogModal, type MedicationLogEntry } from '@/components/monitor/MedicationLogModal'
+import { EventLogModal, type EventLogEntry } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
@@ -34,8 +34,8 @@ export default function MonitorPage() {
   const [isTimerRunning, setIsTimerRunning] = useState(true)
   const [medicationMode, setMedicationMode] = useState(false)
   const [medicationPage, setMedicationPage] = useState<1 | 2 | 3>(1)
-  const [medicationLog, setMedicationLog] = useState<MedicationLogEntry[]>([])
-  const [medInfoOpen, setMedInfoOpen] = useState(false)
+  const [eventLog, setEventLog] = useState<EventLogEntry[]>([])
+  const [eventLogOpen, setEventLogOpen] = useState(false)
   const [flashedMed, setFlashedMed] = useState<string | null>(null)
   const [isPoweredOn, setIsPoweredOn] = useState(true)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -65,7 +65,14 @@ export default function MonitorPage() {
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
-  const defib = useDefibSequence({ patientMode, rhythm: confirmed.rhythm })
+  const defib = useDefibSequence({
+    patientMode,
+    rhythm: confirmed.rhythm,
+    onAnalyzeResult(result) {
+      const name = result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock'
+      setEventLog((prev) => [...prev, { name, time: sessionTimer }])
+    },
+  })
   const alarm = useAlarm(confirmed, isPoweredOn)
 
   const NEXT_MED_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
@@ -75,7 +82,7 @@ export default function MonitorPage() {
   }
 
   function handleMedClick(name: string) {
-    setMedicationLog((prev) => [...prev, { name, time: sessionTimer }])
+    setEventLog((prev) => [...prev, { name, time: sessionTimer }])
     if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
     setFlashedMed(name)
     flashTimerRef.current = setTimeout(() => setFlashedMed(null), 400)
@@ -174,10 +181,10 @@ export default function MonitorPage() {
         info={callerInfoConfirmed}
         onClose={() => setCallerInfoOpen(false)}
       />
-      <MedicationLogModal
-        open={medInfoOpen}
-        log={medicationLog}
-        onClose={() => setMedInfoOpen(false)}
+      <EventLogModal
+        open={eventLogOpen}
+        log={eventLog}
+        onClose={() => setEventLogOpen(false)}
       />
     </div>
   )
@@ -214,19 +221,19 @@ export default function MonitorPage() {
           setIsTimerRunning(false)
           setIsPoweredOn(false)
           defib.reset()
-          setMedicationLog([])
+          setEventLog([])
           setMedicationMode(false)
           setMedicationPage(1)
           setFlashedMed(null)
           setPatientModalOpen(false)
           setCallerInfoOpen(false)
-          setMedInfoOpen(false)
+          setEventLogOpen(false)
         }}
         medicationMode={medicationMode}
         medicationPage={medicationPage}
         onMedClick={handleMedClick}
         onMedPageChange={handleMedPageChange}
-        onMedInfo={() => setMedInfoOpen(true)}
+        onMedInfo={() => setEventLogOpen(true)}
         onMedBack={handleMedBack}
       />
       <PatientModeModal
