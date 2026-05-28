@@ -1,15 +1,23 @@
 const POOL_SIZE = 5
 const BUTTON_CLICK_SRC = '/audio/button_click.mp3'
 const ALARM_SRC = '/audio/fnaf2_hallway.mp3'
+const CHARGE_BEEP_SRC = '/audio/charge_beep.mp3'
+const SHOCK_READY_SRC = '/audio/shock_ready_beep.mp3'
 
 let _pool: HTMLAudioElement[] = []
 let _poolIndex = 0
 let _alarm: HTMLAudioElement | null = null
+let _chargeBeep: HTMLAudioElement | null = null
+let _shockReadyBeep: HTMLAudioElement | null = null
 let _muted = false
 
 export function setAudioMuted(muted: boolean): void {
   _muted = muted
-  if (muted) pauseAlarm()
+  if (muted) {
+    pauseAlarm()
+    pauseChargeBeep()
+    pauseShockReadyBeep()
+  }
 }
 
 // Map for arbitrary system audio files
@@ -25,6 +33,14 @@ if (typeof window !== 'undefined') {
   _alarm = new Audio(ALARM_SRC)
   _alarm.preload = 'auto'
   _alarm.loop = true
+
+  _chargeBeep = new Audio(CHARGE_BEEP_SRC)
+  _chargeBeep.preload = 'auto'
+  _chargeBeep.loop = true
+
+  _shockReadyBeep = new Audio(SHOCK_READY_SRC)
+  _shockReadyBeep.preload = 'auto'
+  _shockReadyBeep.loop = true
 }
 
 export function playSystemAudio(filename: string): void {
@@ -67,4 +83,32 @@ export function pauseAlarm(): void {
   if (!_alarm) return
   _alarm.pause()
   _alarm.currentTime = 0
+}
+
+export function playChargeBeep(): void {
+  if (!_chargeBeep) return
+  if (_muted) return
+  if (!_chargeBeep.paused) return
+  _chargeBeep.currentTime = 0
+  _chargeBeep.play().catch(() => {})
+}
+
+export function pauseChargeBeep(): void {
+  if (!_chargeBeep) return
+  _chargeBeep.pause()
+  _chargeBeep.currentTime = 0
+}
+
+export function playShockReadyBeep(): void {
+  if (!_shockReadyBeep) return
+  if (_muted) return
+  if (!_shockReadyBeep.paused) return
+  _shockReadyBeep.currentTime = 0
+  _shockReadyBeep.play().catch(() => {})
+}
+
+export function pauseShockReadyBeep(): void {
+  if (!_shockReadyBeep) return
+  _shockReadyBeep.pause()
+  _shockReadyBeep.currentTime = 0
 }
