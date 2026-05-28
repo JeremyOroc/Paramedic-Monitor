@@ -183,6 +183,15 @@ export function useDefibSequence({
   const canShock = state === 'charged' || state === 'shock_advised'
   const canAdjustEnergy = !state.startsWith('analyzing') && state !== 'charging' && state !== 'shock_advised'
 
+  const reset = useCallback(() => {
+    clearTimers()
+    setState('idle')
+    setShockCount(0)
+    setProgress(0)
+    setCprStartTime(null)
+    setLastDeliveredJoules(null)
+  }, [clearTimers])
+
   return {
     state,
     energy,
@@ -199,5 +208,6 @@ export function useDefibSequence({
     onShock,
     onEnergyUp,
     onEnergyDown,
+    reset,
   }
 }

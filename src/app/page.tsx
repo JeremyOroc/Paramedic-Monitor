@@ -37,6 +37,7 @@ export default function MonitorPage() {
   const [medicationLog, setMedicationLog] = useState<MedicationLogEntry[]>([])
   const [medInfoOpen, setMedInfoOpen] = useState(false)
   const [flashedMed, setFlashedMed] = useState<string | null>(null)
+  const [isPoweredOn, setIsPoweredOn] = useState(true)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [now, setNow] = useState<Date | null>(null)
 
@@ -65,7 +66,7 @@ export default function MonitorPage() {
   const confirmed = useMonitorStore((s) => s.confirmed)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
   const defib = useDefibSequence({ patientMode, rhythm: confirmed.rhythm })
-  const alarm = useAlarm(confirmed)
+  const alarm = useAlarm(confirmed, isPoweredOn)
 
   const NEXT_MED_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
 
@@ -205,8 +206,22 @@ export default function MonitorPage() {
         onLeftAnalyse={() => setCallerInfoOpen(true)}
         onBack={() => setView('main')}
         twelveLeadActive={isTwelveLead}
-        onPowerOn={() => setIsTimerRunning(true)}
-        onPowerOff={() => setIsTimerRunning(false)}
+        onPowerOn={() => {
+          setIsTimerRunning(true)
+          setIsPoweredOn(true)
+        }}
+        onPowerOff={() => {
+          setIsTimerRunning(false)
+          setIsPoweredOn(false)
+          defib.reset()
+          setMedicationLog([])
+          setMedicationMode(false)
+          setMedicationPage(1)
+          setFlashedMed(null)
+          setPatientModalOpen(false)
+          setCallerInfoOpen(false)
+          setMedInfoOpen(false)
+        }}
         medicationMode={medicationMode}
         medicationPage={medicationPage}
         onMedClick={handleMedClick}
