@@ -264,6 +264,22 @@ paramedic-monitor/
 
 **Milestone:** SpO2 video loops in secondary channel. CO2 button toggles channels. 12-lead overlay opens with fault lines (videos pending from Drive).
 
+**12-Lead Capture (added 2026-05-28):** The 12-lead Capture soft key (slot 1) acquires a
+snapshot of the current state. Confirmed behavior:
+- Press Capture → freeze current rhythm/HR → centered "Acquiring 12-Lead" card with a green
+  progress bar that fills over **~4s** (`ACQUIRE_MS`).
+- On completion a **static tan/salmon ECG-paper printout takes over the entire monitor display**
+  in the clinical **3×4 layout + Lead II rhythm strip**, drawn fresh from
+  `getLeadWaveform(capturedRhythm, lead)` (no animation/jitter). Each row is one continuous trace
+  across its 4 leads (no seams); uniform square grid; pure grid, no header banner; dark ink.
+- **During capture only Back works** — all other physical controls are inert (`captureLock` on
+  `DeviceShell`). Back dismisses (result) or cancels (acquiring), returning to the live 12-lead.
+- **Transient** — nothing is persisted; every press is a fresh capture.
+- Components: `AcquiringDialog`, `TwelveLeadPrintout`, `lib/ecg/staticTrace.ts:drawLeadRow`.
+
+**Testing:** `twelveLeadCaptureFlow` (acquire → printout → dismiss, and mid-acquire cancel),
+`TwelveLeadPrintout` (12 leads + rhythm strip), `AcquiringDialog` (title + progress bar).
+
 ---
 
 ### Phase 6 — Instructor Panel UI + Zustand Draft State
