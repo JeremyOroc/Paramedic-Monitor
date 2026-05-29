@@ -14,6 +14,12 @@ import {
   type CallerInfo,
   type CallerInfoField,
 } from '@/types/callerInfo'
+import {
+  DEFAULT_PATIENT_INFO,
+  clampAge,
+  type PatientInfo,
+  type PatientSex,
+} from '@/types/patientInfo'
 
 export type Vitals = {
   hr: number
@@ -44,15 +50,18 @@ export type MonitorState = {
   callerInfoDraft: CallerInfo
   callerInfoSaved: CallerInfo
   callerInfoConfirmed: CallerInfo
+  patientInfo: PatientInfo
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
+  setPatientAge: (age: number) => void
+  setPatientSex: (sex: PatientSex) => void
   resetVitalsToNormal: () => void
   save: () => void
   send: () => void
   reset: () => void
 }
 
-const STORAGE_KEY = 'paramedic-monitor.v1'
+export const STORAGE_KEY = 'paramedic-monitor.v1'
 
 export const useMonitorStore = create<MonitorState>()(
   persist(
@@ -63,10 +72,15 @@ export const useMonitorStore = create<MonitorState>()(
       callerInfoDraft: DEFAULT_CALLER_INFO,
       callerInfoSaved: DEFAULT_CALLER_INFO,
       callerInfoConfirmed: DEFAULT_CALLER_INFO,
+      patientInfo: DEFAULT_PATIENT_INFO,
       setDraft: (field, value) =>
         set((s) => ({ draft: { ...s.draft, [field]: value } })),
       setCallerInfoDraft: (field, value) =>
         set((s) => ({ callerInfoDraft: { ...s.callerInfoDraft, [field]: value } })),
+      setPatientAge: (age) =>
+        set((s) => ({ patientInfo: { ...s.patientInfo, age: clampAge(age) } })),
+      setPatientSex: (sex) =>
+        set((s) => ({ patientInfo: { ...s.patientInfo, sex } })),
       resetVitalsToNormal: () =>
         set((s) => ({
           draft: {
@@ -96,13 +110,18 @@ export const useMonitorStore = create<MonitorState>()(
           callerInfoDraft: DEFAULT_CALLER_INFO,
           callerInfoSaved: DEFAULT_CALLER_INFO,
           callerInfoConfirmed: DEFAULT_CALLER_INFO,
+          patientInfo: DEFAULT_PATIENT_INFO,
         }),
     }),
     {
       name: STORAGE_KEY,
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
+      // A migrate fn must exist for older persisted versions, otherwise persist
+      // logs "couldn't be migrated" (surfaced as a Next dev error overlay).
+      // Passthrough is enough — `merge` below fills/normalizes new fields.
+      migrate: (persistedState) => persistedState as MonitorState,
       merge: (persisted, current) => {
         const persistedState = persisted as Partial<MonitorState> | undefined
 
@@ -112,6 +131,10 @@ export const useMonitorStore = create<MonitorState>()(
           callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
           callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
           callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),
+          patientInfo: {
+            ...DEFAULT_PATIENT_INFO,
+            ...persistedState?.patientInfo,
+          },
         }
       },
     },

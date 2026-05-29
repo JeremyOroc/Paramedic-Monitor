@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-05-29] [instructor] — Fix admin vital inputs forcing a leading zero
+
+- `VitalInput` previously coerced an empty field back to `0` on every keystroke, so clearing a
+  value and typing left entries like "020". It now keeps local text state: the field can sit
+  empty mid-edit, leading zeros are stripped as you type ("020" → "20"), and the store still
+  receives a number (empty = 0). External changes (save/send/reset, scenario load) resync the
+  displayed text; blur normalizes an empty field back to the stored value.
+- Tests: added cases for typing after a clear (no leading zero), leading-zero stripping, and
+  resync-on-reset.
+
+## [2026-05-29] [monitor] — Print button reprints the latest 12-lead capture
+
+- The main-view **PRINT** soft key (slot 6) was previously inert. It now reprints the most
+  recent completed 12-lead capture as a full-screen `TwelveLeadPrintout` overlay. It stays a
+  no-op until at least one 12-lead has been acquired this session.
+- Added session-only page state in `page.tsx`: `lastCapture` ({ rhythm, hr }) is recorded when
+  an acquisition completes (in `startCapture`'s timer), and `printPreviewOpen` drives the
+  main-view overlay. No store/persistence changes — both are cleared on power-off, so the
+  capture does not survive a power cycle or reload.
+- `captureLock` now also covers `printPreviewOpen`, so while the reprint is up every control
+  except Back is inert (mirrors the 12-lead result behavior). Back dismisses the reprint.
+- Wiring: new required `onPrint` prop on `DeviceShell` (passed through to `LeftSoftKeys`, wired
+  to the `printer` soft key); `LeftSidebar` gained an optional `printActive` prop so the PRINT
+  label highlights while the reprint is open.
+- Tests: new `src/app/__tests__/printFlow.test.tsx` (inert with no capture; reprint over main +
+  Back dismiss + lock-to-Back; forgotten after a power cycle); `DeviceShell` test now asserts
+  the printer key fires `onPrint`.
+
 ## [2026-05-28] [monitor] — Add right-shell selection navigation
 
 - Wired the physical Move up, Move down, and Enter buttons to cycle through selectable monitor regions with a blue highlight.
@@ -13,6 +41,104 @@
 - Made Enter inert except for the minus toggle; the toggle hides/restores the bottom status/defib/CPR panel and expands the main area to ECG / EtCO2 / SpO2 when hidden.
 - Fixed the blue highlight utility so the selected regions actually paint with the reference blue instead of carrying a non-emitted class.
 - Added tests for shell nav handlers, monitor selection/toggle flow, vital selection styling, and secondary graph metadata.
+
+## [2026-05-28] [monitor] — Implement 12-lead Capture (acquire dialog + printout)
+
+- Pressing **Capture** in the 12-lead view now freezes the current rhythm/HR and shows a
+  centered "Acquiring 12-Lead" card with a green progress bar that fills over ~4s
+  (`AcquiringDialog`, `ACQUIRE_MS` in `page.tsx`).
+- When the bar fills, a static **tan/salmon ECG-paper printout takes over the entire monitor
+  display**: clinical 3×4 layout (I/aVR/V1/V4, II/aVL/V2/V5, III/aVF/V3/V6) + a Lead II rhythm
+  strip (`TwelveLeadPrintout` + `lib/ecg/staticTrace.ts:drawLeadRow`). Each row is drawn as **one
+  continuous trace** across its four leads (single full-width canvas) so the baseline connects
+  with no seams; grid is a single uniform square pattern. Traces are rendered fresh from
+  `getLeadWaveform(capturedRhythm, lead)` so morphology matches what was on screen.
+- **During capture, only Back works** — every other physical control is inert via a new
+  `captureLock` prop on `DeviceShell` (handlers no-op, defib row disabled). Back is a physical
+  key outside the screen, so it still dismisses.
+- **Back** precedence extended: cancels an in-progress acquisition (no printout) or dismisses
+  the printout back to the live 12-lead grid. Captures are **transient** — nothing persisted;
+  every press is a fresh capture.
+- Added printout colors to `COLORS` (`utils.ts`) and `@theme inline` (`globals.css`): tan paper,
+  uniform grid, dark ink, acquire green. Acquire bar is a slightly-rounded rectangle.
+- Tests: `twelveLeadCaptureFlow` (acquire→printout→dismiss, mid-acquire cancel, lock-to-Back),
+  `DeviceShell` (`captureLock`), `TwelveLeadPrintout` (12 leads + rhythm strip), `AcquiringDialog`.
+
+## [2026-05-25] [monitor] — Add 12-lead Capture soft key (placeholder)
+
+- Added a **Capture** key to slot 1 of the 12-lead left menu (on-screen `LeftSidebar`
+  label + physical `LeftSoftKeys`), wired to a new `onCaptureTwelveLead` handler.
+- The handler is a placeholder for now; it will later capture the current 12-lead graphs
+  and render them as a printout (pink grid paper, 3×4 lead layout + rhythm strip).
+- Tests: Capture key renders in 12-lead and fires its handler; remaining slots stay inert.
+
+## [2026-05-25] [monitor] — Patient Info panel no longer covers the left menu
+
+- The Patient Info overlay now starts after the 56px left sidebar (`left-[56px]` instead of
+  `inset-x-0`), so the left soft-key menu stays visible while the panel is open.
+
+## [2026-05-25] [monitor] — Patient Info: blue cursor moves between label and value
+
+- The selection highlight is now a single blue cell that moves with the mode: while
+  browsing, the current option's **left label** is blue; once you Enter to edit, the blue
+  jumps to the **right value** cell.
+- Labels no longer use a black background, and the `▲▼` arrows / amber editing outline are
+  removed — the blue alone indicates position and edit state.
+- Tests updated for the label-vs-value cursor and the removed arrows.
+
+## [2026-05-25] [monitor] — Keep physical left soft keys always visible
+
+- The physical left soft keys are fixed hardware and now render all 7 in every view; in
+  12-lead they no longer collapse into empty spacers.
+- The on-screen `LeftSidebar` still supplies the per-view label/action beside each key. A
+  physical key with no on-screen counterpart in the current view is inert (no-op) — in
+  12-lead that means slot 2 → Patient Info, slot 7 → Back, and the rest present-but-inert.
+- Tests: assert all hardware keys stay visible in 12-lead and that unmapped keys do nothing.
+
+## [2026-05-25] [monitor] — Fix persist migration error on store version bump
+
+- Bumping the persist `version` 2 → 3 (Patient Info) without a `migrate` function made
+  Zustand log "State loaded from storage couldn't be migrated…" — surfaced as a Next.js
+  dev error overlay for anyone with previously-persisted state.
+- Added a passthrough `migrate` to the `persist` options; the existing `merge` already
+  seeds `patientInfo` and normalizes caller info, so old vitals/caller-info are preserved
+  and `patientInfo` defaults are filled.
+- Exported `STORAGE_KEY` and added a regression test that rehydrates a version-2 payload
+  and asserts no migration error + seeded defaults.
+
+## [2026-05-25] [monitor] — Patient Info menu in 12-lead view
+
+- Added a **Patient Info** submenu, available only in the 12-lead view, opened by the
+  second left soft key. It overlays the bottom 2/3 of the screen and edits two fields:
+  **Patient Age** (clamp 0–120, default 40) and **Patient Sex** (M / F).
+- Driven entirely by the right control cluster's three buttons: **Move up / Move down**
+  arrows and the center **dot (Enter)**. Two-step model — browse highlights a field,
+  Enter starts editing a draft, arrows change the draft, Enter commits to the store. Back
+  cancels an in-progress edit (revert); Back again closes the panel; a final Back exits
+  12-lead.
+- Age/Sex persist in `monitorStore` (`patientInfo`, persist version bumped 2 → 3) via new
+  `setPatientAge` / `setPatientSex` actions.
+- 12-lead left menu now shows **Patient Info** (slot 2) + **Back** (bottom) on both the
+  on-screen `LeftSidebar` and the physical `LeftSoftKeys`, kept aligned via empty spacers.
+- New: `src/types/patientInfo.ts`, `PatientInfoPanel.tsx`. Tests added for the helpers,
+  store, panel, `DeviceShell` keys/nav wiring, and an end-to-end page flow.
+
+## [2026-05-25] [monitor] — Collapse left menu to BACK only in 12-lead view
+
+- When the 12-lead view is active, `LeftSidebar` now hides the LUM / 12L / CO₂ / MED / ANALYSE / PRINT rows and shows only the BACK control, pinned to the bottom (aligned with the physical Back soft key).
+- The full menu returns when leaving 12-lead view.
+- Updated the `LeftSidebar` test to assert the collapsed 12-lead layout.
+
+## [2026-05-25] [monitor] — Align physical left soft keys with on-screen menu rows
+
+- The physical left soft keys did not line up in size or vertical level with the on-screen `LeftSidebar` menu rows (LUM / 12L / CO₂ / MED / ANALYSE / PRINT / BACK).
+- Rebuilt `LeftSoftKeys` to mirror the sidebar's exact vertical math: same top offset (32px top bar + 24px sub bar + screen bezel), matching `pb-[54px]` (+ bezel), the same `h-[clamp(43px,6.2vh,68px)]` button height, and the same `justify-between` distribution over the shared device row — so the 7 keys land 1:1 on the 7 menu rows.
+
+## [2026-05-25] [monitor] — Fix unclickable Back soft key in 12-lead view
+
+- The left soft-key column reserved a `56px`/`54px` top/bottom spacer and sized 7 buttons up to `68px`, so on real viewport heights the bottom-most key (Back) overflowed its grid row and was painted over by `BottomDefibStrip`, intercepting its clicks — leaving no way out of the 12-lead view.
+- Gave `LeftSoftKeys` `relative z-10`, dropped the unused bottom spacer (`grid-rows-[56px_1fr_54px]` → `[56px_1fr]`), and shrank the buttons (`clamp(43px,6.2vh,68px)` → `clamp(40px,5.4vh,60px)`) so all 7 fit within the column and stay clickable above the defib strip. No outer-grid restructure.
+- Added a page-level regression test (`twelveLeadBackFlow.test.tsx`) using the real `DeviceShell`: entering 12-lead then clicking the physical Back returns to the main view.
 
 ## [2026-05-25] [monitor] — Wire left menu ANALYSE soft key to caller info modal
 

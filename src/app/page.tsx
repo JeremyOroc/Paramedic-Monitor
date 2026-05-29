@@ -8,16 +8,23 @@ import { SubBar } from '@/components/monitor/SubBar'
 import { LeftSidebar } from '@/components/monitor/LeftSidebar'
 import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
+import { TwelveLeadPrintout } from '@/components/monitor/TwelveLeadPrintout'
+import { AcquiringDialog } from '@/components/monitor/AcquiringDialog'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal, PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
 import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
+import {
+  PatientInfoPanel,
+  type PatientInfoField,
+} from '@/components/monitor/PatientInfoPanel'
 import { EventLogModal, type EventLogEntry } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
-import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
+import { DEFAULT_VITALS, type PatientMode, type Rhythm } from '@/types/vitals'
+import { clampAge, toggleSex, type PatientSex } from '@/types/patientInfo'
 import type { MonitorSelection } from '@/types/monitorSelection'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -26,6 +33,10 @@ import { setAudioMuted, playChargeBeep, pauseChargeBeep, playShockReadyBeep, pau
 
 type MonitorView = 'main' | '12lead'
 type SecondaryChannel = 'spo2' | 'etco2'
+type CaptureState = 'idle' | 'acquiring' | 'result'
+
+// Time for the "Acquiring 12-Lead" progress bar to fill before the printout shows.
+const ACQUIRE_MS = 4000
 
 const TOP_SELECTIONS: MonitorSelection[] = [
   'dateTime',
@@ -45,6 +56,10 @@ export default function MonitorPage() {
   const [patientModalOpen, setPatientModalOpen] = useState(false)
   const [patientModeHighlightedIndex, setPatientModeHighlightedIndex] = useState(0)
   const [callerInfoOpen, setCallerInfoOpen] = useState(false)
+  const [patientInfoOpen, setPatientInfoOpen] = useState(false)
+  const [selectedField, setSelectedField] = useState<PatientInfoField>('age')
+  const [editing, setEditing] = useState(false)
+  const [editValue, setEditValue] = useState<number | PatientSex | null>(null)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
   const [medicationMode, setMedicationMode] = useState(false)
   const [medicationPage, setMedicationPage] = useState<1 | 2 | 3>(1)
@@ -55,8 +70,15 @@ export default function MonitorPage() {
   const [isMuted, setIsMuted] = useState(false)
   const [selectedControl, setSelectedControl] = useState<MonitorSelection>('dateTime')
   const [bottomStatusVisible, setBottomStatusVisible] = useState(true)
+  const [jumpscareActive, setJumpscareActive] = useState(false)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [now, setNow] = useState<Date | null>(null)
+  const [captureState, setCaptureState] = useState<CaptureState>('idle')
+  const [capturedRhythm, setCapturedRhythm] = useState<Rhythm>(DEFAULT_VITALS.rhythm)
+  const [capturedHr, setCapturedHr] = useState<number>(DEFAULT_VITALS.hr)
+  const [lastCapture, setLastCapture] = useState<{ rhythm: Rhythm; hr: number } | null>(null)
+  const [printPreviewOpen, setPrintPreviewOpen] = useState(false)
+  const captureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const timeZone = (() => {
     try {
@@ -82,6 +104,9 @@ export default function MonitorPage() {
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
+  const patientInfo = useMonitorStore((s) => s.patientInfo)
+  const setPatientAge = useMonitorStore((s) => s.setPatientAge)
+  const setPatientSex = useMonitorStore((s) => s.setPatientSex)
   const defib = useDefibSequence({
     patientMode,
     rhythm: confirmed.rhythm,
@@ -158,6 +183,8 @@ export default function MonitorPage() {
     }
     if (activeSelectedControl === 'bottomStatusToggle') {
       setBottomStatusVisible((visible) => !visible)
+    } else if (activeSelectedControl === 'battery') {
+      setJumpscareActive(true)
     }
     if (activeSelectedControl === 'patientMode') {
       const currentIndex = PATIENT_MODE_OPTIONS.findIndex((o) => o.value === patientMode)
@@ -190,8 +217,150 @@ export default function MonitorPage() {
     setMedicationMode(false)
   }
 
+  // Patient Info menu (12-lead only): two-step edit driven by the right cluster.
+  // Browse highlights a field; Enter starts editing a draft; arrows change the
+  // draft; Enter commits to the store; Back cancels the edit or closes the panel.
+  function openPatientInfo() {
+    setPatientInfoOpen(true)
+    setSelectedField('age')
+    setEditing(false)
+    setEditValue(null)
+  }
+
+  // 12-lead Capture: freeze the current rhythm/HR, show the "Acquiring" card for
+  // ACQUIRE_MS, then swap the live grid for a static printout. Transient — nothing
+  // is persisted; each press is a fresh capture. Back cancels/dismisses (handleBack).
+  function clearCaptureTimer() {
+    if (captureTimerRef.current) {
+      clearTimeout(captureTimerRef.current)
+      captureTimerRef.current = null
+    }
+  }
+
+  function startCapture() {
+    clearCaptureTimer()
+    setPatientInfoOpen(false)
+    const rhythm = confirmed.rhythm
+    const hr = confirmed.hr
+    setCapturedRhythm(rhythm)
+    setCapturedHr(hr)
+    setCaptureState('acquiring')
+    captureTimerRef.current = setTimeout(() => {
+      captureTimerRef.current = null
+      setCaptureState('result')
+      // Remember the completed capture so the main-view PRINT key can reprint it.
+      setLastCapture({ rhythm, hr })
+    }, ACQUIRE_MS)
+  }
+
+  // Main-view PRINT: bring up the most recent completed 12-lead as a full-screen
+  // printout. Inert until a capture exists. Back dismisses it (handleBack).
+  function handlePrint() {
+    if (!lastCapture) return
+    setPrintPreviewOpen(true)
+  }
+
+  useEffect(() => clearCaptureTimer, [])
+
+  function adjustEditValue(direction: 'up' | 'down') {
+    if (selectedField === 'age') {
+      const delta = direction === 'up' ? 1 : -1
+      setEditValue((v) => clampAge((typeof v === 'number' ? v : patientInfo.age) + delta))
+    } else {
+      setEditValue((v) => toggleSex(v === 'M' || v === 'F' ? v : patientInfo.sex))
+    }
+  }
+
+  function moveSelection(direction: 'up' | 'down') {
+    if (!patientInfoOpen) return
+    if (editing) {
+      // up increments / down decrements the current field's draft
+      adjustEditValue(direction)
+      return
+    }
+    // Two fields only: up highlights Age, down highlights Sex (clamped, no wrap).
+    setSelectedField(direction === 'up' ? 'age' : 'sex')
+  }
+
+  function handleEnter() {
+    if (!patientInfoOpen) return
+    if (!editing) {
+      setEditValue(selectedField === 'age' ? patientInfo.age : patientInfo.sex)
+      setEditing(true)
+      return
+    }
+    // commit the draft to the persisted store
+    if (selectedField === 'age' && typeof editValue === 'number') {
+      setPatientAge(editValue)
+    } else if (selectedField === 'sex' && (editValue === 'M' || editValue === 'F')) {
+      setPatientSex(editValue)
+    }
+    setEditing(false)
+    setEditValue(null)
+  }
+
+  function handleBack() {
+    if (patientModalOpen) {
+      setPatientModalOpen(false)
+      return
+    }
+    if (printPreviewOpen) {
+      // dismiss the reprinted 12-lead, back to the main view
+      setPrintPreviewOpen(false)
+      return
+    }
+    if (editing) {
+      // cancel: discard the draft, stay in the panel (browse)
+      setEditing(false)
+      setEditValue(null)
+      return
+    }
+    if (captureState === 'acquiring') {
+      // cancel the in-progress acquisition — no printout
+      clearCaptureTimer()
+      setCaptureState('idle')
+      return
+    }
+    if (captureState === 'result') {
+      // dismiss the printout, back to the live 12-lead grid
+      setCaptureState('idle')
+      return
+    }
+    if (patientInfoOpen) {
+      setPatientInfoOpen(false)
+      return
+    }
+    clearCaptureTimer()
+    setCaptureState('idle')
+    setView('main')
+  }
+
+  // Values shown in the panel: the draft for the field being edited, else stored.
+  const displayAge =
+    editing && selectedField === 'age' && typeof editValue === 'number'
+      ? editValue
+      : patientInfo.age
+  const displaySex: PatientSex =
+    editing && selectedField === 'sex' && (editValue === 'M' || editValue === 'F')
+      ? editValue
+      : patientInfo.sex
+
   const screen = (
     <div className="relative h-full w-full">
+      {jumpscareActive && (
+        <div
+          className="absolute inset-0 z-50 bg-black"
+          onClick={() => setJumpscareActive(false)}
+        >
+          <video
+            src="/videos/chica_jumpscare.mp4"
+            autoPlay
+            playsInline
+            className="h-full w-full object-cover"
+            onEnded={() => setJumpscareActive(false)}
+          />
+        </div>
+      )}
       <MonitorLayout
         topBar={
           <TopStatusBar
@@ -217,6 +386,7 @@ export default function MonitorPage() {
             medicationMode={medicationMode}
             medicationPage={medicationPage}
             activeMed={flashedMed}
+            printActive={printPreviewOpen}
           />
         }
         main={
@@ -281,11 +451,35 @@ export default function MonitorPage() {
         info={callerInfoConfirmed}
         onClose={() => setCallerInfoOpen(false)}
       />
+      <PatientInfoPanel
+        open={patientInfoOpen}
+        age={displayAge}
+        sex={displaySex}
+        selectedField={selectedField}
+        editing={editing}
+      />
       <EventLogModal
         open={eventLogOpen}
         log={eventLog}
         onClose={() => setEventLogOpen(false)}
       />
+      {/* Capture overlays take over the entire monitor display; only the
+          physical Back key (on DeviceShell, outside the screen) responds. */}
+      {isTwelveLead && captureState === 'acquiring' && (
+        <div className="absolute inset-0 z-40">
+          <AcquiringDialog durationMs={ACQUIRE_MS} />
+        </div>
+      )}
+      {isTwelveLead && captureState === 'result' && (
+        <div className="absolute inset-0 z-40">
+          <TwelveLeadPrintout rhythm={capturedRhythm} hr={capturedHr} />
+        </div>
+      )}
+      {!isTwelveLead && printPreviewOpen && lastCapture && (
+        <div className="absolute inset-0 z-40">
+          <TwelveLeadPrintout rhythm={lastCapture.rhythm} hr={lastCapture.hr} />
+        </div>
+      )}
     </div>
   )
 
@@ -324,11 +518,38 @@ export default function MonitorPage() {
         }
         onTreatment={handleTreatment}
         onLeftAnalyse={() => setCallerInfoOpen(true)}
-        onBack={() => {
+        onBack={handleBack}
+        onPatientInfo={openPatientInfo}
+        onCaptureTwelveLead={startCapture}
+        onPrint={handlePrint}
+        captureLock={(isTwelveLead && captureState !== 'idle') || printPreviewOpen}
+        onMoveUp={() => {
           if (patientModalOpen) {
-            setPatientModalOpen(false)
+            setPatientModeHighlightedIndex(
+              (i) => (i - 1 + PATIENT_MODE_OPTIONS.length) % PATIENT_MODE_OPTIONS.length,
+            )
+          } else if (patientInfoOpen) {
+            moveSelection('up')
           } else {
-            setView('main')
+            moveSelectedControl(1)
+          }
+        }}
+        onMoveDown={() => {
+          if (patientModalOpen) {
+            setPatientModeHighlightedIndex(
+              (i) => (i + 1) % PATIENT_MODE_OPTIONS.length,
+            )
+          } else if (patientInfoOpen) {
+            moveSelection('down')
+          } else {
+            moveSelectedControl(-1)
+          }
+        }}
+        onEnter={() => {
+          if (!patientModalOpen && patientInfoOpen) {
+            handleEnter()
+          } else {
+            handleSelectionEnter()
           }
         }}
         twelveLeadActive={isTwelveLead}
@@ -345,6 +566,8 @@ export default function MonitorPage() {
           setAudioMuted(false)
           defib.reset()
           setEventLog([])
+          setLastCapture(null)
+          setPrintPreviewOpen(false)
           setMedicationMode(false)
           setMedicationPage(1)
           setFlashedMed(null)
@@ -354,25 +577,6 @@ export default function MonitorPage() {
           setSelectedControl('dateTime')
           setBottomStatusVisible(true)
         }}
-        onMoveUp={() => {
-          if (patientModalOpen) {
-            setPatientModeHighlightedIndex(
-              (i) => (i - 1 + PATIENT_MODE_OPTIONS.length) % PATIENT_MODE_OPTIONS.length,
-            )
-          } else {
-            moveSelectedControl(1)
-          }
-        }}
-        onMoveDown={() => {
-          if (patientModalOpen) {
-            setPatientModeHighlightedIndex(
-              (i) => (i + 1) % PATIENT_MODE_OPTIONS.length,
-            )
-          } else {
-            moveSelectedControl(-1)
-          }
-        }}
-        onEnter={handleSelectionEnter}
         medicationMode={medicationMode}
         medicationPage={medicationPage}
         onMedClick={handleMedClick}

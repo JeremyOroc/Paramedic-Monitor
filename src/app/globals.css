@@ -22,6 +22,12 @@
   --color-selection-blue: #1f4cff;
   --color-bottom-bar: #1a1a1a;
   --color-sidebar-bg: #0d0d0d;
+  /* 12-lead Capture printout (warm tan/salmon ECG paper, dark ink) + acquire bar */
+  --color-print-paper: #f4dcc6;
+  --color-print-grid: #e0b193;
+  --color-print-grid-bold: #d09a78;
+  --color-print-ink: #161616;
+  --color-acquire-green: #7cc24a;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -34,6 +34,39 @@ describe('VitalInput', () => {
     expect(screen.getByTestId('status-hr')).toHaveTextContent('pending')
   })
 
+  it('does not leave a leading zero when typing after a clear', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="hr" label="FC" />)
+    const input = screen.getByLabelText('FC') as HTMLInputElement
+    await user.clear(input)
+    // Field stays empty after clearing instead of snapping back to "0".
+    expect(input.value).toBe('')
+    await user.type(input, '20')
+    expect(input.value).toBe('20')
+    expect(useMonitorStore.getState().draft.hr).toBe(20)
+  })
+
+  it('strips leading zeros as you type', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="hr" label="FC" />)
+    const input = screen.getByLabelText('FC') as HTMLInputElement
+    await user.clear(input)
+    await user.type(input, '0')
+    await user.type(input, '2')
+    expect(input.value).toBe('2')
+    expect(useMonitorStore.getState().draft.hr).toBe(2)
+  })
+
+  it('resyncs from the store on reset', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="hr" label="FC" />)
+    const input = screen.getByLabelText('FC') as HTMLInputElement
+    await user.clear(input)
+    await user.type(input, '160')
+    act(() => useMonitorStore.getState().reset())
+    expect(input.value).toBe(String(useMonitorStore.getState().draft.hr))
+  })
+
   it('returns to clean after send', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" />)

@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { useMonitorStore } from '../monitorStore'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { useMonitorStore, STORAGE_KEY } from '../monitorStore'
 import { fieldStatus, hasDirty, hasPending } from '../fieldState'
 import { DEFAULT_VITALS } from '@/types/vitals'
 import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
+import { DEFAULT_PATIENT_INFO } from '@/types/patientInfo'
 
 const defaultsAsVitals = () => ({
   hr: DEFAULT_VITALS.hr,
@@ -137,6 +138,63 @@ describe('monitorStore', () => {
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
     expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('obstructed')
+  })
+
+  it('patientInfo defaults, then setPatientAge clamps and setPatientSex updates', () => {
+    expect(useMonitorStore.getState().patientInfo).toEqual(DEFAULT_PATIENT_INFO)
+
+    useMonitorStore.getState().setPatientAge(63)
+    expect(useMonitorStore.getState().patientInfo.age).toBe(63)
+
+    useMonitorStore.getState().setPatientAge(999)
+    expect(useMonitorStore.getState().patientInfo.age).toBe(120)
+    useMonitorStore.getState().setPatientAge(-3)
+    expect(useMonitorStore.getState().patientInfo.age).toBe(0)
+
+    useMonitorStore.getState().setPatientSex('F')
+    expect(useMonitorStore.getState().patientInfo.sex).toBe('F')
+  })
+
+  it('reset restores patientInfo to defaults', () => {
+    useMonitorStore.getState().setPatientAge(80)
+    useMonitorStore.getState().setPatientSex('F')
+    useMonitorStore.getState().reset()
+    expect(useMonitorStore.getState().patientInfo).toEqual(DEFAULT_PATIENT_INFO)
+  })
+})
+
+describe('persist migration', () => {
+  afterEach(() => {
+    localStorage.removeItem(STORAGE_KEY)
+    useMonitorStore.getState().reset()
+    vi.restoreAllMocks()
+  })
+
+  it('migrates a version-2 payload without error and seeds patientInfo', async () => {
+    // Persisted state from before patientInfo existed (version 2).
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 2,
+        state: {
+          confirmed: { ...DEFAULT_VITALS, hr: 137 },
+          callerInfoConfirmed: { ...DEFAULT_CALLER_INFO, address: '5 Rue Test' },
+        },
+      }),
+    )
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await useMonitorStore.persist.rehydrate()
+
+    const migrationErrors = errorSpy.mock.calls.filter((args) =>
+      String(args[0]).includes("couldn't be migrated"),
+    )
+    expect(migrationErrors).toHaveLength(0)
+
+    const s = useMonitorStore.getState()
+    expect(s.confirmed.hr).toBe(137) // preserved from the old payload
+    expect(s.callerInfoConfirmed.address).toBe('5 Rue Test')
+    expect(s.patientInfo).toEqual(DEFAULT_PATIENT_INFO) // seeded by merge
   })
 })
 

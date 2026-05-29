@@ -111,12 +111,17 @@ type DeviceShellProps = {
   onTreatment: () => void
   onLeftAnalyse: () => void
   onBack: () => void
+  onPatientInfo: () => void
+  onCaptureTwelveLead: () => void
+  onPrint: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onEnter: () => void
   twelveLeadActive?: boolean
+  /** When true (e.g. during a 12-lead capture), every control except Back is inert. */
+  captureLock?: boolean
   onPowerOn?: () => void
   onPowerOff?: () => void
-  onMoveUp?: () => void
-  onMoveDown?: () => void
-  onEnter?: () => void
   medicationMode?: boolean
   medicationPage?: 1 | 2 | 3
   onMedClick?: (name: string) => void
@@ -147,12 +152,16 @@ export function DeviceShell({
   onTreatment,
   onLeftAnalyse,
   onBack,
-  twelveLeadActive = false,
-  onPowerOn,
-  onPowerOff,
+  onPatientInfo,
+  onCaptureTwelveLead,
+  onPrint,
   onMoveUp,
   onMoveDown,
   onEnter,
+  twelveLeadActive = false,
+  captureLock = false,
+  onPowerOn,
+  onPowerOff,
   medicationMode = false,
   medicationPage = 1,
   onMedClick,
@@ -164,6 +173,13 @@ export function DeviceShell({
 }: DeviceShellProps) {
   const [powerState, setPowerState] = useState<PowerState>('on')
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // During a 12-lead capture every control except Back is inert: handlers become
+  // no-ops and the defib row is fully disabled. Back stays live so the user can
+  // dismiss the capture and return to the 12-lead view.
+  const noop = () => {}
+  const lock = <T,>(fn: T): T | (() => void) => (captureLock ? noop : fn)
+  const allow = (flag: boolean) => (captureLock ? false : flag)
 
   function handlePowerToggle() {
     if (powerState === 'booting') return
@@ -190,11 +206,14 @@ export function DeviceShell({
             <DeviceHeader />
             <div className="grid min-h-0 grid-cols-[10.5%_1fr_17.5%] gap-[1.4%] px-[2.8%]">
               <LeftSoftKeys
-                onTwelveLead={onTwelveLead}
-                onToggleEtco2={onToggleEtco2}
-                onTreatment={onTreatment}
-                onLeftAnalyse={onLeftAnalyse}
+                onTwelveLead={lock(onTwelveLead)}
+                onToggleEtco2={lock(onToggleEtco2)}
+                onTreatment={lock(onTreatment)}
+                onLeftAnalyse={lock(onLeftAnalyse)}
                 onBack={onBack}
+                onPatientInfo={lock(onPatientInfo)}
+                onCaptureTwelveLead={lock(onCaptureTwelveLead)}
+                onPrint={lock(onPrint)}
                 twelveLeadActive={twelveLeadActive}
                 medicationMode={medicationMode}
                 medicationPage={medicationPage}
@@ -211,26 +230,26 @@ export function DeviceShell({
                 </div>
               </div>
               <RightControlCluster
+                onMoveUp={lock(onMoveUp)}
+                onMoveDown={lock(onMoveDown)}
+                onEnter={lock(onEnter)}
                 isMuted={isMuted}
                 onToggleMute={onToggleMute ?? (() => {})}
-                onMoveUp={onMoveUp ?? (() => {})}
-                onMoveDown={onMoveDown ?? (() => {})}
-                onEnter={onEnter ?? (() => {})}
               />
             </div>
             <BottomDefibStrip
               defibState={defibState}
               energy={energy}
               progress={progress}
-              canAnalyse={canAnalyse}
-              canCharge={canCharge}
-              canShock={canShock}
-              canAdjustEnergy={canAdjustEnergy}
-              onAnalyse={onAnalyse}
-              onCharge={onCharge}
-              onShock={onShock}
-              onEnergyUp={onEnergyUp}
-              onEnergyDown={onEnergyDown}
+              canAnalyse={allow(canAnalyse)}
+              canCharge={allow(canCharge)}
+              canShock={allow(canShock)}
+              canAdjustEnergy={allow(canAdjustEnergy)}
+              onAnalyse={lock(onAnalyse)}
+              onCharge={lock(onCharge)}
+              onShock={lock(onShock)}
+              onEnergyUp={lock(onEnergyUp)}
+              onEnergyDown={lock(onEnergyDown)}
             />
           </div>
         </div>
@@ -345,6 +364,9 @@ type LeftSoftKeysProps = {
   onTreatment: () => void
   onLeftAnalyse: () => void
   onBack: () => void
+  onPatientInfo: () => void
+  onCaptureTwelveLead: () => void
+  onPrint: () => void
   twelveLeadActive: boolean
   medicationMode: boolean
   medicationPage: 1 | 2 | 3
@@ -354,12 +376,22 @@ type LeftSoftKeysProps = {
   onMedBack: () => void
 }
 
+type SoftKey = {
+  id: string
+  ariaLabel?: string
+  onClick?: () => void
+  active?: boolean
+}
+
 function LeftSoftKeys({
   onTwelveLead,
   onToggleEtco2,
   onTreatment,
   onLeftAnalyse,
   onBack,
+  onPatientInfo,
+  onCaptureTwelveLead,
+  onPrint,
   twelveLeadActive,
   medicationMode,
   medicationPage,
@@ -368,65 +400,79 @@ function LeftSoftKeys({
   onMedInfo,
   onMedBack,
 }: LeftSoftKeysProps) {
+  // 7 fixed hardware soft keys, top to bottom — always rendered, never hidden.
+  // The on-screen LeftSidebar supplies the per-view label/action beside each key;
+  // a key with no on-screen counterpart in the current view is inert (no onClick).
+  // In 12-lead view that means slot 2 → Patient Info, slot 7 → Back, rest inert.
+  const mainKeys: SoftKey[] = [
+    { id: 'brightness', ariaLabel: 'Brightness soft key' },
+    { id: '12lead', ariaLabel: '12-lead view', onClick: onTwelveLead, active: false },
+    { id: 'etco2', ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
+    { id: 'treatment', ariaLabel: 'Treatment soft key', onClick: onTreatment },
+    { id: 'analyse', ariaLabel: 'Call Info (sidebar)', onClick: onLeftAnalyse },
+    { id: 'printer', ariaLabel: 'Printer soft key', onClick: onPrint },
+    { id: 'back', ariaLabel: 'Back', onClick: onBack },
+  ]
+
+  const medicationKeys: SoftKey[] = (() => {
+    const meds = MED_PAGES[medicationPage]
+    return [
+      { id: 'med1', ariaLabel: `Administer ${meds[0]}`, onClick: () => onMedClick(meds[0]) },
+      { id: 'med2', ariaLabel: `Administer ${meds[1]}`, onClick: () => onMedClick(meds[1]) },
+      { id: 'med3', ariaLabel: `Administer ${meds[2]}`, onClick: () => onMedClick(meds[2]) },
+      { id: 'med4', ariaLabel: `Administer ${meds[3]}`, onClick: () => onMedClick(meds[3]) },
+      { id: 'med-info', ariaLabel: 'Medication info', onClick: onMedInfo },
+      { id: 'med-page', ariaLabel: 'Next medication page', onClick: onMedPageChange },
+      { id: 'med-back', ariaLabel: 'Exit medications', onClick: onMedBack },
+    ]
+  })()
+
+  const twelveLeadKeys: SoftKey[] = [
+    { id: 'capture', ariaLabel: 'Capture 12-lead', onClick: onCaptureTwelveLead },
+    { id: 'patient-info', ariaLabel: 'Patient Info', onClick: onPatientInfo },
+    { id: 'slot3', ariaLabel: 'Soft key 3' },
+    { id: 'slot4', ariaLabel: 'Soft key 4' },
+    { id: 'slot5', ariaLabel: 'Soft key 5' },
+    { id: 'slot6', ariaLabel: 'Soft key 6' },
+    { id: 'back', ariaLabel: 'Back', onClick: onBack },
+  ]
+
   const keys = medicationMode
-    ? (() => {
-        const meds = MED_PAGES[medicationPage]
-        return [
-          { ariaLabel: `Administer ${meds[0]}`, onClick: () => onMedClick(meds[0]) },
-          { ariaLabel: `Administer ${meds[1]}`, onClick: () => onMedClick(meds[1]) },
-          { ariaLabel: `Administer ${meds[2]}`, onClick: () => onMedClick(meds[2]) },
-          { ariaLabel: `Administer ${meds[3]}`, onClick: () => onMedClick(meds[3]) },
-          { ariaLabel: 'Medication info', onClick: onMedInfo },
-          { ariaLabel: 'Next medication page', onClick: onMedPageChange },
-          { ariaLabel: 'Exit medications', onClick: onMedBack },
-        ]
-      })()
-    : [
-        { ariaLabel: 'Brightness soft key' },
-        { ariaLabel: '12-lead view', onClick: onTwelveLead, active: false },
-        { ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
-        { ariaLabel: 'Treatment soft key', onClick: onTreatment },
-        { ariaLabel: 'Call Info (sidebar)', onClick: onLeftAnalyse },
-        { ariaLabel: 'Printer soft key' },
-        { ariaLabel: 'Back', onClick: onBack },
-      ]
+    ? medicationKeys
+    : twelveLeadActive
+      ? twelveLeadKeys
+      : mainKeys
 
   return (
-    <div className="grid min-h-0 grid-rows-[56px_1fr_54px] py-[clamp(4px,0.65vh,9px)]">
-      <div />
-      <div className="flex min-h-0 flex-col justify-between">
-        {keys.map((key) => (
-          <div key={key.ariaLabel} className="flex items-center justify-end gap-[9px]">
-            <PhysicalButton
-              ariaLabel={key.ariaLabel}
-              onClick={key.onClick}
-              active={key.active}
-              className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
-            />
-            <div className="h-[clamp(8px,1.1vh,14px)] w-[clamp(11px,1.1vw,18px)] rounded-[3px] bg-[#aeb0b0] shadow-[inset_1px_1px_1px_rgba(255,255,255,0.38)]" />
-          </div>
-        ))}
-      </div>
-      <div />
+    // Mirror the on-screen LeftSidebar geometry so the physical soft keys line
+    // up 1:1 with the menu rows: same top offset (32px top bar + 24px sub bar,
+    // plus the screen bezel inset), same pb-[54px], same button height, same
+    // justify-between distribution over the shared device row.
+    <div className="relative z-10 flex h-full min-h-0 flex-col justify-between pt-[calc(clamp(5px,0.6vw,9px)+56px)] pb-[calc(clamp(5px,0.6vw,9px)+54px)]">
+      {keys.map((key) => (
+        <div key={key.id} className="flex items-center justify-end gap-[9px]">
+          <PhysicalButton
+            ariaLabel={key.ariaLabel ?? key.id}
+            onClick={key.onClick}
+            active={key.active}
+            className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
+          />
+          <div className="h-[clamp(8px,1.1vh,14px)] w-[clamp(11px,1.1vw,18px)] rounded-[3px] bg-[#aeb0b0] shadow-[inset_1px_1px_1px_rgba(255,255,255,0.38)]" />
+        </div>
+      ))}
     </div>
   )
 }
 
 type RightControlClusterProps = {
-  isMuted: boolean
-  onToggleMute: () => void
   onMoveUp: () => void
   onMoveDown: () => void
   onEnter: () => void
+  isMuted: boolean
+  onToggleMute: () => void
 }
 
-function RightControlCluster({
-  isMuted,
-  onToggleMute,
-  onMoveUp,
-  onMoveDown,
-  onEnter,
-}: RightControlClusterProps) {
+function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleMute }: RightControlClusterProps) {
   return (
     <div className="relative min-h-0">
       <PhysicalButton

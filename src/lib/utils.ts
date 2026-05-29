@@ -16,4 +16,10 @@ export const COLORS = {
   selectionBlue: '#1f4cff',
   bottomBar:    '#1a1a1a',
   sidebarBg:    '#0d0d0d',
+  // 12-lead Capture printout (warm tan/salmon ECG paper, dark ink) + acquire bar
+  printPaper:   '#f4dcc6',
+  printGrid:    '#e0b193',
+  printGridBold:'#d09a78',
+  printInk:     '#161616',
+  acquireGreen: '#7cc24a',
 } as const
