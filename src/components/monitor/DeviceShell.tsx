@@ -93,6 +93,7 @@ type PowerState = 'on' | 'booting' | 'off'
 
 type DeviceShellProps = {
   screen: ReactNode
+  screenModal?: ReactNode
   defibState: DefibState
   energy: number
   progress: number
@@ -128,6 +129,7 @@ type DeviceShellProps = {
 
 export function DeviceShell({
   screen,
+  screenModal,
   defibState,
   energy,
   progress,
@@ -202,9 +204,10 @@ export function DeviceShell({
                 onMedBack={onMedBack ?? (() => {})}
               />
               <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6vw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
-                <div className="h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
+                <div className="relative h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
                   {powerState === 'on' && screen}
                   {powerState === 'booting' && <BootScreen />}
+                  {screenModal}
                 </div>
               </div>
               <RightControlCluster
@@ -380,7 +383,7 @@ function LeftSoftKeys({
       })()
     : [
         { ariaLabel: 'Brightness soft key' },
-        { ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
+        { ariaLabel: '12-lead view', onClick: onTwelveLead, active: false },
         { ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
         { ariaLabel: 'Treatment soft key', onClick: onTreatment },
         { ariaLabel: 'Call Info (sidebar)', onClick: onLeftAnalyse },

@@ -179,7 +179,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
   const isShockAdvised = defibState === 'shock_advised'
   const inEval = defibState === 'analyzing_result'
   const showJoulesSelected = !isShockAdvised && (defibState === 'cpr' || defibState === 'analyzing_ecg' || defibState === 'analyzing_clear')
-  const showCprTime = defibState === 'cpr' || defibState === 'idle'
+  const showCprTime = defibState === 'cpr'
   const showDelivered = defibState === 'cpr' && lastDeliveredJoules != null && showDeliveredFlash
 
   return (

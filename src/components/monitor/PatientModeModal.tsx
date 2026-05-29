@@ -1,32 +1,23 @@
 'use client'
 
-import { useEffect } from 'react'
 import type { PatientMode } from '@/types/vitals'
 import { cn } from '@/lib/utils'
 
 type PatientModeModalProps = {
   open: boolean
   current: PatientMode
+  highlighted: PatientMode
   onSelect: (mode: PatientMode) => void
   onClose: () => void
 }
 
-const OPTIONS: ReadonlyArray<{ value: PatientMode; label: string }> = [
+export const PATIENT_MODE_OPTIONS: ReadonlyArray<{ value: PatientMode; label: string }> = [
   { value: 'adult', label: 'Adulte' },
   { value: 'pediatric', label: 'Pédiatrique' },
   { value: 'neonate', label: 'Néonatal' },
 ]
 
-export function PatientModeModal({ open, current, onSelect, onClose }: PatientModeModalProps) {
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
-
+export function PatientModeModal({ open, current, highlighted, onSelect, onClose }: PatientModeModalProps) {
   if (!open) return null
 
   return (
@@ -34,36 +25,32 @@ export function PatientModeModal({ open, current, onSelect, onClose }: PatientMo
       role="dialog"
       aria-modal="true"
       aria-label="Mode patient"
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="absolute inset-0 z-50 flex items-center justify-center"
     >
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/60"
-      />
+      {/* Backdrop — visual dim only, no interaction */}
+      <div className="absolute inset-0 bg-black/60" />
       <div className="relative w-72 bg-neutral-900 border border-cyan-bp text-white font-mono shadow-xl">
         <div className="px-3 py-2 border-b border-neutral-700 text-cyan-bp text-sm uppercase tracking-wider">
           Mode patient
         </div>
         <ul role="listbox" className="py-1">
-          {OPTIONS.map((opt) => {
-            const selected = opt.value === current
+          {PATIENT_MODE_OPTIONS.map((opt) => {
+            const isCurrent = opt.value === current
+            const isHighlighted = opt.value === highlighted
             return (
               <li key={opt.value}>
-                <button
-                  type="button"
+                <div
                   role="option"
-                  aria-selected={selected}
-                  onClick={() => onSelect(opt.value)}
+                  aria-selected={isCurrent}
                   className={cn(
-                    'w-full text-left px-4 py-2 text-sm',
-                    'hover:bg-cyan-900/40',
-                    selected && 'bg-cyan-bp text-black font-bold',
+                    'w-full text-left px-4 py-2 text-sm flex items-center justify-between',
+                    isHighlighted && 'bg-[var(--color-selection-blue)] text-white',
+                    !isHighlighted && isCurrent && 'bg-cyan-bp text-black font-bold',
                   )}
                 >
-                  {opt.label}
-                </button>
+                  <span>{opt.label}</span>
+                  {isCurrent && <span className="text-xs opacity-70">✓</span>}
+                </div>
               </li>
             )
           })}

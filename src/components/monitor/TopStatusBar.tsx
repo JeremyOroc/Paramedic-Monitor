@@ -9,7 +9,6 @@ type TopStatusBarProps = {
   time: string
   patientMode: PatientMode
   patientModeActive?: boolean
-  onPatientModeClick?: () => void
   batteryPercent: number
   sessionTimer: string
   selected?: MonitorSelection
@@ -26,7 +25,6 @@ export function TopStatusBar({
   time,
   patientMode,
   patientModeActive = false,
-  onPatientModeClick,
   batteryPercent,
   sessionTimer,
   selected,
@@ -45,20 +43,16 @@ export function TopStatusBar({
           <span>{time}</span>
         </span>
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={onPatientModeClick}
+          <span
             aria-label="Patient mode"
-            aria-pressed={patientModeActive}
             className={cn(
-              'px-2 py-0.5 transition-[filter,box-shadow] font-bold',
+              'px-2 py-0.5 font-bold',
               selected === 'patientMode' ? 'bg-[var(--color-selection-blue)] text-white' : '',
-              'hover:brightness-110',
               patientModeActive && 'ring-1 ring-white',
             )}
           >
             {MODE_LABEL[patientMode]}
-          </button>
+          </span>
           <span
             aria-label="Beacon"
             className={cn(

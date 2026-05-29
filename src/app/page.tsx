@@ -11,7 +11,7 @@ import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
-import { PatientModeModal } from '@/components/monitor/PatientModeModal'
+import { PatientModeModal, PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
 import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
 import { EventLogModal, type EventLogEntry } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
@@ -43,6 +43,7 @@ export default function MonitorPage() {
   const [secondary, setSecondary] = useState<SecondaryChannel>('spo2')
   const [patientMode, setPatientMode] = useState<PatientMode>(DEFAULT_VITALS.patient_mode)
   const [patientModalOpen, setPatientModalOpen] = useState(false)
+  const [patientModeHighlightedIndex, setPatientModeHighlightedIndex] = useState(0)
   const [callerInfoOpen, setCallerInfoOpen] = useState(false)
   const [isTimerRunning, setIsTimerRunning] = useState(true)
   const [medicationMode, setMedicationMode] = useState(false)
@@ -101,7 +102,7 @@ export default function MonitorPage() {
   }, [defib.state, isMuted])
 
   useEffect(() => {
-    if (defib.state === 'charged' && !isMuted) {
+    if ((defib.state === 'charged' || defib.state === 'shock_advised') && !isMuted) {
       playShockReadyBeep()
       return pauseShockReadyBeep
     }
@@ -149,8 +150,19 @@ export default function MonitorPage() {
   }
 
   function handleSelectionEnter() {
+    if (patientModalOpen) {
+      const mode = PATIENT_MODE_OPTIONS[patientModeHighlightedIndex].value
+      setPatientMode(mode)
+      setPatientModalOpen(false)
+      return
+    }
     if (activeSelectedControl === 'bottomStatusToggle') {
       setBottomStatusVisible((visible) => !visible)
+    }
+    if (activeSelectedControl === 'patientMode') {
+      const currentIndex = PATIENT_MODE_OPTIONS.findIndex((o) => o.value === patientMode)
+      setPatientModeHighlightedIndex(currentIndex === -1 ? 0 : currentIndex)
+      setPatientModalOpen(true)
     }
   }
 
@@ -187,7 +199,6 @@ export default function MonitorPage() {
             time={time}
             patientMode={patientMode}
             patientModeActive={patientModalOpen}
-            onPatientModeClick={() => setPatientModalOpen(true)}
             batteryPercent={85}
             sessionTimer={sessionTimer}
             selected={activeSelectedControl}
@@ -279,9 +290,20 @@ export default function MonitorPage() {
   )
 
   return (
-    <>
-      <DeviceShell
-        screen={screen}
+    <DeviceShell
+      screen={screen}
+      screenModal={
+        <PatientModeModal
+          open={patientModalOpen}
+          current={patientMode}
+          highlighted={PATIENT_MODE_OPTIONS[patientModeHighlightedIndex]?.value ?? 'adult'}
+          onSelect={(mode) => {
+            setPatientMode(mode)
+            setPatientModalOpen(false)
+          }}
+          onClose={() => setPatientModalOpen(false)}
+        />
+      }
         defibState={defib.state}
         energy={defib.energy}
         progress={defib.progress}
@@ -302,7 +324,13 @@ export default function MonitorPage() {
         }
         onTreatment={handleTreatment}
         onLeftAnalyse={() => setCallerInfoOpen(true)}
-        onBack={() => setView('main')}
+        onBack={() => {
+          if (patientModalOpen) {
+            setPatientModalOpen(false)
+          } else {
+            setView('main')
+          }
+        }}
         twelveLeadActive={isTwelveLead}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
@@ -326,8 +354,24 @@ export default function MonitorPage() {
           setSelectedControl('dateTime')
           setBottomStatusVisible(true)
         }}
-        onMoveUp={() => moveSelectedControl(1)}
-        onMoveDown={() => moveSelectedControl(-1)}
+        onMoveUp={() => {
+          if (patientModalOpen) {
+            setPatientModeHighlightedIndex(
+              (i) => (i - 1 + PATIENT_MODE_OPTIONS.length) % PATIENT_MODE_OPTIONS.length,
+            )
+          } else {
+            moveSelectedControl(1)
+          }
+        }}
+        onMoveDown={() => {
+          if (patientModalOpen) {
+            setPatientModeHighlightedIndex(
+              (i) => (i + 1) % PATIENT_MODE_OPTIONS.length,
+            )
+          } else {
+            moveSelectedControl(-1)
+          }
+        }}
         onEnter={handleSelectionEnter}
         medicationMode={medicationMode}
         medicationPage={medicationPage}
@@ -335,16 +379,6 @@ export default function MonitorPage() {
         onMedPageChange={handleMedPageChange}
         onMedInfo={() => setEventLogOpen(true)}
         onMedBack={handleMedBack}
-      />
-      <PatientModeModal
-        open={patientModalOpen}
-        current={patientMode}
-        onSelect={(mode) => {
-          setPatientMode(mode)
-          setPatientModalOpen(false)
-        }}
-        onClose={() => setPatientModalOpen(false)}
-      />
-    </>
+    />
   )
 }
