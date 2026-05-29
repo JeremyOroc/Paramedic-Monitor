@@ -49,7 +49,7 @@ export function PatientModeModal({ open, current, highlighted, onSelect, onClose
                   )}
                 >
                   <span>{opt.label}</span>
-                  {isCurrent && <span className="text-xs opacity-70">✓</span>}
+                  {isCurrent && <span className="text-xs opacity-70" aria-hidden="true">✓</span>}
                 </div>
               </li>
             )
