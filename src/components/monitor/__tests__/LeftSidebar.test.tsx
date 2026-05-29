@@ -21,7 +21,7 @@ describe('LeftSidebar', () => {
     setup()
     expect(screen.queryByRole('button', { name: 'Brightness' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Medications' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Analyse (sidebar)' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Call Info (sidebar)' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument()
   })
 

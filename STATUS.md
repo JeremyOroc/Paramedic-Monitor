@@ -158,6 +158,15 @@
   - [x] `synthVT` plateau contour changed from layered sine wobble/noise to a rounded, gently downward-sloping shelf
   - [x] VT plateau apex shifted earlier in the rounded arc so the rest of the top slopes down toward the trough
   - [x] Rhythm tests updated to guard an early-peaking rounded non-jagged plateau plus the existing deep sharp V trough
+- [x] **Right shell monitor selection controls — COMPLETE:**
+  - [x] Right physical Move up / Move down / Enter buttons now drive a monitor selection cursor
+  - [x] Selection starts on the combined date/time region and cycles through the requested header, vitals, graph title metadata, ECG label, and minus-toggle targets
+  - [x] Selected regions use the new blue selection highlight; right vital selection highlights the value area while leaving the label row unchanged
+  - [x] Added the header beacon icon, selectable battery/date/patient regions, and the subbar minus + empty rectangle controls
+  - [x] Added `SpO2 1x` and displayed `EtCO2 0 to 60 mmHg` graph metadata without changing the EtCO2 renderer scale
+  - [x] Enter is inert except on the minus toggle, which hides/restores the bottom status/defib/CPR panel
+  - [x] When the bottom panel is hidden, the main waveform area expands to ECG / EtCO2 / SpO2 while right-side vitals remain in place
+  - [x] Tests added for shell nav handlers, monitor selection flow, bottom-panel toggle, vital selection styling, and graph metadata
 
 ---
 

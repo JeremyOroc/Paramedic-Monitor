@@ -40,4 +40,16 @@ describe('VitalBox', () => {
 
     expect(screen.getByTestId('vital-value')).not.toHaveClass('vital-alarm-flash')
   })
+
+  it('highlights the value area without highlighting the label row when selected', () => {
+    const { container } = render(
+      <VitalBox label="FC" value={80} unit="bpm" color="ecgGreen" selected />,
+    )
+
+    const box = screen.getByText('FC').closest('[data-selected="true"]')
+    expect(box).toBeInTheDocument()
+    const selectedRegion = screen.getByTestId('vital-value').parentElement
+    expect(selectedRegion).toHaveClass('bg-[var(--color-selection-blue)]', 'text-white')
+    expect(selectedRegion).not.toContainElement(screen.getByText('FC'))
+  })
 })

@@ -114,7 +114,7 @@ export function LeftSidebar({
         interactive={false}
       />
       <SidebarButton icon="℞" label="MED" ariaLabel="Medications" interactive={false} />
-      <SidebarButton icon="A" label="ANALYSE" ariaLabel="Analyse (sidebar)" interactive={false} />
+      <SidebarButton icon="C" label="CALL INFO" ariaLabel="Call Info (sidebar)" interactive={false} />
       <SidebarButton icon="🖨" label="PRINT" ariaLabel="Print" active={printActive} interactive={false} />
       <SidebarButton icon="←" label="BACK" ariaLabel="Back" interactive={false} />
     </div>

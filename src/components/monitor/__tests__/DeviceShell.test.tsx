@@ -108,11 +108,11 @@ describe('DeviceShell', () => {
     expect(props.onBack).toHaveBeenCalledTimes(1)
   })
 
-  it('fires onLeftAnalyse when the left ANALYSE shell button is clicked', async () => {
+  it('fires onLeftAnalyse when the left CALL INFO shell button is clicked', async () => {
     const user = userEvent.setup()
     const props = makeProps()
     render(<DeviceShell {...props} />)
-    await user.click(screen.getByRole('button', { name: 'Analyse (sidebar)' }))
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
     expect(props.onLeftAnalyse).toHaveBeenCalledTimes(1)
     expect(props.onAnalyse).toHaveBeenCalledTimes(0)
   })
@@ -250,5 +250,23 @@ describe('DeviceShell', () => {
   it('displays the current energy level', () => {
     render(<DeviceShell {...makeProps({ energy: 200 })} />)
     expect(screen.getByText('200')).toBeInTheDocument()
+  })
+
+  it('fires right-side navigation handlers from the physical shell', async () => {
+    const user = userEvent.setup()
+    const props = makeProps({
+      onMoveUp: vi.fn(),
+      onMoveDown: vi.fn(),
+      onEnter: vi.fn(),
+    })
+
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Move up' }))
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    await user.click(screen.getByRole('button', { name: 'Enter' }))
+
+    expect(props.onMoveUp).toHaveBeenCalledTimes(1)
+    expect(props.onMoveDown).toHaveBeenCalledTimes(1)
+    expect(props.onEnter).toHaveBeenCalledTimes(1)
   })
 })

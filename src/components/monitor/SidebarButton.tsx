@@ -38,7 +38,7 @@ export function SidebarButton({
   const content = (
     <>
       <span className="text-base leading-none">{icon}</span>
-      {label && <span className="leading-none">{label}</span>}
+      {label && <span className="leading-none text-center w-full">{label}</span>}
     </>
   )
 

@@ -214,11 +214,16 @@ paramedic-monitor/
    - Top-rim power button toggles green/red locally; it does not shut down the monitor UI
   - Grey physical soft keys own left-sidebar interactions: 12-lead, EtCO2 toggle, left-menu ANALYSE (opens caller info modal only), and Back
    - Inner dark sidebar labels are visual only and must not be clickable
+   - Right physical Move up / Move down / Enter buttons cycle a blue selected state through monitor header, right vitals, visible waveform labels/scales, ECG labels, and the minus toggle row. Enter is inert except on the minus toggle.
+   - Header/subbar reference controls include a combined date/time selectable region, patient-mode selectable region, beacon icon, selectable battery icon, a small minus rectangle beneath date/time, and a larger empty rectangle beside it.
+   - The minus toggle hides or restores the bottom status/defib/CPR panel. When hidden, the main waveform area expands to show ECG, EtCO2, and SpO2 rows while the right vitals column stays unchanged.
+   - Graph title metadata displays `SpO2 1x` and, when EtCO2 is visible, `EtCO2 0 to 60 mmHg`; this text does not change the internal EtCO2 renderer scale.
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
 11. Color reference: `#000000` bg, `#00ff41` ECG green, `#00ffff` cyan BP, `#cc44ff` purple EtCO2, `#ffff00` yellow SpO2
 
 **Testing:**
 - Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
+- Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
 
 **Milestone:** Screenshot of app matches Zoll X Series reference photos. No interactivity yet.
 

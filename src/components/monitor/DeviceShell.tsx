@@ -406,7 +406,7 @@ function LeftSoftKeys({
     { id: '12lead', ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
     { id: 'etco2', ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
     { id: 'treatment', ariaLabel: 'Treatment soft key', onClick: onTreatment },
-    { id: 'analyse', ariaLabel: 'Analyse (sidebar)', onClick: onLeftAnalyse },
+    { id: 'analyse', ariaLabel: 'Call Info (sidebar)', onClick: onLeftAnalyse },
     { id: 'printer', ariaLabel: 'Printer soft key', onClick: onPrint },
     { id: 'back', ariaLabel: 'Back', onClick: onBack },
   ]

@@ -33,6 +33,15 @@
   Back dismiss + lock-to-Back; forgotten after a power cycle); `DeviceShell` test now asserts
   the printer key fires `onPrint`.
 
+## [2026-05-28] [monitor] — Add right-shell selection navigation
+
+- Wired the physical Move up, Move down, and Enter buttons to cycle through selectable monitor regions with a blue highlight.
+- Added selectable date/time, patient mode, beacon, battery, right vital boxes, waveform title metadata, ECG gain/Pads labels, and the minus toggle row.
+- Added the subbar minus rectangle and adjacent empty rectangle, plus displayed `SpO2 1x` and `EtCO2 0 to 60 mmHg` graph metadata.
+- Made Enter inert except for the minus toggle; the toggle hides/restores the bottom status/defib/CPR panel and expands the main area to ECG / EtCO2 / SpO2 when hidden.
+- Fixed the blue highlight utility so the selected regions actually paint with the reference blue instead of carrying a non-emitted class.
+- Added tests for shell nav handlers, monitor selection/toggle flow, vital selection styling, and secondary graph metadata.
+
 ## [2026-05-28] [monitor] — Implement 12-lead Capture (acquire dialog + printout)
 
 - Pressing **Capture** in the 12-lead view now freezes the current rhythm/HR and shows a
