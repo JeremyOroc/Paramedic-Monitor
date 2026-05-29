@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-05-29] [monitor] — Print button reprints the latest 12-lead capture
+
+- The main-view **PRINT** soft key (slot 6) was previously inert. It now reprints the most
+  recent completed 12-lead capture as a full-screen `TwelveLeadPrintout` overlay. It stays a
+  no-op until at least one 12-lead has been acquired this session.
+- Added session-only page state in `page.tsx`: `lastCapture` ({ rhythm, hr }) is recorded when
+  an acquisition completes (in `startCapture`'s timer), and `printPreviewOpen` drives the
+  main-view overlay. No store/persistence changes — both are cleared on power-off, so the
+  capture does not survive a power cycle or reload.
+- `captureLock` now also covers `printPreviewOpen`, so while the reprint is up every control
+  except Back is inert (mirrors the 12-lead result behavior). Back dismisses the reprint.
+- Wiring: new required `onPrint` prop on `DeviceShell` (passed through to `LeftSoftKeys`, wired
+  to the `printer` soft key); `LeftSidebar` gained an optional `printActive` prop so the PRINT
+  label highlights while the reprint is open.
+- Tests: new `src/app/__tests__/printFlow.test.tsx` (inert with no capture; reprint over main +
+  Back dismiss + lock-to-Back; forgotten after a power cycle); `DeviceShell` test now asserts
+  the printer key fires `onPrint`.
+
 ## [2026-05-28] [monitor] — Implement 12-lead Capture (acquire dialog + printout)
 
 - Pressing **Capture** in the 12-lead view now freezes the current rhythm/HR and shows a

@@ -25,6 +25,7 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onBack: vi.fn(),
     onPatientInfo: vi.fn(),
     onCaptureTwelveLead: vi.fn(),
+    onPrint: vi.fn(),
     onMoveUp: vi.fn(),
     onMoveDown: vi.fn(),
     onEnter: vi.fn(),
@@ -201,11 +202,18 @@ describe('DeviceShell', () => {
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Brightness soft key' }))
     await user.click(screen.getByRole('button', { name: 'Treatment soft key' }))
-    await user.click(screen.getByRole('button', { name: 'Printer soft key' }))
     expect(props.onTwelveLead).toHaveBeenCalledTimes(0)
     expect(props.onToggleEtco2).toHaveBeenCalledTimes(0)
     expect(props.onLeftAnalyse).toHaveBeenCalledTimes(0)
     expect(props.onBack).toHaveBeenCalledTimes(0)
+  })
+
+  it('fires onPrint when the Printer soft key is clicked in the main view', async () => {
+    const user = userEvent.setup()
+    const props = makeProps()
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Printer soft key' }))
+    expect(props.onPrint).toHaveBeenCalledTimes(1)
   })
 
   it('fires onAnalyse when ANALYZE is clicked and canAnalyse is true', async () => {

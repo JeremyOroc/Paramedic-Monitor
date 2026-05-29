@@ -112,6 +112,7 @@ type DeviceShellProps = {
   onBack: () => void
   onPatientInfo: () => void
   onCaptureTwelveLead: () => void
+  onPrint: () => void
   onMoveUp: () => void
   onMoveDown: () => void
   onEnter: () => void
@@ -151,6 +152,7 @@ export function DeviceShell({
   onBack,
   onPatientInfo,
   onCaptureTwelveLead,
+  onPrint,
   onMoveUp,
   onMoveDown,
   onEnter,
@@ -209,6 +211,7 @@ export function DeviceShell({
                 onBack={onBack}
                 onPatientInfo={lock(onPatientInfo)}
                 onCaptureTwelveLead={lock(onCaptureTwelveLead)}
+                onPrint={lock(onPrint)}
                 twelveLeadActive={twelveLeadActive}
                 medicationMode={medicationMode}
                 medicationPage={medicationPage}
@@ -360,6 +363,7 @@ type LeftSoftKeysProps = {
   onBack: () => void
   onPatientInfo: () => void
   onCaptureTwelveLead: () => void
+  onPrint: () => void
   twelveLeadActive: boolean
   medicationMode: boolean
   medicationPage: 1 | 2 | 3
@@ -384,6 +388,7 @@ function LeftSoftKeys({
   onBack,
   onPatientInfo,
   onCaptureTwelveLead,
+  onPrint,
   twelveLeadActive,
   medicationMode,
   medicationPage,
@@ -402,7 +407,7 @@ function LeftSoftKeys({
     { id: 'etco2', ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
     { id: 'treatment', ariaLabel: 'Treatment soft key', onClick: onTreatment },
     { id: 'analyse', ariaLabel: 'Analyse (sidebar)', onClick: onLeftAnalyse },
-    { id: 'printer', ariaLabel: 'Printer soft key' },
+    { id: 'printer', ariaLabel: 'Printer soft key', onClick: onPrint },
     { id: 'back', ariaLabel: 'Back', onClick: onBack },
   ]
 

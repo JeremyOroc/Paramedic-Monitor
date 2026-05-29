@@ -31,6 +31,7 @@ type LeftSidebarProps = {
   medicationMode?: boolean
   medicationPage?: 1 | 2 | 3
   activeMed?: string | null
+  printActive?: boolean
 }
 
 export function LeftSidebar({
@@ -39,6 +40,7 @@ export function LeftSidebar({
   medicationMode = false,
   medicationPage = 1,
   activeMed = null,
+  printActive = false,
 }: LeftSidebarProps) {
   if (medicationMode) {
     const meds = MED_PAGES[medicationPage]
@@ -113,7 +115,7 @@ export function LeftSidebar({
       />
       <SidebarButton icon="℞" label="MED" ariaLabel="Medications" interactive={false} />
       <SidebarButton icon="A" label="ANALYSE" ariaLabel="Analyse (sidebar)" interactive={false} />
-      <SidebarButton icon="🖨" label="PRINT" ariaLabel="Print" interactive={false} />
+      <SidebarButton icon="🖨" label="PRINT" ariaLabel="Print" active={printActive} interactive={false} />
       <SidebarButton icon="←" label="BACK" ariaLabel="Back" interactive={false} />
     </div>
   )

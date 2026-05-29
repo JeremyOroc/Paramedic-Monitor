@@ -60,6 +60,8 @@ export default function MonitorPage() {
   const [captureState, setCaptureState] = useState<CaptureState>('idle')
   const [capturedRhythm, setCapturedRhythm] = useState<Rhythm>(DEFAULT_VITALS.rhythm)
   const [capturedHr, setCapturedHr] = useState<number>(DEFAULT_VITALS.hr)
+  const [lastCapture, setLastCapture] = useState<{ rhythm: Rhythm; hr: number } | null>(null)
+  const [printPreviewOpen, setPrintPreviewOpen] = useState(false)
   const captureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const timeZone = (() => {
@@ -170,13 +172,24 @@ export default function MonitorPage() {
   function startCapture() {
     clearCaptureTimer()
     setPatientInfoOpen(false)
-    setCapturedRhythm(confirmed.rhythm)
-    setCapturedHr(confirmed.hr)
+    const rhythm = confirmed.rhythm
+    const hr = confirmed.hr
+    setCapturedRhythm(rhythm)
+    setCapturedHr(hr)
     setCaptureState('acquiring')
     captureTimerRef.current = setTimeout(() => {
       captureTimerRef.current = null
       setCaptureState('result')
+      // Remember the completed capture so the main-view PRINT key can reprint it.
+      setLastCapture({ rhythm, hr })
     }, ACQUIRE_MS)
+  }
+
+  // Main-view PRINT: bring up the most recent completed 12-lead as a full-screen
+  // printout. Inert until a capture exists. Back dismisses it (handleBack).
+  function handlePrint() {
+    if (!lastCapture) return
+    setPrintPreviewOpen(true)
   }
 
   useEffect(() => clearCaptureTimer, [])
@@ -219,6 +232,11 @@ export default function MonitorPage() {
   }
 
   function handleBack() {
+    if (printPreviewOpen) {
+      // dismiss the reprinted 12-lead, back to the main view
+      setPrintPreviewOpen(false)
+      return
+    }
     if (editing) {
       // cancel: discard the draft, stay in the panel (browse)
       setEditing(false)
@@ -277,6 +295,7 @@ export default function MonitorPage() {
             medicationMode={medicationMode}
             medicationPage={medicationPage}
             activeMed={flashedMed}
+            printActive={printPreviewOpen}
           />
         }
         main={
@@ -362,6 +381,11 @@ export default function MonitorPage() {
           <TwelveLeadPrintout rhythm={capturedRhythm} hr={capturedHr} />
         </div>
       )}
+      {!isTwelveLead && printPreviewOpen && lastCapture && (
+        <div className="absolute inset-0 z-40">
+          <TwelveLeadPrintout rhythm={lastCapture.rhythm} hr={lastCapture.hr} />
+        </div>
+      )}
     </div>
   )
 
@@ -390,7 +414,8 @@ export default function MonitorPage() {
         onBack={handleBack}
         onPatientInfo={openPatientInfo}
         onCaptureTwelveLead={startCapture}
-        captureLock={isTwelveLead && captureState !== 'idle'}
+        onPrint={handlePrint}
+        captureLock={(isTwelveLead && captureState !== 'idle') || printPreviewOpen}
         onMoveUp={() => moveSelection('up')}
         onMoveDown={() => moveSelection('down')}
         onEnter={handleEnter}
@@ -408,6 +433,8 @@ export default function MonitorPage() {
           setAudioMuted(false)
           defib.reset()
           setEventLog([])
+          setLastCapture(null)
+          setPrintPreviewOpen(false)
           setMedicationMode(false)
           setMedicationPage(1)
           setFlashedMed(null)

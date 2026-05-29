@@ -72,6 +72,11 @@
   - [x] Transient (no persistence) — Back cancels an in-progress acquisition or dismisses the printout back to the live 12-lead grid; every press is a fresh capture of the current state
   - [x] Printout colors added to `COLORS` (`utils.ts`) + `@theme` (`globals.css`): tan paper, uniform grid, dark ink, acquire green
   - [x] Tests: capture flow (acquire → printout → dismiss, mid-acquire cancel, lock-to-Back), `DeviceShell` captureLock, printout layout, acquiring dialog
+- [x] **Print latest 12-lead (main view) — COMPLETE:**
+  - [x] Main-view PRINT soft key (slot 6) reprints the most recent completed capture as a full-screen `TwelveLeadPrintout`; inert until a 12-lead has been acquired
+  - [x] Latest capture kept in session-only page state (`lastCapture`), recorded when an acquisition completes; cleared on power-off (no store persistence)
+  - [x] While the reprint is up only Back works (`captureLock` extended with `printPreviewOpen`); Back dismisses it; sidebar PRINT label highlights while open
+  - [x] Tests: `printFlow` (inert with no capture, reprint + Back dismiss + lock-to-Back, forgotten after power cycle), `DeviceShell` printer key fires `onPrint`
 - [x] **Caller info on ANALYZE — COMPLETE:**
   - [x] Admin dashboard includes a separate Caller Info tab with fields: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button capped at three optional title/input rows
   - [x] Caller info uses draft/saved/confirmed state and the existing Save → Send workflow
