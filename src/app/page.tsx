@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -18,6 +18,7 @@ import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { DEFAULT_VITALS, type PatientMode } from '@/types/vitals'
+import type { MonitorSelection } from '@/types/monitorSelection'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { formatMonitorClock } from '@/lib/monitorClock'
@@ -25,6 +26,17 @@ import { setAudioMuted, playChargeBeep, pauseChargeBeep, playShockReadyBeep, pau
 
 type MonitorView = 'main' | '12lead'
 type SecondaryChannel = 'spo2' | 'etco2'
+
+const TOP_SELECTIONS: MonitorSelection[] = [
+  'dateTime',
+  'patientMode',
+  'beacon',
+  'battery',
+  'hrVital',
+  'nibpVital',
+  'etco2Vital',
+  'spo2Vital',
+]
 
 export default function MonitorPage() {
   const [view, setView] = useState<MonitorView>('main')
@@ -40,6 +52,8 @@ export default function MonitorPage() {
   const [flashedMed, setFlashedMed] = useState<string | null>(null)
   const [isPoweredOn, setIsPoweredOn] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
+  const [selectedControl, setSelectedControl] = useState<MonitorSelection>('dateTime')
+  const [bottomStatusVisible, setBottomStatusVisible] = useState(true)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [now, setNow] = useState<Date | null>(null)
 
@@ -103,6 +117,47 @@ export default function MonitorPage() {
   }
 
   const NEXT_MED_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
+  const isTwelveLead = view === '12lead'
+
+  const selectableControls = useMemo<MonitorSelection[]>(() => {
+    const waveformControls: MonitorSelection[] = []
+
+    if (!isTwelveLead) {
+      const spo2Visible = !bottomStatusVisible || secondary === 'spo2'
+      const etco2Visible = !bottomStatusVisible || secondary === 'etco2'
+
+      if (spo2Visible) waveformControls.push('spo2Scale', 'spo2Label')
+      if (etco2Visible) waveformControls.push('etco2Scale', 'etco2Label')
+      waveformControls.push('ecgGain', 'padsLabel')
+    }
+
+    return [...TOP_SELECTIONS, ...waveformControls, 'bottomStatusToggle']
+  }, [bottomStatusVisible, isTwelveLead, secondary])
+
+  const activeSelectedControl = selectableControls.includes(selectedControl)
+    ? selectedControl
+    : 'dateTime'
+
+  function moveSelectedControl(direction: 1 | -1) {
+    setSelectedControl((current) => {
+      const currentIndex = selectableControls.indexOf(current)
+      const safeIndex = currentIndex === -1 ? 0 : currentIndex
+      return selectableControls[
+        (safeIndex + direction + selectableControls.length) % selectableControls.length
+      ]
+    })
+  }
+
+  function handleSelectionEnter() {
+    if (activeSelectedControl === 'bottomStatusToggle') {
+      setBottomStatusVisible((visible) => !visible)
+    }
+  }
+
+  function handleToggleBottomStatus() {
+    setSelectedControl('bottomStatusToggle')
+    setBottomStatusVisible((visible) => !visible)
+  }
 
   function handleTreatment() {
     setMedicationMode(true)
@@ -123,8 +178,6 @@ export default function MonitorPage() {
     setMedicationMode(false)
   }
 
-  const isTwelveLead = view === '12lead'
-
   const screen = (
     <div className="relative h-full w-full">
       <MonitorLayout
@@ -137,9 +190,15 @@ export default function MonitorPage() {
             onPatientModeClick={() => setPatientModalOpen(true)}
             batteryPercent={85}
             sessionTimer={sessionTimer}
+            selected={activeSelectedControl}
           />
         }
-        subBar={<SubBar />}
+        subBar={
+          <SubBar
+            selected={activeSelectedControl}
+            onToggleBottomStatus={handleToggleBottomStatus}
+          />
+        }
         sidebar={
           <LeftSidebar
             twelveLeadActive={isTwelveLead}
@@ -162,6 +221,8 @@ export default function MonitorPage() {
               spo2Waveform={confirmed.spo2_waveform}
               etco2Waveform={confirmed.etco2_waveform}
               showApplyElectrodes={false}
+              showAllSecondaryChannels={!bottomStatusVisible}
+              selected={activeSelectedControl}
             />
           )
         }
@@ -175,6 +236,7 @@ export default function MonitorPage() {
               spo2={confirmed.spo2}
               activeAlarms={alarm.activeAlarms}
               searching={false}
+              selected={activeSelectedControl}
             />
           )
         }
@@ -192,7 +254,7 @@ export default function MonitorPage() {
           ) : null
         }
         bottomBar={
-          isTwelveLead ? null : (
+          isTwelveLead || !bottomStatusVisible ? null : (
             <BottomStatusBar
               defibState={defib.state}
               joules={defib.energy}
@@ -227,7 +289,9 @@ export default function MonitorPage() {
         canCharge={defib.canCharge}
         canShock={defib.canShock}
         canAdjustEnergy={defib.canAdjustEnergy}
-        onAnalyse={defib.onAnalyse}
+        onAnalyse={() => {
+          defib.onAnalyse()
+        }}
         onCharge={defib.onCharge}
         onShock={defib.onShock}
         onEnergyUp={defib.onEnergyUp}
@@ -259,7 +323,12 @@ export default function MonitorPage() {
           setPatientModalOpen(false)
           setCallerInfoOpen(false)
           setEventLogOpen(false)
+          setSelectedControl('dateTime')
+          setBottomStatusVisible(true)
         }}
+        onMoveUp={() => moveSelectedControl(1)}
+        onMoveDown={() => moveSelectedControl(-1)}
+        onEnter={handleSelectionEnter}
         medicationMode={medicationMode}
         medicationPage={medicationPage}
         onMedClick={handleMedClick}

@@ -113,6 +113,9 @@ type DeviceShellProps = {
   twelveLeadActive?: boolean
   onPowerOn?: () => void
   onPowerOff?: () => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  onEnter?: () => void
   medicationMode?: boolean
   medicationPage?: 1 | 2 | 3
   onMedClick?: (name: string) => void
@@ -145,6 +148,9 @@ export function DeviceShell({
   twelveLeadActive = false,
   onPowerOn,
   onPowerOff,
+  onMoveUp,
+  onMoveDown,
+  onEnter,
   medicationMode = false,
   medicationPage = 1,
   onMedClick,
@@ -201,7 +207,13 @@ export function DeviceShell({
                   {powerState === 'booting' && <BootScreen />}
                 </div>
               </div>
-              <RightControlCluster isMuted={isMuted} onToggleMute={onToggleMute ?? (() => {})} />
+              <RightControlCluster
+                isMuted={isMuted}
+                onToggleMute={onToggleMute ?? (() => {})}
+                onMoveUp={onMoveUp ?? (() => {})}
+                onMoveDown={onMoveDown ?? (() => {})}
+                onEnter={onEnter ?? (() => {})}
+              />
             </div>
             <BottomDefibStrip
               defibState={defibState}
@@ -371,7 +383,7 @@ function LeftSoftKeys({
         { ariaLabel: '12-lead view', onClick: onTwelveLead, active: twelveLeadActive },
         { ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
         { ariaLabel: 'Treatment soft key', onClick: onTreatment },
-        { ariaLabel: 'Analyse (sidebar)', onClick: onLeftAnalyse },
+        { ariaLabel: 'Call Info (sidebar)', onClick: onLeftAnalyse },
         { ariaLabel: 'Printer soft key' },
         { ariaLabel: 'Back', onClick: onBack },
       ]
@@ -400,9 +412,18 @@ function LeftSoftKeys({
 type RightControlClusterProps = {
   isMuted: boolean
   onToggleMute: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  onEnter: () => void
 }
 
-function RightControlCluster({ isMuted, onToggleMute }: RightControlClusterProps) {
+function RightControlCluster({
+  isMuted,
+  onToggleMute,
+  onMoveUp,
+  onMoveDown,
+  onEnter,
+}: RightControlClusterProps) {
   return (
     <div className="relative min-h-0">
       <PhysicalButton
@@ -426,18 +447,21 @@ function RightControlCluster({ isMuted, onToggleMute }: RightControlClusterProps
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Enter"
+          onClick={onEnter}
           className="absolute left-[10%] top-[45%] h-[16%] w-[40%] rounded-[13px]"
         >
           <span className="h-[32%] w-[32%] rounded-full bg-[#4a4a4a]" />
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Move up"
+          onClick={onMoveUp}
           className="absolute right-[13%] top-[30%] h-[18%] w-[35%] rounded-[13px]"
         >
           <CurvedArrowIcon direction="up" />
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Move down"
+          onClick={onMoveDown}
           className="absolute right-[13%] top-[56%] h-[18%] w-[35%] rounded-[13px]"
         >
           <CurvedArrowIcon direction="down" />
