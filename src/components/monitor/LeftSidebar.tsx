@@ -103,14 +103,14 @@ export function LeftSidebar({
         icon="12L"
         label="LEAD"
         ariaLabel="12-lead view"
-        active={twelveLeadActive}
+        active={false}
         interactive={false}
       />
       <SidebarButton
         icon="CO₂"
         label="ETCO2"
         ariaLabel="Toggle EtCO2"
-        active={etco2Active}
+        active={false}
         interactive={false}
       />
       <SidebarButton icon="℞" label="MED" ariaLabel="Medications" interactive={false} />

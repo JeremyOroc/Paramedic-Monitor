@@ -6,14 +6,14 @@ import { PatientModeModal } from '../PatientModeModal'
 describe('PatientModeModal', () => {
   it('does not render when closed', () => {
     render(
-      <PatientModeModal open={false} current="adult" onSelect={vi.fn()} onClose={vi.fn()} />,
+      <PatientModeModal open={false} current="adult" highlighted="adult" onSelect={vi.fn()} onClose={vi.fn()} />,
     )
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('renders three options when open', () => {
     render(
-      <PatientModeModal open={true} current="adult" onSelect={vi.fn()} onClose={vi.fn()} />,
+      <PatientModeModal open={true} current="adult" highlighted="adult" onSelect={vi.fn()} onClose={vi.fn()} />,
     )
     expect(screen.getByRole('option', { name: 'Adulte' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Pédiatrique' })).toBeInTheDocument()
@@ -25,6 +25,7 @@ describe('PatientModeModal', () => {
       <PatientModeModal
         open={true}
         current="pediatric"
+        highlighted="pediatric"
         onSelect={vi.fn()}
         onClose={vi.fn()}
       />,
@@ -35,23 +36,25 @@ describe('PatientModeModal', () => {
     )
   })
 
-  it('calls onSelect when an option is clicked', async () => {
+  it('does not call onSelect when an option div is clicked', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
     render(
-      <PatientModeModal open={true} current="adult" onSelect={onSelect} onClose={vi.fn()} />,
+      <PatientModeModal open={true} current="adult" highlighted="adult" onSelect={onSelect} onClose={vi.fn()} />,
     )
+    // Options are display-only divs; clicking them must not trigger selection
     await user.click(screen.getByRole('option', { name: 'Néonatal' }))
-    expect(onSelect).toHaveBeenCalledWith('neonate')
+    expect(onSelect).not.toHaveBeenCalled()
   })
 
-  it('calls onClose when backdrop is clicked', async () => {
+  it('does not call onClose when the backdrop area is clicked', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     render(
-      <PatientModeModal open={true} current="adult" onSelect={vi.fn()} onClose={onClose} />,
+      <PatientModeModal open={true} current="adult" highlighted="adult" onSelect={vi.fn()} onClose={onClose} />,
     )
-    await user.click(screen.getByRole('button', { name: 'Close' }))
-    expect(onClose).toHaveBeenCalled()
+    // Backdrop is an inert div — clicking inside the dialog must not close it
+    await user.click(screen.getByRole('dialog'))
+    expect(onClose).not.toHaveBeenCalled()
   })
 })
