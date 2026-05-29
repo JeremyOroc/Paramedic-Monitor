@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-05-29] [instructor] — Fix admin vital inputs forcing a leading zero
+
+- `VitalInput` previously coerced an empty field back to `0` on every keystroke, so clearing a
+  value and typing left entries like "020". It now keeps local text state: the field can sit
+  empty mid-edit, leading zeros are stripped as you type ("020" → "20"), and the store still
+  receives a number (empty = 0). External changes (save/send/reset, scenario load) resync the
+  displayed text; blur normalizes an empty field back to the stored value.
+- Tests: added cases for typing after a clear (no leading zero), leading-zero stripping, and
+  resync-on-reset.
+
 ## [2026-05-29] [monitor] — Print button reprints the latest 12-lead capture
 
 - The main-view **PRINT** soft key (slot 6) was previously inert. It now reprints the most
