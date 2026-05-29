@@ -20,6 +20,7 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onEnergyDown: vi.fn(),
     onTwelveLead: vi.fn(),
     onToggleEtco2: vi.fn(),
+    onTreatment: vi.fn(),
     onLeftAnalyse: vi.fn(),
     onBack: vi.fn(),
     twelveLeadActive: false,
@@ -101,11 +102,11 @@ describe('DeviceShell', () => {
     expect(props.onBack).toHaveBeenCalledTimes(1)
   })
 
-  it('fires onLeftAnalyse when the left ANALYSE shell button is clicked', async () => {
+  it('fires onLeftAnalyse when the left CALL INFO shell button is clicked', async () => {
     const user = userEvent.setup()
     const props = makeProps()
     render(<DeviceShell {...props} />)
-    await user.click(screen.getByRole('button', { name: 'Analyse (sidebar)' }))
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
     expect(props.onLeftAnalyse).toHaveBeenCalledTimes(1)
     expect(props.onAnalyse).toHaveBeenCalledTimes(0)
   })
@@ -163,5 +164,23 @@ describe('DeviceShell', () => {
     render(<DeviceShell {...makeProps({ twelveLeadActive: true })} />)
     const btn = screen.getByRole('button', { name: '12-lead view' })
     expect(btn).toHaveClass('bg-[#4a90b8]')
+  })
+
+  it('fires right-side navigation handlers from the physical shell', async () => {
+    const user = userEvent.setup()
+    const props = makeProps({
+      onMoveUp: vi.fn(),
+      onMoveDown: vi.fn(),
+      onEnter: vi.fn(),
+    })
+
+    render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Move up' }))
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    await user.click(screen.getByRole('button', { name: 'Enter' }))
+
+    expect(props.onMoveUp).toHaveBeenCalledTimes(1)
+    expect(props.onMoveDown).toHaveBeenCalledTimes(1)
+    expect(props.onEnter).toHaveBeenCalledTimes(1)
   })
 })

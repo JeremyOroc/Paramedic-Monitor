@@ -20,6 +20,8 @@ type SecondaryChannelProps = {
   spo2Waveform: Spo2Waveform
   etco2Waveform: Etco2Waveform
   className?: string
+  selectedLabel?: boolean
+  selectedScale?: boolean
 }
 
 export function SecondaryChannel({
@@ -30,6 +32,8 @@ export function SecondaryChannel({
   spo2Waveform,
   etco2Waveform,
   className,
+  selectedLabel = false,
+  selectedScale = false,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -74,14 +78,19 @@ export function SecondaryChannel({
 
   return (
     <div className={cn('relative h-full w-full', className)}>
-      <span
+      <div
         className={cn(
-          'absolute top-1 left-2 text-xs font-mono font-bold z-10',
+          'absolute top-1 left-2 z-10 flex items-center gap-20 text-xs font-mono font-bold',
           isEtco2 ? 'text-purple-etco2' : 'text-yellow-spo2',
         )}
       >
-        {isEtco2 ? 'EtCO2' : 'SpO2'}
-      </span>
+        <span className={cn('px-1 py-0.5', selectedLabel && 'bg-[var(--color-selection-blue)] text-white')}>
+          {isEtco2 ? 'EtCO2' : 'SpO2'}
+        </span>
+        <span className={cn('px-1 py-0.5', selectedScale && 'bg-[var(--color-selection-blue)] text-white')}>
+          {isEtco2 ? '0 to 60 mmHg' : '1x'}
+        </span>
+      </div>
       {isEtco2 && (
         <div className="absolute right-2 top-1 bottom-1 flex flex-col justify-between text-[10px] font-mono text-purple-etco2 z-10">
           <span>150</span>

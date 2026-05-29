@@ -1,6 +1,7 @@
 'use client'
 
 import { getActiveAlarms, type AlarmChannel } from '@/types/vitals'
+import type { MonitorSelection } from '@/types/monitorSelection'
 
 import { VitalBox } from './VitalBox'
 
@@ -12,6 +13,7 @@ type VitalsStripProps = {
   spo2: number | string
   activeAlarms?: AlarmChannel[]
   searching?: boolean
+  selected?: MonitorSelection
 }
 
 function toNumber(value: number | string): number {
@@ -27,6 +29,7 @@ export function VitalsStrip({
   spo2,
   activeAlarms,
   searching = true,
+  selected,
 }: VitalsStripProps) {
   const alarms = activeAlarms ?? getActiveAlarms({
     hr: toNumber(hr),
@@ -43,6 +46,7 @@ export function VitalsStrip({
         unit="bpm"
         color="ecgGreen"
         alarming={alarms.includes('hr')}
+        selected={selected === 'hrVital'}
         className="flex-1 min-h-0"
       />
       <VitalBox
@@ -51,6 +55,7 @@ export function VitalsStrip({
         unit="mmHg"
         color="cyanBP"
         alarming={alarms.includes('bp')}
+        selected={selected === 'nibpVital'}
         className="flex-1 min-h-0"
       />
       <VitalBox
@@ -58,6 +63,7 @@ export function VitalsStrip({
         value={etco2}
         unit="mmHg"
         color="purpleEtCO2"
+        selected={selected === 'etco2Vital'}
         className="flex-1 min-h-0"
       />
       <VitalBox
@@ -66,6 +72,7 @@ export function VitalsStrip({
         unit="%"
         color="yellowSpO2"
         alarming={alarms.includes('spo2')}
+        selected={selected === 'spo2Vital'}
         className="flex-1 min-h-0"
       />
       {searching && (

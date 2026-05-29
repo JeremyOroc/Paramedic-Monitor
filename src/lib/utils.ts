@@ -13,6 +13,7 @@ export const COLORS = {
   yellowSpO2:   '#ffff00',
   alarmRed:     '#ff2020',
   pendingAmber: '#ffaa00',
+  selectionBlue: '#1f4cff',
   bottomBar:    '#1a1a1a',
   sidebarBg:    '#0d0d0d',
 } as const

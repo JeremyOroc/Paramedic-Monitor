@@ -17,6 +17,7 @@ type VitalBoxProps = {
   color: VitalColor
   subLabel?: string
   alarming?: boolean
+  selected?: boolean
   className?: string
 }
 
@@ -45,6 +46,7 @@ export function VitalBox({
   color,
   subLabel,
   alarming = false,
+  selected = false,
   className,
 }: VitalBoxProps) {
   const colorClass = COLOR_CLASS[color]
@@ -59,6 +61,7 @@ export function VitalBox({
         className,
       )}
       data-alarming={alarming ? 'true' : 'false'}
+      data-selected={selected ? 'true' : 'false'}
     >
       <div
         className={cn(
@@ -75,28 +78,30 @@ export function VitalBox({
           </span>
         )}
       </div>
-      {stackedValues ? (
-        <div
-          className={cn(STACKED_VALUE_CLASS, valueColorClass, flashClass)}
-          data-testid="vital-value"
-        >
-          <div>{stackedValues.top}</div>
-          <hr className={cn('mx-auto my-1 w-4/5 border-t opacity-60', valueColorClass)} />
-          <div>{stackedValues.bottom}</div>
-        </div>
-      ) : (
-        <div
-          className={cn(VALUE_CLASS, valueColorClass, flashClass)}
-          data-testid="vital-value"
-        >
-          {value}
-        </div>
-      )}
-      {subLabel && (
-        <div className={cn('text-[10px] font-mono mt-1', alarming ? 'text-alarm-red' : 'text-neutral-400')}>
-          {subLabel}
-        </div>
-      )}
+      <div className={cn('flex h-full min-h-0 flex-col', selected && 'bg-[var(--color-selection-blue)] text-white')}>
+        {stackedValues ? (
+          <div
+            className={cn(STACKED_VALUE_CLASS, valueColorClass, flashClass)}
+            data-testid="vital-value"
+          >
+            <div>{stackedValues.top}</div>
+            <hr className={cn('mx-auto my-1 w-4/5 border-t opacity-60', valueColorClass)} />
+            <div>{stackedValues.bottom}</div>
+          </div>
+        ) : (
+          <div
+            className={cn(VALUE_CLASS, valueColorClass, flashClass)}
+            data-testid="vital-value"
+          >
+            {value}
+          </div>
+        )}
+        {subLabel && (
+          <div className={cn('text-[10px] font-mono mt-1', alarming ? 'text-alarm-red' : 'text-neutral-400')}>
+            {subLabel}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
