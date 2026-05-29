@@ -54,6 +54,7 @@ export default function MonitorPage() {
   const [isMuted, setIsMuted] = useState(false)
   const [selectedControl, setSelectedControl] = useState<MonitorSelection>('dateTime')
   const [bottomStatusVisible, setBottomStatusVisible] = useState(true)
+  const [jumpscareActive, setJumpscareActive] = useState(false)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [now, setNow] = useState<Date | null>(null)
 
@@ -151,6 +152,8 @@ export default function MonitorPage() {
   function handleSelectionEnter() {
     if (activeSelectedControl === 'bottomStatusToggle') {
       setBottomStatusVisible((visible) => !visible)
+    } else if (activeSelectedControl === 'battery') {
+      setJumpscareActive(true)
     }
   }
 
@@ -180,6 +183,20 @@ export default function MonitorPage() {
 
   const screen = (
     <div className="relative h-full w-full">
+      {jumpscareActive && (
+        <div
+          className="absolute inset-0 z-50 bg-black"
+          onClick={() => setJumpscareActive(false)}
+        >
+          <video
+            src="/videos/chica_jumpscare.mp4"
+            autoPlay
+            playsInline
+            className="h-full w-full object-cover"
+            onEnded={() => setJumpscareActive(false)}
+          />
+        </div>
+      )}
       <MonitorLayout
         topBar={
           <TopStatusBar
