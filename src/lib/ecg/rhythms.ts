@@ -259,7 +259,6 @@ export const ECG_RHYTHMS: Record<Rhythm, WaveformDef> = {
   vt:       { data: synthVT(1),      cycleMs: VT_TUNING.cycleMs },
   torsades: { data: synthTorsades(), cycleMs: 300 },
   asystole: { data: flatLine(),      cycleMs: 1000 },
-  pea:      { data: synthNSR(),      cycleMs: null },
 }
 
 export function getEcgRhythm(rhythm: Rhythm): WaveformDef {
@@ -301,7 +300,7 @@ export const LEAD_MORPHOLOGY: Record<LeadName, LeadMorphology> = {
 export function getLeadWaveform(rhythm: Rhythm, lead: LeadName): WaveformDef {
   const m = LEAD_MORPHOLOGY[lead]
   const base = ECG_RHYTHMS[rhythm]
-  if (rhythm === 'nsr' || rhythm === 'pea') {
+  if (rhythm === 'nsr') {
     const data = synthNSR({
       pGain: m.pGain,
       qGain: m.qGain,

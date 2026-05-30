@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-05-30] [monitor] — Remove PEA from ECG rhythm options
+
+- Removed PEA from the `Rhythm` union, synthesized ECG rhythm table, 12-lead lead-waveform branch,
+  and the admin ECG selector. The active ECG choices are now NSR, VF, VT, Torsades, and Asystole.
+- Persisted legacy PEA rhythm values now normalize back to NSR during store hydration.
+- Updated selector, rhythm, and store tests so PEA is no longer expected or selectable.
+- Updated `PLAN.md` and `STATUS.md` to stop listing PEA as an ECG rhythm.
+
 ## [2026-05-29] [instructor] — Fix admin vital inputs forcing a leading zero
 
 - `VitalInput` previously coerced an empty field back to `0` on every keystroke, so clearing a

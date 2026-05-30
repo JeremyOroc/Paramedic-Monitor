@@ -182,7 +182,6 @@ describe('ECG_RHYTHMS', () => {
     expect(getEcgRhythm('asystole')).toBe(ECG_RHYTHMS.asystole)
     expect(getEcgRhythm('vf')).toBe(ECG_RHYTHMS.vf)
     expect(getEcgRhythm('vt')).toBe(ECG_RHYTHMS.vt)
-    expect(getEcgRhythm('pea')).toBe(ECG_RHYTHMS.pea)
   })
 
   it('VF is coarse fibrillation, not artifact noise', () => {

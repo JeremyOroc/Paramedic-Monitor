@@ -1,4 +1,4 @@
-export type Rhythm = 'nsr' | 'vf' | 'vt' | 'torsades' | 'asystole' | 'pea'
+export type Rhythm = 'nsr' | 'vf' | 'vt' | 'torsades' | 'asystole'
 
 export type Spo2Waveform = 'normal' | 'weak' | 'off'
 

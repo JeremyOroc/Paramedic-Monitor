@@ -9,7 +9,6 @@ const ECG_RHYTHMS: ReadonlyArray<{ value: Rhythm; label: string }> = [
   { value: 'vt', label: 'VT' },
   { value: 'torsades', label: 'Torsades' },
   { value: 'asystole', label: 'Asystole' },
-  { value: 'pea', label: 'PEA' },
 ]
 
 export function EcgRhythmSelector() {

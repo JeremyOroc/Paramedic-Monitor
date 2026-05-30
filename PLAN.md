@@ -49,8 +49,7 @@ paramedic-monitor/
 │   │       │   └── V6.mp4
 │   │       ├── vf/                   # same structure per rhythm
 │   │       ├── vt/
-│   │       ├── asystole/
-│   │       └── pea/
+│   │       └── asystole/
 │   └── audio/
 │       └── alarm.mp3                 # looping alarm audio (from paramedic's drive)
 │
@@ -233,16 +232,16 @@ paramedic-monitor/
 **Goal:** Live scrolling ECG waveform on canvas, rhythm-switchable.
 
 **Steps:**
-1. Build `rhythms.ts` — define `Float32Array` point data for: NSR, VF, VT, Asystole (flatline), PEA (same as NSR visually)
+1. Build `rhythms.ts` — define `Float32Array` point data for: NSR, VF, VT, Torsades, Asystole
    - VF/VT templates are tuned against the provided `Monitor videos/Graphs/12 lead graphs/Completed/Vfib` and `Completed/Vtach` references plus the latest user-supplied Pads screenshot. VF should read as coarse rolling fibrillation, not static artifact/noise. VT should match the Pads screenshot as a continuous plateau-and-trough rhythm: a smooth rounded upper plateau whose apex arrives early in the arc, then gently slopes downward into clean sharp V troughs. The VT rise/fall geometry should remain stable while plateau contour is tuned. VT should not look like isolated upward spikes, giant negative artifacts, centered plateau humps, jagged plateau noise, or square capnography blocks. VT tuning lives in `VT_TUNING` so plateau, trough, timing, V sharpness, and jitter can be adjusted without rewriting the generator.
 2. Build `renderer.ts` — overwrite-scroll loop: `requestAnimationFrame`, erase band, draw segment, wrap at canvas edge
 3. Wire `ECGCanvas.tsx` — accepts `rhythm` + `hr` props, starts/stops loop on mount/unmount
-4. HR-driven cycle speed: `cycleMs = 60000 / hr` for NSR/PEA; fixed `cycleMs` for VF/VT
+4. HR-driven cycle speed: `cycleMs = 60000 / hr` for NSR; fixed `cycleMs` for VF/VT/Torsades/Asystole
 5. Beat-boundary rhythm switching: pending rhythm waits until `phaseInCycle >= 1.0` then swaps
 6. Test all 5 rhythms locally by hardcoding rhythm changes
 
 **Testing:**
-- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR/PEA, wide-complex VT, coarse VF that does not look like artifact noise, and flat asystole.
+- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR, wide-complex VT, Torsades, screenshot-matched coarse VF with tiny imperfections, no prominent secondary downslope peak, and a rounded lower trough, and near-flat asystole with tiny baseline slopes/waves.
 - VT tests additionally guard the Pads-style criteria: cycle timing stays fast enough to show many beats across the screen, each cycle has a clean V-shaped trough, and the upper plateau is rounded, non-jagged, early-peaking, and gently downward-sloping.
 
 **Milestone:** Smooth scrolling ECG visible. All 5 rhythms render correctly. Rhythm switches are clean at beat boundary.

@@ -43,6 +43,27 @@ const initial: Vitals = {
   etco2_waveform: DEFAULT_VITALS.etco2_waveform,
 }
 
+const VALID_RHYTHMS: ReadonlySet<Rhythm> = new Set([
+  'nsr',
+  'vf',
+  'vt',
+  'torsades',
+  'asystole',
+])
+
+function normalizeRhythm(value: unknown): Rhythm {
+  if (typeof value !== 'string') return DEFAULT_VITALS.rhythm
+  return VALID_RHYTHMS.has(value as Rhythm) ? (value as Rhythm) : DEFAULT_VITALS.rhythm
+}
+
+function normalizeVitals(vitals: Partial<Vitals> | undefined): Vitals {
+  return {
+    ...initial,
+    ...vitals,
+    rhythm: normalizeRhythm(vitals?.rhythm),
+  }
+}
+
 export type MonitorState = {
   draft: Vitals
   saved: Vitals
@@ -128,6 +149,9 @@ export const useMonitorStore = create<MonitorState>()(
         return {
           ...current,
           ...persistedState,
+          draft: normalizeVitals(persistedState?.draft),
+          saved: normalizeVitals(persistedState?.saved),
+          confirmed: normalizeVitals(persistedState?.confirmed),
           callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
           callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
           callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),

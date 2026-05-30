@@ -59,6 +59,10 @@
   - [x] `resetVitalsToNormal` resets draft HR/BP/EtCO2/SpO2 values to `DEFAULT_VITALS`
   - [x] Rhythm and waveform selections are preserved; confirmed monitor values are not changed until Save → Send
   - [x] Tests added for the store action and `VitalsControls` button behavior
+- [x] **PEA ECG option removed — COMPLETE:**
+  - [x] Removed PEA from the ECG rhythm type, synthesized rhythm table, and admin ECG selector
+  - [x] Persisted legacy PEA rhythms normalize back to NSR during store hydration
+  - [x] Updated tests so the admin ECG selector exposes NSR, VF, VT, Torsades, and Asystole only
 - [x] **Patient Info menu (12-lead) — COMPLETE:**
   - [x] Second left soft key (12-lead view only) opens a `PatientInfoPanel` overlaying the bottom 2/3 of the screen
   - [x] Edits Patient Age (clamp 0–120, default 40) and Patient Sex (M/F), driven by the right cluster's Move up/down arrows + center dot (Enter)
@@ -99,7 +103,7 @@
   - [x] Tests updated for inert PACER, physical EtCO2 soft key, and non-clickable inner sidebar labels; full tests, lint, TypeScript, and production build pass
 - [x] **Live waveform graphs + vitals layout refinement — COMPLETE:**
   - [x] Canvas overwrite-scroll renderer in `src/lib/ecg/renderer.ts` (rAF, DPR-aware, ResizeObserver, beat-boundary waveform swap)
-  - [x] Synthesized waveform data in `src/lib/ecg/rhythms.ts` (NSR/VF/VT/Asystole/PEA, SpO2 pleth normal/weak/off, EtCO2 normal/hypoventilation/obstructed/off)
+  - [x] Synthesized waveform data in `src/lib/ecg/rhythms.ts` (NSR/VF/VT/Torsades/Asystole, SpO2 pleth normal/weak/off, EtCO2 normal/hypoventilation/obstructed/off)
   - [x] `ECGCanvas` and `SecondaryChannel` rewritten to use the renderer; `VideoWaveform` retained only for 12-lead view
   - [x] Vital numbers shrunk `text-5xl` → `text-4xl`; PNI rendered as stacked sys/dia with horizontal divider (`text-3xl`)
   - [x] Right vitals column narrowed `220px` → `180px` to give waveforms more horizontal space
@@ -116,7 +120,7 @@
   - [x] Reactivity tests added: EtCO2 plateau scaling, SpO2 amplitude scaling, VT/VF shape sanity
 - [x] **Reference-guided admin rhythm graph pass — COMPLETE:**
   - [x] User-supplied rhythm references reviewed for the currently exposed admin rhythm buttons
-  - [x] NSR/PEA template sharpened with narrower QRS, subtle ST segment, and small baseline motion
+  - [x] NSR template sharpened with narrower QRS, subtle ST segment, and small baseline motion
   - [x] VT template rebuilt as a wide-complex monomorphic rhythm with a dominant broad peak and terminal trough
   - [x] VF template rebuilt as a coarser chaotic trace with irregular amplitude and frequent zero crossings
   - [x] Asystole remains a clean flatline
