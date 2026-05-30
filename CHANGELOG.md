@@ -13,6 +13,16 @@
 - Updated selector, rhythm, and store tests so PEA is no longer expected or selectable.
 - Updated `PLAN.md` and `STATUS.md` to stop listing PEA as an ECG rhythm.
 
+## [2026-05-30] [monitor] — Tune asystole ECG from supplied pads video
+
+- Replaced the mathematically perfect asystole zero-line with a deterministic pads baseline based
+  on `/Users/zaidtabana/Downloads/RPReplay_Final1778567841.mov`: very slight low-amplitude
+  slopes/waves plus tiny monitor noise, with no QRS-like spikes.
+- Added `ASYSTOLE_TUNING` so the sweep timing, wander, and noise levels can be adjusted without
+  rewriting the waveform generator.
+- Updated rhythm tests, `PLAN.md`, and `STATUS.md` to reflect near-flat video-like asystole with
+  tiny baseline variation instead of a strict flatline.
+
 ## [2026-05-29] [instructor] — Fix admin vital inputs forcing a leading zero
 
 - `VitalInput` previously coerced an empty field back to `0` on every keystroke, so clearing a

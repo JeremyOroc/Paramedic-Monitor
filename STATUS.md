@@ -59,6 +59,10 @@
   - [x] `resetVitalsToNormal` resets draft HR/BP/EtCO2/SpO2 values to `DEFAULT_VITALS`
   - [x] Rhythm and waveform selections are preserved; confirmed monitor values are not changed until Save → Send
   - [x] Tests added for the store action and `VitalsControls` button behavior
+- [x] **Asystole ECG reference tuning — COMPLETE:**
+  - [x] Tuned the asystole rhythm against `/Users/zaidtabana/Downloads/RPReplay_Final1778567841.mov`
+  - [x] Asystole now renders as a thin pads baseline with very slight low-amplitude slopes/waves and tiny deterministic monitor noise instead of a mathematically perfect zero line
+  - [x] Tests verify asystole stays near-flat, low-amplitude, smooth, and free of QRS-like spikes
 - [x] **PEA ECG option removed — COMPLETE:**
   - [x] Removed PEA from the ECG rhythm type, synthesized rhythm table, and admin ECG selector
   - [x] Persisted legacy PEA rhythms normalize back to NSR during store hydration
@@ -123,7 +127,7 @@
   - [x] NSR template sharpened with narrower QRS, subtle ST segment, and small baseline motion
   - [x] VT template rebuilt as a wide-complex monomorphic rhythm with a dominant broad peak and terminal trough
   - [x] VF template rebuilt as a coarser chaotic trace with irregular amplitude and frequent zero crossings
-  - [x] Asystole remains a clean flatline
+  - [x] Asystole tuned to a near-flat pads baseline with tiny slopes/waves
   - [x] `PLAN.md` updated to lock vitals to the right column and keep bottom space for status/defib controls
   - [x] Tests strengthened for VT trough/width and VF chaos
 - [x] **Rhythm + EtCO2 scale + vitals width polish — COMPLETE:**

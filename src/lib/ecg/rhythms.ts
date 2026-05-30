@@ -24,6 +24,15 @@ export const VT_TUNING = {
   microNoise: 0.0004,
 } as const
 
+export const ASYSTOLE_TUNING = {
+  cycleMs: 4000,
+  primaryWander: 0.0065,
+  secondaryWander: 0.0028,
+  slopeWave: 0.0022,
+  fineWave: 0.0013,
+  microNoise: 0.00045,
+} as const
+
 function flatLine(): Float32Array {
   return new Float32Array(SAMPLES)
 }
@@ -63,6 +72,31 @@ type Range = readonly [number, number]
 function between(rand: () => number, range: Range): number {
   const [min, max] = range
   return min + rand() * (max - min)
+}
+
+function synthAsystole(): Float32Array {
+  const out = new Float32Array(SAMPLES)
+  let sum = 0
+  for (let i = 0; i < SAMPLES; i++) {
+    const t = i / SAMPLES
+    const wander =
+      ASYSTOLE_TUNING.primaryWander * Math.sin(t * Math.PI * 2 * 0.58 - 0.55) +
+      ASYSTOLE_TUNING.secondaryWander * Math.sin(t * Math.PI * 2 * 1.35 + 1.3) +
+      ASYSTOLE_TUNING.slopeWave * Math.sin(t * Math.PI * 2 * 0.24 + 0.75) +
+      ASYSTOLE_TUNING.fineWave * Math.sin(t * Math.PI * 2 * 2.4 - 0.9)
+    const microNoise =
+      ASYSTOLE_TUNING.microNoise *
+      (
+        Math.sin(t * Math.PI * 2 * 23 + 0.2) +
+        0.45 * Math.sin(t * Math.PI * 2 * 57 + 2.1)
+      )
+    const value = wander + microNoise
+    out[i] = value
+    sum += value
+  }
+  const centerOffset = sum / SAMPLES
+  for (let i = 0; i < SAMPLES; i++) out[i] -= centerOffset
+  return out
 }
 
 function synthNSR(g: NsrGains = {}): Float32Array {
@@ -258,7 +292,7 @@ export const ECG_RHYTHMS: Record<Rhythm, WaveformDef> = {
   vf:       { data: synthVF(),       cycleMs: 330 },
   vt:       { data: synthVT(1),      cycleMs: VT_TUNING.cycleMs },
   torsades: { data: synthTorsades(), cycleMs: 300 },
-  asystole: { data: flatLine(),      cycleMs: 1000 },
+  asystole: { data: synthAsystole(), cycleMs: ASYSTOLE_TUNING.cycleMs },
 }
 
 export function getEcgRhythm(rhythm: Rhythm): WaveformDef {

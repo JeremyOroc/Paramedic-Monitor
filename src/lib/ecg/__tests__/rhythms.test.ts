@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ASYSTOLE_TUNING,
   ECG_RHYTHMS,
   ECG_SWEEP_MS,
   ETCO2_SCALE_MAX,
@@ -105,9 +106,21 @@ describe('ECG_RHYTHMS', () => {
     expect(troughOf(data)).toBeGreaterThan(-0.12)
   })
 
-  it('asystole is effectively flat', () => {
-    const sum = ECG_RHYTHMS.asystole.data.reduce((a, b) => a + Math.abs(b), 0)
-    expect(sum).toBe(0)
+  it('asystole is a near-flat pads baseline with tiny slopes and waves', () => {
+    const def = ECG_RHYTHMS.asystole
+    const data = def.data
+    const peak = peakOf(data)
+    const trough = troughOf(data)
+
+    expect(def.cycleMs).toBe(ASYSTOLE_TUNING.cycleMs)
+    expect(peak).toBeGreaterThan(0.003)
+    expect(peak).toBeLessThan(0.014)
+    expect(trough).toBeLessThan(-0.003)
+    expect(trough).toBeGreaterThan(-0.014)
+    expect(peak - trough).toBeGreaterThan(0.009)
+    expect(peak - trough).toBeLessThan(0.027)
+    expect(maxAdjacentDelta(data)).toBeLessThan(0.0015)
+    expect(zeroCrossings(data)).toBeLessThanOrEqual(8)
   })
 
   it('VT uses a plateau-and-V-trough shape like the screenshot reference', () => {
