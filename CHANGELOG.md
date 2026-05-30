@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-05-30] [monitor] — Document torsades ECG implementation plan
+
+- Recorded the torsades reference-analysis plan from `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov`
+  and the three 2026-05-30 Pads screenshots.
+- Planned implementation should treat torsades as organized fast polymorphic VT, not VFib noise:
+  a multi-second twist envelope with waxing/waning amplitude, wide sloped complexes, rounded
+  imperfect peaks/troughs, and strong beat-to-beat morphology variation.
+- Added next-step test targets for torsades: beat count/rate, amplitude-envelope waist, greater
+  morphology variation than VT, and more organization than VFib.
+
 ## [2026-05-30] [monitor] — Tune VFib ECG to pads screenshot
 
 - Replaced the smooth VFib sine-blend with a screenshot-matched coarse pads waveform: fast

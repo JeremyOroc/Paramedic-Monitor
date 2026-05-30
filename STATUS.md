@@ -183,7 +183,11 @@
 ---
 
 ## In Progress
-- Nothing — next plan is the admin/instructor dashboard
+- [ ] **Torsades ECG reference tuning — PLANNED:**
+  - [ ] Analyze `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov` and the three 2026-05-30 Pads screenshots as the source of truth
+  - [ ] Rebuild torsades as organized fast polymorphic VT, not VFib noise: roughly 200-240 bpm wide complexes, waxing/waning twist envelope, rounded imperfect peaks/troughs, low-amplitude waist, and strong beat-to-beat variety
+  - [ ] Add `TORSADES_TUNING` and use a multi-beat template duration around 3600-4200ms instead of a 300ms single-cycle strip
+  - [ ] Add tests for beat count/rate, amplitude-envelope waist, greater morphology variation than VT, and more organization than VFib
 
 ---
 
@@ -211,6 +215,7 @@
 ---
 
 ## Next Steps (for whoever picks this up)
-1. **Admin/instructor dashboard** — build the controls panel (vitals inputs with pending/Send flow, rhythm selector, defib panel, scenario builder skeleton). Components already scaffolded in `src/components/instructor/`. State via Zustand `instructorStore`. Local-only first; realtime wires in the next phase.
-2. **Realtime wiring** — Supabase Broadcast for instructor → monitor sync (vitals_update, defib_event, cpr_toggle).
-3. **Sessions** — restore `/session/[code]/...` routes; connect landing page (Create / Join).
+1. **Torsades ECG reference tuning** — implement the planned torsades rewrite from the supplied video/screenshots, then visually verify on the monitor with Torsades selected.
+2. **Admin/instructor dashboard** — build the controls panel (vitals inputs with pending/Send flow, rhythm selector, defib panel, scenario builder skeleton). Components already scaffolded in `src/components/instructor/`. State via Zustand `instructorStore`. Local-only first; realtime wires in the next phase.
+3. **Realtime wiring** — Supabase Broadcast for instructor → monitor sync (vitals_update, defib_event, cpr_toggle).
+4. **Sessions** — restore `/session/[code]/...` routes; connect landing page (Create / Join).
