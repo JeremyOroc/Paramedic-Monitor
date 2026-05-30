@@ -59,6 +59,18 @@
   - [x] `resetVitalsToNormal` resets draft HR/BP/EtCO2/SpO2 values to `DEFAULT_VITALS`
   - [x] Rhythm and waveform selections are preserved; confirmed monitor values are not changed until Save → Send
   - [x] Tests added for the store action and `VitalsControls` button behavior
+- [x] **Asystole ECG reference tuning — COMPLETE:**
+  - [x] Tuned the asystole rhythm against `/Users/zaidtabana/Downloads/RPReplay_Final1778567841.mov`
+  - [x] Asystole now renders as a thin pads baseline with very slight low-amplitude slopes/waves and tiny deterministic monitor noise instead of a mathematically perfect zero line
+  - [x] Tests verify asystole stays near-flat, low-amplitude, smooth, and free of QRS-like spikes
+- [x] **PEA ECG option removed — COMPLETE:**
+  - [x] Removed PEA from the ECG rhythm type, synthesized rhythm table, and admin ECG selector
+  - [x] Persisted legacy PEA rhythms normalize back to NSR during store hydration
+  - [x] Updated tests so the admin ECG selector exposes NSR, VF, VT, Torsades, and Asystole only
+- [x] **VFib ECG reference tuning — COMPLETE:**
+  - [x] Tuned VFib against the 2026-05-30 pads screenshot
+  - [x] VFib now renders as fast repeated coarse waves with one tall rounded crest per wave, rounded deep troughs, uneven shoulders, and tiny line imperfections instead of a smooth sine-like trace
+  - [x] Tests verify VFib timing, amplitude range, steep-but-not-artifact jumps, contour imperfections, no prominent secondary peak on the drop-down, and a rounded lower trough
 - [x] **Patient Info menu (12-lead) — COMPLETE:**
   - [x] Second left soft key (12-lead view only) opens a `PatientInfoPanel` overlaying the bottom 2/3 of the screen
   - [x] Edits Patient Age (clamp 0–120, default 40) and Patient Sex (M/F), driven by the right cluster's Move up/down arrows + center dot (Enter)
@@ -67,11 +79,11 @@
   - [x] Tests: patientInfo helpers, store, panel, DeviceShell keys/nav, and an end-to-end page flow
 - [x] **12-lead Capture — COMPLETE:**
   - [x] Capture soft key (slot 1, 12-lead only) freezes the current rhythm/HR and shows a centered "Acquiring 12-Lead" card with a green progress bar that fills over ~4s (`AcquiringDialog`)
-  - [x] On completion a static tan/salmon ECG-paper printout **takes over the entire monitor display**: clinical 3×4 layout (I/aVR/V1/V4, II/aVL/V2/V5, III/aVF/V3/V6) + Lead II rhythm strip (`TwelveLeadPrintout`, `lib/ecg/staticTrace.ts:drawLeadRow`); each row is one continuous trace (no seams), uniform square grid
+  - [x] On completion a static ECG-paper image **takes over the entire monitor display** using `/public/images/twelve-lead-capture.svg` (`TwelveLeadPrintout`)
   - [x] During capture **only Back works** — all other controls inert via `captureLock` on `DeviceShell` (defib row disabled, handlers no-op)
   - [x] Transient (no persistence) — Back cancels an in-progress acquisition or dismisses the printout back to the live 12-lead grid; every press is a fresh capture of the current state
-  - [x] Printout colors added to `COLORS` (`utils.ts`) + `@theme` (`globals.css`): tan paper, uniform grid, dark ink, acquire green
-  - [x] Tests: capture flow (acquire → printout → dismiss, mid-acquire cancel, lock-to-Back), `DeviceShell` captureLock, printout layout, acquiring dialog
+  - [x] Acquire color remains in `COLORS` (`utils.ts`) + `@theme` (`globals.css`) for the progress bar
+  - [x] Tests: capture flow (acquire → printout → dismiss, mid-acquire cancel, lock-to-Back), `DeviceShell` captureLock, static capture image, acquiring dialog
 - [x] **Print latest 12-lead (main view) — COMPLETE:**
   - [x] Main-view PRINT soft key (slot 6) reprints the most recent completed capture as a full-screen `TwelveLeadPrintout`; inert until a 12-lead has been acquired
   - [x] Latest capture kept in session-only page state (`lastCapture`), recorded when an acquisition completes; cleared on power-off (no store persistence)
@@ -99,7 +111,7 @@
   - [x] Tests updated for inert PACER, physical EtCO2 soft key, and non-clickable inner sidebar labels; full tests, lint, TypeScript, and production build pass
 - [x] **Live waveform graphs + vitals layout refinement — COMPLETE:**
   - [x] Canvas overwrite-scroll renderer in `src/lib/ecg/renderer.ts` (rAF, DPR-aware, ResizeObserver, beat-boundary waveform swap)
-  - [x] Synthesized waveform data in `src/lib/ecg/rhythms.ts` (NSR/VF/VT/Asystole/PEA, SpO2 pleth normal/weak/off, EtCO2 normal/hypoventilation/obstructed/off)
+  - [x] Synthesized waveform data in `src/lib/ecg/rhythms.ts` (NSR/VF/VT/Torsades/Asystole, SpO2 pleth normal/weak/off, EtCO2 normal/hypoventilation/obstructed/off)
   - [x] `ECGCanvas` and `SecondaryChannel` rewritten to use the renderer; `VideoWaveform` retained only for 12-lead view
   - [x] Vital numbers shrunk `text-5xl` → `text-4xl`; PNI rendered as stacked sys/dia with horizontal divider (`text-3xl`)
   - [x] Right vitals column narrowed `220px` → `180px` to give waveforms more horizontal space
@@ -111,15 +123,15 @@
   - [x] SpO2 pleth amplitude scales with SpO2 %: full at ≥95, progressively shrinks, floors at 0.25× under 70
   - [x] Decoupled `sweepMs` (paper speed) from `cycleMs` (cardiac cycle) — multiple beats now visible across the screen at typical Zoll speeds (ECG/SpO2 4s, EtCO2 15s)
   - [x] VT shape rewritten to wide rounded peaks matching real-life monomorphic VT (no longer a sine wave)
-  - [x] VF slowed (cycleMs 250→450) and made more chaotic so it doesn't look like a fast periodic wave
+  - [x] VF tuned to the pads reference as fast repeated coarse waves with small imperfections
   - [x] Right vitals column further narrowed `180px` → `140px` to remove leftover empty space
   - [x] Reactivity tests added: EtCO2 plateau scaling, SpO2 amplitude scaling, VT/VF shape sanity
 - [x] **Reference-guided admin rhythm graph pass — COMPLETE:**
   - [x] User-supplied rhythm references reviewed for the currently exposed admin rhythm buttons
-  - [x] NSR/PEA template sharpened with narrower QRS, subtle ST segment, and small baseline motion
+  - [x] NSR template sharpened with narrower QRS, subtle ST segment, and small baseline motion
   - [x] VT template rebuilt as a wide-complex monomorphic rhythm with a dominant broad peak and terminal trough
-  - [x] VF template rebuilt as a coarser chaotic trace with irregular amplitude and frequent zero crossings
-  - [x] Asystole remains a clean flatline
+  - [x] VF template rebuilt as a coarse repeated pads trace with tall peaks, deep troughs, and uneven shoulders
+  - [x] Asystole tuned to a near-flat pads baseline with tiny slopes/waves
   - [x] `PLAN.md` updated to lock vitals to the right column and keep bottom space for status/defib controls
   - [x] Tests strengthened for VT trough/width and VF chaos
 - [x] **Rhythm + EtCO2 scale + vitals width polish — COMPLETE:**
@@ -171,7 +183,11 @@
 ---
 
 ## In Progress
-- Nothing — next plan is the admin/instructor dashboard
+- [ ] **Torsades ECG reference tuning — PLANNED:**
+  - [ ] Analyze `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov` and the three 2026-05-30 Pads screenshots as the source of truth
+  - [ ] Rebuild torsades as organized fast polymorphic VT, not VFib noise: roughly 200-240 bpm wide complexes, waxing/waning twist envelope, rounded imperfect peaks/troughs, low-amplitude waist, and strong beat-to-beat variety
+  - [ ] Add `TORSADES_TUNING` and use a multi-beat template duration around 3600-4200ms instead of a 300ms single-cycle strip
+  - [ ] Add tests for beat count/rate, amplitude-envelope waist, greater morphology variation than VT, and more organization than VFib
 
 ---
 
@@ -199,6 +215,7 @@
 ---
 
 ## Next Steps (for whoever picks this up)
-1. **Admin/instructor dashboard** — build the controls panel (vitals inputs with pending/Send flow, rhythm selector, defib panel, scenario builder skeleton). Components already scaffolded in `src/components/instructor/`. State via Zustand `instructorStore`. Local-only first; realtime wires in the next phase.
-2. **Realtime wiring** — Supabase Broadcast for instructor → monitor sync (vitals_update, defib_event, cpr_toggle).
-3. **Sessions** — restore `/session/[code]/...` routes; connect landing page (Create / Join).
+1. **Torsades ECG reference tuning** — implement the planned torsades rewrite from the supplied video/screenshots, then visually verify on the monitor with Torsades selected.
+2. **Admin/instructor dashboard** — build the controls panel (vitals inputs with pending/Send flow, rhythm selector, defib panel, scenario builder skeleton). Components already scaffolded in `src/components/instructor/`. State via Zustand `instructorStore`. Local-only first; realtime wires in the next phase.
+3. **Realtime wiring** — Supabase Broadcast for instructor → monitor sync (vitals_update, defib_event, cpr_toggle).
+4. **Sessions** — restore `/session/[code]/...` routes; connect landing page (Create / Join).

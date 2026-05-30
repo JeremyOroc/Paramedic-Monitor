@@ -196,6 +196,28 @@ describe('persist migration', () => {
     expect(s.callerInfoConfirmed.address).toBe('5 Rue Test')
     expect(s.patientInfo).toEqual(DEFAULT_PATIENT_INFO) // seeded by merge
   })
+
+  it('normalizes removed PEA rhythms in persisted vitals', async () => {
+    const def = defaultsAsVitals()
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        state: {
+          draft: { ...def, rhythm: 'pea' },
+          saved: { ...def, rhythm: 'pea' },
+          confirmed: { ...def, rhythm: 'pea' },
+        },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.rhythm).toBe(DEFAULT_VITALS.rhythm)
+    expect(s.saved.rhythm).toBe(DEFAULT_VITALS.rhythm)
+    expect(s.confirmed.rhythm).toBe(DEFAULT_VITALS.rhythm)
+  })
 })
 
 describe('fieldStatus + has* helpers', () => {

@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ASYSTOLE_TUNING,
   ECG_RHYTHMS,
   ECG_SWEEP_MS,
   ETCO2_SCALE_MAX,
   ETCO2_SWEEP_MS,
   RESP_CYCLE_MS,
   SPO2_SWEEP_MS,
+  VF_TUNING,
   VT_TUNING,
   getEcgRhythm,
   getEtco2Waveform,
@@ -86,6 +88,23 @@ function directionChanges(data: Float32Array, end: number): number {
   return changes
 }
 
+function prominentLocalPeaksBetween(
+  data: Float32Array,
+  start: number,
+  end: number,
+  threshold: number,
+): number {
+  let peaks = 0
+  const from = Math.max(1, start)
+  const to = Math.min(data.length - 1, end)
+  for (let i = from; i < to; i++) {
+    if (data[i] > threshold && data[i] >= data[i - 1] && data[i] > data[i + 1]) {
+      peaks++
+    }
+  }
+  return peaks
+}
+
 describe('ECG_RHYTHMS', () => {
   it.each(Object.entries(ECG_RHYTHMS))(
     '%s has normalized data and a valid cycleMs',
@@ -105,9 +124,21 @@ describe('ECG_RHYTHMS', () => {
     expect(troughOf(data)).toBeGreaterThan(-0.12)
   })
 
-  it('asystole is effectively flat', () => {
-    const sum = ECG_RHYTHMS.asystole.data.reduce((a, b) => a + Math.abs(b), 0)
-    expect(sum).toBe(0)
+  it('asystole is a near-flat pads baseline with tiny slopes and waves', () => {
+    const def = ECG_RHYTHMS.asystole
+    const data = def.data
+    const peak = peakOf(data)
+    const trough = troughOf(data)
+
+    expect(def.cycleMs).toBe(ASYSTOLE_TUNING.cycleMs)
+    expect(peak).toBeGreaterThan(0.003)
+    expect(peak).toBeLessThan(0.014)
+    expect(trough).toBeLessThan(-0.003)
+    expect(trough).toBeGreaterThan(-0.014)
+    expect(peak - trough).toBeGreaterThan(0.009)
+    expect(peak - trough).toBeLessThan(0.027)
+    expect(maxAdjacentDelta(data)).toBeLessThan(0.0015)
+    expect(zeroCrossings(data)).toBeLessThanOrEqual(8)
   })
 
   it('VT uses a plateau-and-V-trough shape like the screenshot reference', () => {
@@ -182,15 +213,32 @@ describe('ECG_RHYTHMS', () => {
     expect(getEcgRhythm('asystole')).toBe(ECG_RHYTHMS.asystole)
     expect(getEcgRhythm('vf')).toBe(ECG_RHYTHMS.vf)
     expect(getEcgRhythm('vt')).toBe(ECG_RHYTHMS.vt)
-    expect(getEcgRhythm('pea')).toBe(ECG_RHYTHMS.pea)
   })
 
-  it('VF is coarse fibrillation, not artifact noise', () => {
+  it('VF matches the coarse pads reference with tall repeated imperfect waves', () => {
     const data = ECG_RHYTHMS.vf.data
-    expect(ECG_RHYTHMS.vf.cycleMs).toBeLessThanOrEqual(360)
-    expect(peakOf(data)).toBeGreaterThan(0.65)
-    expect(troughOf(data)).toBeLessThan(-0.65)
-    expect(zeroCrossings(data)).toBeLessThanOrEqual(6)
+    const peak = peakOf(data)
+    const trough = troughOf(data)
+    const delta = maxAdjacentDelta(data)
+    const peakIndex = indexOfPeakBefore(data, data.length)
+    const troughIndex = indexOfTrough(data)
+    const roundedTroughSamples = Array.from(data).filter((v) => v < trough * 0.85).length
+
+    expect(ECG_RHYTHMS.vf.cycleMs).toBe(VF_TUNING.cycleMs)
+    expect(ECG_RHYTHMS.vf.cycleMs).toBeGreaterThanOrEqual(260)
+    expect(ECG_RHYTHMS.vf.cycleMs).toBeLessThanOrEqual(310)
+    expect(peak).toBeGreaterThan(0.82)
+    expect(peak).toBeLessThan(0.96)
+    expect(trough).toBeLessThan(-0.72)
+    expect(trough).toBeGreaterThan(-0.9)
+    expect(peak - trough).toBeGreaterThan(1.55)
+    expect(peak - trough).toBeLessThan(1.85)
+    expect(delta).toBeGreaterThan(0.003)
+    expect(delta).toBeLessThan(0.035)
+    expect(zeroCrossings(data)).toBeLessThanOrEqual(4)
+    expect(directionChanges(data, data.length)).toBeGreaterThan(8)
+    expect(prominentLocalPeaksBetween(data, peakIndex + 4, troughIndex, peak * 0.45)).toBe(0)
+    expect(roundedTroughSamples).toBeGreaterThan(70)
   })
 })
 

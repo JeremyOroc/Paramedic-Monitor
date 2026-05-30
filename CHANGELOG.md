@@ -5,6 +5,57 @@
 
 ---
 
+## [2026-05-30] [monitor] — Document torsades ECG implementation plan
+
+- Recorded the torsades reference-analysis plan from `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov`
+  and the three 2026-05-30 Pads screenshots.
+- Planned implementation should treat torsades as organized fast polymorphic VT, not VFib noise:
+  a multi-second twist envelope with waxing/waning amplitude, wide sloped complexes, rounded
+  imperfect peaks/troughs, and strong beat-to-beat morphology variation.
+- Added next-step test targets for torsades: beat count/rate, amplitude-envelope waist, greater
+  morphology variation than VT, and more organization than VFib.
+
+## [2026-05-30] [monitor] — Tune VFib ECG to pads screenshot
+
+- Replaced the smooth VFib sine-blend with a screenshot-matched coarse pads waveform: fast
+  repeated tall rounded peaks, deep troughs, uneven shoulders, and tiny deterministic line
+  imperfections.
+- Refined the VFib contour to keep one crest per wave, with no secondary/double peak on the
+  drop-down; the descent still has slight slope variation rather than being perfectly smooth.
+- Rounded the VFib lower trough slightly more so the bottom turn reads less sharp while preserving
+  the same coarse rhythm and single-crest silhouette.
+- Added `VF_TUNING` for VFib timing, amplitude, shoulder, wobble, and micro-noise controls.
+- Updated rhythm tests, `PLAN.md`, and `STATUS.md` to guard the new VFib visual contract.
+
+## [2026-05-30] [monitor] — Remove PEA from ECG rhythm options
+
+- Removed PEA from the `Rhythm` union, synthesized ECG rhythm table, 12-lead lead-waveform branch,
+  and the admin ECG selector. The active ECG choices are now NSR, VF, VT, Torsades, and Asystole.
+- Persisted legacy PEA rhythm values now normalize back to NSR during store hydration.
+- Updated selector, rhythm, and store tests so PEA is no longer expected or selectable.
+- Updated `PLAN.md` and `STATUS.md` to stop listing PEA as an ECG rhythm.
+
+## [2026-05-30] [monitor] — Tune asystole ECG from supplied pads video
+
+- Replaced the mathematically perfect asystole zero-line with a deterministic pads baseline based
+  on `/Users/zaidtabana/Downloads/RPReplay_Final1778567841.mov`: very slight low-amplitude
+  slopes/waves plus tiny monitor noise, with no QRS-like spikes.
+- Added `ASYSTOLE_TUNING` so the sweep timing, wander, and noise levels can be adjusted without
+  rewriting the waveform generator.
+- Updated rhythm tests, `PLAN.md`, and `STATUS.md` to reflect near-flat video-like asystole with
+  tiny baseline variation instead of a strict flatline.
+
+## [2026-05-30] [monitor] — Replace 12-lead capture result with static image
+
+- `TwelveLeadPrintout` now displays the static ECG-paper capture asset at
+  `/public/images/twelve-lead-capture.svg` instead of drawing a generated canvas printout from
+  rhythm data.
+- The existing flow is preserved: Capture still shows the ~4s acquiring card, then the image takes
+  over the monitor display; Back still cancels acquisition or dismisses the result. The main-view
+  PRINT preview uses the same image-backed component.
+- Updated `PLAN.md`, `STATUS.md`, and the `TwelveLeadPrintout` test to reflect the image-backed
+  requirement.
+
 ## [2026-05-29] [instructor] — Fix admin vital inputs forcing a leading zero
 
 - `VitalInput` previously coerced an empty field back to `0` on every keystroke, so clearing a

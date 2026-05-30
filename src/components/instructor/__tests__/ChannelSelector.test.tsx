@@ -63,8 +63,9 @@ describe('specialized selector wrappers', () => {
     expect(screen.getByRole('button', { name: 'NSR' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'VF' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'VT' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Torsades' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Asystole' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'PEA' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'PEA' })).not.toBeInTheDocument()
   })
 
   it('Spo2WaveformSelector renders 3 option buttons', () => {

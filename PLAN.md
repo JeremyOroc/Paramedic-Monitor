@@ -49,8 +49,7 @@ paramedic-monitor/
 │   │       │   └── V6.mp4
 │   │       ├── vf/                   # same structure per rhythm
 │   │       ├── vt/
-│   │       ├── asystole/
-│   │       └── pea/
+│   │       └── asystole/
 │   └── audio/
 │       └── alarm.mp3                 # looping alarm audio (from paramedic's drive)
 │
@@ -233,17 +232,20 @@ paramedic-monitor/
 **Goal:** Live scrolling ECG waveform on canvas, rhythm-switchable.
 
 **Steps:**
-1. Build `rhythms.ts` — define `Float32Array` point data for: NSR, VF, VT, Asystole (flatline), PEA (same as NSR visually)
-   - VF/VT templates are tuned against the provided `Monitor videos/Graphs/12 lead graphs/Completed/Vfib` and `Completed/Vtach` references plus the latest user-supplied Pads screenshot. VF should read as coarse rolling fibrillation, not static artifact/noise. VT should match the Pads screenshot as a continuous plateau-and-trough rhythm: a smooth rounded upper plateau whose apex arrives early in the arc, then gently slopes downward into clean sharp V troughs. The VT rise/fall geometry should remain stable while plateau contour is tuned. VT should not look like isolated upward spikes, giant negative artifacts, centered plateau humps, jagged plateau noise, or square capnography blocks. VT tuning lives in `VT_TUNING` so plateau, trough, timing, V sharpness, and jitter can be adjusted without rewriting the generator.
+1. Build `rhythms.ts` — define `Float32Array` point data for: NSR, VF, VT, Torsades, Asystole
+   - VF/VT templates are tuned against the provided `Monitor videos/Graphs/12 lead graphs/Completed/Vfib` and `Completed/Vtach` references plus the latest user-supplied Pads screenshot. VF should match the 2026-05-30 pads screenshot: fast repeated coarse waves with one tall rounded crest per wave, no secondary/double peak on the drop-down, rounded deep troughs, slightly uneven shoulders, and tiny line imperfections; it should not look like a smooth sine wave or random artifact. VT should match the Pads screenshot as a continuous plateau-and-trough rhythm: a smooth rounded upper plateau whose apex arrives early in the arc, then gently slopes downward into clean sharp V troughs. The VT rise/fall geometry should remain stable while plateau contour is tuned. VT should not look like isolated upward spikes, giant negative artifacts, centered plateau humps, jagged plateau noise, or square capnography blocks. VF/VT tuning lives in `VF_TUNING`/`VT_TUNING` so timing, contour, and imperfections can be adjusted without rewriting the generators.
+   - Asystole is tuned against `/Users/zaidtabana/Downloads/RPReplay_Final1778567841.mov`: it should be a thin pads baseline with very slight low-amplitude slopes/waves and tiny monitor noise, not a mathematically perfect zero line and not a QRS-like rhythm.
+   - Torsades should be rebuilt from `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov` plus the 2026-05-30 Pads screenshots as organized fast polymorphic VT, not VFib-like noise. The visual contract is: roughly 200-240 bpm wide complexes, a multi-second twist envelope with waxing/waning amplitude, clusters of taller complexes separated by a pinched low-amplitude waist, rounded but imperfect tops/bottoms, and strong beat-to-beat variation in peak height, trough depth, width, tilt, polarity/axis, and small kinks. It should not be a clean sine wave, random static, or monomorphic VT. Prefer a `TORSADES_TUNING` block and a multi-beat template duration around 3600-4200ms instead of treating one 12-beat strip as a 300ms cycle.
 2. Build `renderer.ts` — overwrite-scroll loop: `requestAnimationFrame`, erase band, draw segment, wrap at canvas edge
 3. Wire `ECGCanvas.tsx` — accepts `rhythm` + `hr` props, starts/stops loop on mount/unmount
-4. HR-driven cycle speed: `cycleMs = 60000 / hr` for NSR/PEA; fixed `cycleMs` for VF/VT
+4. HR-driven cycle speed: `cycleMs = 60000 / hr` for NSR; fixed `cycleMs` for VF/VT/Torsades/Asystole
 5. Beat-boundary rhythm switching: pending rhythm waits until `phaseInCycle >= 1.0` then swaps
 6. Test all 5 rhythms locally by hardcoding rhythm changes
 
 **Testing:**
-- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR/PEA, wide-complex VT, coarse VF that does not look like artifact noise, and flat asystole.
+- Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR, wide-complex VT, Torsades, screenshot-matched coarse VF with tiny imperfections, no prominent secondary downslope peak, and a rounded lower trough, and near-flat asystole with tiny baseline slopes/waves.
 - VT tests additionally guard the Pads-style criteria: cycle timing stays fast enough to show many beats across the screen, each cycle has a clean V-shaped trough, and the upper plateau is rounded, non-jagged, early-peaking, and gently downward-sloping.
+- Torsades tests should guard: visible multi-beat rate/beat count across the template, a waxing/waning amplitude envelope with a low-amplitude waist, more morphology variation than VT, and more organization/repeated wide complexes than VFib.
 
 **Milestone:** Smooth scrolling ECG visible. All 5 rhythms render correctly. Rhythm switches are clean at beat boundary.
 
@@ -264,21 +266,20 @@ paramedic-monitor/
 
 **Milestone:** SpO2 video loops in secondary channel. CO2 button toggles channels. 12-lead overlay opens with fault lines (videos pending from Drive).
 
-**12-Lead Capture (added 2026-05-28):** The 12-lead Capture soft key (slot 1) acquires a
+**12-Lead Capture (added 2026-05-28, updated 2026-05-30):** The 12-lead Capture soft key (slot 1) acquires a
 snapshot of the current state. Confirmed behavior:
 - Press Capture → freeze current rhythm/HR → centered "Acquiring 12-Lead" card with a green
   progress bar that fills over **~4s** (`ACQUIRE_MS`).
-- On completion a **static tan/salmon ECG-paper printout takes over the entire monitor display**
-  in the clinical **3×4 layout + Lead II rhythm strip**, drawn fresh from
-  `getLeadWaveform(capturedRhythm, lead)` (no animation/jitter). Each row is one continuous trace
-  across its 4 leads (no seams); uniform square grid; pure grid, no header banner; dark ink.
+- On completion a **static ECG-paper image takes over the entire monitor display**. It uses the
+  supplied 12-lead capture reference asset at `/public/images/twelve-lead-capture.svg` instead of
+  drawing a generated canvas printout.
 - **During capture only Back works** — all other physical controls are inert (`captureLock` on
   `DeviceShell`). Back dismisses (result) or cancels (acquiring), returning to the live 12-lead.
 - **Transient** — nothing is persisted; every press is a fresh capture.
-- Components: `AcquiringDialog`, `TwelveLeadPrintout`, `lib/ecg/staticTrace.ts:drawLeadRow`.
+- Components: `AcquiringDialog`, `TwelveLeadPrintout`.
 
 **Testing:** `twelveLeadCaptureFlow` (acquire → printout → dismiss, and mid-acquire cancel),
-`TwelveLeadPrintout` (12 leads + rhythm strip), `AcquiringDialog` (title + progress bar).
+`TwelveLeadPrintout` (static capture image), `AcquiringDialog` (title + progress bar).
 
 ---
 

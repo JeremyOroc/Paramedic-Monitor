@@ -24,6 +24,24 @@ export const VT_TUNING = {
   microNoise: 0.0004,
 } as const
 
+export const VF_TUNING = {
+  cycleMs: 285,
+  peak: 0.88,
+  trough: -0.78,
+  shoulder: 0.045,
+  fineWobble: 0.018,
+  microNoise: 0.004,
+} as const
+
+export const ASYSTOLE_TUNING = {
+  cycleMs: 4000,
+  primaryWander: 0.0065,
+  secondaryWander: 0.0028,
+  slopeWave: 0.0022,
+  fineWave: 0.0013,
+  microNoise: 0.00045,
+} as const
+
 function flatLine(): Float32Array {
   return new Float32Array(SAMPLES)
 }
@@ -63,6 +81,31 @@ type Range = readonly [number, number]
 function between(rand: () => number, range: Range): number {
   const [min, max] = range
   return min + rand() * (max - min)
+}
+
+function synthAsystole(): Float32Array {
+  const out = new Float32Array(SAMPLES)
+  let sum = 0
+  for (let i = 0; i < SAMPLES; i++) {
+    const t = i / SAMPLES
+    const wander =
+      ASYSTOLE_TUNING.primaryWander * Math.sin(t * Math.PI * 2 * 0.58 - 0.55) +
+      ASYSTOLE_TUNING.secondaryWander * Math.sin(t * Math.PI * 2 * 1.35 + 1.3) +
+      ASYSTOLE_TUNING.slopeWave * Math.sin(t * Math.PI * 2 * 0.24 + 0.75) +
+      ASYSTOLE_TUNING.fineWave * Math.sin(t * Math.PI * 2 * 2.4 - 0.9)
+    const microNoise =
+      ASYSTOLE_TUNING.microNoise *
+      (
+        Math.sin(t * Math.PI * 2 * 23 + 0.2) +
+        0.45 * Math.sin(t * Math.PI * 2 * 57 + 2.1)
+      )
+    const value = wander + microNoise
+    out[i] = value
+    sum += value
+  }
+  const centerOffset = sum / SAMPLES
+  for (let i = 0; i < SAMPLES; i++) out[i] -= centerOffset
+  return out
 }
 
 function synthNSR(g: NsrGains = {}): Float32Array {
@@ -132,15 +175,34 @@ function synthVT(seed = 1): Float32Array {
 
 function synthVF(): Float32Array {
   const out = new Float32Array(SAMPLES)
+  const anchors = [
+    [0.00, VF_TUNING.peak],
+    [0.08, VF_TUNING.peak * 0.76],
+    [0.18, VF_TUNING.peak * 0.18],
+    [0.28, -0.22],
+    [0.35, VF_TUNING.trough * 0.78],
+    [0.43, VF_TUNING.trough],
+    [0.51, VF_TUNING.trough * 0.95],
+    [0.60, VF_TUNING.trough * 0.66],
+    [0.68, -0.18],
+    [0.78, VF_TUNING.peak * 0.34],
+    [0.90, VF_TUNING.peak * 0.76],
+    [1.00, VF_TUNING.peak],
+  ] as const
   for (let i = 0; i < SAMPLES; i++) {
     const t = i / SAMPLES
-    const primary = 0.72 * Math.sin(t * Math.PI * 2 - 0.35)
-    const asymmetricPeak = 0.22 * triangle(t, 0.10, 0.28, 0.44)
-    const asymmetricTrough = -0.18 * triangle(t, 0.56, 0.70, 0.90)
-    const wobble =
-      0.075 * Math.sin(t * Math.PI * 6.4 + 0.9) +
-      0.04 * Math.sin(t * Math.PI * 10.6 + 2.2)
-    out[i] = primary + asymmetricPeak + asymmetricTrough + wobble
+    const shape = interpolateAnchors(t, anchors)
+    const shoulder =
+      VF_TUNING.shoulder * gaussian(i, SAMPLES * 0.20, SAMPLES * 0.018) -
+      VF_TUNING.shoulder * 0.7 * gaussian(i, SAMPLES * 0.62, SAMPLES * 0.022)
+    const fineWobble =
+      VF_TUNING.fineWobble * Math.sin(t * Math.PI * 2 * 9.5 + 0.7) +
+      VF_TUNING.fineWobble * 0.45 * Math.sin(t * Math.PI * 2 * 16.5 + 2.4)
+    const microNoise =
+      VF_TUNING.microNoise *
+      Math.sin(t * Math.PI * 2 * 41 + 1.1) *
+      (0.7 + 0.3 * Math.sin(t * Math.PI * 2 * 3.2))
+    out[i] = shape + shoulder + fineWobble + microNoise
   }
   return out
 }
@@ -180,6 +242,22 @@ function synthCapno(
 function smoothstep(t: number): number {
   const c = Math.max(0, Math.min(1, t))
   return c * c * (3 - 2 * c)
+}
+
+function interpolateAnchors(
+  phase: number,
+  anchors: readonly (readonly [number, number])[],
+): number {
+  for (let i = 1; i < anchors.length; i++) {
+    const [fromPhase, fromValue] = anchors[i - 1]
+    const [toPhase, toValue] = anchors[i]
+    if (phase <= toPhase) {
+      const span = toPhase - fromPhase
+      const t = span === 0 ? 0 : (phase - fromPhase) / span
+      return fromValue + (toValue - fromValue) * smoothstep(t)
+    }
+  }
+  return anchors[anchors.length - 1][1]
 }
 
 function synthCapnoSquare(baseline: number, peak: number): Float32Array {
@@ -255,11 +333,10 @@ function synthTorsades(): Float32Array {
 
 export const ECG_RHYTHMS: Record<Rhythm, WaveformDef> = {
   nsr:      { data: synthNSR(),      cycleMs: null },
-  vf:       { data: synthVF(),       cycleMs: 330 },
+  vf:       { data: synthVF(),       cycleMs: VF_TUNING.cycleMs },
   vt:       { data: synthVT(1),      cycleMs: VT_TUNING.cycleMs },
   torsades: { data: synthTorsades(), cycleMs: 300 },
-  asystole: { data: flatLine(),      cycleMs: 1000 },
-  pea:      { data: synthNSR(),      cycleMs: null },
+  asystole: { data: synthAsystole(), cycleMs: ASYSTOLE_TUNING.cycleMs },
 }
 
 export function getEcgRhythm(rhythm: Rhythm): WaveformDef {
@@ -301,7 +378,7 @@ export const LEAD_MORPHOLOGY: Record<LeadName, LeadMorphology> = {
 export function getLeadWaveform(rhythm: Rhythm, lead: LeadName): WaveformDef {
   const m = LEAD_MORPHOLOGY[lead]
   const base = ECG_RHYTHMS[rhythm]
-  if (rhythm === 'nsr' || rhythm === 'pea') {
+  if (rhythm === 'nsr') {
     const data = synthNSR({
       pGain: m.pGain,
       qGain: m.qGain,
