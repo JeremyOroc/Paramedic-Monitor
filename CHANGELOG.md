@@ -35,6 +35,17 @@
 - Updated rhythm tests, `PLAN.md`, and `STATUS.md` to reflect near-flat video-like asystole with
   tiny baseline variation instead of a strict flatline.
 
+## [2026-05-30] [monitor] — Replace 12-lead capture result with static image
+
+- `TwelveLeadPrintout` now displays the static ECG-paper capture asset at
+  `/public/images/twelve-lead-capture.svg` instead of drawing a generated canvas printout from
+  rhythm data.
+- The existing flow is preserved: Capture still shows the ~4s acquiring card, then the image takes
+  over the monitor display; Back still cancels acquisition or dismisses the result. The main-view
+  PRINT preview uses the same image-backed component.
+- Updated `PLAN.md`, `STATUS.md`, and the `TwelveLeadPrintout` test to reflect the image-backed
+  requirement.
+
 ## [2026-05-29] [instructor] — Fix admin vital inputs forcing a leading zero
 
 - `VitalInput` previously coerced an empty field back to `0` on every keystroke, so clearing a
