@@ -7,6 +7,7 @@ import {
   ETCO2_SWEEP_MS,
   RESP_CYCLE_MS,
   SPO2_SWEEP_MS,
+  VF_TUNING,
   VT_TUNING,
   getEcgRhythm,
   getEtco2Waveform,
@@ -85,6 +86,23 @@ function directionChanges(data: Float32Array, end: number): number {
     if (direction !== 0) lastDirection = direction
   }
   return changes
+}
+
+function prominentLocalPeaksBetween(
+  data: Float32Array,
+  start: number,
+  end: number,
+  threshold: number,
+): number {
+  let peaks = 0
+  const from = Math.max(1, start)
+  const to = Math.min(data.length - 1, end)
+  for (let i = from; i < to; i++) {
+    if (data[i] > threshold && data[i] >= data[i - 1] && data[i] > data[i + 1]) {
+      peaks++
+    }
+  }
+  return peaks
 }
 
 describe('ECG_RHYTHMS', () => {
@@ -197,12 +215,30 @@ describe('ECG_RHYTHMS', () => {
     expect(getEcgRhythm('vt')).toBe(ECG_RHYTHMS.vt)
   })
 
-  it('VF is coarse fibrillation, not artifact noise', () => {
+  it('VF matches the coarse pads reference with tall repeated imperfect waves', () => {
     const data = ECG_RHYTHMS.vf.data
-    expect(ECG_RHYTHMS.vf.cycleMs).toBeLessThanOrEqual(360)
-    expect(peakOf(data)).toBeGreaterThan(0.65)
-    expect(troughOf(data)).toBeLessThan(-0.65)
-    expect(zeroCrossings(data)).toBeLessThanOrEqual(6)
+    const peak = peakOf(data)
+    const trough = troughOf(data)
+    const delta = maxAdjacentDelta(data)
+    const peakIndex = indexOfPeakBefore(data, data.length)
+    const troughIndex = indexOfTrough(data)
+    const roundedTroughSamples = Array.from(data).filter((v) => v < trough * 0.85).length
+
+    expect(ECG_RHYTHMS.vf.cycleMs).toBe(VF_TUNING.cycleMs)
+    expect(ECG_RHYTHMS.vf.cycleMs).toBeGreaterThanOrEqual(260)
+    expect(ECG_RHYTHMS.vf.cycleMs).toBeLessThanOrEqual(310)
+    expect(peak).toBeGreaterThan(0.82)
+    expect(peak).toBeLessThan(0.96)
+    expect(trough).toBeLessThan(-0.72)
+    expect(trough).toBeGreaterThan(-0.9)
+    expect(peak - trough).toBeGreaterThan(1.55)
+    expect(peak - trough).toBeLessThan(1.85)
+    expect(delta).toBeGreaterThan(0.003)
+    expect(delta).toBeLessThan(0.035)
+    expect(zeroCrossings(data)).toBeLessThanOrEqual(4)
+    expect(directionChanges(data, data.length)).toBeGreaterThan(8)
+    expect(prominentLocalPeaksBetween(data, peakIndex + 4, troughIndex, peak * 0.45)).toBe(0)
+    expect(roundedTroughSamples).toBeGreaterThan(70)
   })
 })
 

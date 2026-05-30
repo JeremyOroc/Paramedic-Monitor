@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-05-30] [monitor] — Tune VFib ECG to pads screenshot
+
+- Replaced the smooth VFib sine-blend with a screenshot-matched coarse pads waveform: fast
+  repeated tall rounded peaks, deep troughs, uneven shoulders, and tiny deterministic line
+  imperfections.
+- Refined the VFib contour to keep one crest per wave, with no secondary/double peak on the
+  drop-down; the descent still has slight slope variation rather than being perfectly smooth.
+- Rounded the VFib lower trough slightly more so the bottom turn reads less sharp while preserving
+  the same coarse rhythm and single-crest silhouette.
+- Added `VF_TUNING` for VFib timing, amplitude, shoulder, wobble, and micro-noise controls.
+- Updated rhythm tests, `PLAN.md`, and `STATUS.md` to guard the new VFib visual contract.
+
 ## [2026-05-30] [monitor] — Remove PEA from ECG rhythm options
 
 - Removed PEA from the `Rhythm` union, synthesized ECG rhythm table, 12-lead lead-waveform branch,

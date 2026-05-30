@@ -67,6 +67,10 @@
   - [x] Removed PEA from the ECG rhythm type, synthesized rhythm table, and admin ECG selector
   - [x] Persisted legacy PEA rhythms normalize back to NSR during store hydration
   - [x] Updated tests so the admin ECG selector exposes NSR, VF, VT, Torsades, and Asystole only
+- [x] **VFib ECG reference tuning — COMPLETE:**
+  - [x] Tuned VFib against the 2026-05-30 pads screenshot
+  - [x] VFib now renders as fast repeated coarse waves with one tall rounded crest per wave, rounded deep troughs, uneven shoulders, and tiny line imperfections instead of a smooth sine-like trace
+  - [x] Tests verify VFib timing, amplitude range, steep-but-not-artifact jumps, contour imperfections, no prominent secondary peak on the drop-down, and a rounded lower trough
 - [x] **Patient Info menu (12-lead) — COMPLETE:**
   - [x] Second left soft key (12-lead view only) opens a `PatientInfoPanel` overlaying the bottom 2/3 of the screen
   - [x] Edits Patient Age (clamp 0–120, default 40) and Patient Sex (M/F), driven by the right cluster's Move up/down arrows + center dot (Enter)
@@ -119,14 +123,14 @@
   - [x] SpO2 pleth amplitude scales with SpO2 %: full at ≥95, progressively shrinks, floors at 0.25× under 70
   - [x] Decoupled `sweepMs` (paper speed) from `cycleMs` (cardiac cycle) — multiple beats now visible across the screen at typical Zoll speeds (ECG/SpO2 4s, EtCO2 15s)
   - [x] VT shape rewritten to wide rounded peaks matching real-life monomorphic VT (no longer a sine wave)
-  - [x] VF slowed (cycleMs 250→450) and made more chaotic so it doesn't look like a fast periodic wave
+  - [x] VF tuned to the pads reference as fast repeated coarse waves with small imperfections
   - [x] Right vitals column further narrowed `180px` → `140px` to remove leftover empty space
   - [x] Reactivity tests added: EtCO2 plateau scaling, SpO2 amplitude scaling, VT/VF shape sanity
 - [x] **Reference-guided admin rhythm graph pass — COMPLETE:**
   - [x] User-supplied rhythm references reviewed for the currently exposed admin rhythm buttons
   - [x] NSR template sharpened with narrower QRS, subtle ST segment, and small baseline motion
   - [x] VT template rebuilt as a wide-complex monomorphic rhythm with a dominant broad peak and terminal trough
-  - [x] VF template rebuilt as a coarser chaotic trace with irregular amplitude and frequent zero crossings
+  - [x] VF template rebuilt as a coarse repeated pads trace with tall peaks, deep troughs, and uneven shoulders
   - [x] Asystole tuned to a near-flat pads baseline with tiny slopes/waves
   - [x] `PLAN.md` updated to lock vitals to the right column and keep bottom space for status/defib controls
   - [x] Tests strengthened for VT trough/width and VF chaos
