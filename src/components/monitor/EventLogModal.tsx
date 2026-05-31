@@ -1,7 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
 const ITEMS_PER_PAGE = 8
 
 export type EventLogEntry = {
@@ -12,16 +10,18 @@ export type EventLogEntry = {
 type EventLogModalProps = {
   open: boolean
   log: EventLogEntry[]
-  onClose: () => void
+  rightOffset?: number
+  page?: number
+  highlightedButton?: 'prev' | 'next'
 }
 
-export function EventLogModal({ open, log, onClose }: EventLogModalProps) {
-  const [page, setPage] = useState(1)
-
-  useEffect(() => {
-    if (open) setPage(1)
-  }, [open])
-
+export function EventLogModal({
+  open,
+  log,
+  rightOffset = 96,
+  page = 1,
+  highlightedButton = 'next',
+}: EventLogModalProps) {
   if (!open) return null
 
   const totalPages = Math.max(1, Math.ceil(log.length / ITEMS_PER_PAGE))
@@ -29,61 +29,50 @@ export function EventLogModal({ open, log, onClose }: EventLogModalProps) {
   const showPagination = log.length > ITEMS_PER_PAGE
 
   return (
-    <div className="absolute inset-0 z-30 grid place-items-center bg-black/65 p-6">
-      <section
-        aria-label="Event log"
-        className="w-full max-w-[520px] border-2 border-ecg-green bg-black font-mono text-white shadow-[0_0_24px_rgba(0,255,65,0.35)]"
-      >
-        <header className="flex items-center justify-between bg-ecg-green px-4 py-2 text-black">
-          <h2 className="text-sm font-bold uppercase tracking-wider">Event Log</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close event log"
-            className="grid h-7 w-7 place-items-center border border-black/50 text-base font-bold hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-black"
-          >
-            X
-          </button>
-        </header>
-        <div className="grid gap-2 p-4 text-sm">
-          {log.length > 0 ? (
-            pageEntries.map((entry, i) => (
-              <div
+    <section
+      aria-label="Event log"
+      className="absolute left-[56px] top-[56px] bottom-[110px] z-30 flex flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
+      style={{ right: rightOffset }}
+    >
+      <header className="bg-white px-4 py-1.5 text-black">
+        <h2 className="text-base font-bold">Event Log</h2>
+      </header>
+      <div className="flex-1 overflow-hidden bg-[#8ba88c] px-4 py-2">
+        {log.length > 0 ? (
+          <ul className="flex flex-col gap-1">
+            {pageEntries.map((entry, i) => (
+              <li
                 key={(page - 1) * ITEMS_PER_PAGE + i}
-                className="grid grid-cols-[1fr_auto] gap-3 border-b border-neutral-800 pb-2 last:border-b-0 last:pb-0"
+                className="grid grid-cols-[1fr_1fr] items-stretch"
               >
-                <span className="text-ecg-green">{entry.name}</span>
-                <span className="text-neutral-100 tabular-nums">{entry.time}</span>
-              </div>
-            ))
-          ) : (
-            <p className="text-neutral-400">No events recorded.</p>
-          )}
-        </div>
-        {showPagination && (
-          <div className="flex items-center justify-between border-t border-neutral-800 px-4 py-2 text-xs">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-2 py-1 text-ecg-green disabled:opacity-30 hover:text-white focus:outline-none"
-            >
-              &#8592; Prev
-            </button>
-            <span className="text-neutral-400">
-              Page {page} of {totalPages}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-2 py-1 text-ecg-green disabled:opacity-30 hover:text-white focus:outline-none"
-            >
-              Next &#8594;
-            </button>
-          </div>
+                <span className="px-2 py-1 text-xs font-bold text-black">{entry.name}</span>
+                <span className="flex items-center justify-center bg-black px-2 py-1 text-xs font-bold tabular-nums text-white text-center">
+                  {entry.time}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-black/70 text-sm">No events recorded.</p>
         )}
-      </section>
-    </div>
+      </div>
+      {showPagination && (
+        <div className="flex items-center justify-between bg-[#8ba88c] border-t border-black/20 px-4 py-1.5 text-xs font-mono">
+          <span
+            className={`px-2 py-1 font-bold ${highlightedButton === 'prev' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === 1 ? 'opacity-30' : ''}`}
+          >
+            &#8592; Prev
+          </span>
+          <span className="text-black/70">
+            Page {page} of {totalPages}
+          </span>
+          <span
+            className={`px-2 py-1 font-bold ${highlightedButton === 'next' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === totalPages ? 'opacity-30' : ''}`}
+          >
+            Next &#8594;
+          </span>
+        </div>
+      )}
+    </section>
   )
 }

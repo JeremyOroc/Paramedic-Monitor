@@ -66,6 +66,8 @@ export default function MonitorPage() {
   const [medicationPage, setMedicationPage] = useState<1 | 2 | 3>(1)
   const [eventLog, setEventLog] = useState<EventLogEntry[]>([])
   const [eventLogOpen, setEventLogOpen] = useState(false)
+  const [eventLogPage, setEventLogPage] = useState(1)
+  const [eventLogHighlighted, setEventLogHighlighted] = useState<'prev' | 'next'>('next')
   const [flashedMed, setFlashedMed] = useState<string | null>(null)
   const [isPoweredOn, setIsPoweredOn] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
@@ -216,6 +218,10 @@ export default function MonitorPage() {
   }
 
   function handleMedBack() {
+    if (eventLogOpen) {
+      setEventLogOpen(false)
+      return
+    }
     setMedicationMode(false)
   }
 
@@ -276,17 +282,27 @@ export default function MonitorPage() {
   function moveSelection(direction: 'up' | 'down') {
     if (!patientInfoOpen) return
     if (editing) {
-      // up increments / down decrements the current field's draft
+      // up increments / down decrements the current field's draft (back unreachable while editing)
       adjustEditValue(direction)
       return
     }
-    // Two fields only: up highlights Age, down highlights Sex (clamped, no wrap).
-    setSelectedField(direction === 'up' ? 'age' : 'sex')
+    // Three fields: age → sex → back (clamped, no wrap)
+    const ORDER: PatientInfoField[] = ['age', 'sex', 'back']
+    const idx = ORDER.indexOf(selectedField)
+    if (direction === 'up') {
+      setSelectedField(ORDER[Math.max(0, idx - 1)])
+    } else {
+      setSelectedField(ORDER[Math.min(ORDER.length - 1, idx + 1)])
+    }
   }
 
   function handleEnter() {
     if (!patientInfoOpen) return
     if (!editing) {
+      if (selectedField === 'back') {
+        handleBack()
+        return
+      }
       setEditValue(selectedField === 'age' ? patientInfo.age : patientInfo.sex)
       setEditing(true)
       return
@@ -302,6 +318,10 @@ export default function MonitorPage() {
   }
 
   function handleBack() {
+    if (callerInfoOpen) {
+      setCallerInfoOpen(false)
+      return
+    }
     if (patientModalOpen) {
       setPatientModalOpen(false)
       return
@@ -346,6 +366,11 @@ export default function MonitorPage() {
     editing && selectedField === 'sex' && (editValue === 'M' || editValue === 'F')
       ? editValue
       : patientInfo.sex
+
+  // Compute the right offset so modals never overlap the vitals or energy column.
+  // 96 = vitals strip width, 80 = energy column width, 0 = 12-lead (no right panel).
+  const defibHidesVitals = ['charge_prompt', 'charging', 'charged', 'delivered'].includes(defib.state)
+  const modalRightOffset = isTwelveLead ? 0 : defibHidesVitals ? 80 : 96
 
   const screen = (
     <div className="relative h-full w-full">
@@ -453,7 +478,6 @@ export default function MonitorPage() {
       <CallerInfoModal
         open={callerInfoOpen}
         info={callerInfoConfirmed}
-        onClose={() => setCallerInfoOpen(false)}
       />
       <PatientInfoPanel
         open={patientInfoOpen}
@@ -461,11 +485,14 @@ export default function MonitorPage() {
         sex={displaySex}
         selectedField={selectedField}
         editing={editing}
+        rightOffset={96}
       />
       <EventLogModal
         open={eventLogOpen}
         log={eventLog}
-        onClose={() => setEventLogOpen(false)}
+        rightOffset={modalRightOffset}
+        page={eventLogPage}
+        highlightedButton={eventLogHighlighted}
       />
       {/* Capture overlays take over the entire monitor display; only the
           physical Back key (on DeviceShell, outside the screen) responds. */}
@@ -534,6 +561,8 @@ export default function MonitorPage() {
             )
           } else if (patientInfoOpen) {
             moveSelection('up')
+          } else if (eventLogOpen) {
+            setEventLogHighlighted('prev')
           } else {
             moveSelectedControl(1)
           }
@@ -545,6 +574,8 @@ export default function MonitorPage() {
             )
           } else if (patientInfoOpen) {
             moveSelection('down')
+          } else if (eventLogOpen) {
+            setEventLogHighlighted('next')
           } else {
             moveSelectedControl(-1)
           }
@@ -552,6 +583,13 @@ export default function MonitorPage() {
         onEnter={() => {
           if (!patientModalOpen && patientInfoOpen) {
             handleEnter()
+          } else if (eventLogOpen) {
+            const totalPages = Math.max(1, Math.ceil(eventLog.length / 8))
+            if (eventLogHighlighted === 'prev') {
+              setEventLogPage((p) => Math.max(1, p - 1))
+            } else {
+              setEventLogPage((p) => Math.min(totalPages, p + 1))
+            }
           } else {
             handleSelectionEnter()
           }
@@ -586,7 +624,7 @@ export default function MonitorPage() {
         medicationPage={medicationPage}
         onMedClick={handleMedClick}
         onMedPageChange={handleMedPageChange}
-        onMedInfo={() => setEventLogOpen(true)}
+        onMedInfo={() => { setEventLogOpen(true); setEventLogPage(1); setEventLogHighlighted('next') }}
         onMedBack={handleMedBack}
     />
   )
