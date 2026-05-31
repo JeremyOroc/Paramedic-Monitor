@@ -1,5 +1,7 @@
 'use client'
 
+import { Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -13,7 +15,7 @@ import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal, PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
-import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
+import { CallerInfoModal, type CallerEventKey } from '@/components/monitor/CallerInfoModal'
 import { PatientInfoPanel } from '@/components/monitor/PatientInfoPanel'
 import { EventLogModal } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
@@ -22,12 +24,14 @@ import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { useMonitorClock } from '@/hooks/useMonitorClock'
 import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
+import { useCountdown } from '@/hooks/useCountdown'
 import { useNibpReading } from '@/hooks/useNibpReading'
+import { formatEstTime } from '@/lib/estTime'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { setAudioMuted } from '@/lib/audio'
 
-export default function MonitorPage() {
+function MonitorPage() {
   const { date, time } = useMonitorClock()
 
   useStoreHydration()
@@ -36,14 +40,63 @@ export default function MonitorPage() {
   const patientInfo = useMonitorStore((s) => s.patientInfo)
   const setPatientAge = useMonitorStore((s) => s.setPatientAge)
   const setPatientSex = useMonitorStore((s) => s.setPatientSex)
+  const dispatchState = useMonitorStore((s) => s.dispatch)
+  const acknowledgeCall = useMonitorStore((s) => s.acknowledgeCall)
+  const arriveCall = useMonitorStore((s) => s.arriveCall)
+  const transportCall = useMonitorStore((s) => s.transportCall)
+
+  const devBypass = useSearchParams().get('dev') === '1'
 
   const controller = useMonitorController({
     confirmed,
     patientInfo,
     setPatientAge,
     setPatientSex,
+    initialPoweredOn: devBypass,
   })
   const sessionTimer = useSessionTimer(controller.isTimerRunning)
+
+  // Dispatch startup gate: countdown is travel-time to scene; the trainee must
+  // Acknowledge, wait out the countdown, then mark Arrival before power unlocks.
+  const countdown = useCountdown(dispatchState.countdownEndsAt)
+  const gateSatisfied =
+    !!dispatchState.acknowledgedAt && countdown.isDone && !!dispatchState.arrivedAt
+  const powerLocked = !devBypass && !gateSatisfied
+
+  const callerButtonState: Record<CallerEventKey, { disabled: boolean }> = {
+    acknowledge: { disabled: dispatchState.acknowledgedAt !== null },
+    arrival: {
+      disabled:
+        !(dispatchState.acknowledgedAt && countdown.isDone) || dispatchState.arrivedAt !== null,
+    },
+    transport: { disabled: !controller.isPoweredOn || dispatchState.transportedAt !== null },
+  }
+
+  const onCallerEvent = (key: CallerEventKey) => {
+    const est = formatEstTime()
+    if (key === 'acknowledge') acknowledgeCall(est)
+    else if (key === 'arrival') arriveCall(est)
+    else transportCall(est)
+  }
+
+  const mergedEventLog = [...dispatchState.callerEvents, ...controller.eventLog]
+
+  const lockScreen = dispatchState.armed ? (
+    <CallerInfoModal
+      open
+      info={callerInfoConfirmed}
+      onCallerEvent={onCallerEvent}
+      buttonState={callerButtonState}
+      showCountdown={!countdown.isDone}
+      countdownFormatted={countdown.formatted}
+    />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center bg-black">
+      <span className="font-mono text-sm uppercase tracking-[0.3em] text-neutral-700">
+        Standby
+      </span>
+    </div>
+  )
 
   const defib = useDefibSequence({
     patientMode: controller.patientMode,
@@ -169,6 +222,8 @@ export default function MonitorPage() {
       <CallerInfoModal
         open={controller.callerInfoOpen}
         info={callerInfoConfirmed}
+        onCallerEvent={onCallerEvent}
+        buttonState={callerButtonState}
       />
       <PatientInfoPanel
         open={controller.patientInfoOpen}
@@ -179,7 +234,7 @@ export default function MonitorPage() {
       />
       <EventLogModal
         open={controller.eventLogOpen}
-        log={controller.eventLog}
+        log={mergedEventLog}
       />
       {controller.isTwelveLead && controller.captureState === 'acquiring' && (
         <div className="absolute inset-0 z-40">
@@ -208,6 +263,9 @@ export default function MonitorPage() {
   return (
     <DeviceShell
       screen={screen}
+      initialPowerState={devBypass ? 'on' : 'off'}
+      powerLocked={powerLocked}
+      lockScreen={lockScreen}
       screenModal={
         <PatientModeModal
           open={controller.patientModalOpen}
@@ -272,5 +330,14 @@ export default function MonitorPage() {
         onPatientEvent: handlePatientEvent,
       }}
     />
+  )
+}
+
+// useSearchParams requires a Suspense boundary in the App Router.
+export default function MonitorPageRoute() {
+  return (
+    <Suspense fallback={null}>
+      <MonitorPage />
+    </Suspense>
   )
 }

@@ -31,6 +31,7 @@ function setup(overrides: Partial<{
   patientInfo: PatientInfo
   setPatientAge: (age: number) => void
   setPatientSex: (sex: PatientSex) => void
+  initialPoweredOn: boolean
 }> = {}) {
   const setPatientAge = overrides.setPatientAge ?? vi.fn()
   const setPatientSex = overrides.setPatientSex ?? vi.fn()
@@ -40,6 +41,7 @@ function setup(overrides: Partial<{
       patientInfo: overrides.patientInfo ?? patientInfo,
       setPatientAge,
       setPatientSex,
+      initialPoweredOn: overrides.initialPoweredOn,
     }),
   )
   return { ...rendered, setPatientAge, setPatientSex }
@@ -231,6 +233,17 @@ describe('useMonitorController', () => {
 
     act(() => result.current.onBack())
     expect(result.current.callerInfoOpen).toBe(false)
+  })
+
+  it('starts powered-off when initialPoweredOn is false', () => {
+    const { result } = setup({ initialPoweredOn: false })
+
+    expect(result.current.isPoweredOn).toBe(false)
+    expect(result.current.isTimerRunning).toBe(false)
+
+    act(() => result.current.onPowerOn())
+    expect(result.current.isPoweredOn).toBe(true)
+    expect(result.current.isTimerRunning).toBe(true)
   })
 
   it('closes the medication event log on Back before exiting medication mode', () => {

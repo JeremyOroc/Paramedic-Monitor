@@ -150,6 +150,12 @@ type DeviceShellProps = {
   twelveLeadActive?: boolean
   /** When true (e.g. during a 12-lead capture), every control except Back is inert. */
   captureLock?: boolean
+  /** Initial power state — normal users boot 'off' (locked), dev bypass boots 'on'. */
+  initialPowerState?: PowerState
+  /** When true the power button is inert and the lock screen shows instead of the monitor. */
+  powerLocked?: boolean
+  /** Overlay shown while powered off AND locked (standby / dispatch screen). */
+  lockScreen?: ReactNode
   defib: DefibControls
   softKeys: SoftKeyHandlers
   nav: NavHandlers
@@ -163,6 +169,9 @@ export function DeviceShell({
   screenModal,
   twelveLeadActive = false,
   captureLock = false,
+  initialPowerState = 'on',
+  powerLocked = false,
+  lockScreen,
   defib,
   softKeys,
   nav,
@@ -207,9 +216,19 @@ export function DeviceShell({
   const onToggleMute = audio?.onToggleMute ?? (() => {})
   const onPatientEvent = audio?.onPatientEvent
 
-  const [powerState, setPowerState] = useState<PowerState>('on')
+  const [powerState, setPowerState] = useState<PowerState>(initialPowerState)
   const [jumpscareActive, setJumpscareActive] = useState(false)
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // If the gate re-locks while the monitor is on (e.g. admin Reset mid-drill),
+  // force it back to off so the lock screen takes over.
+  useEffect(() => {
+    if (powerLocked && powerState !== 'off') {
+      if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
+      setPowerState('off')
+      onPowerOff?.()
+    }
+  }, [powerLocked, powerState, onPowerOff])
 
   // 1/1000 per second jumpscare while monitor is on and not already playing
   useEffect(() => {
@@ -265,6 +284,7 @@ export function DeviceShell({
         })
 
   function handlePowerToggle() {
+    if (powerLocked) return
     if (powerState === 'booting') return
     if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
     if (powerState === 'on') {
@@ -293,19 +313,24 @@ export function DeviceShell({
                 <div className="relative h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
                   {powerState === 'on' && screen}
                   {powerState === 'booting' && <BootScreen />}
-                  {powerState === 'off' && (
-                    <div className="absolute inset-0 z-50 overflow-hidden bg-black">
-                      <video
-                        src="/videos/its_me.mp4"
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="h-full w-full object-cover"
-                      />
-                      <audio src="/audio/its_me.mp3" autoPlay loop />
-                    </div>
-                  )}
+                  {powerState === 'off' &&
+                    (powerLocked ? (
+                      <div className="absolute inset-0 z-50 overflow-hidden bg-black">
+                        {lockScreen}
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 z-50 overflow-hidden bg-black">
+                        <video
+                          src="/videos/its_me.mp4"
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          className="h-full w-full object-cover"
+                        />
+                        <audio src="/audio/its_me.mp3" autoPlay loop />
+                      </div>
+                    ))}
                   {jumpscareActive && powerState === 'on' && (
                     <div className="absolute inset-0 z-50 overflow-hidden bg-black">
                       <video
