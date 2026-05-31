@@ -528,7 +528,8 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
 
   function handleAck() {
     if (ackActive) return
-    const duration = 750 + Math.random() * 1500
+    if (Math.random() >= 1 / 32768) return
+    const duration = 750 + Math.random() * 3000
     setAckActive(true)
     setTimeout(() => setAckActive(false), duration)
   }
