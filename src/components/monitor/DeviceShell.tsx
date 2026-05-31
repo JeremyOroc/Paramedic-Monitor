@@ -193,7 +193,8 @@ export function DeviceShell({
       setJumpscareActive(false)
       return
     }
-    const id = setTimeout(() => setJumpscareActive(false), 5000)
+    const duration = 3000 + Math.random() * 2000
+    const id = setTimeout(() => setJumpscareActive(false), duration)
     return () => clearTimeout(id)
   }, [jumpscareActive, powerState])
 
