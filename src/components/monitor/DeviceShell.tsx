@@ -524,12 +524,32 @@ type RightControlClusterProps = {
 }
 
 function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleMute, onPatientEvent }: RightControlClusterProps) {
+  const [ackActive, setAckActive] = useState(false)
+
+  function handleAck() {
+    if (ackActive) return
+    const duration = 500 + Math.random() * 3000
+    setAckActive(true)
+    setTimeout(() => setAckActive(false), duration)
+  }
+
   return (
     <div className="relative min-h-0">
       <PhysicalButton
         ariaLabel="Alarm acknowledge"
+        onClick={handleAck}
         className="absolute left-[23%] top-[1.5%] h-[22%] w-[54%] rounded-[24px] bg-[#474747] border-[#dfe1e2]"
       />
+      {ackActive && (
+        <div className="pointer-events-none absolute left-[23%] top-[1.5%] z-50 h-[22%] w-[54%] overflow-hidden rounded-[24px]">
+          <video
+            src="/videos/golden_freddy.mp4"
+            autoPlay
+            playsInline
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
       <div className="absolute inset-x-[2%] bottom-[0%] top-[29%] rounded-[19px] bg-[#b9b9b8] shadow-[inset_7px_8px_10px_rgba(255,255,255,0.26),inset_-8px_-9px_10px_rgba(102,102,102,0.2)]">
         <PhysicalButton
           ariaLabel="Home"
