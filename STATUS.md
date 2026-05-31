@@ -71,6 +71,10 @@
   - [x] Tuned VFib against the 2026-05-30 pads screenshot
   - [x] VFib now renders as fast repeated coarse waves with one tall rounded crest per wave, rounded deep troughs, uneven shoulders, and tiny line imperfections instead of a smooth sine-like trace
   - [x] Tests verify VFib timing, amplitude range, steep-but-not-artifact jumps, contour imperfections, no prominent secondary peak on the drop-down, and a rounded lower trough
+- [x] **ECG rhythm-switch artifact fix — COMPLETE:**
+  - [x] Fixed torsades → NSR switch artifact where torsades could briefly render at NSR speed as a rapid up/down buzz
+  - [x] Renderer signal keys now refresh waveform data and reset phase immediately when rhythm/channel shape changes
+  - [x] Added regression coverage for immediate waveform refresh on signal-key changes
 - [x] **Patient Info menu (12-lead) — COMPLETE:**
   - [x] Second left soft key (12-lead view only) opens a `PatientInfoPanel` overlaying the bottom 2/3 of the screen
   - [x] Edits Patient Age (clamp 0–120, default 40) and Patient Sex (M/F), driven by the right cluster's Move up/down arrows + center dot (Enter)

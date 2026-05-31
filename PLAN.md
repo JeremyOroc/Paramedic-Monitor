@@ -240,12 +240,14 @@ paramedic-monitor/
 3. Wire `ECGCanvas.tsx` — accepts `rhythm` + `hr` props, starts/stops loop on mount/unmount
 4. HR-driven cycle speed: `cycleMs = 60000 / hr` for NSR; fixed `cycleMs` for VF/VT/Torsades/Asystole
 5. Beat-boundary rhythm switching: pending rhythm waits until `phaseInCycle >= 1.0` then swaps
+   - Renderer signal keys reset the active waveform immediately when rhythm/channel shape changes, so waveform data and cycle timing switch atomically. This prevents long-template rhythms such as torsades from being briefly drawn at a new short-cycle rhythm speed during transitions.
 6. Test all 5 rhythms locally by hardcoding rhythm changes
 
 **Testing:**
 - Rhythm generator tests verify all ECG templates stay normalized and distinguish the admin rhythm buttons: organized NSR, wide-complex VT, Torsades, screenshot-matched coarse VF with tiny imperfections, no prominent secondary downslope peak, and a rounded lower trough, and near-flat asystole with tiny baseline slopes/waves.
 - VT tests additionally guard the Pads-style criteria: cycle timing stays fast enough to show many beats across the screen, each cycle has a clean V-shaped trough, and the upper plateau is rounded, non-jagged, early-peaking, and gently downward-sloping.
 - Torsades tests should guard: visible multi-beat rate/beat count across the template, a waxing/waning amplitude envelope with a low-amplitude waist, more morphology variation than VT, and more organization/repeated wide complexes than VFib.
+- Renderer tests guard signal-key rhythm changes so transitions such as torsades → NSR refresh waveform data immediately instead of compressing the old rhythm at the new cycle speed.
 
 **Milestone:** Smooth scrolling ECG visible. All 5 rhythms render correctly. Rhythm switches are clean at beat boundary.
 

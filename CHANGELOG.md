@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-05-31] [monitor] — Fix ECG rhythm-switch compression artifact
+
+- Fixed the torsades → NSR transition artifact where the old torsades waveform could be drawn at
+  the new NSR cycle speed, creating a brief rapid up/down buzz.
+- `startRenderer` now accepts a signal key and refreshes the active waveform immediately when the
+  rhythm/channel shape changes, resetting phase so waveform data and cycle timing switch together.
+- Wired signal keys through ECG, 12-lead cells, and secondary channels; added a renderer regression
+  test for immediate waveform refresh on signal-key changes.
+
 ## [2026-05-30] [monitor] — Document torsades ECG implementation plan
 
 - Recorded the torsades reference-analysis plan from `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov`

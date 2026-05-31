@@ -6,6 +6,7 @@ export type RendererOptions = {
   color: string
   getWaveform: () => WaveformDef
   getCycleMs: () => number
+  getSignalKey?: () => string
   /** Time in ms for the trace to sweep across the full canvas. Defaults to 4000ms (~Zoll ECG paper speed). */
   sweepMs?: number
   amplitude?: number
@@ -24,6 +25,7 @@ export function startRenderer(opts: RendererOptions): () => void {
     color,
     getWaveform,
     getCycleMs,
+    getSignalKey,
     sweepMs = 4000,
     amplitude = 0.85,
     lineWidth = 2,
@@ -37,6 +39,7 @@ export function startRenderer(opts: RendererOptions): () => void {
   if (!ctx) return () => {}
 
   let activeWaveform = getWaveform()
+  let activeSignalKey = getSignalKey?.() ?? 'default'
   let cssWidth = 0
   let cssHeight = 0
   let dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
@@ -117,6 +120,15 @@ export function startRenderer(opts: RendererOptions): () => void {
     rafId = requestAnimationFrame(tick)
     const dt = Math.min(64, now - lastT)
     lastT = now
+
+    const nextSignalKey = getSignalKey?.() ?? 'default'
+    if (nextSignalKey !== activeSignalKey) {
+      activeSignalKey = nextSignalKey
+      activeWaveform = getWaveform()
+      phase = 0
+      rollJitter()
+      prevY = yFromValue(sampleAt(0))
+    }
 
     const cycleMs = Math.max(60, getCycleMs() * cycleMul)
     const dPhase = dt / cycleMs
