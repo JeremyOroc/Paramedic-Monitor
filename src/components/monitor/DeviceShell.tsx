@@ -493,7 +493,6 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         <PhysicalButton
           ariaLabel="Alarm"
           onClick={onToggleMute}
-          active={isMuted}
           className="absolute right-[7%] top-[0%] h-[18%] w-[40%] rounded-[13px] text-[clamp(15px,1.6vw,24px)]"
         >
           {isMuted ? '🔕' : '🔔'}

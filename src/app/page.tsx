@@ -216,6 +216,10 @@ export default function MonitorPage() {
   }
 
   function handleMedBack() {
+    if (eventLogOpen) {
+      setEventLogOpen(false)
+      return
+    }
     setMedicationMode(false)
   }
 
@@ -302,6 +306,10 @@ export default function MonitorPage() {
   }
 
   function handleBack() {
+    if (callerInfoOpen) {
+      setCallerInfoOpen(false)
+      return
+    }
     if (patientModalOpen) {
       setPatientModalOpen(false)
       return
@@ -453,7 +461,6 @@ export default function MonitorPage() {
       <CallerInfoModal
         open={callerInfoOpen}
         info={callerInfoConfirmed}
-        onClose={() => setCallerInfoOpen(false)}
       />
       <PatientInfoPanel
         open={patientInfoOpen}
@@ -465,7 +472,6 @@ export default function MonitorPage() {
       <EventLogModal
         open={eventLogOpen}
         log={eventLog}
-        onClose={() => setEventLogOpen(false)}
       />
       {/* Capture overlays take over the entire monitor display; only the
           physical Back key (on DeviceShell, outside the screen) responds. */}

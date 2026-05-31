@@ -28,12 +28,19 @@ const COLOR_CLASS: Record<VitalColor, string> = {
   yellowSpO2: 'text-yellow-spo2',
 }
 
+const LABEL_BG_CLASS: Record<VitalColor, string> = {
+  ecgGreen: 'bg-ecg-green',
+  cyanBP: 'bg-cyan-bp',
+  purpleEtCO2: 'bg-purple-etco2',
+  yellowSpO2: 'bg-yellow-spo2',
+}
+
 const VALUE_CLASS = [
-  'flex w-full items-center justify-center self-stretch text-center font-mono font-bold text-[2.1rem] leading-none tabular-nums',
+  'flex w-full items-center justify-center self-stretch text-center font-mono font-bold text-[2.8rem] leading-none tabular-nums',
 ]
 
 const STACKED_VALUE_CLASS = [
-  'flex w-full flex-col items-center justify-center self-stretch text-center font-mono font-bold text-[1.75rem] leading-none tabular-nums',
+  'flex w-full flex-col items-center justify-center self-stretch text-center font-mono font-bold text-[2.2rem] leading-none tabular-nums',
 ]
 
 const ALARM_FLASH_CLASS = 'vital-alarm-flash'
@@ -50,6 +57,7 @@ export function VitalBox({
   className,
 }: VitalBoxProps) {
   const colorClass = COLOR_CLASS[color]
+  const labelBgClass = LABEL_BG_CLASS[color]
   const valueColorClass = alarming ? 'text-alarm-red' : colorClass
   const flashClass = alarming ? ALARM_FLASH_CLASS : null
   return (
@@ -65,20 +73,20 @@ export function VitalBox({
     >
       <div
         className={cn(
-          'flex items-baseline justify-between',
-          alarming && '-mx-1 -mt-1 bg-alarm-red px-1 py-1',
+          'flex items-baseline justify-between -mx-1 -mt-1 px-1 py-0.5',
+          alarming ? 'bg-alarm-red' : labelBgClass,
         )}
       >
-        <span className={cn('text-[10px] font-mono uppercase tracking-normal', alarming ? 'text-white' : colorClass)}>
+        <span className={cn('text-[12px] font-mono uppercase tracking-normal', alarming ? 'text-white' : 'text-black')}>
           {label}
         </span>
         {unit && (
-          <span className={cn('text-[9px] font-mono', alarming ? 'text-white' : 'text-neutral-500')}>
+          <span className={cn('text-[10px] font-mono', alarming ? 'text-white' : 'text-black/70')}>
             {unit}
           </span>
         )}
       </div>
-      <div className={cn('flex h-full min-h-0 flex-col', selected && 'bg-[var(--color-selection-blue)] text-white')}>
+      <div className={cn('flex h-full min-h-0 flex-col justify-center', selected && 'bg-[var(--color-selection-blue)] text-white')}>
         {stackedValues ? (
           <div
             className={cn(STACKED_VALUE_CLASS, valueColorClass, flashClass)}

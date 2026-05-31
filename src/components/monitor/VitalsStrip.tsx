@@ -62,12 +62,12 @@ export function VitalsStrip({
             'border-b border-neutral-800 px-1 py-1',
           )}
         >
-          <div className="flex items-baseline justify-between">
-            <span className="text-[10px] font-mono uppercase tracking-normal text-cyan-bp">PNI</span>
-            <span className="text-[9px] font-mono text-neutral-500">mmHg</span>
+          <div className="flex items-baseline justify-between -mx-1 -mt-1 bg-cyan-bp px-1 py-0.5">
+            <span className="text-[12px] font-mono uppercase tracking-normal text-black">PNI</span>
+            <span className="text-[10px] font-mono text-black/70">mmHg</span>
           </div>
           <div className="flex h-full min-h-0 flex-col items-center justify-center text-center">
-            <span className="font-mono text-[10px] leading-tight text-cyan-bp">
+            <span className="font-mono text-[2.8rem] font-bold leading-none tabular-nums text-cyan-bp">
               {nibpDisplayValue}
             </span>
           </div>

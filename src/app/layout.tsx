@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Paramedic Monitor",
   description: "Cardiac monitor simulator for paramedic training",
+  icons: { icon: '/logo.png' },
 };
 
 export default function RootLayout({
