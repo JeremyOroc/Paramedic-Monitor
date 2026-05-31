@@ -130,6 +130,7 @@ type DeviceShellProps = {
   onMedBack?: () => void
   isMuted?: boolean
   onToggleMute?: () => void
+  onPatientEvent?: () => void
 }
 
 export function DeviceShell({
@@ -170,6 +171,7 @@ export function DeviceShell({
   onMedBack,
   isMuted = false,
   onToggleMute,
+  onPatientEvent,
 }: DeviceShellProps) {
   const [powerState, setPowerState] = useState<PowerState>('on')
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -235,6 +237,7 @@ export function DeviceShell({
                 onEnter={lock(onEnter)}
                 isMuted={isMuted}
                 onToggleMute={onToggleMute ?? (() => {})}
+                onPatientEvent={onPatientEvent}
               />
             </div>
             <BottomDefibStrip
@@ -470,9 +473,10 @@ type RightControlClusterProps = {
   onEnter: () => void
   isMuted: boolean
   onToggleMute: () => void
+  onPatientEvent?: () => void
 }
 
-function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleMute }: RightControlClusterProps) {
+function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleMute, onPatientEvent }: RightControlClusterProps) {
   return (
     <div className="relative min-h-0">
       <PhysicalButton
@@ -523,6 +527,7 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Patient event"
+          onClick={onPatientEvent}
           className="absolute right-[8%] bottom-[3%] h-[13%] w-[37%] rounded-[13px] text-[clamp(15px,1.6vw,23px)]"
         >
           💪

@@ -2,6 +2,8 @@
 
 import { getActiveAlarms, type AlarmChannel } from '@/types/vitals'
 import type { MonitorSelection } from '@/types/monitorSelection'
+import { cn } from '@/lib/utils'
+import type { NibpPhase } from '@/hooks/useNibpReading'
 
 import { VitalBox } from './VitalBox'
 
@@ -14,6 +16,8 @@ type VitalsStripProps = {
   activeAlarms?: AlarmChannel[]
   searching?: boolean
   selected?: MonitorSelection
+  nibpPhase?: NibpPhase
+  nibpDisplayValue?: string | number
 }
 
 function toNumber(value: number | string): number {
@@ -30,6 +34,8 @@ export function VitalsStrip({
   activeAlarms,
   searching = true,
   selected,
+  nibpPhase,
+  nibpDisplayValue,
 }: VitalsStripProps) {
   const alarms = activeAlarms ?? getActiveAlarms({
     hr: toNumber(hr),
@@ -49,15 +55,44 @@ export function VitalsStrip({
         selected={selected === 'hrVital'}
         className="flex-1 min-h-0"
       />
-      <VitalBox
-        label="PNI"
-        stackedValues={{ top: bpSys, bottom: bpDia }}
-        unit="mmHg"
-        color="cyanBP"
-        alarming={alarms.includes('bp')}
-        selected={selected === 'nibpVital'}
-        className="flex-1 min-h-0"
-      />
+      {nibpPhase === 'please_wait' || nibpPhase === 'reading' ? (
+        <div
+          className={cn(
+            'flex-1 min-h-0 grid grid-rows-[auto_1fr_auto]',
+            'border-b border-neutral-800 px-1 py-1',
+          )}
+        >
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] font-mono uppercase tracking-normal text-cyan-bp">PNI</span>
+            <span className="text-[9px] font-mono text-neutral-500">mmHg</span>
+          </div>
+          <div className="flex h-full min-h-0 flex-col items-center justify-center text-center">
+            <span className="font-mono text-[10px] leading-tight text-cyan-bp">
+              {nibpDisplayValue}
+            </span>
+          </div>
+        </div>
+      ) : nibpPhase === 'counting' || nibpPhase === 'settled' ? (
+        <VitalBox
+          label="PNI"
+          value={nibpDisplayValue}
+          unit="mmHg"
+          color="cyanBP"
+          alarming={alarms.includes('bp')}
+          selected={selected === 'nibpVital'}
+          className="flex-1 min-h-0"
+        />
+      ) : (
+        <VitalBox
+          label="PNI"
+          stackedValues={{ top: bpSys, bottom: bpDia }}
+          unit="mmHg"
+          color="cyanBP"
+          alarming={alarms.includes('bp')}
+          selected={selected === 'nibpVital'}
+          className="flex-1 min-h-0"
+        />
+      )}
       <VitalBox
         label="EtCO2"
         value={etco2}

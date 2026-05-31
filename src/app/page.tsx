@@ -23,6 +23,7 @@ import { EventLogModal, type EventLogEntry } from '@/components/monitor/EventLog
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
+import { useNibpReading } from '@/hooks/useNibpReading'
 import { DEFAULT_VITALS, type PatientMode, type Rhythm } from '@/types/vitals'
 import { clampAge, toggleSex, type PatientSex } from '@/types/patientInfo'
 import type { MonitorSelection } from '@/types/monitorSelection'
@@ -116,6 +117,7 @@ export default function MonitorPage() {
     },
   })
   const alarm = useAlarm(confirmed, isPoweredOn, isMuted)
+  const { phase: nibpPhase, displayValue: nibpDisplayValue, handlePatientEvent } = useNibpReading(confirmed.bp_sys)
 
   useEffect(() => {
     if (defib.state === 'charging' && !isMuted) {
@@ -418,6 +420,8 @@ export default function MonitorPage() {
               activeAlarms={alarm.activeAlarms}
               searching={false}
               selected={activeSelectedControl}
+              nibpPhase={nibpPhase}
+              nibpDisplayValue={nibpDisplayValue}
             />
           )
         }
@@ -555,6 +559,7 @@ export default function MonitorPage() {
         twelveLeadActive={isTwelveLead}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
+        onPatientEvent={handlePatientEvent}
         onPowerOn={() => {
           setIsTimerRunning(true)
           setIsPoweredOn(true)
