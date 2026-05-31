@@ -46,6 +46,9 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Medication event log back fix — COMPLETE:**
+  - [x] Med "BACK" now closes the open event log first (staying in medication mode), then exits medication mode on the next press — restoring pre-refactor two-step behavior
+  - [x] Fixed in `useMonitorController` `exitMedicationMode`; controller test added
 - [x] **ECG renderer dimension self-heal fix — COMPLETE:**
   - [x] Fixed the ECG trace being erased in chunks (until a manual window resize) when the cached canvas size drifted from the real size after a layout change
   - [x] `resize()` is idempotent + client-size-rounded; the loop self-heals size a few times per second instead of relying solely on `ResizeObserver`

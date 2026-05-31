@@ -222,4 +222,23 @@ describe('useMonitorController', () => {
     expect(result.current.selectedControl).toBe('dateTime')
     expect(result.current.bottomStatusVisible).toBe(true)
   })
+
+  it('closes the medication event log on Back before exiting medication mode', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTreatment())
+    expect(result.current.medicationMode).toBe(true)
+
+    act(() => result.current.onMedInfo())
+    expect(result.current.eventLogOpen).toBe(true)
+
+    // First Back closes the log but stays in medication mode.
+    act(() => result.current.onMedBack())
+    expect(result.current.eventLogOpen).toBe(false)
+    expect(result.current.medicationMode).toBe(true)
+
+    // Second Back exits medication mode.
+    act(() => result.current.onMedBack())
+    expect(result.current.medicationMode).toBe(false)
+  })
 })

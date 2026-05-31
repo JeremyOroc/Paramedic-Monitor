@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-05-31] [monitor] — Fix unable to close the medication event log
+
+- The med "BACK" key (`onMedBack` → `exitMedicationMode`) cleared `medicationMode` but left
+  `eventLogOpen` true, trapping the user in the event log with no soft keys to exit.
+- Restored the pre-refactor two-step Back in `useMonitorController`: `exitMedicationMode` now closes
+  the event log first when it is open, then exits medication mode on the next press.
+- Added a `useMonitorController` test for open-log → Back closes log (still in meds) → Back exits.
+
 ## [2026-05-31] [monitor] — Fix ECG waveform erased in chunks until a window resize
 
 - `startRenderer` (`src/lib/ecg/renderer.ts`) cached the canvas size from `ResizeObserver` only and

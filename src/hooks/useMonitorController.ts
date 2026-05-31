@@ -226,6 +226,9 @@ function reducer(
     case 'nextMedicationPage':
       return { ...state, medicationPage: NEXT_MED_PAGE[state.medicationPage] }
     case 'exitMedicationMode':
+      // Two-step Back: close the event log first if it's open, otherwise leave
+      // medication mode. Mirrors the pre-refactor handleMedBack behavior.
+      if (state.eventLogOpen) return { ...state, eventLogOpen: false }
       return { ...state, medicationMode: false }
     case 'openEventLog':
       return { ...state, eventLogOpen: true }
