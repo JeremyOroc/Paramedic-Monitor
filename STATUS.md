@@ -179,6 +179,16 @@
   - [x] Enter is inert except on the minus toggle, which hides/restores the bottom status/defib/CPR panel
   - [x] When the bottom panel is hidden, the main waveform area expands to ECG / EtCO2 / SpO2 while right-side vitals remain in place
   - [x] Tests added for shell nav handlers, monitor selection flow, bottom-panel toggle, vital selection styling, and graph metadata
+- [x] **NIBP reading animation (Patient Event button) — COMPLETE:**
+  - [x] Patient Event button (💪, outer shell right cluster) now triggers a 5-phase NIBP reading sequence
+  - [x] Phase flow: idle → Please Wait (3s) → Reading in Progress (0.5s) → ascending count 0→bpSys+30 (~8s) → settled at bpSys indefinitely
+  - [x] Ascending sequence pre-generated via Fisher-Yates shuffle of evenly-distributed steps; guarantees exact endpoints and ~333ms per step
+  - [x] Clicking during any active phase cancels and returns to idle (showing confirmed store bp_sys/bp_dia again)
+  - [x] Clicking during settled phase starts a fresh reading
+  - [x] `useNibpReading` hook (new) manages all phase transitions and timer cleanup
+  - [x] `VitalsStrip` conditionally renders text slot (please_wait/reading) or single-value VitalBox (counting/settled) or normal stacked VitalBox (idle)
+  - [x] `DeviceShell` wired with `onPatientEvent` prop threading through `RightControlCluster`
+  - [x] Tests: 14 passing — full phase transition coverage, cancel scenarios, endpoint/monotone sequence validation for low/normal/high BP values
 
 ---
 

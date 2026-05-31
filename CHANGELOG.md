@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-05-31] [monitor] — NIBP reading animation via Patient Event button
+
+- Created `src/hooks/useNibpReading.ts`: 5-phase state machine (idle → please_wait → reading → counting → settled) with pre-generated ascending sequence using Fisher-Yates shuffle for randomised-feeling ascent
+- Wired `onPatientEvent` prop through `DeviceShell` → `RightControlClusterProps` → Patient Event `PhysicalButton` (previously had no onClick)
+- Updated `VitalsStrip` to accept `nibpPhase` and `nibpDisplayValue` props; PNI box now renders conditionally: text slot during please_wait/reading, single-value VitalBox during counting/settled, normal stacked VitalBox when idle
+- Updated `page.tsx` to call `useNibpReading(confirmed.bp_sys)`, pass `onPatientEvent` to DeviceShell, and pass `nibpPhase`/`nibpDisplayValue` to VitalsStrip
+- Created `src/hooks/__tests__/useNibpReading.test.ts`: 14 tests covering all phase transitions, cancel mid-sequence, settled→new reading, and sequence endpoint/monotone validation for bpSys 5/60/110/180
+
+---
+
 ## [2026-05-30] [monitor] — Document torsades ECG implementation plan
 
 - Recorded the torsades reference-analysis plan from `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov`
