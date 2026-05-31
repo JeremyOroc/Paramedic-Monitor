@@ -46,6 +46,9 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Page composition cleanup — COMPLETE:**
+  - [x] Extracted `useMonitorClock` (ticking clock) and `useDefibAudio` (charge/shock-ready beeps) from `MonitorPage`
+  - [x] `MonitorPage` is now pure wiring (selectors, hooks, render tree); hook tests added; behavior unchanged
 - [x] **Defib state machine split — COMPLETE:**
   - [x] Added pure `src/lib/defib/defibMachine.ts` (state enum, guards, energy math, charge/shock transition classifiers)
   - [x] `useDefibSequence` keeps timers/rAF/audio, delegates decisions to the machine; `DefibState` re-exported for compat

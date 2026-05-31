@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -20,40 +19,15 @@ import { EventLogModal } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
+import { useMonitorClock } from '@/hooks/useMonitorClock'
+import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
-import { formatMonitorClock } from '@/lib/monitorClock'
-import {
-  setAudioMuted,
-  playChargeBeep,
-  pauseChargeBeep,
-  playShockReadyBeep,
-  pauseShockReadyBeep,
-} from '@/lib/audio'
+import { setAudioMuted } from '@/lib/audio'
 
 export default function MonitorPage() {
-  const [now, setNow] = useState<Date | null>(null)
-
-  const timeZone = (() => {
-    try {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
-      return tz || 'America/Toronto'
-    } catch {
-      return 'America/Toronto'
-    }
-  })()
-
-  useEffect(() => {
-    const firstTickId = setTimeout(() => setNow(new Date()), 0)
-    const id = setInterval(() => setNow(new Date()), 1000)
-    return () => {
-      clearTimeout(firstTickId)
-      clearInterval(id)
-    }
-  }, [])
-
-  const { date, time } = formatMonitorClock(now, timeZone)
+  const { date, time } = useMonitorClock()
 
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
@@ -79,26 +53,7 @@ export default function MonitorPage() {
   })
   const alarm = useAlarm(confirmed, controller.isPoweredOn, controller.isMuted)
 
-  useEffect(() => {
-    if (defib.state === 'charging' && !controller.isMuted) {
-      playChargeBeep()
-      return pauseChargeBeep
-    }
-    pauseChargeBeep()
-    return undefined
-  }, [defib.state, controller.isMuted])
-
-  useEffect(() => {
-    if (
-      (defib.state === 'charged' || defib.state === 'shock_advised') &&
-      !controller.isMuted
-    ) {
-      playShockReadyBeep()
-      return pauseShockReadyBeep
-    }
-    pauseShockReadyBeep()
-    return undefined
-  }, [defib.state, controller.isMuted])
+  useDefibAudio(defib.state, controller.isMuted)
 
   const screen = (
     <div className="relative h-full w-full">

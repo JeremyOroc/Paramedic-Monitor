@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-05-31] [monitor] — Simplify page composition
+
+- Extracted the ticking clock into `src/hooks/useMonitorClock.ts` and the two defib beep effects
+  into `src/hooks/useDefibAudio.ts`. `MonitorPage` is now pure wiring (store selectors, hooks,
+  render tree) with no inline clock timers or audio effects.
+- Added focused tests for both hooks; page behavior unchanged.
+
 ## [2026-05-31] [defib] — Split defib sequence reducer
 
 - Added `src/lib/defib/defibMachine.ts`: the pure `DefibState` enum, `SHOCKABLE_RHYTHMS`, phase
