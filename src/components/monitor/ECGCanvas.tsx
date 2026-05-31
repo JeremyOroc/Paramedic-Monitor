@@ -32,6 +32,7 @@ export function ECGCanvas({ rhythm, hr, className }: ECGCanvasProps) {
       ampJitter: 0.05,
       cycleJitter: 0.03,
       getWaveform: pick,
+      getSignalKey: () => rhythmRef.current,
       getCycleMs: () =>
         ECG_RHYTHMS[rhythmRef.current].cycleMs ?? 60000 / Math.max(20, hrRef.current),
     })

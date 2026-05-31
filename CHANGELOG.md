@@ -5,6 +5,53 @@
 
 ---
 
+## [2026-05-31] [monitor] — Retune torsades to exaggerated oval packets
+
+- Retuned the shared torsades/VFib polymorphic waveform toward the new hand-drawn and pink-strip
+  reference: small humps lead into larger rounded oval loops, then shrink back down in repeated
+  spindle packets.
+- Updated the torsades plan to replace the previous isolated-complex emphasis with an exaggerated
+  continuous oval-loop packet contract.
+- Added tests to guard the small-to-large-to-small packet envelope, active low-amplitude humps,
+  rounded oval morphology, and cycle-to-cycle variant behavior.
+
+## [2026-05-31] [monitor] — Make VFib use torsades-style pattern
+
+- Changed VFib to use the current torsades-style polymorphic waveform pattern instead of the old
+  coarse VFib pads trace.
+- VFib now shares the 15-beat/3900ms generated template family with torsades, including
+  cycle-to-cycle variants, active first-pass waveform content, low-amplitude waist activity, and
+  varied complex sharpness.
+- Updated rhythm tests so VFib is guarded by the torsades-style waveform contract.
+
+## [2026-05-31] [monitor] — Fix ECG rhythm-switch compression artifact
+
+- Fixed the torsades → NSR transition artifact where the old torsades waveform could be drawn at
+  the new NSR cycle speed, creating a brief rapid up/down buzz.
+- `startRenderer` now accepts a signal key and refreshes the active waveform immediately when the
+  rhythm/channel shape changes, resetting phase so waveform data and cycle timing switch together.
+- Wired signal keys through ECG, 12-lead cells, and secondary channels; added a renderer regression
+  test for immediate waveform refresh on signal-key changes.
+
+## [2026-05-31] [monitor] — Implement torsades ECG reference tuning
+
+- Rebuilt torsades from the saved reference plan for `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov`
+  and the 2026-05-30 Pads screenshots.
+- Replaced the compressed 12-beat/300ms torsades strip with a multi-second organized polymorphic
+  VT template: 15 wide complexes over 3.9s, waxing/waning twist envelope, low-amplitude waist,
+  rounded imperfect complexes, and deterministic beat-to-beat variation.
+- Added cycle-to-cycle torsades variants so the rhythm no longer repeats the same overall pattern:
+  generated templates rotate through multiple envelope families while preserving the organized
+  polymorphic VT character.
+- Kept the low-amplitude waist alive with small residual torsades waves, avoiding a long flat
+  stretch while still preserving the visible wax/wane pattern.
+- Added per-complex sharpness variation from the 2026-05-31 reference crop: some complexes now
+  have faster upstrokes, sharper down-turns, rounded exits, or a small bottom hook before rising;
+  the first visible torsades pass also starts with more activity before the early spike.
+- Added `TORSADES_TUNING` and rhythm tests for beat rate/count, amplitude-envelope variation,
+  waist depth, organized zero-crossing bounds, non-artifact contour, per-cycle pattern changes,
+  first-pass activity, and variable segment sharpness.
+
 ## [2026-05-30] [monitor] — Document torsades ECG implementation plan
 
 - Recorded the torsades reference-analysis plan from `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov`

@@ -68,6 +68,10 @@ export function SecondaryChannel({
       ampJitter: isEtco2 ? 0.05 : 0.07,
       cycleJitter: isEtco2 ? 0.06 : 0.03,
       getWaveform: pick,
+      getSignalKey: () =>
+        channelRef.current === 'etco2'
+          ? `${channelRef.current}:${etcoShapeRef.current}`
+          : `${channelRef.current}:${spoShapeRef.current}`,
       getCycleMs: () => {
         const def = pick()
         if (channelRef.current === 'etco2') return def.cycleMs ?? RESP_CYCLE_MS

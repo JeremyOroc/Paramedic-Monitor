@@ -35,6 +35,7 @@ export function LeadCell({ label, rhythm, hr, className }: LeadCellProps) {
       ampJitter: 0.06,
       cycleJitter: 0.03,
       getWaveform: pick,
+      getSignalKey: () => `${rhythmRef.current}:${label}`,
       getCycleMs: () => pick().cycleMs ?? 60000 / Math.max(20, hrRef.current),
     })
   }, [label])
