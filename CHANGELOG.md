@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-05-31] [waveforms] — Extract waveform renderer hook
+
+- Added `src/hooks/useWaveformRenderer.ts` wrapping the shared React glue: the `<canvas>` ref, the
+  latest-reactive-inputs ref synced every render, and the `startRenderer` start/cleanup lifecycle.
+- `ECGCanvas`, `LeadCell`, and `SecondaryChannel` now call the hook instead of repeating the
+  ref-sync effect + `startRenderer` boilerplate; each keeps its own per-view options (color, sweep,
+  amplitude, jitter, getWaveform/getSignalKey/getCycleMs).
+- Rhythm generators (`rhythms.ts`) and renderer math (`renderer.ts`) are untouched — rendered
+  waveforms are unchanged.
+- Added a hook test (mount start, latest-value reads without restart, deps-change restart, unmount
+  cleanup).
+
 ## [2026-05-31] [monitor] — Extract shared soft-key model
 
 - Added `src/lib/monitor/medications.ts` (`MED_PAGES`, `NEXT_MED_PAGE`, `MED_ABBREVS`,

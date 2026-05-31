@@ -46,6 +46,10 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Waveform renderer hook refactor — COMPLETE:**
+  - [x] Added `src/hooks/useWaveformRenderer.ts` (canvas ref + latest-value sync + `startRenderer` lifecycle)
+  - [x] `ECGCanvas`, `LeadCell`, `SecondaryChannel` rewired to the hook; per-view options unchanged
+  - [x] Generators/renderer math untouched; rendered waveforms unchanged; hook test added
 - [x] **Shared soft-key model refactor — COMPLETE:**
   - [x] Added `src/lib/monitor/medications.ts` + `src/lib/monitor/softKeys.ts` as the single source of truth for medication pages and the 7 per-view physical soft keys
   - [x] Removed duplicate medication tables from `DeviceShell`/`LeftSidebar` and the duplicate next-page map from `useMonitorController`
