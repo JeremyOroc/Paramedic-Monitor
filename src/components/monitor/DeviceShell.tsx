@@ -209,16 +209,17 @@ export function DeviceShell({
 
   const [powerState, setPowerState] = useState<PowerState>('on')
   const [jumpscareActive, setJumpscareActive] = useState(false)
+  const [goldenFreddyActive, setGoldenFreddyActive] = useState(false)
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 1/1000 per second jumpscare while monitor is on and not already playing
   useEffect(() => {
-    if (powerState !== 'on' || jumpscareActive) return
+    if (powerState !== 'on' || jumpscareActive || goldenFreddyActive) return
     const id = setInterval(() => {
       if (Math.random() < 1 / 1000) setJumpscareActive(true)
     }, 1000)
     return () => clearInterval(id)
-  }, [powerState, jumpscareActive])
+  }, [powerState, jumpscareActive, goldenFreddyActive])
 
   // Auto-dismiss after 5 seconds; also cancel immediately on power-off
   useEffect(() => {
@@ -231,6 +232,26 @@ export function DeviceShell({
     const id = setTimeout(() => setJumpscareActive(false), duration)
     return () => clearTimeout(id)
   }, [jumpscareActive, powerState])
+
+  // 1/32768 per second golden freddy — any power state, cancels its_me
+  useEffect(() => {
+    if (goldenFreddyActive) return
+    const id = setInterval(() => {
+      if (Math.random() < 1 / 32768) {
+        setJumpscareActive(false)
+        setGoldenFreddyActive(true)
+      }
+    }, 1000)
+    return () => clearInterval(id)
+  }, [goldenFreddyActive])
+
+  // Auto-dismiss golden freddy after 750–3000ms
+  useEffect(() => {
+    if (!goldenFreddyActive) return
+    const duration = 750 + Math.random() * 2250
+    const id = setTimeout(() => setGoldenFreddyActive(false), duration)
+    return () => clearTimeout(id)
+  }, [goldenFreddyActive])
 
   // During a 12-lead capture every control except Back is inert: handlers become
   // no-ops and the defib row is fully disabled. Back stays live so the user can
@@ -316,6 +337,16 @@ export function DeviceShell({
                         className="h-full w-full object-cover"
                       />
                       <audio src="/audio/its_me.mp3" autoPlay />
+                    </div>
+                  )}
+                  {goldenFreddyActive && (
+                    <div className="absolute inset-0 z-[60] overflow-hidden bg-black">
+                      <video
+                        src="/videos/golden_freddy.mp4"
+                        autoPlay
+                        playsInline
+                        className="h-full w-full object-cover"
+                      />
                     </div>
                   )}
                   {screenModal}
