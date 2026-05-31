@@ -418,9 +418,14 @@ function PowerButton({ powerState, onToggle }: PowerButtonProps) {
 }
 
 function BootScreen() {
-  const [prankCombo] = useState<1 | 2 | null>(() =>
-    Math.random() < 1 / 3 ? (Math.random() < 0.5 ? 1 : 2) : null
-  )
+  const [prankCombo] = useState<1 | 2 | 'golden' | null>(() => {
+    const r = Math.random()
+    if (r < 0.25) return null
+    if (r < 0.50) return 1
+    if (r < 0.75) return 2
+    return 'golden'
+  })
+  const [goldenVisible, setGoldenVisible] = useState(true)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
 
@@ -447,9 +452,15 @@ function BootScreen() {
     }
   }, [prankCombo])
 
+  useEffect(() => {
+    if (prankCombo !== 'golden') return
+    const id = setTimeout(() => setGoldenVisible(false), 2000)
+    return () => clearTimeout(id)
+  }, [prankCombo])
+
   return (
     <div className="relative h-full w-full bg-black">
-      {prankCombo !== null && (
+      {(prankCombo === 1 || prankCombo === 2) && (
         <>
           <video
             ref={videoRef}
@@ -464,6 +475,14 @@ function BootScreen() {
             src={prankCombo === 1 ? '/audio/jumpscare_fnaf2.mp3' : '/audio/jumpscare_fnaf1.mp3'}
           />
         </>
+      )}
+      {prankCombo === 'golden' && goldenVisible && (
+        <video
+          src="/videos/golden_freddy.mp4"
+          autoPlay
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       )}
       <span className="absolute bottom-[8%] right-[6%] select-none font-mono text-[clamp(18px,2.4vw,36px)] font-black text-white">
         WAGAMI
