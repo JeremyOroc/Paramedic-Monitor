@@ -46,6 +46,10 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Defib state machine split — COMPLETE:**
+  - [x] Added pure `src/lib/defib/defibMachine.ts` (state enum, guards, energy math, charge/shock transition classifiers)
+  - [x] `useDefibSequence` keeps timers/rAF/audio, delegates decisions to the machine; `DefibState` re-exported for compat
+  - [x] Reducer-level tests added; charge/analyze/shock/audio behavior unchanged
 - [x] **Waveform renderer hook refactor — COMPLETE:**
   - [x] Added `src/hooks/useWaveformRenderer.ts` (canvas ref + latest-value sync + `startRenderer` lifecycle)
   - [x] `ECGCanvas`, `LeadCell`, `SecondaryChannel` rewired to the hook; per-view options unchanged

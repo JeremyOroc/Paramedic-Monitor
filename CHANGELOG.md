@@ -5,6 +5,17 @@
 
 ---
 
+## [2026-05-31] [defib] — Split defib sequence reducer
+
+- Added `src/lib/defib/defibMachine.ts`: the pure `DefibState` enum, `SHOCKABLE_RHYTHMS`, phase
+  durations / energy step, control guards (`canAnalyse`/`canCharge`/`canShock`/`canAdjustEnergy`),
+  energy math (`resolveEnergy`/`energyUp`/`energyDown` with patient-mode re-base), and the
+  charge/shock transition classifiers.
+- `useDefibSequence` is now a thin wrapper that keeps the timed phases (`setTimeout` + `rAF`) and
+  audio cues but delegates all state decisions and energy math to the machine. `DefibState` is
+  re-exported from the hook so existing importers are unchanged.
+- Added reducer-level transition/guard/energy tests; the existing hook behavior tests stay green.
+
 ## [2026-05-31] [waveforms] — Extract waveform renderer hook
 
 - Added `src/hooks/useWaveformRenderer.ts` wrapping the shared React glue: the `<canvas>` ref, the
