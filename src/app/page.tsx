@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -15,70 +15,25 @@ import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal, PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
 import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
-import {
-  PatientInfoPanel,
-  type PatientInfoField,
-} from '@/components/monitor/PatientInfoPanel'
-import { EventLogModal, type EventLogEntry } from '@/components/monitor/EventLogModal'
+import { PatientInfoPanel } from '@/components/monitor/PatientInfoPanel'
+import { EventLogModal } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
+import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
-import { DEFAULT_VITALS, type PatientMode, type Rhythm } from '@/types/vitals'
-import { clampAge, toggleSex, type PatientSex } from '@/types/patientInfo'
-import type { MonitorSelection } from '@/types/monitorSelection'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { formatMonitorClock } from '@/lib/monitorClock'
-import { setAudioMuted, playChargeBeep, pauseChargeBeep, playShockReadyBeep, pauseShockReadyBeep } from '@/lib/audio'
-
-type MonitorView = 'main' | '12lead'
-type SecondaryChannel = 'spo2' | 'etco2'
-type CaptureState = 'idle' | 'acquiring' | 'result'
-
-// Time for the "Acquiring 12-Lead" progress bar to fill before the printout shows.
-const ACQUIRE_MS = 4000
-
-const TOP_SELECTIONS: MonitorSelection[] = [
-  'dateTime',
-  'patientMode',
-  'beacon',
-  'battery',
-  'hrVital',
-  'nibpVital',
-  'etco2Vital',
-  'spo2Vital',
-]
+import {
+  setAudioMuted,
+  playChargeBeep,
+  pauseChargeBeep,
+  playShockReadyBeep,
+  pauseShockReadyBeep,
+} from '@/lib/audio'
 
 export default function MonitorPage() {
-  const [view, setView] = useState<MonitorView>('main')
-  const [secondary, setSecondary] = useState<SecondaryChannel>('spo2')
-  const [patientMode, setPatientMode] = useState<PatientMode>(DEFAULT_VITALS.patient_mode)
-  const [patientModalOpen, setPatientModalOpen] = useState(false)
-  const [patientModeHighlightedIndex, setPatientModeHighlightedIndex] = useState(0)
-  const [callerInfoOpen, setCallerInfoOpen] = useState(false)
-  const [patientInfoOpen, setPatientInfoOpen] = useState(false)
-  const [selectedField, setSelectedField] = useState<PatientInfoField>('age')
-  const [editing, setEditing] = useState(false)
-  const [editValue, setEditValue] = useState<number | PatientSex | null>(null)
-  const [isTimerRunning, setIsTimerRunning] = useState(true)
-  const [medicationMode, setMedicationMode] = useState(false)
-  const [medicationPage, setMedicationPage] = useState<1 | 2 | 3>(1)
-  const [eventLog, setEventLog] = useState<EventLogEntry[]>([])
-  const [eventLogOpen, setEventLogOpen] = useState(false)
-  const [flashedMed, setFlashedMed] = useState<string | null>(null)
-  const [isPoweredOn, setIsPoweredOn] = useState(true)
-  const [isMuted, setIsMuted] = useState(false)
-  const [selectedControl, setSelectedControl] = useState<MonitorSelection>('dateTime')
-  const [bottomStatusVisible, setBottomStatusVisible] = useState(true)
-  const [jumpscareActive, setJumpscareActive] = useState(false)
-  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [now, setNow] = useState<Date | null>(null)
-  const [captureState, setCaptureState] = useState<CaptureState>('idle')
-  const [capturedRhythm, setCapturedRhythm] = useState<Rhythm>(DEFAULT_VITALS.rhythm)
-  const [capturedHr, setCapturedHr] = useState<number>(DEFAULT_VITALS.hr)
-  const [lastCapture, setLastCapture] = useState<{ rhythm: Rhythm; hr: number } | null>(null)
-  const [printPreviewOpen, setPrintPreviewOpen] = useState(false)
-  const captureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const timeZone = (() => {
     try {
@@ -99,7 +54,6 @@ export default function MonitorPage() {
   }, [])
 
   const { date, time } = formatMonitorClock(now, timeZone)
-  const sessionTimer = useSessionTimer(isTimerRunning)
 
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
@@ -107,257 +61,58 @@ export default function MonitorPage() {
   const patientInfo = useMonitorStore((s) => s.patientInfo)
   const setPatientAge = useMonitorStore((s) => s.setPatientAge)
   const setPatientSex = useMonitorStore((s) => s.setPatientSex)
+
+  const controller = useMonitorController({
+    confirmed,
+    patientInfo,
+    setPatientAge,
+    setPatientSex,
+  })
+  const sessionTimer = useSessionTimer(controller.isTimerRunning)
+
   const defib = useDefibSequence({
-    patientMode,
+    patientMode: controller.patientMode,
     rhythm: confirmed.rhythm,
     onAnalyzeResult(result) {
-      const name = result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock'
-      setEventLog((prev) => [...prev, { name, time: sessionTimer }])
+      controller.onAnalyzeResult(result, sessionTimer)
     },
   })
-  const alarm = useAlarm(confirmed, isPoweredOn, isMuted)
+  const alarm = useAlarm(confirmed, controller.isPoweredOn, controller.isMuted)
 
   useEffect(() => {
-    if (defib.state === 'charging' && !isMuted) {
+    if (defib.state === 'charging' && !controller.isMuted) {
       playChargeBeep()
       return pauseChargeBeep
     }
     pauseChargeBeep()
     return undefined
-  }, [defib.state, isMuted])
+  }, [defib.state, controller.isMuted])
 
   useEffect(() => {
-    if ((defib.state === 'charged' || defib.state === 'shock_advised') && !isMuted) {
+    if (
+      (defib.state === 'charged' || defib.state === 'shock_advised') &&
+      !controller.isMuted
+    ) {
       playShockReadyBeep()
       return pauseShockReadyBeep
     }
     pauseShockReadyBeep()
     return undefined
-  }, [defib.state, isMuted])
-
-  function handleToggleMute() {
-    setIsMuted((prev) => {
-      setAudioMuted(!prev)
-      return !prev
-    })
-  }
-
-  const NEXT_MED_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
-  const isTwelveLead = view === '12lead'
-
-  const selectableControls = useMemo<MonitorSelection[]>(() => {
-    const waveformControls: MonitorSelection[] = []
-
-    if (!isTwelveLead) {
-      const spo2Visible = !bottomStatusVisible || secondary === 'spo2'
-      const etco2Visible = !bottomStatusVisible || secondary === 'etco2'
-
-      if (spo2Visible) waveformControls.push('spo2Scale', 'spo2Label')
-      if (etco2Visible) waveformControls.push('etco2Scale', 'etco2Label')
-      waveformControls.push('ecgGain', 'padsLabel')
-    }
-
-    return [...TOP_SELECTIONS, ...waveformControls, 'bottomStatusToggle']
-  }, [bottomStatusVisible, isTwelveLead, secondary])
-
-  const activeSelectedControl = selectableControls.includes(selectedControl)
-    ? selectedControl
-    : 'dateTime'
-
-  function moveSelectedControl(direction: 1 | -1) {
-    setSelectedControl((current) => {
-      const currentIndex = selectableControls.indexOf(current)
-      const safeIndex = currentIndex === -1 ? 0 : currentIndex
-      return selectableControls[
-        (safeIndex + direction + selectableControls.length) % selectableControls.length
-      ]
-    })
-  }
-
-  function handleSelectionEnter() {
-    if (patientModalOpen) {
-      const mode = PATIENT_MODE_OPTIONS[patientModeHighlightedIndex].value
-      setPatientMode(mode)
-      setPatientModalOpen(false)
-      return
-    }
-    if (activeSelectedControl === 'bottomStatusToggle') {
-      setBottomStatusVisible((visible) => !visible)
-    } else if (activeSelectedControl === 'battery') {
-      setJumpscareActive(true)
-    }
-    if (activeSelectedControl === 'patientMode') {
-      const currentIndex = PATIENT_MODE_OPTIONS.findIndex((o) => o.value === patientMode)
-      setPatientModeHighlightedIndex(currentIndex === -1 ? 0 : currentIndex)
-      setPatientModalOpen(true)
-    }
-  }
-
-  function handleToggleBottomStatus() {
-    setSelectedControl('bottomStatusToggle')
-    setBottomStatusVisible((visible) => !visible)
-  }
-
-  function handleTreatment() {
-    setMedicationMode(true)
-  }
-
-  function handleMedClick(name: string) {
-    setEventLog((prev) => [...prev, { name, time: sessionTimer }])
-    if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
-    setFlashedMed(name)
-    flashTimerRef.current = setTimeout(() => setFlashedMed(null), 400)
-  }
-
-  function handleMedPageChange() {
-    setMedicationPage((p) => NEXT_MED_PAGE[p])
-  }
-
-  function handleMedBack() {
-    setMedicationMode(false)
-  }
-
-  // Patient Info menu (12-lead only): two-step edit driven by the right cluster.
-  // Browse highlights a field; Enter starts editing a draft; arrows change the
-  // draft; Enter commits to the store; Back cancels the edit or closes the panel.
-  function openPatientInfo() {
-    setPatientInfoOpen(true)
-    setSelectedField('age')
-    setEditing(false)
-    setEditValue(null)
-  }
-
-  // 12-lead Capture: freeze the current rhythm/HR, show the "Acquiring" card for
-  // ACQUIRE_MS, then swap the live grid for a static printout. Transient — nothing
-  // is persisted; each press is a fresh capture. Back cancels/dismisses (handleBack).
-  function clearCaptureTimer() {
-    if (captureTimerRef.current) {
-      clearTimeout(captureTimerRef.current)
-      captureTimerRef.current = null
-    }
-  }
-
-  function startCapture() {
-    clearCaptureTimer()
-    setPatientInfoOpen(false)
-    const rhythm = confirmed.rhythm
-    const hr = confirmed.hr
-    setCapturedRhythm(rhythm)
-    setCapturedHr(hr)
-    setCaptureState('acquiring')
-    captureTimerRef.current = setTimeout(() => {
-      captureTimerRef.current = null
-      setCaptureState('result')
-      // Remember the completed capture so the main-view PRINT key can reprint it.
-      setLastCapture({ rhythm, hr })
-    }, ACQUIRE_MS)
-  }
-
-  // Main-view PRINT: bring up the most recent completed 12-lead as a full-screen
-  // printout. Inert until a capture exists. Back dismisses it (handleBack).
-  function handlePrint() {
-    if (!lastCapture) return
-    setPrintPreviewOpen(true)
-  }
-
-  useEffect(() => clearCaptureTimer, [])
-
-  function adjustEditValue(direction: 'up' | 'down') {
-    if (selectedField === 'age') {
-      const delta = direction === 'up' ? 1 : -1
-      setEditValue((v) => clampAge((typeof v === 'number' ? v : patientInfo.age) + delta))
-    } else {
-      setEditValue((v) => toggleSex(v === 'M' || v === 'F' ? v : patientInfo.sex))
-    }
-  }
-
-  function moveSelection(direction: 'up' | 'down') {
-    if (!patientInfoOpen) return
-    if (editing) {
-      // up increments / down decrements the current field's draft
-      adjustEditValue(direction)
-      return
-    }
-    // Two fields only: up highlights Age, down highlights Sex (clamped, no wrap).
-    setSelectedField(direction === 'up' ? 'age' : 'sex')
-  }
-
-  function handleEnter() {
-    if (!patientInfoOpen) return
-    if (!editing) {
-      setEditValue(selectedField === 'age' ? patientInfo.age : patientInfo.sex)
-      setEditing(true)
-      return
-    }
-    // commit the draft to the persisted store
-    if (selectedField === 'age' && typeof editValue === 'number') {
-      setPatientAge(editValue)
-    } else if (selectedField === 'sex' && (editValue === 'M' || editValue === 'F')) {
-      setPatientSex(editValue)
-    }
-    setEditing(false)
-    setEditValue(null)
-  }
-
-  function handleBack() {
-    if (patientModalOpen) {
-      setPatientModalOpen(false)
-      return
-    }
-    if (printPreviewOpen) {
-      // dismiss the reprinted 12-lead, back to the main view
-      setPrintPreviewOpen(false)
-      return
-    }
-    if (editing) {
-      // cancel: discard the draft, stay in the panel (browse)
-      setEditing(false)
-      setEditValue(null)
-      return
-    }
-    if (captureState === 'acquiring') {
-      // cancel the in-progress acquisition — no printout
-      clearCaptureTimer()
-      setCaptureState('idle')
-      return
-    }
-    if (captureState === 'result') {
-      // dismiss the printout, back to the live 12-lead grid
-      setCaptureState('idle')
-      return
-    }
-    if (patientInfoOpen) {
-      setPatientInfoOpen(false)
-      return
-    }
-    clearCaptureTimer()
-    setCaptureState('idle')
-    setView('main')
-  }
-
-  // Values shown in the panel: the draft for the field being edited, else stored.
-  const displayAge =
-    editing && selectedField === 'age' && typeof editValue === 'number'
-      ? editValue
-      : patientInfo.age
-  const displaySex: PatientSex =
-    editing && selectedField === 'sex' && (editValue === 'M' || editValue === 'F')
-      ? editValue
-      : patientInfo.sex
+  }, [defib.state, controller.isMuted])
 
   const screen = (
     <div className="relative h-full w-full">
-      {jumpscareActive && (
+      {controller.jumpscareActive && (
         <div
           className="absolute inset-0 z-50 bg-black"
-          onClick={() => setJumpscareActive(false)}
+          onClick={() => controller.onSetJumpscareActive(false)}
         >
           <video
             src="/videos/chica_jumpscare.mp4"
             autoPlay
             playsInline
             className="h-full w-full object-cover"
-            onEnded={() => setJumpscareActive(false)}
+            onEnded={() => controller.onSetJumpscareActive(false)}
           />
         </div>
       )}
@@ -366,35 +121,35 @@ export default function MonitorPage() {
           <TopStatusBar
             date={date}
             time={time}
-            patientMode={patientMode}
-            patientModeActive={patientModalOpen}
+            patientMode={controller.patientMode}
+            patientModeActive={controller.patientModalOpen}
             batteryPercent={85}
             sessionTimer={sessionTimer}
-            selected={activeSelectedControl}
+            selected={controller.activeSelectedControl}
           />
         }
         subBar={
           <SubBar
-            selected={activeSelectedControl}
-            onToggleBottomStatus={handleToggleBottomStatus}
+            selected={controller.activeSelectedControl}
+            onToggleBottomStatus={controller.onToggleBottomStatus}
           />
         }
         sidebar={
           <LeftSidebar
-            twelveLeadActive={isTwelveLead}
-            etco2Active={secondary === 'etco2'}
-            medicationMode={medicationMode}
-            medicationPage={medicationPage}
-            activeMed={flashedMed}
-            printActive={printPreviewOpen}
+            twelveLeadActive={controller.isTwelveLead}
+            etco2Active={controller.secondary === 'etco2'}
+            medicationMode={controller.medicationMode}
+            medicationPage={controller.medicationPage}
+            activeMed={controller.flashedMed}
+            printActive={controller.printPreviewOpen}
           />
         }
         main={
-          isTwelveLead ? (
+          controller.isTwelveLead ? (
             <TwelveLeadPage rhythm={confirmed.rhythm} hr={confirmed.hr} />
           ) : (
             <WaveformPanel
-              secondaryChannel={secondary}
+              secondaryChannel={controller.secondary}
               rhythm={confirmed.rhythm}
               hr={confirmed.hr}
               spo2={confirmed.spo2}
@@ -402,27 +157,29 @@ export default function MonitorPage() {
               spo2Waveform={confirmed.spo2_waveform}
               etco2Waveform={confirmed.etco2_waveform}
               showApplyElectrodes={false}
-              showAllSecondaryChannels={!bottomStatusVisible}
-              selected={activeSelectedControl}
+              showAllSecondaryChannels={!controller.bottomStatusVisible}
+              selected={controller.activeSelectedControl}
             />
           )
         }
         vitals={
-          ['charge_prompt', 'charging', 'charged', 'delivered'].includes(defib.state) ? null : (
-            <VitalsStrip
-              hr={confirmed.hr}
-              bpSys={confirmed.bp_sys}
-              bpDia={confirmed.bp_dia}
-              etco2={confirmed.etco2}
-              spo2={confirmed.spo2}
-              activeAlarms={alarm.activeAlarms}
-              searching={false}
-              selected={activeSelectedControl}
-            />
-          )
+          ['charge_prompt', 'charging', 'charged', 'delivered'].includes(defib.state)
+            ? null
+            : (
+                <VitalsStrip
+                  hr={confirmed.hr}
+                  bpSys={confirmed.bp_sys}
+                  bpDia={confirmed.bp_dia}
+                  etco2={confirmed.etco2}
+                  spo2={confirmed.spo2}
+                  activeAlarms={alarm.activeAlarms}
+                  searching={false}
+                  selected={controller.activeSelectedControl}
+                />
+              )
         }
         energyColumn={
-          !isTwelveLead ? (
+          !controller.isTwelveLead ? (
             ['charge_prompt', 'charging', 'charged'].includes(defib.state) ? (
               <EnergyScaleColumn
                 progress={defib.progress}
@@ -435,7 +192,7 @@ export default function MonitorPage() {
           ) : null
         }
         bottomBar={
-          isTwelveLead || !bottomStatusVisible ? null : (
+          controller.isTwelveLead || !controller.bottomStatusVisible ? null : (
             <BottomStatusBar
               defibState={defib.state}
               joules={defib.energy}
@@ -447,37 +204,41 @@ export default function MonitorPage() {
         }
       />
       <CallerInfoModal
-        open={callerInfoOpen}
+        open={controller.callerInfoOpen}
         info={callerInfoConfirmed}
-        onClose={() => setCallerInfoOpen(false)}
+        onClose={controller.onCloseCallerInfo}
       />
       <PatientInfoPanel
-        open={patientInfoOpen}
-        age={displayAge}
-        sex={displaySex}
-        selectedField={selectedField}
-        editing={editing}
+        open={controller.patientInfoOpen}
+        age={controller.displayAge}
+        sex={controller.displaySex}
+        selectedField={controller.selectedField}
+        editing={controller.editing}
       />
       <EventLogModal
-        open={eventLogOpen}
-        log={eventLog}
-        onClose={() => setEventLogOpen(false)}
+        open={controller.eventLogOpen}
+        log={controller.eventLog}
+        onClose={controller.onCloseEventLog}
       />
-      {/* Capture overlays take over the entire monitor display; only the
-          physical Back key (on DeviceShell, outside the screen) responds. */}
-      {isTwelveLead && captureState === 'acquiring' && (
+      {controller.isTwelveLead && controller.captureState === 'acquiring' && (
         <div className="absolute inset-0 z-40">
           <AcquiringDialog durationMs={ACQUIRE_MS} />
         </div>
       )}
-      {isTwelveLead && captureState === 'result' && (
+      {controller.isTwelveLead && controller.captureState === 'result' && (
         <div className="absolute inset-0 z-40">
-          <TwelveLeadPrintout rhythm={capturedRhythm} hr={capturedHr} />
+          <TwelveLeadPrintout
+            rhythm={controller.capturedRhythm}
+            hr={controller.capturedHr}
+          />
         </div>
       )}
-      {!isTwelveLead && printPreviewOpen && lastCapture && (
+      {!controller.isTwelveLead && controller.printPreviewOpen && controller.lastCapture && (
         <div className="absolute inset-0 z-40">
-          <TwelveLeadPrintout rhythm={lastCapture.rhythm} hr={lastCapture.hr} />
+          <TwelveLeadPrintout
+            rhythm={controller.lastCapture.rhythm}
+            hr={controller.lastCapture.hr}
+          />
         </div>
       )}
     </div>
@@ -488,101 +249,54 @@ export default function MonitorPage() {
       screen={screen}
       screenModal={
         <PatientModeModal
-          open={patientModalOpen}
-          current={patientMode}
-          highlighted={PATIENT_MODE_OPTIONS[patientModeHighlightedIndex]?.value ?? 'adult'}
-          onSelect={(mode) => {
-            setPatientMode(mode)
-            setPatientModalOpen(false)
-          }}
-          onClose={() => setPatientModalOpen(false)}
+          open={controller.patientModalOpen}
+          current={controller.patientMode}
+          highlighted={
+            PATIENT_MODE_OPTIONS[controller.patientModeHighlightedIndex]?.value ?? 'adult'
+          }
+          onSelect={controller.onSelectPatientMode}
+          onClose={controller.onClosePatientModal}
         />
       }
-        defibState={defib.state}
-        energy={defib.energy}
-        progress={defib.progress}
-        canAnalyse={defib.canAnalyse}
-        canCharge={defib.canCharge}
-        canShock={defib.canShock}
-        canAdjustEnergy={defib.canAdjustEnergy}
-        onAnalyse={() => {
-          defib.onAnalyse()
-        }}
-        onCharge={defib.onCharge}
-        onShock={defib.onShock}
-        onEnergyUp={defib.onEnergyUp}
-        onEnergyDown={defib.onEnergyDown}
-        onTwelveLead={() => setView('12lead')}
-        onToggleEtco2={() =>
-          setSecondary((s) => (s === 'spo2' ? 'etco2' : 'spo2'))
-        }
-        onTreatment={handleTreatment}
-        onLeftAnalyse={() => setCallerInfoOpen(true)}
-        onBack={handleBack}
-        onPatientInfo={openPatientInfo}
-        onCaptureTwelveLead={startCapture}
-        onPrint={handlePrint}
-        captureLock={(isTwelveLead && captureState !== 'idle') || printPreviewOpen}
-        onMoveUp={() => {
-          if (patientModalOpen) {
-            setPatientModeHighlightedIndex(
-              (i) => (i - 1 + PATIENT_MODE_OPTIONS.length) % PATIENT_MODE_OPTIONS.length,
-            )
-          } else if (patientInfoOpen) {
-            moveSelection('up')
-          } else {
-            moveSelectedControl(1)
-          }
-        }}
-        onMoveDown={() => {
-          if (patientModalOpen) {
-            setPatientModeHighlightedIndex(
-              (i) => (i + 1) % PATIENT_MODE_OPTIONS.length,
-            )
-          } else if (patientInfoOpen) {
-            moveSelection('down')
-          } else {
-            moveSelectedControl(-1)
-          }
-        }}
-        onEnter={() => {
-          if (!patientModalOpen && patientInfoOpen) {
-            handleEnter()
-          } else {
-            handleSelectionEnter()
-          }
-        }}
-        twelveLeadActive={isTwelveLead}
-        isMuted={isMuted}
-        onToggleMute={handleToggleMute}
-        onPowerOn={() => {
-          setIsTimerRunning(true)
-          setIsPoweredOn(true)
-        }}
-        onPowerOff={() => {
-          setIsTimerRunning(false)
-          setIsPoweredOn(false)
-          setIsMuted(false)
-          setAudioMuted(false)
-          defib.reset()
-          setEventLog([])
-          setLastCapture(null)
-          setPrintPreviewOpen(false)
-          setMedicationMode(false)
-          setMedicationPage(1)
-          setFlashedMed(null)
-          setPatientModalOpen(false)
-          setCallerInfoOpen(false)
-          setEventLogOpen(false)
-          setSelectedControl('dateTime')
-          setBottomStatusVisible(true)
-        }}
-        medicationMode={medicationMode}
-        medicationPage={medicationPage}
-        onMedClick={handleMedClick}
-        onMedPageChange={handleMedPageChange}
-        onMedInfo={() => setEventLogOpen(true)}
-        onMedBack={handleMedBack}
+      defibState={defib.state}
+      energy={defib.energy}
+      progress={defib.progress}
+      canAnalyse={defib.canAnalyse}
+      canCharge={defib.canCharge}
+      canShock={defib.canShock}
+      canAdjustEnergy={defib.canAdjustEnergy}
+      onAnalyse={defib.onAnalyse}
+      onCharge={defib.onCharge}
+      onShock={defib.onShock}
+      onEnergyUp={defib.onEnergyUp}
+      onEnergyDown={defib.onEnergyDown}
+      onTwelveLead={controller.onTwelveLead}
+      onToggleEtco2={controller.onToggleEtco2}
+      onTreatment={controller.onTreatment}
+      onLeftAnalyse={controller.onLeftAnalyse}
+      onBack={controller.onBack}
+      onPatientInfo={controller.onPatientInfo}
+      onCaptureTwelveLead={controller.onCaptureTwelveLead}
+      onPrint={controller.onPrint}
+      captureLock={controller.captureLock}
+      onMoveUp={controller.onMoveUp}
+      onMoveDown={controller.onMoveDown}
+      onEnter={controller.onEnter}
+      twelveLeadActive={controller.isTwelveLead}
+      isMuted={controller.isMuted}
+      onToggleMute={controller.onToggleMute}
+      onPowerOn={controller.onPowerOn}
+      onPowerOff={() => {
+        controller.onPowerOff()
+        defib.reset()
+        setAudioMuted(false)
+      }}
+      medicationMode={controller.medicationMode}
+      medicationPage={controller.medicationPage}
+      onMedClick={(name) => controller.onMedClick(name, sessionTimer)}
+      onMedPageChange={controller.onMedPageChange}
+      onMedInfo={controller.onMedInfo}
+      onMedBack={controller.onMedBack}
     />
   )
 }

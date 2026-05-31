@@ -46,6 +46,11 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Monitor interaction controller refactor — COMPLETE:**
+  - [x] Extracted monitor-page local UI state into `useMonitorController`, backed by a reducer
+  - [x] Controller owns view/channel mode, modal state, patient-info editing, medication log/flash, mute/power flags, selection cursor, 12-lead capture, latest-print preview, and Back precedence
+  - [x] `MonitorPage` now focuses on rendering/wiring while keeping defib sequence, alarms, session timer, and screen composition in place
+  - [x] Tests added for controller initial state, selection toggle, patient-info drafts, capture timers, Back precedence, and power-off cleanup
 - [x] **Vitals alarm system — COMPLETE:**
   - [x] Confirmed client thresholds: HR <40/>140 bpm; BP systolic <90/>200 mmHg; BP diastolic <25/>225 mmHg; SpO2 <90%; no EtCO2 threshold
   - [x] `getActiveAlarms` centralizes alarm evaluation for HR, BP, and SpO2

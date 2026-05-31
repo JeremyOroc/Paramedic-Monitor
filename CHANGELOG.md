@@ -5,6 +5,17 @@
 
 ---
 
+## [2026-05-31] [monitor] — Extract monitor interaction controller
+
+- Moved monitor-page interaction state into `useMonitorController`, backed by a reducer, while
+  keeping screen rendering, defib wiring, alarms, and session timing in `MonitorPage`.
+- Centralized 12-lead capture, print preview, patient-info editing, medication events, modal
+  state, mute/power flags, selected-control navigation, and Back precedence behind the controller.
+- Added direct controller tests for initial state, selection toggling, patient-info drafts,
+  capture timers, Back precedence, and power-off cleanup.
+- Kept `useAlarm` backward-compatible for existing tests/callers by defaulting optional power/mute
+  flags to powered-on and unmuted.
+
 ## [2026-05-31] [monitor] — Retune torsades to exaggerated oval packets
 
 - Retuned the shared torsades/VFib polymorphic waveform toward the new hand-drawn and pink-strip
