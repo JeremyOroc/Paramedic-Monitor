@@ -10,6 +10,7 @@ import MonitorPage from '../page'
 describe('MonitorPage — print latest 12-lead', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
+    window.history.pushState({}, '', '/?dev=1') // bypass the dispatch lock gate
     vi.useFakeTimers()
   })
 

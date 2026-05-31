@@ -379,6 +379,24 @@ snapshot of the current state. Confirmed behavior:
 
 **Milestone:** Clicking Adult label shows mode picker. BP animation plays before numbers appear.
 
+**Requirement change (2026-05-31) — Dispatch lock + countdown startup gate:**
+Supersedes the earlier "power button is local only / never gates the monitor UI"
+note (Phase 3). Normal users now boot the monitor **locked-off**; the power
+button is inert until a drill gate is satisfied.
+- The admin caller-info **Send** doubles as the dispatch signal. A new
+  whole-minutes "Dispatch countdown" field on the admin caller-info form sets the
+  ETA. The **first** Send arms the lock + countdown and pushes caller info; later
+  Sends only update content. Admin **Reset** = full reset to locked-off.
+- Locked screen shows caller info + a counting-down MM:SS timer. Unlock order:
+  Acknowledge (immediate) → countdown 0 → Arrival → power unlocks. Transport is
+  enabled only after power-on. Acknowledge/Arrival/Transport stamp **EST**
+  wall-clock time and are merged into the event log with meds/shocks.
+- Gate state is persisted (store version 3→4; countdown stored as an absolute
+  end-timestamp) so a mid-drill refresh resumes. `?dev=1` bypasses the gate.
+- New: `useCountdown` hook, `formatEstTime` util, store dispatch slice; caller-event
+  state moved from `useMonitorController` into the store; controller gained an
+  `initialPoweredOn` option.
+
 ---
 
 ### Phase 10 — Scenario Builder

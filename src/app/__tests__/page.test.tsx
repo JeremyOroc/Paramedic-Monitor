@@ -56,6 +56,7 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
 describe('MonitorPage', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
+    window.history.pushState({}, '', '/?dev=1') // bypass the dispatch lock gate
   })
 
   it('does not open caller info modal when ANALYZE is clicked', async () => {

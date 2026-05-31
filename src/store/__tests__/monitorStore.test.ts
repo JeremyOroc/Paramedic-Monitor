@@ -163,6 +163,80 @@ describe('monitorStore', () => {
   })
 })
 
+describe('dispatch gate', () => {
+  beforeEach(() => {
+    useMonitorStore.getState().reset()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('starts disarmed with empty caller events', () => {
+    const { dispatch, dispatchMinutes } = useMonitorStore.getState()
+    expect(dispatch.armed).toBe(false)
+    expect(dispatch.countdownEndsAt).toBeNull()
+    expect(dispatch.callerEvents).toEqual([])
+    expect(dispatchMinutes).toBe(0)
+  })
+
+  it('first send arms the gate with an absolute countdown end', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().send()
+
+    const { dispatch } = useMonitorStore.getState()
+    expect(dispatch.armed).toBe(true)
+    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 5 * 60_000)
+  })
+
+  it('later sends do not re-arm or move the countdown', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().send()
+    const firstEnd = useMonitorStore.getState().dispatch.countdownEndsAt
+
+    useMonitorStore.getState().setDispatchMinutes(99)
+    useMonitorStore.getState().send()
+
+    expect(useMonitorStore.getState().dispatch.countdownEndsAt).toBe(firstEnd)
+  })
+
+  it('acknowledge/arrive/transport log once and append EST entries', () => {
+    const s = useMonitorStore.getState()
+    s.acknowledgeCall('14:05:11')
+    s.acknowledgeCall('14:06:00') // ignored — already acknowledged
+    s.arriveCall('14:10:14')
+    s.transportCall('15:20:30')
+
+    const { dispatch } = useMonitorStore.getState()
+    expect(dispatch.acknowledgedAt).toBe('14:05:11')
+    expect(dispatch.arrivedAt).toBe('14:10:14')
+    expect(dispatch.transportedAt).toBe('15:20:30')
+    expect(dispatch.callerEvents).toEqual([
+      { name: 'Call - Acknowledge', time: '14:05:11' },
+      { name: 'Call - Arrival', time: '14:10:14' },
+      { name: 'Call - Transport', time: '15:20:30' },
+    ])
+  })
+
+  it('reset clears the dispatch gate', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().acknowledgeCall('14:05:11')
+
+    useMonitorStore.getState().reset()
+
+    const { dispatch, dispatchMinutes } = useMonitorStore.getState()
+    expect(dispatch.armed).toBe(false)
+    expect(dispatch.countdownEndsAt).toBeNull()
+    expect(dispatch.acknowledgedAt).toBeNull()
+    expect(dispatch.callerEvents).toEqual([])
+    expect(dispatchMinutes).toBe(0)
+  })
+})
+
 describe('persist migration', () => {
   afterEach(() => {
     localStorage.removeItem(STORAGE_KEY)
@@ -217,6 +291,30 @@ describe('persist migration', () => {
     expect(s.draft.rhythm).toBe(DEFAULT_VITALS.rhythm)
     expect(s.saved.rhythm).toBe(DEFAULT_VITALS.rhythm)
     expect(s.confirmed.rhythm).toBe(DEFAULT_VITALS.rhythm)
+  })
+
+  it('seeds a default dispatch slice for a payload without one', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        state: { confirmed: { ...DEFAULT_VITALS, hr: 99 } },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const s = useMonitorStore.getState()
+    expect(s.confirmed.hr).toBe(99)
+    expect(s.dispatch).toEqual({
+      armed: false,
+      countdownEndsAt: null,
+      acknowledgedAt: null,
+      arrivedAt: null,
+      transportedAt: null,
+      callerEvents: [],
+    })
+    expect(s.dispatchMinutes).toBe(0)
   })
 })
 

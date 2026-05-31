@@ -10,6 +10,7 @@ import MonitorPage from '../page'
 describe('MonitorPage — 12-lead back flow', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
+    window.history.pushState({}, '', '/?dev=1') // bypass the dispatch lock gate
   })
 
   it('returns to the main view when the physical Back soft key is clicked', async () => {

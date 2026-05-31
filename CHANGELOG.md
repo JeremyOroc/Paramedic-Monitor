@@ -5,6 +5,45 @@
 
 ---
 
+## [2026-05-31] [monitor] — Dispatch lock + countdown startup gate
+
+- Normal users now boot the monitor **locked and off**. The admin's caller-info
+  **Send** doubles as a dispatch: the first Send arms a lock + ETA countdown
+  (new whole-minutes field on the admin caller-info form) and pushes the caller
+  info; later Sends only update content. The admin **Reset** does a full reset to
+  locked-off.
+- On the locked screen the trainee sees the caller info + a counting-down MM:SS
+  timer. Unlock sequence: **Acknowledge** (clickable immediately) → countdown
+  reaches 0 → **Arrival** (enabled only after Ack + countdown-done) → power button
+  unlocks. **Transport** stays disabled until the monitor is powered on.
+- Acknowledge/Arrival/Transport now record **EST** wall-clock time (`HH:MM:SS`,
+  America/New_York) and are merged into the event log alongside meds/shocks.
+- Gate state lives in the persisted store (version 3→4) so a refresh mid-drill
+  resumes exactly (countdown via an absolute end-timestamp; ack/arrival flags
+  persist). Cross-tab admin→monitor uses the existing storage-rehydrate path.
+- `?dev=1` URL flag bypasses the whole gate (monitor boots on/unlocked) for quick
+  iteration. Pre-dispatch shows a plain dark standby; the blocked power button is
+  inert; the its_me power-off easter egg is preserved for normal post-unlock
+  power-offs.
+- Caller-event logging moved out of `useMonitorController` (added in the previous
+  change) into the store; the controller gained an `initialPoweredOn` option so
+  normal users start with alarms/timer off. New `useCountdown` hook and
+  `formatEstTime` util. Tests added/updated across store, hook, util, modal,
+  controller, and the page flow tests (which now render with `?dev=1`).
+
+## [2026-05-31] [monitor] — Add Acknowledge / Arrival / Transport buttons to Caller Info
+
+- Added three buttons to the bottom of the `CallerInfoModal`: Acknowledge, Arrival, Transport.
+  Clicking one appends a session-timestamped entry to the shared `eventLog`
+  (`Call - Acknowledge` / `Call - Arrival` / `Call - Transport`, mirroring the `Analyze - Shock`
+  convention), then disables that button so each milestone logs only once.
+- `useMonitorController` gained `callerEventsLogged` state, an `addCallerEvent` reducer action
+  (no-op once logged), and an `onCallerEvent(key, time)` callback; the flags reset on power off
+  alongside `eventLog`. `page.tsx` wires the handler with the existing `sessionTimer`.
+- Buttons are placeholder for roleplay logic — they only log timestamps for now.
+- Added `CallerInfoModal` tests (render, click fires correct key, disabled-when-logged) and a
+  `useMonitorController` test (logs prefixed entry once, ignores repeat clicks).
+
 ## [2026-05-31] [monitor] — Fix caller info panel not closing on Back
 
 - The Call Info panel (left CALL INFO soft key) had no way to close: the merged `CallerInfoModal`
