@@ -68,9 +68,17 @@
   - [x] Persisted legacy PEA rhythms normalize back to NSR during store hydration
   - [x] Updated tests so the admin ECG selector exposes NSR, VF, VT, Torsades, and Asystole only
 - [x] **VFib ECG reference tuning — COMPLETE:**
-  - [x] Tuned VFib against the 2026-05-30 pads screenshot
-  - [x] VFib now renders as fast repeated coarse waves with one tall rounded crest per wave, rounded deep troughs, uneven shoulders, and tiny line imperfections instead of a smooth sine-like trace
-  - [x] Tests verify VFib timing, amplitude range, steep-but-not-artifact jumps, contour imperfections, no prominent secondary peak on the drop-down, and a rounded lower trough
+  - [x] VFib now uses the torsades-style polymorphic waveform pattern by request
+  - [x] VFib shares the 15-beat/3900ms generated template family: cycle-to-cycle variants, active first-pass activity, low-amplitude waist waves, and exaggerated rounded oval packets
+  - [x] Tests verify VFib follows the same torsades-style waveform contract and generates new variants across cycles
+- [x] **Torsades ECG reference tuning — COMPLETE:**
+  - [x] Tuned torsades against `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov`, the three 2026-05-30 Pads screenshots, and the 2026-05-31 hand-drawn/pink-strip oval packet references
+  - [x] Torsades now renders as organized fast polymorphic VT: 15 rounded oval complexes over 3.9s, exaggerated small-hump-to-large-oval spindle packets, active low-amplitude humps, deterministic packet variation, and multiple generated pattern families across cycles
+  - [x] Added `TORSADES_TUNING`; tests verify beat count/rate, exaggerated packet growth, active low-amplitude humps, rounded oval morphology, organized zero-crossing bounds, non-artifact contour, and per-cycle pattern changes
+- [x] **ECG rhythm-switch artifact fix — COMPLETE:**
+  - [x] Fixed torsades → NSR switch artifact where torsades could briefly render at NSR speed as a rapid up/down buzz
+  - [x] Renderer signal keys now refresh waveform data and reset phase immediately when rhythm/channel shape changes
+  - [x] Added regression coverage for immediate waveform refresh on signal-key changes
 - [x] **Patient Info menu (12-lead) — COMPLETE:**
   - [x] Second left soft key (12-lead view only) opens a `PatientInfoPanel` overlaying the bottom 2/3 of the screen
   - [x] Edits Patient Age (clamp 0–120, default 40) and Patient Sex (M/F), driven by the right cluster's Move up/down arrows + center dot (Enter)
@@ -193,11 +201,7 @@
 ---
 
 ## In Progress
-- [ ] **Torsades ECG reference tuning — PLANNED:**
-  - [ ] Analyze `/Users/zaidtabana/Downloads/RPReplay_Final1778567085.mov` and the three 2026-05-30 Pads screenshots as the source of truth
-  - [ ] Rebuild torsades as organized fast polymorphic VT, not VFib noise: roughly 200-240 bpm wide complexes, waxing/waning twist envelope, rounded imperfect peaks/troughs, low-amplitude waist, and strong beat-to-beat variety
-  - [ ] Add `TORSADES_TUNING` and use a multi-beat template duration around 3600-4200ms instead of a 300ms single-cycle strip
-  - [ ] Add tests for beat count/rate, amplitude-envelope waist, greater morphology variation than VT, and more organization than VFib
+- Nothing — next plan is the admin/instructor dashboard
 
 ---
 
@@ -225,7 +229,6 @@
 ---
 
 ## Next Steps (for whoever picks this up)
-1. **Torsades ECG reference tuning** — implement the planned torsades rewrite from the supplied video/screenshots, then visually verify on the monitor with Torsades selected.
-2. **Admin/instructor dashboard** — build the controls panel (vitals inputs with pending/Send flow, rhythm selector, defib panel, scenario builder skeleton). Components already scaffolded in `src/components/instructor/`. State via Zustand `instructorStore`. Local-only first; realtime wires in the next phase.
-3. **Realtime wiring** — Supabase Broadcast for instructor → monitor sync (vitals_update, defib_event, cpr_toggle).
-4. **Sessions** — restore `/session/[code]/...` routes; connect landing page (Create / Join).
+1. **Admin/instructor dashboard** — build the controls panel (vitals inputs with pending/Send flow, rhythm selector, defib panel, scenario builder skeleton). Components already scaffolded in `src/components/instructor/`. State via Zustand `instructorStore`. Local-only first; realtime wires in the next phase.
+2. **Realtime wiring** — Supabase Broadcast for instructor → monitor sync (vitals_update, defib_event, cpr_toggle).
+3. **Sessions** — restore `/session/[code]/...` routes; connect landing page (Create / Join).

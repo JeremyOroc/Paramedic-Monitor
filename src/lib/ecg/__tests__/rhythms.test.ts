@@ -7,7 +7,7 @@ import {
   ETCO2_SWEEP_MS,
   RESP_CYCLE_MS,
   SPO2_SWEEP_MS,
-  VF_TUNING,
+  TORSADES_TUNING,
   VT_TUNING,
   getEcgRhythm,
   getEtco2Waveform,
@@ -88,21 +88,78 @@ function directionChanges(data: Float32Array, end: number): number {
   return changes
 }
 
-function prominentLocalPeaksBetween(
-  data: Float32Array,
-  start: number,
-  end: number,
-  threshold: number,
-): number {
-  let peaks = 0
-  const from = Math.max(1, start)
-  const to = Math.min(data.length - 1, end)
-  for (let i = from; i < to; i++) {
-    if (data[i] > threshold && data[i] >= data[i - 1] && data[i] > data[i + 1]) {
-      peaks++
+function segmentAmplitudes(data: Float32Array, segments: number): number[] {
+  return Array.from({ length: segments }, (_, segment) => {
+    const start = Math.floor((segment / segments) * data.length)
+    const end = Math.floor(((segment + 1) / segments) * data.length)
+    let min = Infinity
+    let max = -Infinity
+    for (let i = start; i < end; i++) {
+      if (data[i] < min) min = data[i]
+      if (data[i] > max) max = data[i]
     }
-  }
-  return peaks
+    return max - min
+  })
+}
+
+function segmentMaxDeltas(data: Float32Array, segments: number): number[] {
+  return Array.from({ length: segments }, (_, segment) => {
+    const start = Math.max(1, Math.floor((segment / segments) * data.length))
+    const end = Math.floor(((segment + 1) / segments) * data.length)
+    let max = 0
+    for (let i = start; i < end; i++) {
+      max = Math.max(max, Math.abs(data[i] - data[i - 1]))
+    }
+    return max
+  })
+}
+
+function waveformDistance(a: Float32Array, b: Float32Array): number {
+  let distance = 0
+  for (let i = 0; i < a.length; i++) distance += Math.abs(a[i] - b[i])
+  return distance
+}
+
+function expectTorsadesStylePattern(def: WaveformDef): void {
+  const data = def.data
+  const beatRate = (TORSADES_TUNING.beatCount * 60000) / TORSADES_TUNING.cycleMs
+  const amplitudes = segmentAmplitudes(data, TORSADES_TUNING.beatCount)
+  const deltas = segmentMaxDeltas(data, TORSADES_TUNING.beatCount)
+  const minAmplitude = Math.min(...amplitudes)
+  const maxAmplitude = Math.max(...amplitudes)
+  const middleWaist = Math.min(...amplitudes.slice(7, 10))
+  const tallComplexes = amplitudes.filter((amp) => amp > 0.6).length
+  const delta = maxAdjacentDelta(data)
+  const firstScreen = Array.from(data.slice(0, Math.floor(data.length * 0.22)))
+  const firstScreenAmplitude = Math.max(...firstScreen) - Math.min(...firstScreen)
+  const earlySmall = Math.max(...amplitudes.slice(0, 2))
+  const earlyBig = Math.max(...amplitudes.slice(3, 6))
+  const roundedTopSamples = Array.from(data).filter((v) => v > peakOf(data) * 0.85).length
+  const roundedBottomSamples = Array.from(data).filter((v) => v < troughOf(data) * 0.85).length
+
+  expect(def.cycleMs).toBe(TORSADES_TUNING.cycleMs)
+  expect(def.cycleMs).toBeGreaterThanOrEqual(3600)
+  expect(def.cycleMs).toBeLessThanOrEqual(4200)
+  expect(beatRate).toBeGreaterThanOrEqual(200)
+  expect(beatRate).toBeLessThanOrEqual(240)
+  expect(TORSADES_TUNING.beatCount).toBeGreaterThanOrEqual(14)
+  expect(TORSADES_TUNING.beatCount).toBeLessThanOrEqual(16)
+  expect(tallComplexes).toBeGreaterThanOrEqual(4)
+  expect(maxAmplitude).toBeGreaterThan(0.7)
+  expect(maxAmplitude).toBeGreaterThan(1.15)
+  expect(minAmplitude).toBeGreaterThan(0.25)
+  expect(minAmplitude).toBeLessThan(maxAmplitude * 0.45)
+  expect(middleWaist).toBeLessThan(maxAmplitude * 0.6)
+  expect(maxAmplitude - minAmplitude).toBeGreaterThan(0.38)
+  expect(earlyBig).toBeGreaterThan(earlySmall * 1.8)
+  expect(firstScreenAmplitude).toBeGreaterThan(0.5)
+  expect(roundedTopSamples).toBeGreaterThanOrEqual(8)
+  expect(roundedBottomSamples).toBeGreaterThanOrEqual(8)
+  expect(Math.max(...deltas)).toBeGreaterThan(Math.min(...deltas) * 1.7)
+  expect(zeroCrossings(data)).toBeGreaterThanOrEqual(TORSADES_TUNING.beatCount + 8)
+  expect(zeroCrossings(data)).toBeLessThanOrEqual(TORSADES_TUNING.beatCount * 3)
+  expect(delta).toBeGreaterThan(0.025)
+  expect(delta).toBeLessThan(0.16)
 }
 
 describe('ECG_RHYTHMS', () => {
@@ -208,38 +265,42 @@ describe('ECG_RHYTHMS', () => {
     expect(directionChanges(data, plateauEnd)).toBeLessThanOrEqual(2)
   })
 
-  it('getEcgRhythm returns stable references for all rhythms', () => {
+  it('getEcgRhythm returns stable references for non-polymorphic rhythms', () => {
     expect(getEcgRhythm('nsr')).toBe(ECG_RHYTHMS.nsr)
     expect(getEcgRhythm('asystole')).toBe(ECG_RHYTHMS.asystole)
-    expect(getEcgRhythm('vf')).toBe(ECG_RHYTHMS.vf)
     expect(getEcgRhythm('vt')).toBe(ECG_RHYTHMS.vt)
   })
 
-  it('VF matches the coarse pads reference with tall repeated imperfect waves', () => {
-    const data = ECG_RHYTHMS.vf.data
-    const peak = peakOf(data)
-    const trough = troughOf(data)
-    const delta = maxAdjacentDelta(data)
-    const peakIndex = indexOfPeakBefore(data, data.length)
-    const troughIndex = indexOfTrough(data)
-    const roundedTroughSamples = Array.from(data).filter((v) => v < trough * 0.85).length
-
-    expect(ECG_RHYTHMS.vf.cycleMs).toBe(VF_TUNING.cycleMs)
-    expect(ECG_RHYTHMS.vf.cycleMs).toBeGreaterThanOrEqual(260)
-    expect(ECG_RHYTHMS.vf.cycleMs).toBeLessThanOrEqual(310)
-    expect(peak).toBeGreaterThan(0.82)
-    expect(peak).toBeLessThan(0.96)
-    expect(trough).toBeLessThan(-0.72)
-    expect(trough).toBeGreaterThan(-0.9)
-    expect(peak - trough).toBeGreaterThan(1.55)
-    expect(peak - trough).toBeLessThan(1.85)
-    expect(delta).toBeGreaterThan(0.003)
-    expect(delta).toBeLessThan(0.035)
-    expect(zeroCrossings(data)).toBeLessThanOrEqual(4)
-    expect(directionChanges(data, data.length)).toBeGreaterThan(8)
-    expect(prominentLocalPeaksBetween(data, peakIndex + 4, troughIndex, peak * 0.45)).toBe(0)
-    expect(roundedTroughSamples).toBeGreaterThan(70)
+  it('VF uses the torsades-style polymorphic pattern', () => {
+    expectTorsadesStylePattern(ECG_RHYTHMS.vf)
   })
+
+  it('torsades is a multi-second twisting polymorphic VT template', () => {
+    expectTorsadesStylePattern(ECG_RHYTHMS.torsades)
+  })
+
+  it.each(['vf', 'torsades'] as const)(
+    'getEcgRhythm generates new %s pattern variants across template cycles',
+    (rhythm) => {
+      const variants = Array.from({ length: TORSADES_TUNING.patternCount + 1 }, () =>
+        getEcgRhythm(rhythm),
+      )
+      const distances = variants.slice(1).map((variant, index) =>
+        waveformDistance(variant.data, variants[index].data),
+      )
+
+      for (const variant of variants) {
+        assertNormalized(variant, 'torsades variant')
+        expect(variant.cycleMs).toBe(TORSADES_TUNING.cycleMs)
+        expect(zeroCrossings(variant.data)).toBeGreaterThanOrEqual(
+          TORSADES_TUNING.beatCount + 8,
+        )
+        expect(maxAdjacentDelta(variant.data)).toBeLessThan(0.16)
+      }
+      expect(Math.min(...distances)).toBeGreaterThan(35)
+      expect(Math.max(...distances)).toBeGreaterThan(60)
+    },
+  )
 })
 
 describe('sweep speeds', () => {

@@ -106,4 +106,34 @@ describe('startRenderer', () => {
     expect(getWaveform.mock.calls.length).toBeGreaterThan(initialCalls)
     stop()
   })
+
+  it('switches waveform immediately when the signal key changes', () => {
+    const canvas = makeCanvas()
+    let key = 'torsades'
+    const torsades = { data: new Float32Array([0.8, -0.8]), cycleMs: 4000 }
+    const nsr = { data: new Float32Array([0.05, 0.05]), cycleMs: 750 }
+    const getWaveform = vi.fn(() => (key === 'torsades' ? torsades : nsr))
+    const stop = startRenderer({
+      canvas,
+      color: '#00ff41',
+      getWaveform,
+      getSignalKey: () => key,
+      getCycleMs: () => (key === 'torsades' ? 4000 : 750),
+      cycleJitter: 0,
+      ampJitter: 0,
+    })
+    const initialCalls = getWaveform.mock.calls.length
+    const first = rafCalls.shift()
+    expect(first).toBeTypeOf('function')
+    first!(0)
+
+    key = 'nsr'
+    const second = rafCalls.shift()
+    expect(second).toBeTypeOf('function')
+    second!(16)
+
+    expect(getWaveform.mock.calls.length).toBeGreaterThan(initialCalls)
+    expect(getWaveform.mock.results.at(-1)?.value).toBe(nsr)
+    stop()
+  })
 })
