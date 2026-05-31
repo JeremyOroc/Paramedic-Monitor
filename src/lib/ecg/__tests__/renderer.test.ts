@@ -136,4 +136,48 @@ describe('startRenderer', () => {
     expect(getWaveform.mock.results.at(-1)?.value).toBe(nsr)
     stop()
   })
+
+  it('does not re-clear while size is unchanged, and self-heals a real size change', () => {
+    const ctx = fakeCtx()
+    const canvas = document.createElement('canvas')
+    let rectW = 400
+    Object.defineProperty(canvas, 'getBoundingClientRect', {
+      configurable: true,
+      value: () => ({
+        width: rectW, height: 200, top: 0, left: 0, right: rectW, bottom: 200, x: 0, y: 0,
+        toJSON: () => ({}),
+      }),
+    })
+    vi.spyOn(canvas, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D)
+
+    const stop = startRenderer({
+      canvas,
+      color: '#00ff41',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 800,
+      cycleJitter: 0,
+      ampJitter: 0,
+    })
+
+    // A real resize re-syncs the backing store (setTransform) exactly once.
+    const setTransform = ctx.setTransform as unknown as ReturnType<typeof vi.fn>
+    const afterInit = setTransform.mock.calls.length
+    expect(afterInit).toBe(1)
+
+    const advance = (n: number, base: number) => {
+      for (let i = 0; i < n; i++) rafCalls.shift()?.((base + i) * 16)
+    }
+
+    // Many frames at the same size: the per-frame self-heal stays a no-op,
+    // so the trace is never wiped (no extra resize/clear).
+    advance(64, 1)
+    expect(setTransform.mock.calls.length).toBe(afterInit)
+
+    // A real size change is picked up by the self-heal without a manual resize.
+    rectW = 520
+    advance(16, 100)
+    expect(setTransform.mock.calls.length).toBe(afterInit + 1)
+
+    stop()
+  })
 })

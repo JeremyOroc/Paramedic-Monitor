@@ -46,6 +46,10 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **ECG renderer dimension self-heal fix — COMPLETE:**
+  - [x] Fixed the ECG trace being erased in chunks (until a manual window resize) when the cached canvas size drifted from the real size after a layout change
+  - [x] `resize()` is idempotent + client-size-rounded; the loop self-heals size a few times per second instead of relying solely on `ResizeObserver`
+  - [x] Renderer regression test added; confirmed via instrumentation there were no duplicate render loops
 - [x] **Vitals alarm system — COMPLETE:**
   - [x] Confirmed client thresholds: HR <40/>140 bpm; BP systolic <90/>200 mmHg; BP diastolic <25/>225 mmHg; SpO2 <90%; no EtCO2 threshold
   - [x] `getActiveAlarms` centralizes alarm evaluation for HR, BP, and SpO2

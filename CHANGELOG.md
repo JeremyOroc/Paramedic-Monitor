@@ -5,6 +5,21 @@
 
 ---
 
+## [2026-05-31] [monitor] — Fix ECG waveform erased in chunks until a window resize
+
+- `startRenderer` (`src/lib/ecg/renderer.ts`) cached the canvas size from `ResizeObserver` only and
+  re-cleared on every callback. When a layout change (e.g. defib state toggling the vitals/energy
+  columns) was missed or coalesced by the observer, the cached size drifted from the real canvas, so
+  the per-frame erase band and sweep math corrupted the trace — wiping drawn history in chunks —
+  until a manual window resize re-synced it.
+- `resize()` is now idempotent (returns early when size/DPR are unchanged, so it never needlessly
+  wipes the trace) and rounds to the element's client size (no permanent 1px drift). The render loop
+  also re-syncs size a few times per second as a self-heal, so it no longer depends solely on
+  `ResizeObserver`.
+- Added a renderer regression test (no re-clear while size is unchanged; self-heals a real size
+  change without a manual resize). Diagnosed with temporary instrumentation that confirmed no
+  duplicate render loops.
+
 ## [2026-05-31] [monitor] — NIBP reading animation via Patient Event button
 
 - Created `src/hooks/useNibpReading.ts`: 5-phase state machine (idle → please_wait → reading → counting → settled) with pre-generated ascending sequence using Fisher-Yates shuffle for randomised-feeling ascent
