@@ -22,6 +22,7 @@ import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { useMonitorClock } from '@/hooks/useMonitorClock'
 import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
+import { useNibpReading } from '@/hooks/useNibpReading'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { setAudioMuted } from '@/lib/audio'
@@ -52,6 +53,11 @@ export default function MonitorPage() {
     },
   })
   const alarm = useAlarm(confirmed, controller.isPoweredOn, controller.isMuted)
+  const {
+    phase: nibpPhase,
+    displayValue: nibpDisplayValue,
+    handlePatientEvent,
+  } = useNibpReading(confirmed.bp_sys)
 
   useDefibAudio(defib.state, controller.isMuted)
 
@@ -130,6 +136,8 @@ export default function MonitorPage() {
                   activeAlarms={alarm.activeAlarms}
                   searching={false}
                   selected={controller.activeSelectedControl}
+                  nibpPhase={nibpPhase}
+                  nibpDisplayValue={nibpDisplayValue}
                 />
               )
         }
@@ -161,7 +169,6 @@ export default function MonitorPage() {
       <CallerInfoModal
         open={controller.callerInfoOpen}
         info={callerInfoConfirmed}
-        onClose={controller.onCloseCallerInfo}
       />
       <PatientInfoPanel
         open={controller.patientInfoOpen}
@@ -173,7 +180,6 @@ export default function MonitorPage() {
       <EventLogModal
         open={controller.eventLogOpen}
         log={controller.eventLog}
-        onClose={controller.onCloseEventLog}
       />
       {controller.isTwelveLead && controller.captureState === 'acquiring' && (
         <div className="absolute inset-0 z-40">
@@ -263,6 +269,7 @@ export default function MonitorPage() {
       audio={{
         isMuted: controller.isMuted,
         onToggleMute: controller.onToggleMute,
+        onPatientEvent: handlePatientEvent,
       }}
     />
   )

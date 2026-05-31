@@ -44,11 +44,20 @@ export function startRenderer(opts: RendererOptions): () => void {
   let cssHeight = 0
   let dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
 
+  // Re-sync the backing store to the element's CSS size. Idempotent: when size
+  // and DPR are unchanged it does nothing (and never wipes the drawn trace), so
+  // it is safe to call freely — from the ResizeObserver and as a per-frame
+  // self-heal. Uses round() to match the element's reported client size, so a
+  // sub-pixel layout doesn't leave the cache permanently 1px off.
   const resize = () => {
     const rect = canvas.getBoundingClientRect()
-    dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
-    cssWidth = Math.max(1, Math.floor(rect.width))
-    cssHeight = Math.max(1, Math.floor(rect.height))
+    const nextDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+    const nextWidth = Math.max(1, Math.round(rect.width))
+    const nextHeight = Math.max(1, Math.round(rect.height))
+    if (nextWidth === cssWidth && nextHeight === cssHeight && nextDpr === dpr) return
+    dpr = nextDpr
+    cssWidth = nextWidth
+    cssHeight = nextHeight
     canvas.width = cssWidth * dpr
     canvas.height = cssHeight * dpr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -116,8 +125,15 @@ export function startRenderer(opts: RendererOptions): () => void {
     ctx.stroke()
   }
 
+  let healFrame = 0
   const tick = (now: number) => {
     rafId = requestAnimationFrame(tick)
+    // Self-heal: ResizeObserver can miss or coalesce a layout change (e.g. when
+    // the defib state toggles the vitals/energy columns and the ECG column
+    // reflows), leaving the cached size out of sync with the canvas — which then
+    // corrupts the erase band / sweep math until a manual window resize. Re-sync
+    // a few times per second; resize() is a no-op when nothing changed.
+    if ((healFrame++ & 15) === 0) resize()
     const dt = Math.min(64, now - lastT)
     lastT = now
 

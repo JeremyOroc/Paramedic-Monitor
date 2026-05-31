@@ -141,6 +141,7 @@ export type PowerHandlers = {
 export type AudioControls = {
   isMuted?: boolean
   onToggleMute?: () => void
+  onPatientEvent?: () => void
 }
 
 type DeviceShellProps = {
@@ -204,9 +205,32 @@ export function DeviceShell({
   const onPowerOff = power?.onPowerOff
   const isMuted = audio?.isMuted ?? false
   const onToggleMute = audio?.onToggleMute ?? (() => {})
+  const onPatientEvent = audio?.onPatientEvent
 
   const [powerState, setPowerState] = useState<PowerState>('on')
+  const [jumpscareActive, setJumpscareActive] = useState(false)
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 1/1000 per second jumpscare while monitor is on and not already playing
+  useEffect(() => {
+    if (powerState !== 'on' || jumpscareActive) return
+    const id = setInterval(() => {
+      if (Math.random() < 1 / 1000) setJumpscareActive(true)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [powerState, jumpscareActive])
+
+  // Auto-dismiss after 5 seconds; also cancel immediately on power-off
+  useEffect(() => {
+    if (!jumpscareActive) return
+    if (powerState !== 'on') {
+      setJumpscareActive(false)
+      return
+    }
+    const duration = 1000 + Math.random() * 4000
+    const id = setTimeout(() => setJumpscareActive(false), duration)
+    return () => clearTimeout(id)
+  }, [jumpscareActive, powerState])
 
   // During a 12-lead capture every control except Back is inert: handlers become
   // no-ops and the defib row is fully disabled. Back stays live so the user can
@@ -269,6 +293,31 @@ export function DeviceShell({
                 <div className="relative h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
                   {powerState === 'on' && screen}
                   {powerState === 'booting' && <BootScreen />}
+                  {powerState === 'off' && (
+                    <div className="absolute inset-0 z-50 overflow-hidden bg-black">
+                      <video
+                        src="/videos/its_me.mp4"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="h-full w-full object-cover"
+                      />
+                      <audio src="/audio/its_me.mp3" autoPlay loop />
+                    </div>
+                  )}
+                  {jumpscareActive && powerState === 'on' && (
+                    <div className="absolute inset-0 z-50 overflow-hidden bg-black">
+                      <video
+                        src="/videos/its_me.mp4"
+                        autoPlay
+                        muted
+                        playsInline
+                        className="h-full w-full object-cover"
+                      />
+                      <audio src="/audio/its_me.mp3" autoPlay />
+                    </div>
+                  )}
                   {screenModal}
                 </div>
               </div>
@@ -278,6 +327,7 @@ export function DeviceShell({
                 onEnter={lock(onEnter)}
                 isMuted={isMuted}
                 onToggleMute={onToggleMute ?? (() => {})}
+                onPatientEvent={onPatientEvent}
               />
             </div>
             <BottomDefibStrip
@@ -394,7 +444,7 @@ function BootScreen() {
 function DeviceHeader() {
   return (
     <div className="relative flex items-start justify-center pt-[2.1%]">
-      <span className="select-none text-[clamp(30px,4.6vw,68px)] font-black leading-none tracking-[0.02em] text-white/45">
+      <span className="select-none text-[clamp(30px,4.6vw,68px)] font-black leading-none tracking-[0.02em] text-white">
         WAGAMI
       </span>
     </div>
@@ -433,15 +483,37 @@ type RightControlClusterProps = {
   onEnter: () => void
   isMuted: boolean
   onToggleMute: () => void
+  onPatientEvent?: () => void
 }
 
-function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleMute }: RightControlClusterProps) {
+function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleMute, onPatientEvent }: RightControlClusterProps) {
+  const [ackActive, setAckActive] = useState(false)
+
+  function handleAck() {
+    if (ackActive) return
+    if (Math.random() >= 1 / 32768) return
+    const duration = 750 + Math.random() * 3000
+    setAckActive(true)
+    setTimeout(() => setAckActive(false), duration)
+  }
+
   return (
     <div className="relative min-h-0">
       <PhysicalButton
         ariaLabel="Alarm acknowledge"
+        onClick={handleAck}
         className="absolute left-[23%] top-[1.5%] h-[22%] w-[54%] rounded-[24px] bg-[#474747] border-[#dfe1e2]"
       />
+      {ackActive && (
+        <div className="pointer-events-none absolute left-[23%] top-[1.5%] z-50 h-[22%] w-[54%] overflow-hidden rounded-[24px]">
+          <video
+            src="/videos/golden_freddy.mp4"
+            autoPlay
+            playsInline
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
       <div className="absolute inset-x-[2%] bottom-[0%] top-[29%] rounded-[19px] bg-[#b9b9b8] shadow-[inset_7px_8px_10px_rgba(255,255,255,0.26),inset_-8px_-9px_10px_rgba(102,102,102,0.2)]">
         <PhysicalButton
           ariaLabel="Home"
@@ -452,7 +524,6 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         <PhysicalButton
           ariaLabel="Alarm"
           onClick={onToggleMute}
-          active={isMuted}
           className="absolute right-[7%] top-[0%] h-[18%] w-[40%] rounded-[13px] text-[clamp(15px,1.6vw,24px)]"
         >
           {isMuted ? '🔕' : '🔔'}
@@ -486,6 +557,7 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Patient event"
+          onClick={onPatientEvent}
           className="absolute right-[8%] bottom-[3%] h-[13%] w-[37%] rounded-[13px] text-[clamp(15px,1.6vw,23px)]"
         >
           💪

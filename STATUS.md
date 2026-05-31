@@ -46,6 +46,10 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **ECG renderer dimension self-heal fix — COMPLETE:**
+  - [x] Fixed the ECG trace being erased in chunks (until a manual window resize) when the cached canvas size drifted from the real size after a layout change
+  - [x] `resize()` is idempotent + client-size-rounded; the loop self-heals size a few times per second instead of relying solely on `ResizeObserver`
+  - [x] Renderer regression test added; confirmed via instrumentation there were no duplicate render loops
 - [x] **Page composition cleanup — COMPLETE:**
   - [x] Extracted `useMonitorClock` (ticking clock) and `useDefibAudio` (charge/shock-ready beeps) from `MonitorPage`
   - [x] `MonitorPage` is now pure wiring (selectors, hooks, render tree); hook tests added; behavior unchanged
@@ -208,6 +212,16 @@
   - [x] Enter is inert except on the minus toggle, which hides/restores the bottom status/defib/CPR panel
   - [x] When the bottom panel is hidden, the main waveform area expands to ECG / EtCO2 / SpO2 while right-side vitals remain in place
   - [x] Tests added for shell nav handlers, monitor selection flow, bottom-panel toggle, vital selection styling, and graph metadata
+- [x] **NIBP reading animation (Patient Event button) — COMPLETE:**
+  - [x] Patient Event button (💪, outer shell right cluster) now triggers a 5-phase NIBP reading sequence
+  - [x] Phase flow: idle → Please Wait (3s) → Reading in Progress (0.5s) → ascending count 0→bpSys+30 (~8s) → settled at bpSys indefinitely
+  - [x] Ascending sequence pre-generated via Fisher-Yates shuffle of evenly-distributed steps; guarantees exact endpoints and ~333ms per step
+  - [x] Clicking during any active phase cancels and returns to idle (showing confirmed store bp_sys/bp_dia again)
+  - [x] Clicking during settled phase starts a fresh reading
+  - [x] `useNibpReading` hook (new) manages all phase transitions and timer cleanup
+  - [x] `VitalsStrip` conditionally renders text slot (please_wait/reading) or single-value VitalBox (counting/settled) or normal stacked VitalBox (idle)
+  - [x] `DeviceShell` wired with `onPatientEvent` prop threading through `RightControlCluster`
+  - [x] Tests: 14 passing — full phase transition coverage, cancel scenarios, endpoint/monotone sequence validation for low/normal/high BP values
 
 ---
 
