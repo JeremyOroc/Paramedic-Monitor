@@ -46,6 +46,9 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Caller info Back-to-close fix — COMPLETE:**
+  - [x] Back now closes the Call Info panel (controller `back` reducer handles `callerInfoOpen`); the merged modal has no in-panel close button
+  - [x] Stale `CallerInfoModal` close-button test replaced; controller test added; full suite green (241 tests)
 - [x] **Medication event log back fix — COMPLETE:**
   - [x] Med "BACK" now closes the open event log first (staying in medication mode), then exits medication mode on the next press — restoring pre-refactor two-step behavior
   - [x] Fixed in `useMonitorController` `exitMedicationMode`; controller test added

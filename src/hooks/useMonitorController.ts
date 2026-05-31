@@ -299,6 +299,7 @@ function reducer(
     case 'openPrintPreview':
       return state.lastCapture ? { ...state, printPreviewOpen: true } : state
     case 'back':
+      if (state.callerInfoOpen) return { ...state, callerInfoOpen: false }
       if (state.patientModalOpen) return { ...state, patientModalOpen: false }
       if (state.printPreviewOpen) return { ...state, printPreviewOpen: false }
       if (state.editing) return { ...state, editing: false, editValue: null }

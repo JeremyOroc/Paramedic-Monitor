@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-05-31] [monitor] — Fix caller info panel not closing on Back
+
+- The Call Info panel (left CALL INFO soft key) had no way to close: the merged `CallerInfoModal`
+  dropped its in-panel close button and the controller's `back` reducer never handled
+  `callerInfoOpen`. Back now dismisses it, consistent with every other menu/overlay.
+- Updated the stale `CallerInfoModal` test (no in-panel close button) and added a `useMonitorController`
+  test for Back closing the caller info panel. Full suite is green again.
+
 ## [2026-05-31] [monitor] — Fix unable to close the medication event log
 
 - The med "BACK" key (`onMedBack` → `exitMedicationMode`) cleared `medicationMode` but left

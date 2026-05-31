@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 
 import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
 
@@ -93,12 +92,9 @@ describe('CallerInfoModal', () => {
     expect(panelText.indexOf('Heure')).toBeLessThan(panelText.indexOf('Acces'))
   })
 
-  it('closes when the close button is clicked', async () => {
-    const user = userEvent.setup()
-    const onClose = vi.fn()
+  it('has no in-panel close button (dismissed with the Back key)', () => {
     render(<CallerInfoModal open info={DEFAULT_CALLER_INFO} />)
 
-    await user.click(screen.getByRole('button', { name: 'Close caller info' }))
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'Close caller info' })).toBeNull()
   })
 })

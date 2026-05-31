@@ -223,6 +223,16 @@ describe('useMonitorController', () => {
     expect(result.current.bottomStatusVisible).toBe(true)
   })
 
+  it('closes the caller info panel on Back', () => {
+    const { result } = setup()
+
+    act(() => result.current.onLeftAnalyse())
+    expect(result.current.callerInfoOpen).toBe(true)
+
+    act(() => result.current.onBack())
+    expect(result.current.callerInfoOpen).toBe(false)
+  })
+
   it('closes the medication event log on Back before exiting medication mode', () => {
     const { result } = setup()
 
