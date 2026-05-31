@@ -20,6 +20,7 @@ import {
   type PatientInfo,
   type PatientSex,
 } from '@/types/patientInfo'
+import type { EventLogEntry } from '@/components/monitor/EventLogModal'
 
 export type Vitals = {
   hr: number
@@ -64,6 +65,45 @@ function normalizeVitals(vitals: Partial<Vitals> | undefined): Vitals {
   }
 }
 
+// Dispatch / startup-gate state. The admin "Send" arms this (lock + countdown);
+// the trainee must Acknowledge, wait out the countdown, then mark Arrival before
+// the monitor power button works. Persisted so a refresh resumes the drill.
+export type DispatchState = {
+  armed: boolean
+  countdownEndsAt: number | null // absolute ms epoch; survives refresh
+  acknowledgedAt: string | null // EST HH:MM:SS
+  arrivedAt: string | null
+  transportedAt: string | null
+  callerEvents: EventLogEntry[]
+}
+
+export const DEFAULT_DISPATCH: DispatchState = {
+  armed: false,
+  countdownEndsAt: null,
+  acknowledgedAt: null,
+  arrivedAt: null,
+  transportedAt: null,
+  callerEvents: [],
+}
+
+const CALLER_EVENT_LABELS = {
+  acknowledge: 'Acknowledge',
+  arrival: 'Arrival',
+  transport: 'Transport',
+} as const
+
+function normalizeDispatch(dispatch: Partial<DispatchState> | undefined): DispatchState {
+  return {
+    armed: dispatch?.armed === true,
+    countdownEndsAt:
+      typeof dispatch?.countdownEndsAt === 'number' ? dispatch.countdownEndsAt : null,
+    acknowledgedAt: typeof dispatch?.acknowledgedAt === 'string' ? dispatch.acknowledgedAt : null,
+    arrivedAt: typeof dispatch?.arrivedAt === 'string' ? dispatch.arrivedAt : null,
+    transportedAt: typeof dispatch?.transportedAt === 'string' ? dispatch.transportedAt : null,
+    callerEvents: Array.isArray(dispatch?.callerEvents) ? dispatch.callerEvents : [],
+  }
+}
+
 export type MonitorState = {
   draft: Vitals
   saved: Vitals
@@ -72,10 +112,16 @@ export type MonitorState = {
   callerInfoSaved: CallerInfo
   callerInfoConfirmed: CallerInfo
   patientInfo: PatientInfo
+  dispatch: DispatchState
+  dispatchMinutes: number
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
   setPatientAge: (age: number) => void
   setPatientSex: (sex: PatientSex) => void
+  setDispatchMinutes: (minutes: number) => void
+  acknowledgeCall: (estTime: string) => void
+  arriveCall: (estTime: string) => void
+  transportCall: (estTime: string) => void
   resetVitalsToNormal: () => void
   save: () => void
   send: () => void
@@ -94,6 +140,8 @@ export const useMonitorStore = create<MonitorState>()(
       callerInfoSaved: DEFAULT_CALLER_INFO,
       callerInfoConfirmed: DEFAULT_CALLER_INFO,
       patientInfo: DEFAULT_PATIENT_INFO,
+      dispatch: DEFAULT_DISPATCH,
+      dispatchMinutes: 0,
       setDraft: (field, value) =>
         set((s) => ({ draft: { ...s.draft, [field]: value } })),
       setCallerInfoDraft: (field, value) =>
@@ -102,6 +150,50 @@ export const useMonitorStore = create<MonitorState>()(
         set((s) => ({ patientInfo: { ...s.patientInfo, age: clampAge(age) } })),
       setPatientSex: (sex) =>
         set((s) => ({ patientInfo: { ...s.patientInfo, sex } })),
+      setDispatchMinutes: (minutes) =>
+        set({ dispatchMinutes: Math.max(0, Math.floor(minutes) || 0) }),
+      acknowledgeCall: (estTime) =>
+        set((s) => {
+          if (s.dispatch.acknowledgedAt) return s
+          return {
+            dispatch: {
+              ...s.dispatch,
+              acknowledgedAt: estTime,
+              callerEvents: [
+                ...s.dispatch.callerEvents,
+                { name: `Call - ${CALLER_EVENT_LABELS.acknowledge}`, time: estTime },
+              ],
+            },
+          }
+        }),
+      arriveCall: (estTime) =>
+        set((s) => {
+          if (s.dispatch.arrivedAt) return s
+          return {
+            dispatch: {
+              ...s.dispatch,
+              arrivedAt: estTime,
+              callerEvents: [
+                ...s.dispatch.callerEvents,
+                { name: `Call - ${CALLER_EVENT_LABELS.arrival}`, time: estTime },
+              ],
+            },
+          }
+        }),
+      transportCall: (estTime) =>
+        set((s) => {
+          if (s.dispatch.transportedAt) return s
+          return {
+            dispatch: {
+              ...s.dispatch,
+              transportedAt: estTime,
+              callerEvents: [
+                ...s.dispatch.callerEvents,
+                { name: `Call - ${CALLER_EVENT_LABELS.transport}`, time: estTime },
+              ],
+            },
+          }
+        }),
       resetVitalsToNormal: () =>
         set((s) => ({
           draft: {
@@ -119,10 +211,23 @@ export const useMonitorStore = create<MonitorState>()(
           callerInfoSaved: { ...s.callerInfoDraft },
         })),
       send: () =>
-        set((s) => ({
-          confirmed: { ...s.saved },
-          callerInfoConfirmed: { ...s.callerInfoSaved },
-        })),
+        set((s) => {
+          const base = {
+            confirmed: { ...s.saved },
+            callerInfoConfirmed: { ...s.callerInfoSaved },
+          }
+          // The first Send arms the dispatch gate: lock + countdown. Later Sends
+          // only push updated caller-info content and never re-arm or restart it.
+          if (s.dispatch.armed) return base
+          return {
+            ...base,
+            dispatch: {
+              ...s.dispatch,
+              armed: true,
+              countdownEndsAt: Date.now() + s.dispatchMinutes * 60_000,
+            },
+          }
+        }),
       reset: () =>
         set({
           draft: initial,
@@ -132,11 +237,13 @@ export const useMonitorStore = create<MonitorState>()(
           callerInfoSaved: DEFAULT_CALLER_INFO,
           callerInfoConfirmed: DEFAULT_CALLER_INFO,
           patientInfo: DEFAULT_PATIENT_INFO,
+          dispatch: DEFAULT_DISPATCH,
+          dispatchMinutes: 0,
         }),
     }),
     {
       name: STORAGE_KEY,
-      version: 3,
+      version: 4,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist
@@ -159,6 +266,11 @@ export const useMonitorStore = create<MonitorState>()(
             ...DEFAULT_PATIENT_INFO,
             ...persistedState?.patientInfo,
           },
+          dispatch: normalizeDispatch(persistedState?.dispatch),
+          dispatchMinutes:
+            typeof persistedState?.dispatchMinutes === 'number'
+              ? persistedState.dispatchMinutes
+              : 0,
         }
       },
     },

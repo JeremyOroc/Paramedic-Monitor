@@ -34,6 +34,9 @@ function getInitialExtraCount(callerInfoDraft: CallerInfoDraft) {
 export function CallerInfoForm() {
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
+  const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
+  const setDispatchMinutes = useMonitorStore((s) => s.setDispatchMinutes)
+  const dispatchArmed = useMonitorStore((s) => s.dispatch.armed)
   const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
   const visibleExtraFields = EXTRA_FIELDS.slice(0, extraCount)
   const extraLimitReached = extraCount >= EXTRA_FIELDS.length
@@ -45,6 +48,25 @@ export function CallerInfoForm() {
         <span className="text-xs uppercase tracking-wider text-neutral-600">Analyse</span>
       </div>
       <div className="grid gap-3">
+        <label className="grid gap-1">
+          <span className="text-xs uppercase tracking-wider text-neutral-400">
+            Dispatch countdown (min)
+          </span>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={dispatchMinutes}
+            onChange={(e) => setDispatchMinutes(Number(e.target.value))}
+            aria-label="Dispatch countdown (min)"
+            className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+          />
+          <span className="text-xs text-neutral-600">
+            {dispatchArmed
+              ? 'Dispatch already armed — further Sends only update caller info.'
+              : 'The first Send arms the dispatch and starts this countdown on the monitor.'}
+          </span>
+        </label>
         {PRIMARY_FIELDS.map(({ field, label, multiline }) => (
           <label key={field} className="grid gap-1">
             <span className="text-xs uppercase tracking-wider text-neutral-400">{label}</span>
