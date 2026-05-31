@@ -10,11 +10,12 @@ import type { MonitorSelection } from '@/types/monitorSelection'
 import { clampAge, toggleSex, type PatientInfo, type PatientSex } from '@/types/patientInfo'
 import { DEFAULT_VITALS, type PatientMode, type Rhythm } from '@/types/vitals'
 import { setAudioMuted } from '@/lib/audio'
+import { NEXT_MED_PAGE, type MedicationPage } from '@/lib/monitor/medications'
 
 export type MonitorView = 'main' | '12lead'
 export type SecondaryChannel = 'spo2' | 'etco2'
 export type CaptureState = 'idle' | 'acquiring' | 'result'
-export type MedicationPage = 1 | 2 | 3
+export type { MedicationPage }
 
 export type CaptureSnapshot = {
   rhythm: Rhythm
@@ -34,7 +35,6 @@ const TOP_SELECTIONS: MonitorSelection[] = [
   'spo2Vital',
 ]
 
-const NEXT_MED_PAGE: Record<MedicationPage, MedicationPage> = { 1: 2, 2: 3, 3: 1 }
 
 type MonitorControllerState = {
   view: MonitorView

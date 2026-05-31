@@ -5,6 +5,19 @@
 
 ---
 
+## [2026-05-31] [monitor] — Extract shared soft-key model
+
+- Added `src/lib/monitor/medications.ts` (`MED_PAGES`, `NEXT_MED_PAGE`, `MED_ABBREVS`,
+  `MedicationPage`) and `src/lib/monitor/softKeys.ts` (per-view physical soft-key builders) as the
+  single source of truth, removing the duplicate medication tables from `DeviceShell` and
+  `LeftSidebar` and the duplicate next-page map from `useMonitorController`.
+- Collapsed the ~40-prop `DeviceShellProps` interface into grouped objects (`defib`, `softKeys`,
+  `nav`, `meds`, `power`, `audio`); updated the `page.tsx` call site to match.
+- `LeftSidebar` keeps byte-identical markup, now sourcing its medication strings from the shared
+  module.
+- Added soft-key model tests; updated `DeviceShell`/page test wiring for the grouped props. Behavior
+  and rendered output unchanged.
+
 ## [2026-05-31] [monitor] — Extract monitor interaction controller
 
 - Moved monitor-page interaction state into `useMonitorController`, backed by a reducer, while

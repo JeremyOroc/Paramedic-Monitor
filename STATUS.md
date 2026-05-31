@@ -46,6 +46,11 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Shared soft-key model refactor — COMPLETE:**
+  - [x] Added `src/lib/monitor/medications.ts` + `src/lib/monitor/softKeys.ts` as the single source of truth for medication pages and the 7 per-view physical soft keys
+  - [x] Removed duplicate medication tables from `DeviceShell`/`LeftSidebar` and the duplicate next-page map from `useMonitorController`
+  - [x] Collapsed the ~40-prop `DeviceShellProps` into grouped objects (`defib`, `softKeys`, `nav`, `meds`, `power`, `audio`); `LeftSidebar` markup unchanged
+  - [x] Added soft-key model tests; behavior and rendered output preserved
 - [x] **Monitor interaction controller refactor — COMPLETE:**
   - [x] Extracted monitor-page local UI state into `useMonitorController`, backed by a reducer
   - [x] Controller owns view/channel mode, modal state, patient-info editing, medication log/flash, mute/power flags, selection cursor, 12-lead capture, latest-print preview, and Back precedence

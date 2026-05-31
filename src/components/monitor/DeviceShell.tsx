@@ -5,12 +5,13 @@ import type { ReactNode } from 'react'
 import type { DefibState } from '@/hooks/useDefibSequence'
 import { cn } from '@/lib/utils'
 import { playButtonClick } from '@/lib/audio'
-
-const MED_PAGES: Record<1 | 2 | 3, string[]> = {
-  1: ['O2', 'AAS', 'Nitro', 'Epi'],
-  2: ['Salbutamol', 'Glucagon', 'Midazolam', 'Nalaxone'],
-  3: ['Zofran', 'Tylenol', 'Advil', 'Fentanyl'],
-}
+import type { MedicationPage } from '@/lib/monitor/medications'
+import {
+  buildMainSoftKeys,
+  buildMedicationSoftKeys,
+  buildTwelveLeadSoftKeys,
+  type SoftKey,
+} from '@/lib/monitor/softKeys'
 
 type PhysicalButtonProps = {
   ariaLabel: string
@@ -91,10 +92,8 @@ function DefibButton({
 
 type PowerState = 'on' | 'booting' | 'off'
 
-type DeviceShellProps = {
-  screen: ReactNode
-  screenModal?: ReactNode
-  defibState: DefibState
+export type DefibControls = {
+  state: DefibState
   energy: number
   progress: number
   canAnalyse: boolean
@@ -106,6 +105,9 @@ type DeviceShellProps = {
   onShock: () => void
   onEnergyUp: () => void
   onEnergyDown: () => void
+}
+
+export type SoftKeyHandlers = {
   onTwelveLead: () => void
   onToggleEtco2: () => void
   onTreatment: () => void
@@ -114,63 +116,95 @@ type DeviceShellProps = {
   onPatientInfo: () => void
   onCaptureTwelveLead: () => void
   onPrint: () => void
+}
+
+export type NavHandlers = {
   onMoveUp: () => void
   onMoveDown: () => void
   onEnter: () => void
-  twelveLeadActive?: boolean
-  /** When true (e.g. during a 12-lead capture), every control except Back is inert. */
-  captureLock?: boolean
-  onPowerOn?: () => void
-  onPowerOff?: () => void
-  medicationMode?: boolean
-  medicationPage?: 1 | 2 | 3
+}
+
+export type MedicationControls = {
+  mode?: boolean
+  page?: MedicationPage
   onMedClick?: (name: string) => void
   onMedPageChange?: () => void
   onMedInfo?: () => void
   onMedBack?: () => void
+}
+
+export type PowerHandlers = {
+  onPowerOn?: () => void
+  onPowerOff?: () => void
+}
+
+export type AudioControls = {
   isMuted?: boolean
   onToggleMute?: () => void
+}
+
+type DeviceShellProps = {
+  screen: ReactNode
+  screenModal?: ReactNode
+  twelveLeadActive?: boolean
+  /** When true (e.g. during a 12-lead capture), every control except Back is inert. */
+  captureLock?: boolean
+  defib: DefibControls
+  softKeys: SoftKeyHandlers
+  nav: NavHandlers
+  meds?: MedicationControls
+  power?: PowerHandlers
+  audio?: AudioControls
 }
 
 export function DeviceShell({
   screen,
   screenModal,
-  defibState,
-  energy,
-  progress,
-  canAnalyse,
-  canCharge,
-  canShock,
-  canAdjustEnergy,
-  onAnalyse,
-  onCharge,
-  onShock,
-  onEnergyUp,
-  onEnergyDown,
-  onTwelveLead,
-  onToggleEtco2,
-  onTreatment,
-  onLeftAnalyse,
-  onBack,
-  onPatientInfo,
-  onCaptureTwelveLead,
-  onPrint,
-  onMoveUp,
-  onMoveDown,
-  onEnter,
   twelveLeadActive = false,
   captureLock = false,
-  onPowerOn,
-  onPowerOff,
-  medicationMode = false,
-  medicationPage = 1,
-  onMedClick,
-  onMedPageChange,
-  onMedInfo,
-  onMedBack,
-  isMuted = false,
-  onToggleMute,
+  defib,
+  softKeys,
+  nav,
+  meds,
+  power,
+  audio,
 }: DeviceShellProps) {
+  const {
+    state: defibState,
+    energy,
+    progress,
+    canAnalyse,
+    canCharge,
+    canShock,
+    canAdjustEnergy,
+    onAnalyse,
+    onCharge,
+    onShock,
+    onEnergyUp,
+    onEnergyDown,
+  } = defib
+  const {
+    onTwelveLead,
+    onToggleEtco2,
+    onTreatment,
+    onLeftAnalyse,
+    onBack,
+    onPatientInfo,
+    onCaptureTwelveLead,
+    onPrint,
+  } = softKeys
+  const { onMoveUp, onMoveDown, onEnter } = nav
+  const medicationMode = meds?.mode ?? false
+  const medicationPage: MedicationPage = meds?.page ?? 1
+  const onMedClick = meds?.onMedClick ?? (() => {})
+  const onMedPageChange = meds?.onMedPageChange ?? (() => {})
+  const onMedInfo = meds?.onMedInfo ?? (() => {})
+  const onMedBack = meds?.onMedBack ?? (() => {})
+  const onPowerOn = power?.onPowerOn
+  const onPowerOff = power?.onPowerOff
+  const isMuted = audio?.isMuted ?? false
+  const onToggleMute = audio?.onToggleMute ?? (() => {})
+
   const [powerState, setPowerState] = useState<PowerState>('on')
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -180,6 +214,31 @@ export function DeviceShell({
   const noop = () => {}
   const lock = <T,>(fn: T): T | (() => void) => (captureLock ? noop : fn)
   const allow = (flag: boolean) => (captureLock ? false : flag)
+
+  // Resolve the 7 physical left soft keys for the current view. Back stays live
+  // during captureLock; medication keys are unaffected by captureLock (the modes
+  // never overlap), matching prior behavior.
+  const leftSoftKeys: SoftKey[] = medicationMode
+    ? buildMedicationSoftKeys(medicationPage, {
+        onMedClick,
+        onMedInfo,
+        onMedPageChange,
+        onMedBack,
+      })
+    : twelveLeadActive
+      ? buildTwelveLeadSoftKeys({
+          onCaptureTwelveLead: lock(onCaptureTwelveLead),
+          onPatientInfo: lock(onPatientInfo),
+          onBack,
+        })
+      : buildMainSoftKeys({
+          onTwelveLead: lock(onTwelveLead),
+          onToggleEtco2: lock(onToggleEtco2),
+          onTreatment: lock(onTreatment),
+          onLeftAnalyse: lock(onLeftAnalyse),
+          onPrint: lock(onPrint),
+          onBack,
+        })
 
   function handlePowerToggle() {
     if (powerState === 'booting') return
@@ -205,23 +264,7 @@ export function DeviceShell({
           <div className="absolute inset-[3.2%] grid grid-rows-[13%_1fr_21%] overflow-hidden rounded-[58px] border-[3px] border-[#0a2362] bg-[#c7c8c7] shadow-[inset_0_0_32px_rgba(255,255,255,0.54),inset_0_0_0_2px_rgba(78,78,78,0.2)]">
             <DeviceHeader />
             <div className="grid min-h-0 grid-cols-[10.5%_1fr_17.5%] gap-[1.4%] px-[2.8%]">
-              <LeftSoftKeys
-                onTwelveLead={lock(onTwelveLead)}
-                onToggleEtco2={lock(onToggleEtco2)}
-                onTreatment={lock(onTreatment)}
-                onLeftAnalyse={lock(onLeftAnalyse)}
-                onBack={onBack}
-                onPatientInfo={lock(onPatientInfo)}
-                onCaptureTwelveLead={lock(onCaptureTwelveLead)}
-                onPrint={lock(onPrint)}
-                twelveLeadActive={twelveLeadActive}
-                medicationMode={medicationMode}
-                medicationPage={medicationPage}
-                onMedClick={onMedClick ?? (() => {})}
-                onMedPageChange={onMedPageChange ?? (() => {})}
-                onMedInfo={onMedInfo ?? (() => {})}
-                onMedBack={onMedBack ?? (() => {})}
-              />
+              <LeftSoftKeys keys={leftSoftKeys} />
               <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6vw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
                 <div className="relative h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
                   {powerState === 'on' && screen}
@@ -358,91 +401,11 @@ function DeviceHeader() {
   )
 }
 
-type LeftSoftKeysProps = {
-  onTwelveLead: () => void
-  onToggleEtco2: () => void
-  onTreatment: () => void
-  onLeftAnalyse: () => void
-  onBack: () => void
-  onPatientInfo: () => void
-  onCaptureTwelveLead: () => void
-  onPrint: () => void
-  twelveLeadActive: boolean
-  medicationMode: boolean
-  medicationPage: 1 | 2 | 3
-  onMedClick: (name: string) => void
-  onMedPageChange: () => void
-  onMedInfo: () => void
-  onMedBack: () => void
-}
-
-type SoftKey = {
-  id: string
-  ariaLabel?: string
-  onClick?: () => void
-  active?: boolean
-}
-
-function LeftSoftKeys({
-  onTwelveLead,
-  onToggleEtco2,
-  onTreatment,
-  onLeftAnalyse,
-  onBack,
-  onPatientInfo,
-  onCaptureTwelveLead,
-  onPrint,
-  twelveLeadActive,
-  medicationMode,
-  medicationPage,
-  onMedClick,
-  onMedPageChange,
-  onMedInfo,
-  onMedBack,
-}: LeftSoftKeysProps) {
-  // 7 fixed hardware soft keys, top to bottom — always rendered, never hidden.
-  // The on-screen LeftSidebar supplies the per-view label/action beside each key;
-  // a key with no on-screen counterpart in the current view is inert (no onClick).
-  // In 12-lead view that means slot 2 → Patient Info, slot 7 → Back, rest inert.
-  const mainKeys: SoftKey[] = [
-    { id: 'brightness', ariaLabel: 'Brightness soft key' },
-    { id: '12lead', ariaLabel: '12-lead view', onClick: onTwelveLead, active: false },
-    { id: 'etco2', ariaLabel: 'Toggle EtCO2', onClick: onToggleEtco2 },
-    { id: 'treatment', ariaLabel: 'Treatment soft key', onClick: onTreatment },
-    { id: 'analyse', ariaLabel: 'Call Info (sidebar)', onClick: onLeftAnalyse },
-    { id: 'printer', ariaLabel: 'Printer soft key', onClick: onPrint },
-    { id: 'back', ariaLabel: 'Back', onClick: onBack },
-  ]
-
-  const medicationKeys: SoftKey[] = (() => {
-    const meds = MED_PAGES[medicationPage]
-    return [
-      { id: 'med1', ariaLabel: `Administer ${meds[0]}`, onClick: () => onMedClick(meds[0]) },
-      { id: 'med2', ariaLabel: `Administer ${meds[1]}`, onClick: () => onMedClick(meds[1]) },
-      { id: 'med3', ariaLabel: `Administer ${meds[2]}`, onClick: () => onMedClick(meds[2]) },
-      { id: 'med4', ariaLabel: `Administer ${meds[3]}`, onClick: () => onMedClick(meds[3]) },
-      { id: 'med-info', ariaLabel: 'Medication info', onClick: onMedInfo },
-      { id: 'med-page', ariaLabel: 'Next medication page', onClick: onMedPageChange },
-      { id: 'med-back', ariaLabel: 'Exit medications', onClick: onMedBack },
-    ]
-  })()
-
-  const twelveLeadKeys: SoftKey[] = [
-    { id: 'capture', ariaLabel: 'Capture 12-lead', onClick: onCaptureTwelveLead },
-    { id: 'patient-info', ariaLabel: 'Patient Info', onClick: onPatientInfo },
-    { id: 'slot3', ariaLabel: 'Soft key 3' },
-    { id: 'slot4', ariaLabel: 'Soft key 4' },
-    { id: 'slot5', ariaLabel: 'Soft key 5' },
-    { id: 'slot6', ariaLabel: 'Soft key 6' },
-    { id: 'back', ariaLabel: 'Back', onClick: onBack },
-  ]
-
-  const keys = medicationMode
-    ? medicationKeys
-    : twelveLeadActive
-      ? twelveLeadKeys
-      : mainKeys
-
+// 7 fixed hardware soft keys, top to bottom — always rendered, never hidden.
+// The on-screen LeftSidebar supplies the per-view label/action beside each key;
+// a key with no action in the current view is inert. The resolved per-view key
+// list comes from `@/lib/monitor/softKeys`.
+function LeftSoftKeys({ keys }: { keys: SoftKey[] }) {
   return (
     // Mirror the on-screen LeftSidebar geometry so the physical soft keys line
     // up 1:1 with the menu rows: same top offset (32px top bar + 24px sub bar,

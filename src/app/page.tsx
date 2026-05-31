@@ -258,45 +258,57 @@ export default function MonitorPage() {
           onClose={controller.onClosePatientModal}
         />
       }
-      defibState={defib.state}
-      energy={defib.energy}
-      progress={defib.progress}
-      canAnalyse={defib.canAnalyse}
-      canCharge={defib.canCharge}
-      canShock={defib.canShock}
-      canAdjustEnergy={defib.canAdjustEnergy}
-      onAnalyse={defib.onAnalyse}
-      onCharge={defib.onCharge}
-      onShock={defib.onShock}
-      onEnergyUp={defib.onEnergyUp}
-      onEnergyDown={defib.onEnergyDown}
-      onTwelveLead={controller.onTwelveLead}
-      onToggleEtco2={controller.onToggleEtco2}
-      onTreatment={controller.onTreatment}
-      onLeftAnalyse={controller.onLeftAnalyse}
-      onBack={controller.onBack}
-      onPatientInfo={controller.onPatientInfo}
-      onCaptureTwelveLead={controller.onCaptureTwelveLead}
-      onPrint={controller.onPrint}
-      captureLock={controller.captureLock}
-      onMoveUp={controller.onMoveUp}
-      onMoveDown={controller.onMoveDown}
-      onEnter={controller.onEnter}
       twelveLeadActive={controller.isTwelveLead}
-      isMuted={controller.isMuted}
-      onToggleMute={controller.onToggleMute}
-      onPowerOn={controller.onPowerOn}
-      onPowerOff={() => {
-        controller.onPowerOff()
-        defib.reset()
-        setAudioMuted(false)
+      captureLock={controller.captureLock}
+      defib={{
+        state: defib.state,
+        energy: defib.energy,
+        progress: defib.progress,
+        canAnalyse: defib.canAnalyse,
+        canCharge: defib.canCharge,
+        canShock: defib.canShock,
+        canAdjustEnergy: defib.canAdjustEnergy,
+        onAnalyse: defib.onAnalyse,
+        onCharge: defib.onCharge,
+        onShock: defib.onShock,
+        onEnergyUp: defib.onEnergyUp,
+        onEnergyDown: defib.onEnergyDown,
       }}
-      medicationMode={controller.medicationMode}
-      medicationPage={controller.medicationPage}
-      onMedClick={(name) => controller.onMedClick(name, sessionTimer)}
-      onMedPageChange={controller.onMedPageChange}
-      onMedInfo={controller.onMedInfo}
-      onMedBack={controller.onMedBack}
+      softKeys={{
+        onTwelveLead: controller.onTwelveLead,
+        onToggleEtco2: controller.onToggleEtco2,
+        onTreatment: controller.onTreatment,
+        onLeftAnalyse: controller.onLeftAnalyse,
+        onBack: controller.onBack,
+        onPatientInfo: controller.onPatientInfo,
+        onCaptureTwelveLead: controller.onCaptureTwelveLead,
+        onPrint: controller.onPrint,
+      }}
+      nav={{
+        onMoveUp: controller.onMoveUp,
+        onMoveDown: controller.onMoveDown,
+        onEnter: controller.onEnter,
+      }}
+      meds={{
+        mode: controller.medicationMode,
+        page: controller.medicationPage,
+        onMedClick: (name) => controller.onMedClick(name, sessionTimer),
+        onMedPageChange: controller.onMedPageChange,
+        onMedInfo: controller.onMedInfo,
+        onMedBack: controller.onMedBack,
+      }}
+      power={{
+        onPowerOn: controller.onPowerOn,
+        onPowerOff: () => {
+          controller.onPowerOff()
+          defib.reset()
+          setAudioMuted(false)
+        },
+      }}
+      audio={{
+        isMuted: controller.isMuted,
+        onToggleMute: controller.onToggleMute,
+      }}
     />
   )
 }
