@@ -1,7 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
 const ITEMS_PER_PAGE = 8
 
 export type EventLogEntry = {
@@ -12,15 +10,18 @@ export type EventLogEntry = {
 type EventLogModalProps = {
   open: boolean
   log: EventLogEntry[]
+  rightOffset?: number
+  page?: number
+  highlightedButton?: 'prev' | 'next'
 }
 
-export function EventLogModal({ open, log }: EventLogModalProps) {
-  const [page, setPage] = useState(1)
-
-  useEffect(() => {
-    if (open) setPage(1)
-  }, [open])
-
+export function EventLogModal({
+  open,
+  log,
+  rightOffset = 96,
+  page = 1,
+  highlightedButton = 'next',
+}: EventLogModalProps) {
   if (!open) return null
 
   const totalPages = Math.max(1, Math.ceil(log.length / ITEMS_PER_PAGE))
@@ -30,51 +31,46 @@ export function EventLogModal({ open, log }: EventLogModalProps) {
   return (
     <section
       aria-label="Event log"
-      className="absolute left-[56px] right-0 bottom-0 z-30 flex h-2/3 flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
+      className="absolute left-[56px] top-[56px] bottom-[110px] z-30 flex flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
+      style={{ right: rightOffset }}
     >
-      <header className="bg-white px-5 py-2 text-black">
-        <h2 className="text-lg font-bold">Event Log</h2>
+      <header className="bg-white px-4 py-1.5 text-black">
+        <h2 className="text-base font-bold">Event Log</h2>
       </header>
-      <div className="flex-1 overflow-y-auto bg-[#8ba88c] px-5 py-4">
+      <div className="flex-1 overflow-hidden bg-[#8ba88c] px-4 py-2">
         {log.length > 0 ? (
-          <ul className="flex flex-col gap-1.5">
+          <ul className="flex flex-col gap-1">
             {pageEntries.map((entry, i) => (
               <li
                 key={(page - 1) * ITEMS_PER_PAGE + i}
-                className="grid grid-cols-[1fr_auto] items-stretch"
+                className="grid grid-cols-[1fr_1fr] items-stretch"
               >
-                <span className="px-3 py-2 text-base font-bold text-black">{entry.name}</span>
-                <span className="flex items-center justify-center bg-black px-3 py-2 text-base font-bold tabular-nums text-white">
+                <span className="px-2 py-1 text-xs font-bold text-black">{entry.name}</span>
+                <span className="flex items-center justify-center bg-black px-2 py-1 text-xs font-bold tabular-nums text-white text-center">
                   {entry.time}
                 </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-black/70 text-base">No events recorded.</p>
+          <p className="text-black/70 text-sm">No events recorded.</p>
         )}
       </div>
       {showPagination && (
-        <div className="flex items-center justify-between bg-[#8ba88c] border-t border-black/20 px-5 py-2 text-sm font-mono">
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-            className="px-2 py-1 text-black font-bold disabled:opacity-30 hover:bg-black/10 focus:outline-none"
+        <div className="flex items-center justify-between bg-[#8ba88c] border-t border-black/20 px-4 py-1.5 text-xs font-mono">
+          <span
+            className={`px-2 py-1 font-bold ${highlightedButton === 'prev' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === 1 ? 'opacity-30' : ''}`}
           >
             &#8592; Prev
-          </button>
+          </span>
           <span className="text-black/70">
             Page {page} of {totalPages}
           </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            className="px-2 py-1 text-black font-bold disabled:opacity-30 hover:bg-black/10 focus:outline-none"
+          <span
+            className={`px-2 py-1 font-bold ${highlightedButton === 'next' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === totalPages ? 'opacity-30' : ''}`}
           >
             Next &#8594;
-          </button>
+          </span>
         </div>
       )}
     </section>

@@ -67,7 +67,7 @@ export function VitalsStrip({
             <span className="text-[10px] font-mono text-black/70">mmHg</span>
           </div>
           <div className="flex h-full min-h-0 flex-col items-center justify-center text-center">
-            <span className="font-mono text-[2.8rem] font-bold leading-none tabular-nums text-cyan-bp">
+            <span className="font-mono text-[9px] leading-tight text-cyan-bp break-words px-0.5">
               {nibpDisplayValue}
             </span>
           </div>

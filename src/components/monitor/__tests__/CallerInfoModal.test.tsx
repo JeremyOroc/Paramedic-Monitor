@@ -9,7 +9,7 @@ import { CallerInfoModal } from '../CallerInfoModal'
 describe('CallerInfoModal', () => {
   it('renders nothing when closed', () => {
     const { container } = render(
-      <CallerInfoModal open={false} info={DEFAULT_CALLER_INFO} onClose={vi.fn()} />,
+      <CallerInfoModal open={false} info={DEFAULT_CALLER_INFO} />,
     )
 
     expect(container).toBeEmptyDOMElement()
@@ -26,7 +26,7 @@ describe('CallerInfoModal', () => {
           problem: 'Douleur thoracique',
           time: '14:45',
         }}
-        onClose={vi.fn()}
+       
       />,
     )
 
@@ -46,7 +46,7 @@ describe('CallerInfoModal', () => {
           extra1Label: 'Acces',
           extra1: 'Porte cote nord',
         }}
-        onClose={vi.fn()}
+       
       />,
     )
 
@@ -65,7 +65,7 @@ describe('CallerInfoModal', () => {
           ...DEFAULT_CALLER_INFO,
           extra1: 'Porte cote nord',
         }}
-        onClose={vi.fn()}
+       
       />,
     )
 
@@ -83,7 +83,7 @@ describe('CallerInfoModal', () => {
           extra1Label: 'Acces',
           extra1: 'Porte cote nord',
         }}
-        onClose={vi.fn()}
+       
       />,
     )
 
@@ -96,7 +96,7 @@ describe('CallerInfoModal', () => {
   it('closes when the close button is clicked', async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
-    render(<CallerInfoModal open info={DEFAULT_CALLER_INFO} onClose={onClose} />)
+    render(<CallerInfoModal open info={DEFAULT_CALLER_INFO} />)
 
     await user.click(screen.getByRole('button', { name: 'Close caller info' }))
     expect(onClose).toHaveBeenCalledTimes(1)
