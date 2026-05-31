@@ -174,7 +174,28 @@ export function DeviceShell({
   onPatientEvent,
 }: DeviceShellProps) {
   const [powerState, setPowerState] = useState<PowerState>('on')
+  const [jumpscareActive, setJumpscareActive] = useState(false)
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 1/1000 per second jumpscare while monitor is on and not already playing
+  useEffect(() => {
+    if (powerState !== 'on' || jumpscareActive) return
+    const id = setInterval(() => {
+      if (Math.random() < 1 / 1000) setJumpscareActive(true)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [powerState, jumpscareActive])
+
+  // Auto-dismiss after 5 seconds; also cancel immediately on power-off
+  useEffect(() => {
+    if (!jumpscareActive) return
+    if (powerState !== 'on') {
+      setJumpscareActive(false)
+      return
+    }
+    const id = setTimeout(() => setJumpscareActive(false), 5000)
+    return () => clearTimeout(id)
+  }, [jumpscareActive, powerState])
 
   // During a 12-lead capture every control except Back is inert: handlers become
   // no-ops and the defib row is fully disabled. Back stays live so the user can
@@ -228,6 +249,31 @@ export function DeviceShell({
                 <div className="relative h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
                   {powerState === 'on' && screen}
                   {powerState === 'booting' && <BootScreen />}
+                  {powerState === 'off' && (
+                    <div className="absolute inset-0 z-50 overflow-hidden bg-black">
+                      <video
+                        src="/videos/its_me.mp4"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="h-full w-full object-cover"
+                      />
+                      <audio src="/audio/its_me.mp3" autoPlay loop />
+                    </div>
+                  )}
+                  {jumpscareActive && powerState === 'on' && (
+                    <div className="absolute inset-0 z-50 overflow-hidden bg-black">
+                      <video
+                        src="/videos/its_me.mp4"
+                        autoPlay
+                        muted
+                        playsInline
+                        className="h-full w-full object-cover"
+                      />
+                      <audio src="/audio/its_me.mp3" autoPlay />
+                    </div>
+                  )}
                   {screenModal}
                 </div>
               </div>
@@ -354,7 +400,7 @@ function BootScreen() {
 function DeviceHeader() {
   return (
     <div className="relative flex items-start justify-center pt-[2.1%]">
-      <span className="select-none text-[clamp(30px,4.6vw,68px)] font-black leading-none tracking-[0.02em] text-white/45">
+      <span className="select-none text-[clamp(30px,4.6vw,68px)] font-black leading-none tracking-[0.02em] text-white">
         WAGAMI
       </span>
     </div>

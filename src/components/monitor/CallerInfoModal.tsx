@@ -9,10 +9,9 @@ import {
 type CallerInfoModalProps = {
   open: boolean
   info: CallerInfo
-  rightOffset?: number
 }
 
-export function CallerInfoModal({ open, info, rightOffset = 96 }: CallerInfoModalProps) {
+export function CallerInfoModal({ open, info }: CallerInfoModalProps) {
   if (!open) return null
 
   const hasInfo = hasCallerInfo(info)
@@ -24,8 +23,7 @@ export function CallerInfoModal({ open, info, rightOffset = 96 }: CallerInfoModa
   return (
     <section
       aria-label="Caller info"
-      className="absolute left-[56px] top-[56px] bottom-[110px] z-30 flex flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
-      style={{ right: rightOffset }}
+      className="absolute left-[56px] top-[56px] bottom-0 right-0 z-30 flex flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
     >
       <header className="bg-white px-4 py-1.5 text-black">
         <h2 className="text-base font-bold">Caller Info</h2>

@@ -478,7 +478,6 @@ export default function MonitorPage() {
       <CallerInfoModal
         open={callerInfoOpen}
         info={callerInfoConfirmed}
-        rightOffset={modalRightOffset}
       />
       <PatientInfoPanel
         open={patientInfoOpen}
