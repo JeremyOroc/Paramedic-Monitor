@@ -10,34 +10,30 @@ import MonitorPage from '../page'
 vi.mock('@/components/monitor/DeviceShell', () => ({
   DeviceShell: ({
     screen,
-    onAnalyse,
-    onLeftAnalyse,
-    onMoveUp,
-    onMoveDown,
-    onEnter,
+    defib,
+    softKeys,
+    nav,
   }: {
     screen: ReactNode
-    onAnalyse: () => void
-    onLeftAnalyse: () => void
-    onMoveUp: () => void
-    onMoveDown: () => void
-    onEnter: () => void
+    defib: { onAnalyse: () => void }
+    softKeys: { onLeftAnalyse: () => void }
+    nav: { onMoveUp: () => void; onMoveDown: () => void; onEnter: () => void }
   }) => (
     <div>
       {screen}
-      <button type="button" onClick={onAnalyse}>
+      <button type="button" onClick={defib.onAnalyse}>
         Analyze rhythm
       </button>
-      <button type="button" onClick={onLeftAnalyse}>
+      <button type="button" onClick={softKeys.onLeftAnalyse}>
         Call Info (sidebar)
       </button>
-      <button type="button" onClick={onMoveUp}>
+      <button type="button" onClick={nav.onMoveUp}>
         Move up
       </button>
-      <button type="button" onClick={onMoveDown}>
+      <button type="button" onClick={nav.onMoveDown}>
         Move down
       </button>
-      <button type="button" onClick={onEnter}>
+      <button type="button" onClick={nav.onEnter}>
         Enter
       </button>
     </div>

@@ -46,10 +46,37 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Caller info Back-to-close fix — COMPLETE:**
+  - [x] Back now closes the Call Info panel (controller `back` reducer handles `callerInfoOpen`); the merged modal has no in-panel close button
+  - [x] Stale `CallerInfoModal` close-button test replaced; controller test added; full suite green (241 tests)
+- [x] **Medication event log back fix — COMPLETE:**
+  - [x] Med "BACK" now closes the open event log first (staying in medication mode), then exits medication mode on the next press — restoring pre-refactor two-step behavior
+  - [x] Fixed in `useMonitorController` `exitMedicationMode`; controller test added
 - [x] **ECG renderer dimension self-heal fix — COMPLETE:**
   - [x] Fixed the ECG trace being erased in chunks (until a manual window resize) when the cached canvas size drifted from the real size after a layout change
   - [x] `resize()` is idempotent + client-size-rounded; the loop self-heals size a few times per second instead of relying solely on `ResizeObserver`
   - [x] Renderer regression test added; confirmed via instrumentation there were no duplicate render loops
+- [x] **Page composition cleanup — COMPLETE:**
+  - [x] Extracted `useMonitorClock` (ticking clock) and `useDefibAudio` (charge/shock-ready beeps) from `MonitorPage`
+  - [x] `MonitorPage` is now pure wiring (selectors, hooks, render tree); hook tests added; behavior unchanged
+- [x] **Defib state machine split — COMPLETE:**
+  - [x] Added pure `src/lib/defib/defibMachine.ts` (state enum, guards, energy math, charge/shock transition classifiers)
+  - [x] `useDefibSequence` keeps timers/rAF/audio, delegates decisions to the machine; `DefibState` re-exported for compat
+  - [x] Reducer-level tests added; charge/analyze/shock/audio behavior unchanged
+- [x] **Waveform renderer hook refactor — COMPLETE:**
+  - [x] Added `src/hooks/useWaveformRenderer.ts` (canvas ref + latest-value sync + `startRenderer` lifecycle)
+  - [x] `ECGCanvas`, `LeadCell`, `SecondaryChannel` rewired to the hook; per-view options unchanged
+  - [x] Generators/renderer math untouched; rendered waveforms unchanged; hook test added
+- [x] **Shared soft-key model refactor — COMPLETE:**
+  - [x] Added `src/lib/monitor/medications.ts` + `src/lib/monitor/softKeys.ts` as the single source of truth for medication pages and the 7 per-view physical soft keys
+  - [x] Removed duplicate medication tables from `DeviceShell`/`LeftSidebar` and the duplicate next-page map from `useMonitorController`
+  - [x] Collapsed the ~40-prop `DeviceShellProps` into grouped objects (`defib`, `softKeys`, `nav`, `meds`, `power`, `audio`); `LeftSidebar` markup unchanged
+  - [x] Added soft-key model tests; behavior and rendered output preserved
+- [x] **Monitor interaction controller refactor — COMPLETE:**
+  - [x] Extracted monitor-page local UI state into `useMonitorController`, backed by a reducer
+  - [x] Controller owns view/channel mode, modal state, patient-info editing, medication log/flash, mute/power flags, selection cursor, 12-lead capture, latest-print preview, and Back precedence
+  - [x] `MonitorPage` now focuses on rendering/wiring while keeping defib sequence, alarms, session timer, and screen composition in place
+  - [x] Tests added for controller initial state, selection toggle, patient-info drafts, capture timers, Back precedence, and power-off cleanup
 - [x] **Vitals alarm system — COMPLETE:**
   - [x] Confirmed client thresholds: HR <40/>140 bpm; BP systolic <90/>200 mmHg; BP diastolic <25/>225 mmHg; SpO2 <90%; no EtCO2 threshold
   - [x] `getActiveAlarms` centralizes alarm evaluation for HR, BP, and SpO2

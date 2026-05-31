@@ -1,35 +1,18 @@
 'use client'
 
 import { SidebarButton } from './SidebarButton'
-
-const MED_PAGES: Record<1 | 2 | 3, string[]> = {
-  1: ['O2', 'AAS', 'Nitro', 'Epi'],
-  2: ['Salbutamol', 'Glucagon', 'Midazolam', 'Nalaxone'],
-  3: ['Zofran', 'Tylenol', 'Advil', 'Fentanyl'],
-}
-
-const NEXT_PAGE: Record<1 | 2 | 3, 1 | 2 | 3> = { 1: 2, 2: 3, 3: 1 }
-
-const MED_ABBREVS: Record<string, string> = {
-  'O2':         'O2',
-  'AAS':        'AAS',
-  'Nitro':      'NTG',
-  'Epi':        'EPI',
-  'Salbutamol': 'SALB',
-  'Glucagon':   'GLUC',
-  'Midazolam':  'MIDAZ',
-  'Nalaxone':   'NALX',
-  'Zofran':     'ZOF',
-  'Tylenol':    'TYL',
-  'Advil':      'ADV',
-  'Fentanyl':   'FENT',
-}
+import {
+  MED_ABBREVS,
+  MED_PAGES,
+  NEXT_MED_PAGE,
+  type MedicationPage,
+} from '@/lib/monitor/medications'
 
 type LeftSidebarProps = {
   twelveLeadActive: boolean
   etco2Active: boolean
   medicationMode?: boolean
-  medicationPage?: 1 | 2 | 3
+  medicationPage?: MedicationPage
   activeMed?: string | null
   printActive?: boolean
 }
@@ -44,7 +27,7 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   if (medicationMode) {
     const meds = MED_PAGES[medicationPage]
-    const nextPage = NEXT_PAGE[medicationPage]
+    const nextPage = NEXT_MED_PAGE[medicationPage]
 
     return (
       <div className="h-full w-full flex flex-col justify-between bg-sidebar-bg pb-[54px]">

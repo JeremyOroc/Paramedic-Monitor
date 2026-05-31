@@ -1,7 +1,5 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import { startRenderer } from '@/lib/ecg/renderer'
 import {
   ETCO2_SWEEP_MS,
   RESP_CYCLE_MS,
@@ -9,6 +7,7 @@ import {
   getEtco2Waveform,
   getSpo2Waveform,
 } from '@/lib/ecg/rhythms'
+import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
 import { COLORS, cn } from '@/lib/utils'
 import type { Etco2Waveform, Spo2Waveform } from '@/types/vitals'
 
@@ -36,49 +35,34 @@ export function SecondaryChannel({
   selectedScale = false,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const channelRef = useRef(channel)
-  const hrRef = useRef(hr)
-  const spoNumRef = useRef(spo2)
-  const etcoNumRef = useRef(etco2)
-  const spoShapeRef = useRef(spo2Waveform)
-  const etcoShapeRef = useRef(etco2Waveform)
-
-  useEffect(() => {
-    channelRef.current = channel
-    hrRef.current = hr
-    spoNumRef.current = spo2
-    etcoNumRef.current = etco2
-    spoShapeRef.current = spo2Waveform
-    etcoShapeRef.current = etco2Waveform
-  })
-
-  useEffect(() => {
-    if (!canvasRef.current) return
-    const pick = () =>
-      channelRef.current === 'etco2'
-        ? getEtco2Waveform(etcoShapeRef.current, etcoNumRef.current)
-        : getSpo2Waveform(spoShapeRef.current, spoNumRef.current)
-    return startRenderer({
-      canvas: canvasRef.current,
-      color: isEtco2 ? COLORS.purpleEtCO2 : COLORS.yellowSpO2,
-      sweepMs: isEtco2 ? ETCO2_SWEEP_MS : SPO2_SWEEP_MS,
-      amplitude: isEtco2 ? 0.95 : 0.85,
-      fillStyle: isEtco2 ? 'area' : 'line',
-      ampJitter: isEtco2 ? 0.05 : 0.07,
-      cycleJitter: isEtco2 ? 0.06 : 0.03,
-      getWaveform: pick,
-      getSignalKey: () =>
-        channelRef.current === 'etco2'
-          ? `${channelRef.current}:${etcoShapeRef.current}`
-          : `${channelRef.current}:${spoShapeRef.current}`,
-      getCycleMs: () => {
-        const def = pick()
-        if (channelRef.current === 'etco2') return def.cycleMs ?? RESP_CYCLE_MS
-        return def.cycleMs ?? 60000 / Math.max(20, hrRef.current)
-      },
-    })
-  }, [isEtco2])
+  const canvasRef = useWaveformRenderer(
+    { channel, hr, spo2, etco2, spo2Waveform, etco2Waveform },
+    (get) => {
+      const pick = () =>
+        get().channel === 'etco2'
+          ? getEtco2Waveform(get().etco2Waveform, get().etco2)
+          : getSpo2Waveform(get().spo2Waveform, get().spo2)
+      return {
+        color: isEtco2 ? COLORS.purpleEtCO2 : COLORS.yellowSpO2,
+        sweepMs: isEtco2 ? ETCO2_SWEEP_MS : SPO2_SWEEP_MS,
+        amplitude: isEtco2 ? 0.95 : 0.85,
+        fillStyle: isEtco2 ? 'area' : 'line',
+        ampJitter: isEtco2 ? 0.05 : 0.07,
+        cycleJitter: isEtco2 ? 0.06 : 0.03,
+        getWaveform: pick,
+        getSignalKey: () =>
+          get().channel === 'etco2'
+            ? `${get().channel}:${get().etco2Waveform}`
+            : `${get().channel}:${get().spo2Waveform}`,
+        getCycleMs: () => {
+          const def = pick()
+          if (get().channel === 'etco2') return def.cycleMs ?? RESP_CYCLE_MS
+          return def.cycleMs ?? 60000 / Math.max(20, get().hr)
+        },
+      }
+    },
+    [isEtco2],
+  )
 
   return (
     <div className={cn('relative h-full w-full', className)}>

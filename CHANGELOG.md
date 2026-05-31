@@ -5,6 +5,22 @@
 
 ---
 
+## [2026-05-31] [monitor] — Fix caller info panel not closing on Back
+
+- The Call Info panel (left CALL INFO soft key) had no way to close: the merged `CallerInfoModal`
+  dropped its in-panel close button and the controller's `back` reducer never handled
+  `callerInfoOpen`. Back now dismisses it, consistent with every other menu/overlay.
+- Updated the stale `CallerInfoModal` test (no in-panel close button) and added a `useMonitorController`
+  test for Back closing the caller info panel. Full suite is green again.
+
+## [2026-05-31] [monitor] — Fix unable to close the medication event log
+
+- The med "BACK" key (`onMedBack` → `exitMedicationMode`) cleared `medicationMode` but left
+  `eventLogOpen` true, trapping the user in the event log with no soft keys to exit.
+- Restored the pre-refactor two-step Back in `useMonitorController`: `exitMedicationMode` now closes
+  the event log first when it is open, then exits medication mode on the next press.
+- Added a `useMonitorController` test for open-log → Back closes log (still in meds) → Back exits.
+
 ## [2026-05-31] [monitor] — Fix ECG waveform erased in chunks until a window resize
 
 - `startRenderer` (`src/lib/ecg/renderer.ts`) cached the canvas size from `ResizeObserver` only and
@@ -20,6 +36,59 @@
   change without a manual resize). Diagnosed with temporary instrumentation that confirmed no
   duplicate render loops.
 
+## [2026-05-31] [monitor] — Simplify page composition
+
+- Extracted the ticking clock into `src/hooks/useMonitorClock.ts` and the two defib beep effects
+  into `src/hooks/useDefibAudio.ts`. `MonitorPage` is now pure wiring (store selectors, hooks,
+  render tree) with no inline clock timers or audio effects.
+- Added focused tests for both hooks; page behavior unchanged.
+
+## [2026-05-31] [defib] — Split defib sequence reducer
+
+- Added `src/lib/defib/defibMachine.ts`: the pure `DefibState` enum, `SHOCKABLE_RHYTHMS`, phase
+  durations / energy step, control guards (`canAnalyse`/`canCharge`/`canShock`/`canAdjustEnergy`),
+  energy math (`resolveEnergy`/`energyUp`/`energyDown` with patient-mode re-base), and the
+  charge/shock transition classifiers.
+- `useDefibSequence` is now a thin wrapper that keeps the timed phases (`setTimeout` + `rAF`) and
+  audio cues but delegates all state decisions and energy math to the machine. `DefibState` is
+  re-exported from the hook so existing importers are unchanged.
+- Added reducer-level transition/guard/energy tests; the existing hook behavior tests stay green.
+
+## [2026-05-31] [waveforms] — Extract waveform renderer hook
+
+- Added `src/hooks/useWaveformRenderer.ts` wrapping the shared React glue: the `<canvas>` ref, the
+  latest-reactive-inputs ref synced every render, and the `startRenderer` start/cleanup lifecycle.
+- `ECGCanvas`, `LeadCell`, and `SecondaryChannel` now call the hook instead of repeating the
+  ref-sync effect + `startRenderer` boilerplate; each keeps its own per-view options (color, sweep,
+  amplitude, jitter, getWaveform/getSignalKey/getCycleMs).
+- Rhythm generators (`rhythms.ts`) and renderer math (`renderer.ts`) are untouched — rendered
+  waveforms are unchanged.
+- Added a hook test (mount start, latest-value reads without restart, deps-change restart, unmount
+  cleanup).
+
+## [2026-05-31] [monitor] — Extract shared soft-key model
+
+- Added `src/lib/monitor/medications.ts` (`MED_PAGES`, `NEXT_MED_PAGE`, `MED_ABBREVS`,
+  `MedicationPage`) and `src/lib/monitor/softKeys.ts` (per-view physical soft-key builders) as the
+  single source of truth, removing the duplicate medication tables from `DeviceShell` and
+  `LeftSidebar` and the duplicate next-page map from `useMonitorController`.
+- Collapsed the ~40-prop `DeviceShellProps` interface into grouped objects (`defib`, `softKeys`,
+  `nav`, `meds`, `power`, `audio`); updated the `page.tsx` call site to match.
+- `LeftSidebar` keeps byte-identical markup, now sourcing its medication strings from the shared
+  module.
+- Added soft-key model tests; updated `DeviceShell`/page test wiring for the grouped props. Behavior
+  and rendered output unchanged.
+
+## [2026-05-31] [monitor] — Extract monitor interaction controller
+
+- Moved monitor-page interaction state into `useMonitorController`, backed by a reducer, while
+  keeping screen rendering, defib wiring, alarms, and session timing in `MonitorPage`.
+- Centralized 12-lead capture, print preview, patient-info editing, medication events, modal
+  state, mute/power flags, selected-control navigation, and Back precedence behind the controller.
+- Added direct controller tests for initial state, selection toggling, patient-info drafts,
+  capture timers, Back precedence, and power-off cleanup.
+- Kept `useAlarm` backward-compatible for existing tests/callers by defaulting optional power/mute
+  flags to powered-on and unmuted.
 ## [2026-05-31] [monitor] — NIBP reading animation via Patient Event button
 
 - Created `src/hooks/useNibpReading.ts`: 5-phase state machine (idle → please_wait → reading → counting → settled) with pre-generated ascending sequence using Fisher-Yates shuffle for randomised-feeling ascent

@@ -12,7 +12,11 @@ type UseAlarmResult = {
   isAlarming: boolean
 }
 
-export function useAlarm(vitals: AlarmVitals, isPoweredOn: boolean, isMuted: boolean): UseAlarmResult {
+export function useAlarm(
+  vitals: AlarmVitals,
+  isPoweredOn = true,
+  isMuted = false,
+): UseAlarmResult {
   const activeAlarms = getActiveAlarms(vitals)
   const isAlarming = activeAlarms.length > 0
 

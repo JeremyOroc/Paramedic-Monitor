@@ -1,28 +1,29 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { JOULE_DEFAULTS, type PatientMode, type Rhythm } from '@/types/vitals'
+import { type PatientMode, type Rhythm } from '@/types/vitals'
 import { playSystemAudio } from '@/lib/audio'
+import {
+  ANALYZE_CLEAR_MS,
+  ANALYZE_ECG_MS,
+  ANALYZE_RESULT_MS,
+  CHARGE_DURATION_MS,
+  type DefibState,
+  type EnergyState,
+  canAdjustEnergy as canAdjustEnergyIn,
+  canAnalyse as canAnalyseIn,
+  canCharge as canChargeIn,
+  canShock as canShockIn,
+  chargeTransition,
+  defaultEnergy,
+  energyDown,
+  energyUp,
+  isShockable,
+  resolveEnergy,
+  shockTransition,
+} from '@/lib/defib/defibMachine'
 
-export type DefibState = 
-  | 'idle'
-  | 'analyzing_ecg'
-  | 'analyzing_clear'
-  | 'analyzing_result'
-  | 'shock_advised'
-  | 'cpr'
-  | 'charge_prompt'
-  | 'charging'
-  | 'charged'
-  | 'delivered'
-
-const SHOCKABLE_RHYTHMS: ReadonlySet<Rhythm> = new Set(['vf', 'vt', 'torsades'])
-
-const ANALYZE_ECG_MS = 2500
-const ANALYZE_CLEAR_MS = 2500
-const ANALYZE_RESULT_MS = 4000
-const CHARGE_DURATION_MS = 4000
-const ENERGY_STEP = 10
+export type { DefibState }
 
 type Options = {
   patientMode: PatientMode
@@ -36,9 +37,9 @@ export function useDefibSequence({
   onAnalyzeResult,
 }: Options) {
   const [state, setState] = useState<DefibState>('idle')
-  const [energyState, setEnergyState] = useState(() => ({
+  const [energyState, setEnergyState] = useState<EnergyState>(() => ({
     patientMode,
-    energy: JOULE_DEFAULTS[patientMode],
+    energy: defaultEnergy(patientMode),
   }))
   const [shockCount, setShockCount] = useState(0)
   const [progress, setProgress] = useState(0)
@@ -55,10 +56,7 @@ export function useDefibSequence({
   const onAnalyzeResultRef = useRef(onAnalyzeResult)
   onAnalyzeResultRef.current = onAnalyzeResult
 
-  const energy =
-    energyState.patientMode === patientMode
-      ? energyState.energy
-      : JOULE_DEFAULTS[patientMode]
+  const energy = resolveEnergy(energyState, patientMode)
 
   const clearTimers = useCallback(() => {
     if (timerRef.current !== null) {
@@ -98,13 +96,7 @@ export function useDefibSequence({
   )
 
   const onAnalyse = useCallback(() => {
-    if (
-      state !== 'idle' &&
-      state !== 'cpr' &&
-      state !== 'charge_prompt' &&
-      state !== 'delivered'
-    )
-      return
+    if (!canAnalyseIn(state)) return
     rhythmAtAnalyzeRef.current = rhythm
     setState('analyzing_ecg')
     setCprStartTime(null)
@@ -113,7 +105,7 @@ export function useDefibSequence({
     runTimedPhase(ANALYZE_ECG_MS, () => {
       setState('analyzing_clear')
       runTimedPhase(ANALYZE_CLEAR_MS, () => {
-        if (SHOCKABLE_RHYTHMS.has(rhythmAtAnalyzeRef.current)) {
+        if (isShockable(rhythmAtAnalyzeRef.current)) {
           setState('shock_advised')
           onAnalyzeResultRef.current?.('shock')
           playSystemAudio('press_shock.mp3')
@@ -132,19 +124,19 @@ export function useDefibSequence({
   }, [state, rhythm, runTimedPhase])
 
   const onCharge = useCallback(() => {
-    if (state === 'charge_prompt') {
+    const next = chargeTransition(state)
+    if (next === 'charging') {
       setState('charging')
       runTimedPhase(CHARGE_DURATION_MS, () => setState('charged'))
-    } else if (state === 'cpr' || state === 'idle' || state === 'analyzing_result' || state === 'delivered') {
+    } else if (next === 'charge_prompt') {
       setState('charge_prompt')
     }
   }, [state, runTimedPhase])
 
   const onShock = useCallback(() => {
-    if (state === 'shock_advised') {
-      const joulesDelivered = energyState.patientMode === patientMode
-        ? energyState.energy
-        : JOULE_DEFAULTS[patientMode]
+    const action = shockTransition(state)
+    if (action === 'advised') {
+      const joulesDelivered = resolveEnergy(energyState, patientMode)
       setShockCount((n) => n + 1)
       setLastDeliveredJoules(joulesDelivered)
       setState('cpr')
@@ -153,42 +145,26 @@ export function useDefibSequence({
       setProgress(0)
       return
     }
-    if (state !== 'charged') return
+    if (action !== 'charged') return
     setShockCount((n) => n + 1)
     setState('delivered')
     setProgress(0)
   }, [state, energyState, patientMode])
 
   const onEnergyUp = useCallback(() => {
-    if (state.startsWith('analyzing') || state === 'charging' || state === 'shock_advised') return
-    setEnergyState((current) => {
-      const currentEnergy =
-        current.patientMode === patientMode
-          ? current.energy
-          : JOULE_DEFAULTS[patientMode]
-      return { patientMode, energy: currentEnergy + ENERGY_STEP }
-    })
+    if (!canAdjustEnergyIn(state)) return
+    setEnergyState((current) => energyUp(current, patientMode))
   }, [state, patientMode])
 
   const onEnergyDown = useCallback(() => {
-    if (state.startsWith('analyzing') || state === 'charging' || state === 'shock_advised') return
-    setEnergyState((current) => {
-      const currentEnergy =
-        current.patientMode === patientMode
-          ? current.energy
-          : JOULE_DEFAULTS[patientMode]
-      return { patientMode, energy: Math.max(ENERGY_STEP, currentEnergy - ENERGY_STEP) }
-    })
+    if (!canAdjustEnergyIn(state)) return
+    setEnergyState((current) => energyDown(current, patientMode))
   }, [state, patientMode])
 
-  const canAnalyse =
-    state === 'idle' ||
-    state === 'cpr' ||
-    state === 'charge_prompt' ||
-    state === 'delivered'
-  const canCharge = state === 'idle' || state === 'cpr' || state === 'charge_prompt' || state === 'delivered'
-  const canShock = state === 'charged' || state === 'shock_advised'
-  const canAdjustEnergy = !state.startsWith('analyzing') && state !== 'charging' && state !== 'shock_advised'
+  const canAnalyse = canAnalyseIn(state)
+  const canCharge = canChargeIn(state)
+  const canShock = canShockIn(state)
+  const canAdjustEnergy = canAdjustEnergyIn(state)
 
   const reset = useCallback(() => {
     clearTimers()

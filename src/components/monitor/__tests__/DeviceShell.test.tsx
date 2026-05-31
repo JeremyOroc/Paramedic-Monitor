@@ -2,11 +2,30 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DeviceShell } from '../DeviceShell'
+import type { DefibState } from '@/hooks/useDefibSequence'
 
-function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
-  return {
-    screen: <div>monitor-screen</div>,
-    defibState: 'idle' as const,
+type Overrides = {
+  twelveLeadActive?: boolean
+  captureLock?: boolean
+  defib?: Partial<{
+    state: DefibState
+    energy: number
+    progress: number
+    canAnalyse: boolean
+    canCharge: boolean
+    canShock: boolean
+    canAdjustEnergy: boolean
+  }>
+  nav?: Partial<{
+    onMoveUp: () => void
+    onMoveDown: () => void
+    onEnter: () => void
+  }>
+}
+
+function makeProps(overrides: Overrides = {}) {
+  const defib = {
+    state: 'idle' as DefibState,
     energy: 120,
     progress: 0,
     canAnalyse: true,
@@ -18,6 +37,9 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onShock: vi.fn(),
     onEnergyUp: vi.fn(),
     onEnergyDown: vi.fn(),
+    ...overrides.defib,
+  }
+  const softKeys = {
     onTwelveLead: vi.fn(),
     onToggleEtco2: vi.fn(),
     onTreatment: vi.fn(),
@@ -26,11 +48,20 @@ function makeProps(overrides: Partial<Parameters<typeof DeviceShell>[0]> = {}) {
     onPatientInfo: vi.fn(),
     onCaptureTwelveLead: vi.fn(),
     onPrint: vi.fn(),
+  }
+  const nav = {
     onMoveUp: vi.fn(),
     onMoveDown: vi.fn(),
     onEnter: vi.fn(),
-    twelveLeadActive: false,
-    ...overrides,
+    ...overrides.nav,
+  }
+  return {
+    screen: <div>monitor-screen</div>,
+    twelveLeadActive: overrides.twelveLeadActive ?? false,
+    captureLock: overrides.captureLock,
+    defib,
+    softKeys,
+    nav,
   }
 }
 
@@ -89,7 +120,7 @@ describe('DeviceShell', () => {
     const props = makeProps()
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: '12-lead view' }))
-    expect(props.onTwelveLead).toHaveBeenCalledTimes(1)
+    expect(props.softKeys.onTwelveLead).toHaveBeenCalledTimes(1)
   })
 
   it('fires onToggleEtco2 when the EtCO2 shell button is clicked', async () => {
@@ -97,7 +128,7 @@ describe('DeviceShell', () => {
     const props = makeProps()
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
-    expect(props.onToggleEtco2).toHaveBeenCalledTimes(1)
+    expect(props.softKeys.onToggleEtco2).toHaveBeenCalledTimes(1)
   })
 
   it('fires onBack when the Back button is clicked', async () => {
@@ -105,7 +136,7 @@ describe('DeviceShell', () => {
     const props = makeProps()
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Back' }))
-    expect(props.onBack).toHaveBeenCalledTimes(1)
+    expect(props.softKeys.onBack).toHaveBeenCalledTimes(1)
   })
 
   it('fires onLeftAnalyse when the left CALL INFO shell button is clicked', async () => {
@@ -113,8 +144,8 @@ describe('DeviceShell', () => {
     const props = makeProps()
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
-    expect(props.onLeftAnalyse).toHaveBeenCalledTimes(1)
-    expect(props.onAnalyse).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onLeftAnalyse).toHaveBeenCalledTimes(1)
+    expect(props.defib.onAnalyse).toHaveBeenCalledTimes(0)
   })
 
   it('maps slot 2 → Patient Info and slot 7 → Back in 12-lead view', () => {
@@ -139,7 +170,7 @@ describe('DeviceShell', () => {
     const props = makeProps({ twelveLeadActive: true })
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Patient Info' }))
-    expect(props.onPatientInfo).toHaveBeenCalledTimes(1)
+    expect(props.softKeys.onPatientInfo).toHaveBeenCalledTimes(1)
   })
 
   it('fires onCaptureTwelveLead when the slot-1 key is clicked in 12-lead view', async () => {
@@ -147,7 +178,7 @@ describe('DeviceShell', () => {
     const props = makeProps({ twelveLeadActive: true })
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Capture 12-lead' }))
-    expect(props.onCaptureTwelveLead).toHaveBeenCalledTimes(1)
+    expect(props.softKeys.onCaptureTwelveLead).toHaveBeenCalledTimes(1)
   })
 
   it('locks every control except Back when captureLock is set', async () => {
@@ -159,17 +190,17 @@ describe('DeviceShell', () => {
     await user.click(screen.getByRole('button', { name: 'Patient Info' }))
     await user.click(screen.getByRole('button', { name: 'Enter' }))
     await user.click(screen.getByRole('button', { name: 'Move up' }))
-    expect(props.onCaptureTwelveLead).toHaveBeenCalledTimes(0)
-    expect(props.onPatientInfo).toHaveBeenCalledTimes(0)
-    expect(props.onEnter).toHaveBeenCalledTimes(0)
-    expect(props.onMoveUp).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onCaptureTwelveLead).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onPatientInfo).toHaveBeenCalledTimes(0)
+    expect(props.nav.onEnter).toHaveBeenCalledTimes(0)
+    expect(props.nav.onMoveUp).toHaveBeenCalledTimes(0)
 
     // Defib controls are disabled too.
     expect(screen.getByRole('button', { name: 'Analyze rhythm' })).toBeDisabled()
 
     // Back still works.
     await user.click(screen.getByRole('button', { name: 'Back' }))
-    expect(props.onBack).toHaveBeenCalledTimes(1)
+    expect(props.softKeys.onBack).toHaveBeenCalledTimes(1)
   })
 
   it('keeps unmapped 12-lead soft keys inert', async () => {
@@ -178,10 +209,10 @@ describe('DeviceShell', () => {
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Soft key 3' }))
     await user.click(screen.getByRole('button', { name: 'Soft key 4' }))
-    expect(props.onPatientInfo).toHaveBeenCalledTimes(0)
-    expect(props.onBack).toHaveBeenCalledTimes(0)
-    expect(props.onCaptureTwelveLead).toHaveBeenCalledTimes(0)
-    expect(props.onToggleEtco2).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onPatientInfo).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onBack).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onCaptureTwelveLead).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onToggleEtco2).toHaveBeenCalledTimes(0)
   })
 
   it('wires the right-cluster Move up / Move down / Enter buttons', async () => {
@@ -191,9 +222,9 @@ describe('DeviceShell', () => {
     await user.click(screen.getByRole('button', { name: 'Move up' }))
     await user.click(screen.getByRole('button', { name: 'Move down' }))
     await user.click(screen.getByRole('button', { name: 'Enter' }))
-    expect(props.onMoveUp).toHaveBeenCalledTimes(1)
-    expect(props.onMoveDown).toHaveBeenCalledTimes(1)
-    expect(props.onEnter).toHaveBeenCalledTimes(1)
+    expect(props.nav.onMoveUp).toHaveBeenCalledTimes(1)
+    expect(props.nav.onMoveDown).toHaveBeenCalledTimes(1)
+    expect(props.nav.onEnter).toHaveBeenCalledTimes(1)
   })
 
   it('keeps non-mapped left shell buttons inert', async () => {
@@ -202,10 +233,10 @@ describe('DeviceShell', () => {
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Brightness soft key' }))
     await user.click(screen.getByRole('button', { name: 'Treatment soft key' }))
-    expect(props.onTwelveLead).toHaveBeenCalledTimes(0)
-    expect(props.onToggleEtco2).toHaveBeenCalledTimes(0)
-    expect(props.onLeftAnalyse).toHaveBeenCalledTimes(0)
-    expect(props.onBack).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onTwelveLead).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onToggleEtco2).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onLeftAnalyse).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onBack).toHaveBeenCalledTimes(0)
   })
 
   it('fires onPrint when the Printer soft key is clicked in the main view', async () => {
@@ -213,51 +244,53 @@ describe('DeviceShell', () => {
     const props = makeProps()
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Printer soft key' }))
-    expect(props.onPrint).toHaveBeenCalledTimes(1)
+    expect(props.softKeys.onPrint).toHaveBeenCalledTimes(1)
   })
 
   it('fires onAnalyse when ANALYZE is clicked and canAnalyse is true', async () => {
     const user = userEvent.setup()
-    const props = makeProps({ canAnalyse: true })
+    const props = makeProps({ defib: { canAnalyse: true } })
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
-    expect(props.onAnalyse).toHaveBeenCalledTimes(1)
+    expect(props.defib.onAnalyse).toHaveBeenCalledTimes(1)
   })
 
   it('does not fire onAnalyse when ANALYZE is disabled', async () => {
     const user = userEvent.setup()
-    const props = makeProps({ canAnalyse: false })
+    const props = makeProps({ defib: { canAnalyse: false } })
     render(<DeviceShell {...props} />)
     const btn = screen.getByRole('button', { name: 'Analyze rhythm' })
     expect(btn).toBeDisabled()
     await user.click(btn)
-    expect(props.onAnalyse).not.toHaveBeenCalled()
+    expect(props.defib.onAnalyse).not.toHaveBeenCalled()
   })
 
   it('SHOCK button is disabled when canShock is false', () => {
-    render(<DeviceShell {...makeProps({ canShock: false })} />)
+    render(<DeviceShell {...makeProps({ defib: { canShock: false } })} />)
     expect(screen.getByRole('button', { name: 'Shock' })).toBeDisabled()
   })
 
   it('fires onShock when SHOCK is clicked and canShock is true', async () => {
     const user = userEvent.setup()
-    const props = makeProps({ canShock: true, defibState: 'charged' })
+    const props = makeProps({ defib: { canShock: true, state: 'charged' } })
     render(<DeviceShell {...props} />)
     await user.click(screen.getByRole('button', { name: 'Shock' }))
-    expect(props.onShock).toHaveBeenCalledTimes(1)
+    expect(props.defib.onShock).toHaveBeenCalledTimes(1)
   })
 
   it('displays the current energy level', () => {
-    render(<DeviceShell {...makeProps({ energy: 200 })} />)
+    render(<DeviceShell {...makeProps({ defib: { energy: 200 } })} />)
     expect(screen.getByText('200')).toBeInTheDocument()
   })
 
   it('fires right-side navigation handlers from the physical shell', async () => {
     const user = userEvent.setup()
     const props = makeProps({
-      onMoveUp: vi.fn(),
-      onMoveDown: vi.fn(),
-      onEnter: vi.fn(),
+      nav: {
+        onMoveUp: vi.fn(),
+        onMoveDown: vi.fn(),
+        onEnter: vi.fn(),
+      },
     })
 
     render(<DeviceShell {...props} />)
@@ -265,8 +298,8 @@ describe('DeviceShell', () => {
     await user.click(screen.getByRole('button', { name: 'Move down' }))
     await user.click(screen.getByRole('button', { name: 'Enter' }))
 
-    expect(props.onMoveUp).toHaveBeenCalledTimes(1)
-    expect(props.onMoveDown).toHaveBeenCalledTimes(1)
-    expect(props.onEnter).toHaveBeenCalledTimes(1)
+    expect(props.nav.onMoveUp).toHaveBeenCalledTimes(1)
+    expect(props.nav.onMoveDown).toHaveBeenCalledTimes(1)
+    expect(props.nav.onEnter).toHaveBeenCalledTimes(1)
   })
 })

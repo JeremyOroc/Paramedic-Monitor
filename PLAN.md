@@ -219,10 +219,16 @@ paramedic-monitor/
    - Graph title metadata displays `SpO2 1x` and, when EtCO2 is visible, `EtCO2 0 to 60 mmHg`; this text does not change the internal EtCO2 renderer scale.
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
 11. Color reference: `#000000` bg, `#00ff41` ECG green, `#00ffff` cyan BP, `#cc44ff` purple EtCO2, `#ffff00` yellow SpO2
+12. `MonitorPage` render composition is kept separate from interaction state. Local monitor UI state
+    (view/channel mode, modal state, patient-info editing, medication events, mute/power flags,
+    selected-control navigation, 12-lead capture, print preview, and Back precedence) lives behind
+    the reducer-backed `useMonitorController` hook.
 
 **Testing:**
 - Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
 - Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
+- Controller tests cover initial monitor state, selection toggling, patient-info draft/commit/cancel,
+  12-lead capture timers, Back precedence, and power-off cleanup.
 
 **Milestone:** Screenshot of app matches Zoll X Series reference photos. No interactivity yet.
 
