@@ -5,6 +5,7 @@ import {
   hasCallerInfo,
   type CallerInfo,
 } from '@/types/callerInfo'
+import { cn } from '@/lib/utils'
 
 export type CallerEventKey = 'acknowledge' | 'arrival' | 'transport'
 
@@ -17,6 +18,8 @@ type CallerInfoModalProps = {
   /** Show the dispatch ETA countdown (locked phase only). */
   showCountdown?: boolean
   countdownFormatted?: string
+  /** Locked dispatch mode uses this as a touchscreen that fills the monitor display. */
+  fullScreen?: boolean
 }
 
 const CALLER_EVENT_BUTTONS: { key: CallerEventKey; label: string }[] = [
@@ -32,6 +35,7 @@ export function CallerInfoModal({
   buttonState,
   showCountdown = false,
   countdownFormatted = '00:00',
+  fullScreen = false,
 }: CallerInfoModalProps) {
   if (!open) return null
 
@@ -44,7 +48,10 @@ export function CallerInfoModal({
   return (
     <section
       aria-label="Caller info"
-      className="absolute left-[56px] top-[56px] bottom-0 right-0 z-30 flex flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
+      className={cn(
+        'absolute z-30 flex flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]',
+        fullScreen ? 'inset-0' : 'left-[56px] top-[56px] bottom-0 right-0',
+      )}
     >
       <header className="bg-white px-4 py-1.5 text-black">
         <h2 className="text-base font-bold">Caller Info</h2>

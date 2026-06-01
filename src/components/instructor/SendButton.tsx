@@ -7,10 +7,15 @@ import { cn } from '@/lib/utils'
 export function SendButton() {
   const saved = useMonitorStore((s) => s.saved)
   const confirmed = useMonitorStore((s) => s.confirmed)
+  const savedVitalsActive = useMonitorStore((s) => s.savedVitalsActive)
+  const confirmedVitalsActive = useMonitorStore((s) => s.confirmedVitalsActive)
   const callerInfoSaved = useMonitorStore((s) => s.callerInfoSaved)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
   const send = useMonitorStore((s) => s.send)
-  const disabled = !hasPending(saved, confirmed) && !hasCallerInfoPending(callerInfoSaved, callerInfoConfirmed)
+  const disabled =
+    !hasPending(saved, confirmed) &&
+    savedVitalsActive === confirmedVitalsActive &&
+    !hasCallerInfoPending(callerInfoSaved, callerInfoConfirmed)
 
   return (
     <button

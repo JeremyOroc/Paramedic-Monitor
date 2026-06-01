@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-05-31] [monitor] — Start monitor vitals blank
+
+- Confirmed monitor vitals now start inactive/blank instead of showing the normal
+  default numbers immediately. The underlying draft values still default to normal
+  so instructors can activate a normal baseline through the existing Normal →
+  Save → Send flow.
+- Alarm evaluation is disabled while confirmed vitals are inactive, so blank
+  startup vitals do not behave like zero HR/SpO2/BP and do not trigger alarm audio
+  or red vital boxes.
+- Added store, alarm, instructor button, and monitor page tests for the vitals
+  activation pipeline.
+
+## [2026-05-31] [monitor] — Tighten dispatch lock off-state behavior
+
+- While the monitor is powered off or dispatch-locked, all hardware controls are
+  inert and silent: left soft keys, nav cluster, alarm/patient-event buttons, and
+  defib controls no longer fire handlers or button-click audio behind the locked
+  screen.
+- The initial dispatch caller-info view now renders as a full monitor-screen
+  touchscreen, while the normal in-monitor Call Info panel keeps its shifted
+  sidebar modal layout.
+- Removed the power-off background audio so the off state remains silent.
+
 ## [2026-05-31] [monitor] — Dispatch lock + countdown startup gate
 
 - Normal users now boot the monitor **locked and off**. The admin's caller-info

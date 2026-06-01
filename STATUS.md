@@ -47,10 +47,16 @@
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
 - [x] **Dispatch lock + countdown startup gate — COMPLETE:**
-  - [x] Monitor boots locked-off for normal users; admin caller-info Send arms a lock + ETA countdown on first send (new whole-minutes field), later Sends only update content; admin Reset = full reset to locked-off
+  - [x] Monitor boots locked-off for normal users; admin caller-info Send arms a lock + ETA countdown on first send (minutes + seconds fields), later Sends only update content; admin Reset = full reset to locked-off
   - [x] Unlock = Acknowledge → countdown 0 → Arrival; Transport enabled only after power-on; Ack/Arrival/Transport record EST wall-clock time, merged into the event log
-  - [x] Gate state persisted (store v3→4, absolute countdown end-timestamp) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
+  - [x] Gate state persisted (store version 5, absolute countdown end-timestamp) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
   - [x] New `useCountdown` hook + `formatEstTime` util; caller-event state moved from controller to store; `initialPoweredOn` controller option; tests across store/hook/util/modal/controller + page flow tests run with `?dev=1`
+- [x] **Dispatch locked/off hardware silence — COMPLETE:**
+  - [x] While powered off or dispatch-locked, hardware controls are inert and do not play button audio; only the dispatch touchscreen buttons remain interactive on the locked caller-info screen
+  - [x] Locked caller-info now fills the monitor screen as a touchscreen; the normal Call Info sidebar modal layout is unchanged
+- [x] **Blank startup vitals — COMPLETE:**
+  - [x] Monitor vital numbers start blank/inactive after reset and caller-info-only dispatch, without treating blanks as zeroes
+  - [x] Vital alarms stay inactive until instructor vitals are saved and sent; the Normal button now activates the default normal baseline through Save → Send
 - [x] **Caller info call-milestone buttons — COMPLETE:**
   - [x] Acknowledge / Arrival / Transport buttons at the bottom of `CallerInfoModal` (now gated/logged via the dispatch store; superseded by the gate work above)
 - [x] **Caller info Back-to-close fix — COMPLETE:**

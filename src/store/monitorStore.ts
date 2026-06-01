@@ -65,6 +65,14 @@ function normalizeVitals(vitals: Partial<Vitals> | undefined): Vitals {
   }
 }
 
+function isNumericVitalField(field: keyof Vitals): boolean {
+  return field === 'hr' ||
+    field === 'bp_sys' ||
+    field === 'bp_dia' ||
+    field === 'etco2' ||
+    field === 'spo2'
+}
+
 // Dispatch / startup-gate state. The admin "Send" arms this (lock + countdown);
 // the trainee must Acknowledge, wait out the countdown, then mark Arrival before
 // the monitor power button works. Persisted so a refresh resumes the drill.
@@ -108,6 +116,9 @@ export type MonitorState = {
   draft: Vitals
   saved: Vitals
   confirmed: Vitals
+  draftVitalsActive: boolean
+  savedVitalsActive: boolean
+  confirmedVitalsActive: boolean
   callerInfoDraft: CallerInfo
   callerInfoSaved: CallerInfo
   callerInfoConfirmed: CallerInfo
@@ -138,6 +149,9 @@ export const useMonitorStore = create<MonitorState>()(
       draft: initial,
       saved: initial,
       confirmed: initial,
+      draftVitalsActive: false,
+      savedVitalsActive: false,
+      confirmedVitalsActive: false,
       callerInfoDraft: DEFAULT_CALLER_INFO,
       callerInfoSaved: DEFAULT_CALLER_INFO,
       callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -146,7 +160,10 @@ export const useMonitorStore = create<MonitorState>()(
       dispatchMinutes: 0,
       dispatchSeconds: 0,
       setDraft: (field, value) =>
-        set((s) => ({ draft: { ...s.draft, [field]: value } })),
+        set((s) => ({
+          draft: { ...s.draft, [field]: value },
+          draftVitalsActive: isNumericVitalField(field) ? true : s.draftVitalsActive,
+        })),
       setCallerInfoDraft: (field, value) =>
         set((s) => ({ callerInfoDraft: { ...s.callerInfoDraft, [field]: value } })),
       setPatientAge: (age) =>
@@ -209,16 +226,19 @@ export const useMonitorStore = create<MonitorState>()(
             etco2: DEFAULT_VITALS.etco2,
             spo2: DEFAULT_VITALS.spo2,
           },
+          draftVitalsActive: true,
         })),
       save: () =>
         set((s) => ({
           saved: { ...s.draft },
+          savedVitalsActive: s.draftVitalsActive,
           callerInfoSaved: { ...s.callerInfoDraft },
         })),
       send: () =>
         set((s) => {
           const base = {
             confirmed: { ...s.saved },
+            confirmedVitalsActive: s.savedVitalsActive,
             callerInfoConfirmed: { ...s.callerInfoSaved },
           }
           // The first Send arms the dispatch gate: lock + countdown. Later Sends
@@ -239,6 +259,9 @@ export const useMonitorStore = create<MonitorState>()(
           draft: initial,
           saved: initial,
           confirmed: initial,
+          draftVitalsActive: false,
+          savedVitalsActive: false,
+          confirmedVitalsActive: false,
           callerInfoDraft: DEFAULT_CALLER_INFO,
           callerInfoSaved: DEFAULT_CALLER_INFO,
           callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -266,6 +289,9 @@ export const useMonitorStore = create<MonitorState>()(
           draft: normalizeVitals(persistedState?.draft),
           saved: normalizeVitals(persistedState?.saved),
           confirmed: normalizeVitals(persistedState?.confirmed),
+          draftVitalsActive: persistedState?.draftVitalsActive === true,
+          savedVitalsActive: persistedState?.savedVitalsActive === true,
+          confirmedVitalsActive: persistedState?.confirmedVitalsActive === true,
           callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
           callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
           callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),

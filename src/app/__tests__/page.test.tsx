@@ -100,6 +100,35 @@ describe('MonitorPage', () => {
     )
   })
 
+  it('starts with blank vital numbers without active alarms', () => {
+    render(<MonitorPage />)
+
+    expect(screen.queryByText('80')).not.toBeInTheDocument()
+    expect(screen.queryByText('120')).not.toBeInTheDocument()
+    expect(screen.queryByText('98')).not.toBeInTheDocument()
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+  })
+
+  it('shows vital numbers after vitals are saved and sent', () => {
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 150)
+      useMonitorStore.getState().setDraft('bp_sys', 110)
+      useMonitorStore.getState().setDraft('bp_dia', 70)
+      useMonitorStore.getState().setDraft('spo2', 97)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('150')).toBeInTheDocument()
+    expect(screen.getByText('110')).toBeInTheDocument()
+    expect(screen.getByText('70')).toBeInTheDocument()
+    expect(screen.getByText('97')).toBeInTheDocument()
+  })
+
   it('cycles to the bottom status toggle in reverse and hides the bottom panel on enter', async () => {
     const user = userEvent.setup()
     render(<MonitorPage />)

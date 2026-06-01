@@ -17,6 +17,7 @@ type PhysicalButtonProps = {
   ariaLabel: string
   onClick?: () => void
   active?: boolean
+  disabled?: boolean
   className?: string
   children?: ReactNode
 }
@@ -25,6 +26,7 @@ function PhysicalButton({
   ariaLabel,
   onClick,
   active = false,
+  disabled = false,
   className,
   children,
 }: PhysicalButtonProps) {
@@ -32,14 +34,20 @@ function PhysicalButton({
     <button
       type="button"
       aria-label={ariaLabel}
-      onClick={() => { playButtonClick(); onClick?.() }}
+      disabled={disabled}
+      onClick={() => {
+        if (disabled) return
+        playButtonClick()
+        onClick?.()
+      }}
       className={cn(
         'flex items-center justify-center select-none',
         'rounded-[12px] border border-[#eef0f2] bg-[#d2d4d5]',
         'text-[#424242] shadow-[inset_3px_4px_5px_rgba(255,255,255,0.62),inset_-4px_-5px_6px_rgba(90,90,90,0.28),4px_5px_5px_rgba(60,60,60,0.22)]',
         'transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-300',
         active && 'bg-[#4a90b8] text-white',
-        'hover:bg-[#e0e2e3] active:bg-[#bec2c4]',
+        !disabled && 'hover:bg-[#e0e2e3] active:bg-[#bec2c4]',
+        disabled && 'cursor-default',
         className,
       )}
     >
@@ -219,15 +227,18 @@ export function DeviceShell({
   const [powerState, setPowerState] = useState<PowerState>(initialPowerState)
   const [jumpscareActive, setJumpscareActive] = useState(false)
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const controlsEnabled = powerState === 'on'
 
   // If the gate re-locks while the monitor is on (e.g. admin Reset mid-drill),
   // force it back to off so the lock screen takes over.
   useEffect(() => {
-    if (powerLocked && powerState !== 'off') {
-      if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
+    if (!powerLocked || powerState === 'off') return
+    if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
+    const id = setTimeout(() => {
       setPowerState('off')
       onPowerOff?.()
-    }
+    }, 0)
+    return () => clearTimeout(id)
   }, [powerLocked, powerState, onPowerOff])
 
   // 1/1000 per second jumpscare while monitor is on and not already playing
@@ -243,8 +254,8 @@ export function DeviceShell({
   useEffect(() => {
     if (!jumpscareActive) return
     if (powerState !== 'on') {
-      setJumpscareActive(false)
-      return
+      const id = setTimeout(() => setJumpscareActive(false), 0)
+      return () => clearTimeout(id)
     }
     const duration = 1000 + Math.random() * 4000
     const id = setTimeout(() => setJumpscareActive(false), duration)
@@ -255,24 +266,27 @@ export function DeviceShell({
   // no-ops and the defib row is fully disabled. Back stays live so the user can
   // dismiss the capture and return to the 12-lead view.
   const noop = () => {}
-  const lock = <T,>(fn: T): T | (() => void) => (captureLock ? noop : fn)
-  const allow = (flag: boolean) => (captureLock ? false : flag)
+  const powerGuard = <T extends () => void>(fn: T): T | (() => void) =>
+    controlsEnabled ? fn : noop
+  const lock = <T extends () => void>(fn: T): T | (() => void) =>
+    captureLock || !controlsEnabled ? noop : fn
+  const allow = (flag: boolean) => controlsEnabled && !captureLock && flag
 
   // Resolve the 7 physical left soft keys for the current view. Back stays live
   // during captureLock; medication keys are unaffected by captureLock (the modes
   // never overlap), matching prior behavior.
   const leftSoftKeys: SoftKey[] = medicationMode
     ? buildMedicationSoftKeys(medicationPage, {
-        onMedClick,
-        onMedInfo,
-        onMedPageChange,
-        onMedBack,
+        onMedClick: controlsEnabled ? onMedClick : noop,
+        onMedInfo: powerGuard(onMedInfo),
+        onMedPageChange: powerGuard(onMedPageChange),
+        onMedBack: powerGuard(onMedBack),
       })
     : twelveLeadActive
       ? buildTwelveLeadSoftKeys({
           onCaptureTwelveLead: lock(onCaptureTwelveLead),
           onPatientInfo: lock(onPatientInfo),
-          onBack,
+          onBack: powerGuard(onBack),
         })
       : buildMainSoftKeys({
           onTwelveLead: lock(onTwelveLead),
@@ -280,7 +294,7 @@ export function DeviceShell({
           onTreatment: lock(onTreatment),
           onLeftAnalyse: lock(onLeftAnalyse),
           onPrint: lock(onPrint),
-          onBack,
+          onBack: powerGuard(onBack),
         })
 
   function handlePowerToggle() {
@@ -304,11 +318,15 @@ export function DeviceShell({
       <div className="relative aspect-[1.36] h-[96vh] max-h-[calc(98vw/1.36)]">
         <div className="absolute inset-0 overflow-hidden rounded-[72px] bg-[#06317f] shadow-[0_26px_55px_rgba(0,0,0,0.55),inset_0_0_0_12px_rgba(0,67,154,0.92),inset_0_0_30px_rgba(0,0,0,0.36)]">
           <div className="absolute left-[10%] top-[-2.6%] h-[7.5%] w-[22%] rounded-b-[18px] bg-[#f2f2f2] shadow-[inset_0_-8px_12px_rgba(0,0,0,0.18),0_4px_6px_rgba(0,0,0,0.22)]" />
-          <PowerButton powerState={powerState} onToggle={handlePowerToggle} />
+          <PowerButton
+            powerState={powerState}
+            powerLocked={powerLocked}
+            onToggle={handlePowerToggle}
+          />
           <div className="absolute inset-[3.2%] grid grid-rows-[13%_1fr_21%] overflow-hidden rounded-[58px] border-[3px] border-[#0a2362] bg-[#c7c8c7] shadow-[inset_0_0_32px_rgba(255,255,255,0.54),inset_0_0_0_2px_rgba(78,78,78,0.2)]">
             <DeviceHeader />
             <div className="grid min-h-0 grid-cols-[10.5%_1fr_17.5%] gap-[1.4%] px-[2.8%]">
-              <LeftSoftKeys keys={leftSoftKeys} />
+              <LeftSoftKeys keys={leftSoftKeys} disabled={!controlsEnabled} />
               <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6vw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
                 <div className="relative h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
                   {powerState === 'on' && screen}
@@ -328,7 +346,6 @@ export function DeviceShell({
                           playsInline
                           className="h-full w-full object-cover"
                         />
-                        <audio src="/audio/its_me.mp3" autoPlay loop />
                       </div>
                     ))}
                   {jumpscareActive && powerState === 'on' && (
@@ -351,6 +368,7 @@ export function DeviceShell({
                 onMoveDown={lock(onMoveDown)}
                 onEnter={lock(onEnter)}
                 isMuted={isMuted}
+                disabled={!controlsEnabled}
                 onToggleMute={onToggleMute ?? (() => {})}
                 onPatientEvent={onPatientEvent}
               />
@@ -363,6 +381,7 @@ export function DeviceShell({
               canCharge={allow(canCharge)}
               canShock={allow(canShock)}
               canAdjustEnergy={allow(canAdjustEnergy)}
+              controlsEnabled={controlsEnabled}
               onAnalyse={lock(onAnalyse)}
               onCharge={lock(onCharge)}
               onShock={lock(onShock)}
@@ -378,16 +397,22 @@ export function DeviceShell({
 
 type PowerButtonProps = {
   powerState: PowerState
+  powerLocked: boolean
   onToggle: () => void
 }
 
-function PowerButton({ powerState, onToggle }: PowerButtonProps) {
+function PowerButton({ powerState, powerLocked, onToggle }: PowerButtonProps) {
   return (
     <button
       type="button"
       aria-label="Power"
       aria-pressed={powerState === 'on'}
-      onClick={() => { playButtonClick(); onToggle() }}
+      disabled={powerLocked}
+      onClick={() => {
+        if (powerLocked) return
+        if (powerState === 'on') playButtonClick()
+        onToggle()
+      }}
       className="absolute right-[22%] top-[1.2%] z-20 grid h-[clamp(34px,4.2vw,62px)] w-[clamp(66px,7.2vw,108px)] place-items-center rounded-full bg-[#6f92d1] shadow-[inset_0_2px_4px_rgba(255,255,255,0.45),0_3px_7px_rgba(0,0,0,0.22)] focus:outline-none focus:ring-2 focus:ring-cyan-200"
     >
       <span
@@ -480,7 +505,7 @@ function DeviceHeader() {
 // The on-screen LeftSidebar supplies the per-view label/action beside each key;
 // a key with no action in the current view is inert. The resolved per-view key
 // list comes from `@/lib/monitor/softKeys`.
-function LeftSoftKeys({ keys }: { keys: SoftKey[] }) {
+function LeftSoftKeys({ keys, disabled }: { keys: SoftKey[]; disabled: boolean }) {
   return (
     // Mirror the on-screen LeftSidebar geometry so the physical soft keys line
     // up 1:1 with the menu rows: same top offset (32px top bar + 24px sub bar,
@@ -493,6 +518,7 @@ function LeftSoftKeys({ keys }: { keys: SoftKey[] }) {
             ariaLabel={key.ariaLabel ?? key.id}
             onClick={key.onClick}
             active={key.active}
+            disabled={disabled || !key.onClick}
             className="h-[clamp(43px,6.2vh,68px)] w-[clamp(48px,4.8vw,76px)]"
           />
           <div className="h-[clamp(8px,1.1vh,14px)] w-[clamp(11px,1.1vw,18px)] rounded-[3px] bg-[#aeb0b0] shadow-[inset_1px_1px_1px_rgba(255,255,255,0.38)]" />
@@ -507,11 +533,20 @@ type RightControlClusterProps = {
   onMoveDown: () => void
   onEnter: () => void
   isMuted: boolean
+  disabled: boolean
   onToggleMute: () => void
   onPatientEvent?: () => void
 }
 
-function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleMute, onPatientEvent }: RightControlClusterProps) {
+function RightControlCluster({
+  onMoveUp,
+  onMoveDown,
+  onEnter,
+  isMuted,
+  disabled,
+  onToggleMute,
+  onPatientEvent,
+}: RightControlClusterProps) {
   const [ackActive, setAckActive] = useState(false)
 
   function handleAck() {
@@ -527,6 +562,7 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
       <PhysicalButton
         ariaLabel="Alarm acknowledge"
         onClick={handleAck}
+        disabled={disabled}
         className="absolute left-[23%] top-[1.5%] h-[22%] w-[54%] rounded-[24px] bg-[#474747] border-[#dfe1e2]"
       />
       {ackActive && (
@@ -542,6 +578,7 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
       <div className="absolute inset-x-[2%] bottom-[0%] top-[29%] rounded-[19px] bg-[#b9b9b8] shadow-[inset_7px_8px_10px_rgba(255,255,255,0.26),inset_-8px_-9px_10px_rgba(102,102,102,0.2)]">
         <PhysicalButton
           ariaLabel="Home"
+          disabled={disabled}
           className="absolute left-[10%] top-[10%] h-[13.5%] w-[39%] rounded-[13px]"
         >
           <HomeIcon />
@@ -549,6 +586,7 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         <PhysicalButton
           ariaLabel="Alarm"
           onClick={onToggleMute}
+          disabled={disabled}
           className="absolute right-[7%] top-[0%] h-[18%] w-[40%] rounded-[13px] text-[clamp(15px,1.6vw,24px)]"
         >
           {isMuted ? '🔕' : '🔔'}
@@ -556,6 +594,7 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         <PhysicalButton
           ariaLabel="Enter"
           onClick={onEnter}
+          disabled={disabled}
           className="absolute left-[10%] top-[45%] h-[16%] w-[40%] rounded-[13px]"
         >
           <span className="h-[32%] w-[32%] rounded-full bg-[#4a4a4a]" />
@@ -563,6 +602,7 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         <PhysicalButton
           ariaLabel="Move up"
           onClick={onMoveUp}
+          disabled={disabled}
           className="absolute right-[13%] top-[30%] h-[18%] w-[35%] rounded-[13px]"
         >
           <CurvedArrowIcon direction="up" />
@@ -570,12 +610,14 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         <PhysicalButton
           ariaLabel="Move down"
           onClick={onMoveDown}
+          disabled={disabled}
           className="absolute right-[13%] top-[56%] h-[18%] w-[35%] rounded-[13px]"
         >
           <CurvedArrowIcon direction="down" />
         </PhysicalButton>
         <PhysicalButton
           ariaLabel="Snapshot"
+          disabled={disabled}
           className="absolute left-[10%] bottom-[8%] h-[14%] w-[39%] rounded-[13px] text-[clamp(16px,1.7vw,25px)]"
         >
           📷
@@ -583,6 +625,7 @@ function RightControlCluster({ onMoveUp, onMoveDown, onEnter, isMuted, onToggleM
         <PhysicalButton
           ariaLabel="Patient event"
           onClick={onPatientEvent}
+          disabled={disabled}
           className="absolute right-[8%] bottom-[3%] h-[13%] w-[37%] rounded-[13px] text-[clamp(15px,1.6vw,23px)]"
         >
           💪
@@ -600,6 +643,7 @@ type BottomDefibStripProps = {
   canCharge: boolean
   canShock: boolean
   canAdjustEnergy: boolean
+  controlsEnabled: boolean
   onAnalyse: () => void
   onCharge: () => void
   onShock: () => void
@@ -614,6 +658,7 @@ function BottomDefibStrip({
   canCharge,
   canShock,
   canAdjustEnergy,
+  controlsEnabled,
   onAnalyse,
   onCharge,
   onShock,
@@ -626,8 +671,9 @@ function BottomDefibStrip({
         <button
           type="button"
           aria-label="Pacer"
+          disabled={!controlsEnabled}
           onClick={() => { playButtonClick() }}
-          className="absolute bottom-[34%] right-[8%] grid h-[clamp(56px,9.6vh,104px)] w-[clamp(56px,9.6vh,104px)] place-items-center rounded-full border-[7px] border-[#10a99e] bg-[#4d575d] font-mono text-[clamp(11px,1.4vw,20px)] font-bold uppercase text-white shadow-[0_4px_0_rgba(0,74,75,0.58),inset_3px_5px_8px_rgba(255,255,255,0.22),inset_-5px_-7px_8px_rgba(0,0,0,0.34)] transition-colors hover:bg-[#5b666d] active:translate-y-px focus:outline-none focus:ring-2 focus:ring-cyan-300"
+          className="absolute bottom-[34%] right-[8%] grid h-[clamp(56px,9.6vh,104px)] w-[clamp(56px,9.6vh,104px)] place-items-center rounded-full border-[7px] border-[#10a99e] bg-[#4d575d] font-mono text-[clamp(11px,1.4vw,20px)] font-bold uppercase text-white shadow-[0_4px_0_rgba(0,74,75,0.58),inset_3px_5px_8px_rgba(255,255,255,0.22),inset_-5px_-7px_8px_rgba(0,0,0,0.34)] transition-colors enabled:hover:bg-[#5b666d] enabled:active:translate-y-px disabled:cursor-default focus:outline-none focus:ring-2 focus:ring-cyan-300"
         >
           PACER
         </button>

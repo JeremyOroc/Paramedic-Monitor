@@ -27,6 +27,9 @@ describe('monitorStore', () => {
     expect(s.draft).toEqual(def)
     expect(s.saved).toEqual(def)
     expect(s.confirmed).toEqual(def)
+    expect(s.draftVitalsActive).toBe(false)
+    expect(s.savedVitalsActive).toBe(false)
+    expect(s.confirmedVitalsActive).toBe(false)
     expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
@@ -65,6 +68,9 @@ describe('monitorStore', () => {
     expect(s.draft).toEqual(def)
     expect(s.saved).toEqual(def)
     expect(s.confirmed).toEqual(def)
+    expect(s.draftVitalsActive).toBe(false)
+    expect(s.savedVitalsActive).toBe(false)
+    expect(s.confirmedVitalsActive).toBe(false)
     expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
@@ -87,6 +93,23 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().callerInfoConfirmed.problem).toBe('Douleur thoracique')
     expect(useMonitorStore.getState().callerInfoConfirmed.extra1Label).toBe('Acces')
     expect(useMonitorStore.getState().callerInfoConfirmed.extra1).toBe('Porte cote nord')
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+  })
+
+  it('numeric vitals stay hidden until a vitals edit is saved and sent', () => {
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+
+    useMonitorStore.getState().setDraft('hr', 160)
+    expect(useMonitorStore.getState().draftVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+
+    useMonitorStore.getState().save()
+    expect(useMonitorStore.getState().savedVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().confirmed.hr).toBe(160)
   })
 
 
@@ -112,6 +135,7 @@ describe('monitorStore', () => {
       spo2: DEFAULT_VITALS.spo2,
       rhythm: 'vt',
     })
+    expect(s.draftVitalsActive).toBe(true)
     expect(s.saved.hr).toBe(180)
     expect(s.confirmed.hr).toBe(180)
   })
@@ -279,6 +303,7 @@ describe('persist migration', () => {
     expect(s.confirmed.hr).toBe(137) // preserved from the old payload
     expect(s.callerInfoConfirmed.address).toBe('5 Rue Test')
     expect(s.patientInfo).toEqual(DEFAULT_PATIENT_INFO) // seeded by merge
+    expect(s.confirmedVitalsActive).toBe(false)
   })
 
   it('normalizes removed PEA rhythms in persisted vitals', async () => {

@@ -7,10 +7,15 @@ import { cn } from '@/lib/utils'
 export function SaveButton() {
   const draft = useMonitorStore((s) => s.draft)
   const saved = useMonitorStore((s) => s.saved)
+  const draftVitalsActive = useMonitorStore((s) => s.draftVitalsActive)
+  const savedVitalsActive = useMonitorStore((s) => s.savedVitalsActive)
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const callerInfoSaved = useMonitorStore((s) => s.callerInfoSaved)
   const save = useMonitorStore((s) => s.save)
-  const disabled = !hasDirty(draft, saved) && !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved)
+  const disabled =
+    !hasDirty(draft, saved) &&
+    draftVitalsActive === savedVitalsActive &&
+    !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved)
 
   return (
     <button

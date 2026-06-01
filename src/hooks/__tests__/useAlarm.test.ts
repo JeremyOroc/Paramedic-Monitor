@@ -50,4 +50,15 @@ describe('useAlarm', () => {
     expect(result.current.isAlarming).toBe(false)
     expect(pauseAlarm).toHaveBeenCalled()
   })
+
+  it('stays silent and returns no active alarms while vitals are not active', () => {
+    const { result } = renderHook(() =>
+      useAlarm({ ...healthyVitals, hr: 0, spo2: 0 }, true, false, false),
+    )
+
+    expect(result.current.activeAlarms).toEqual([])
+    expect(result.current.isAlarming).toBe(false)
+    expect(playAlarm).not.toHaveBeenCalled()
+    expect(pauseAlarm).toHaveBeenCalled()
+  })
 })

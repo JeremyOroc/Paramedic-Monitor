@@ -147,4 +147,11 @@ describe('CallerInfoModal', () => {
 
     expect(screen.getByLabelText('Dispatch countdown')).toHaveTextContent('04:59')
   })
+
+  it('can fill the full monitor screen for the locked dispatch touchscreen', () => {
+    renderModal({ fullScreen: true })
+
+    expect(screen.getByLabelText('Caller info')).toHaveClass('inset-0')
+    expect(screen.getByLabelText('Caller info')).not.toHaveClass('left-[56px]')
+  })
 })

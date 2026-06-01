@@ -16,19 +16,20 @@ export function useAlarm(
   vitals: AlarmVitals,
   isPoweredOn = true,
   isMuted = false,
+  enabled = true,
 ): UseAlarmResult {
-  const activeAlarms = getActiveAlarms(vitals)
+  const activeAlarms = enabled ? getActiveAlarms(vitals) : []
   const isAlarming = activeAlarms.length > 0
 
   useEffect(() => {
-    if (isAlarming && isPoweredOn && !isMuted) {
+    if (isAlarming && enabled && isPoweredOn && !isMuted) {
       playAlarm()
       return pauseAlarm
     }
 
     pauseAlarm()
     return undefined
-  }, [isAlarming, isPoweredOn, isMuted])
+  }, [enabled, isAlarming, isPoweredOn, isMuted])
 
   return { activeAlarms, isAlarming }
 }
