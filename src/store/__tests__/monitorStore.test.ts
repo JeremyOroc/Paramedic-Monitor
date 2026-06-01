@@ -140,6 +140,30 @@ describe('monitorStore', () => {
     expect(s.confirmed.hr).toBe(180)
   })
 
+  it('resetMonitorVitals clears only monitor vitals back to the blank inactive state', () => {
+    useMonitorStore.getState().setDraft('hr', 180)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().send()
+
+    useMonitorStore.getState().resetMonitorVitals()
+
+    const s = useMonitorStore.getState()
+    const def = defaultsAsVitals()
+    expect(s.draft).toEqual(def)
+    expect(s.saved).toEqual(def)
+    expect(s.confirmed).toEqual(def)
+    expect(s.draftVitalsActive).toBe(false)
+    expect(s.savedVitalsActive).toBe(false)
+    expect(s.confirmedVitalsActive).toBe(false)
+    expect(s.callerInfoConfirmed.address).toBe('123 Rue Principale')
+    expect(s.dispatch.armed).toBe(true)
+  })
+
   it('rhythm flows through the same draft → save → send pipeline', () => {
     useMonitorStore.getState().setDraft('rhythm', 'vf')
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('nsr')

@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-05-31] [instructor] — Scope admin Reset by tab
+
+- The admin **Reset** button is now tab-aware: on the Monitor tab it resets only
+  monitor vitals/rhythm/waveform state back to the blank inactive startup state;
+  it does not clear caller info or dispatch/drill state.
+- On the Caller Info tab, **Reset** still performs the full drill reset, clearing
+  caller info, dispatch gate/countdown, call milestone logs, and monitor vitals.
+- Added store and admin page tests for both reset paths.
+
 ## [2026-05-31] [monitor] — Start monitor vitals blank
 
 - Confirmed monitor vitals now start inactive/blank instead of showing the normal

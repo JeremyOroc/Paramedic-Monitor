@@ -57,6 +57,9 @@
 - [x] **Blank startup vitals — COMPLETE:**
   - [x] Monitor vital numbers start blank/inactive after reset and caller-info-only dispatch, without treating blanks as zeroes
   - [x] Vital alarms stay inactive until instructor vitals are saved and sent; the Normal button now activates the default normal baseline through Save → Send
+- [x] **Context-aware admin reset — COMPLETE:**
+  - [x] Monitor tab Reset clears only monitor vitals/rhythm/waveform state back to the blank inactive startup state
+  - [x] Caller Info tab Reset remains the full drill reset, clearing caller info, dispatch gate/countdown, logs, and vitals
 - [x] **Caller info call-milestone buttons — COMPLETE:**
   - [x] Acknowledge / Arrival / Transport buttons at the bottom of `CallerInfoModal` (now gated/logged via the dispatch store; superseded by the gate work above)
 - [x] **Caller info Back-to-close fix — COMPLETE:**

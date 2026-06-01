@@ -135,6 +135,7 @@ export type MonitorState = {
   acknowledgeCall: (estTime: string) => void
   arriveCall: (estTime: string) => void
   transportCall: (estTime: string) => void
+  resetMonitorVitals: () => void
   resetVitalsToNormal: () => void
   save: () => void
   send: () => void
@@ -215,6 +216,15 @@ export const useMonitorStore = create<MonitorState>()(
               ],
             },
           }
+        }),
+      resetMonitorVitals: () =>
+        set({
+          draft: initial,
+          saved: initial,
+          confirmed: initial,
+          draftVitalsActive: false,
+          savedVitalsActive: false,
+          confirmedVitalsActive: false,
         }),
       resetVitalsToNormal: () =>
         set((s) => ({

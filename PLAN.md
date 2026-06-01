@@ -398,6 +398,10 @@ button is inert until a drill gate is satisfied.
   dispatch. Blanks are not interpreted as zero values, so they do not trigger
   alarms. Instructor vital edits, or the Normal button, activate vitals through
   the existing Save → Send flow.
+- Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
+  vitals/rhythm/waveform state back to the blank inactive startup state; on the
+  Caller Info tab it resets the full drill, including caller info, dispatch gate,
+  countdown, milestone logs, and monitor vitals.
 - Gate state is persisted (store version 5; countdown stored as an absolute
   end-timestamp) so a mid-drill refresh resumes. `?dev=1` bypasses the gate.
 - New: `useCountdown` hook, `formatEstTime` util, store dispatch slice; caller-event
