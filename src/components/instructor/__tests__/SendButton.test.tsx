@@ -23,7 +23,7 @@ describe('SendButton', () => {
     expect(screen.getByRole('button', { name: 'Send' })).not.toBeDisabled()
   })
 
-  it('enables when normal vitals are saved from the blank start state', () => {
+  it('enables when normal vitals are saved from the inactive zero start state', () => {
     act(() => {
       useMonitorStore.getState().resetVitalsToNormal()
       useMonitorStore.getState().save()

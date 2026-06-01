@@ -6,11 +6,11 @@ import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
 import { DEFAULT_PATIENT_INFO } from '@/types/patientInfo'
 
 const defaultsAsVitals = () => ({
-  hr: DEFAULT_VITALS.hr,
-  bp_sys: DEFAULT_VITALS.bp_sys,
-  bp_dia: DEFAULT_VITALS.bp_dia,
-  etco2: DEFAULT_VITALS.etco2,
-  spo2: DEFAULT_VITALS.spo2,
+  hr: 0,
+  bp_sys: 0,
+  bp_dia: 0,
+  etco2: 0,
+  spo2: 0,
   rhythm: DEFAULT_VITALS.rhythm,
   spo2_waveform: DEFAULT_VITALS.spo2_waveform,
   etco2_waveform: DEFAULT_VITALS.etco2_waveform,
@@ -21,7 +21,7 @@ describe('monitorStore', () => {
     useMonitorStore.getState().reset()
   })
 
-  it('initial state has draft = saved = confirmed = DEFAULT_VITALS', () => {
+  it('initial state has zero numeric vitals and inactive alarm/display flags', () => {
     const s = useMonitorStore.getState()
     const def = defaultsAsVitals()
     expect(s.draft).toEqual(def)
@@ -39,8 +39,8 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setDraft('hr', 160)
     const s = useMonitorStore.getState()
     expect(s.draft.hr).toBe(160)
-    expect(s.saved.hr).toBe(DEFAULT_VITALS.hr)
-    expect(s.confirmed.hr).toBe(DEFAULT_VITALS.hr)
+    expect(s.saved.hr).toBe(0)
+    expect(s.confirmed.hr).toBe(0)
   })
 
   it('save copies draft to saved without touching confirmed', () => {
@@ -48,7 +48,7 @@ describe('monitorStore', () => {
     useMonitorStore.getState().save()
     const s = useMonitorStore.getState()
     expect(s.saved.hr).toBe(160)
-    expect(s.confirmed.hr).toBe(DEFAULT_VITALS.hr)
+    expect(s.confirmed.hr).toBe(0)
   })
 
   it('send copies saved to confirmed', () => {
@@ -58,7 +58,7 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.hr).toBe(160)
   })
 
-  it('reset returns all three slices to defaults', () => {
+  it('reset returns all three slices to inactive zero vitals', () => {
     useMonitorStore.getState().setDraft('hr', 200)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
@@ -96,7 +96,7 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
   })
 
-  it('numeric vitals stay hidden until a vitals edit is saved and sent', () => {
+  it('numeric vitals stay inactive until a vitals edit is saved and sent', () => {
     expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
 
     useMonitorStore.getState().setDraft('hr', 160)
@@ -140,7 +140,7 @@ describe('monitorStore', () => {
     expect(s.confirmed.hr).toBe(180)
   })
 
-  it('resetMonitorVitals clears only monitor vitals back to the blank inactive state', () => {
+  it('resetMonitorVitals clears only monitor vitals back to the inactive zero state', () => {
     useMonitorStore.getState().setDraft('hr', 180)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()

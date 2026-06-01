@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-06-01] [monitor] — Use inactive zero startup vitals
+
+- Monitor and admin vitals now reset to numeric `0` values instead of the previous
+  blank display state.
+- Startup/reset zeroes stay inactive (`confirmedVitalsActive=false`), so they do
+  not trigger red alarm boxes or alarm audio until instructor vitals are saved and
+  sent.
+- Monitor-tab Reset now returns admin vitals and monitor vitals to inactive zeroes
+  while preserving caller info and dispatch state.
+
 ## [2026-05-31] [instructor] — Scope admin Reset by tab
 
 - The admin **Reset** button is now tab-aware: on the Monitor tab it resets only

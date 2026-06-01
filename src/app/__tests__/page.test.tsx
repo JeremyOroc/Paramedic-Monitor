@@ -100,14 +100,14 @@ describe('MonitorPage', () => {
     )
   })
 
-  it('starts with blank vital numbers without active alarms', () => {
+  it('starts with zero vital numbers without active alarms', () => {
     render(<MonitorPage />)
 
-    expect(screen.queryByText('80')).not.toBeInTheDocument()
-    expect(screen.queryByText('120')).not.toBeInTheDocument()
-    expect(screen.queryByText('98')).not.toBeInTheDocument()
+    const vitalValues = screen.getAllByTestId('vital-value').map((node) => node.textContent)
+    expect(vitalValues).toEqual(['0', '00', '0', '0'])
     expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
     expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('EtCO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
     expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
   })
 

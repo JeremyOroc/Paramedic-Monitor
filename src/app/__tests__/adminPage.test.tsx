@@ -42,7 +42,7 @@ describe('AdminPage', () => {
 
     const s = useMonitorStore.getState()
     expect(s.confirmedVitalsActive).toBe(false)
-    expect(s.confirmed.hr).toBe(80)
+    expect(s.confirmed.hr).toBe(0)
     expect(s.callerInfoConfirmed.address).toBe('123 Rue Principale')
     expect(s.dispatch.armed).toBe(true)
   })

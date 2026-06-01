@@ -34,11 +34,11 @@ export type Vitals = {
 }
 
 const initial: Vitals = {
-  hr: DEFAULT_VITALS.hr,
-  bp_sys: DEFAULT_VITALS.bp_sys,
-  bp_dia: DEFAULT_VITALS.bp_dia,
-  etco2: DEFAULT_VITALS.etco2,
-  spo2: DEFAULT_VITALS.spo2,
+  hr: 0,
+  bp_sys: 0,
+  bp_dia: 0,
+  etco2: 0,
+  spo2: 0,
   rhythm: DEFAULT_VITALS.rhythm,
   spo2_waveform: DEFAULT_VITALS.spo2_waveform,
   etco2_waveform: DEFAULT_VITALS.etco2_waveform,

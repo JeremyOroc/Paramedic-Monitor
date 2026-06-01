@@ -394,12 +394,12 @@ button is inert until a drill gate is satisfied.
 - The locked caller-info screen fills the monitor display as a touchscreen. While
   powered off/locked, all hardware controls are inert and silent; only touchscreen
   call milestone buttons can be used.
-- Monitor vital numbers start blank/inactive after reset and caller-info-only
-  dispatch. Blanks are not interpreted as zero values, so they do not trigger
-  alarms. Instructor vital edits, or the Normal button, activate vitals through
-  the existing Save → Send flow.
+- Monitor and admin vital numbers start/reset to inactive `0` values after reset
+  and caller-info-only dispatch. Startup/reset zeroes do not trigger alarms
+  because vitals remain inactive until instructor vital edits, or the Normal
+  button, activate vitals through the existing Save → Send flow.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
-  vitals/rhythm/waveform state back to the blank inactive startup state; on the
+  vitals/rhythm/waveform state back to the inactive zero startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
   countdown, milestone logs, and monitor vitals.
 - Gate state is persisted (store version 5; countdown stored as an absolute

@@ -188,11 +188,11 @@ function MonitorPage() {
             ? null
             : (
                 <VitalsStrip
-                  hr={confirmedVitalsActive ? confirmed.hr : ''}
-                  bpSys={confirmedVitalsActive ? confirmed.bp_sys : ''}
-                  bpDia={confirmedVitalsActive ? confirmed.bp_dia : ''}
-                  etco2={confirmedVitalsActive ? confirmed.etco2 : ''}
-                  spo2={confirmedVitalsActive ? confirmed.spo2 : ''}
+                  hr={confirmedVitalsActive ? confirmed.hr : 0}
+                  bpSys={confirmedVitalsActive ? confirmed.bp_sys : 0}
+                  bpDia={confirmedVitalsActive ? confirmed.bp_dia : 0}
+                  etco2={confirmedVitalsActive ? confirmed.etco2 : 0}
+                  spo2={confirmedVitalsActive ? confirmed.spo2 : 0}
                   activeAlarms={alarm.activeAlarms}
                   searching={false}
                   selected={controller.activeSelectedControl}
