@@ -173,21 +173,30 @@ describe('dispatch gate', () => {
   })
 
   it('starts disarmed with empty caller events', () => {
-    const { dispatch, dispatchMinutes } = useMonitorStore.getState()
+    const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
     expect(dispatch.countdownEndsAt).toBeNull()
     expect(dispatch.callerEvents).toEqual([])
     expect(dispatchMinutes).toBe(0)
+    expect(dispatchSeconds).toBe(0)
   })
 
-  it('first send arms the gate with an absolute countdown end', () => {
+  it('first send arms the gate with an absolute countdown end from minutes + seconds', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
     useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().setDispatchSeconds(30)
     useMonitorStore.getState().send()
 
     const { dispatch } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(true)
-    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 5 * 60_000)
+    expect(dispatch.countdownEndsAt).toBe(1_000_000 + (5 * 60 + 30) * 1000)
+  })
+
+  it('clamps dispatch seconds to 0–59', () => {
+    useMonitorStore.getState().setDispatchSeconds(90)
+    expect(useMonitorStore.getState().dispatchSeconds).toBe(59)
+    useMonitorStore.getState().setDispatchSeconds(-5)
+    expect(useMonitorStore.getState().dispatchSeconds).toBe(0)
   })
 
   it('later sends do not re-arm or move the countdown', () => {
@@ -228,12 +237,13 @@ describe('dispatch gate', () => {
 
     useMonitorStore.getState().reset()
 
-    const { dispatch, dispatchMinutes } = useMonitorStore.getState()
+    const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
     expect(dispatch.countdownEndsAt).toBeNull()
     expect(dispatch.acknowledgedAt).toBeNull()
     expect(dispatch.callerEvents).toEqual([])
     expect(dispatchMinutes).toBe(0)
+    expect(dispatchSeconds).toBe(0)
   })
 })
 
@@ -315,6 +325,7 @@ describe('persist migration', () => {
       callerEvents: [],
     })
     expect(s.dispatchMinutes).toBe(0)
+    expect(s.dispatchSeconds).toBe(0)
   })
 })
 

@@ -114,11 +114,13 @@ export type MonitorState = {
   patientInfo: PatientInfo
   dispatch: DispatchState
   dispatchMinutes: number
+  dispatchSeconds: number
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
   setPatientAge: (age: number) => void
   setPatientSex: (sex: PatientSex) => void
   setDispatchMinutes: (minutes: number) => void
+  setDispatchSeconds: (seconds: number) => void
   acknowledgeCall: (estTime: string) => void
   arriveCall: (estTime: string) => void
   transportCall: (estTime: string) => void
@@ -142,6 +144,7 @@ export const useMonitorStore = create<MonitorState>()(
       patientInfo: DEFAULT_PATIENT_INFO,
       dispatch: DEFAULT_DISPATCH,
       dispatchMinutes: 0,
+      dispatchSeconds: 0,
       setDraft: (field, value) =>
         set((s) => ({ draft: { ...s.draft, [field]: value } })),
       setCallerInfoDraft: (field, value) =>
@@ -152,6 +155,8 @@ export const useMonitorStore = create<MonitorState>()(
         set((s) => ({ patientInfo: { ...s.patientInfo, sex } })),
       setDispatchMinutes: (minutes) =>
         set({ dispatchMinutes: Math.max(0, Math.floor(minutes) || 0) }),
+      setDispatchSeconds: (seconds) =>
+        set({ dispatchSeconds: Math.min(59, Math.max(0, Math.floor(seconds) || 0)) }),
       acknowledgeCall: (estTime) =>
         set((s) => {
           if (s.dispatch.acknowledgedAt) return s
@@ -219,12 +224,13 @@ export const useMonitorStore = create<MonitorState>()(
           // The first Send arms the dispatch gate: lock + countdown. Later Sends
           // only push updated caller-info content and never re-arm or restart it.
           if (s.dispatch.armed) return base
+          const durationMs = (s.dispatchMinutes * 60 + s.dispatchSeconds) * 1000
           return {
             ...base,
             dispatch: {
               ...s.dispatch,
               armed: true,
-              countdownEndsAt: Date.now() + s.dispatchMinutes * 60_000,
+              countdownEndsAt: Date.now() + durationMs,
             },
           }
         }),
@@ -239,11 +245,12 @@ export const useMonitorStore = create<MonitorState>()(
           patientInfo: DEFAULT_PATIENT_INFO,
           dispatch: DEFAULT_DISPATCH,
           dispatchMinutes: 0,
+          dispatchSeconds: 0,
         }),
     }),
     {
       name: STORAGE_KEY,
-      version: 4,
+      version: 5,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist
@@ -270,6 +277,10 @@ export const useMonitorStore = create<MonitorState>()(
           dispatchMinutes:
             typeof persistedState?.dispatchMinutes === 'number'
               ? persistedState.dispatchMinutes
+              : 0,
+          dispatchSeconds:
+            typeof persistedState?.dispatchSeconds === 'number'
+              ? persistedState.dispatchSeconds
               : 0,
         }
       },

@@ -35,7 +35,9 @@ export function CallerInfoForm() {
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
+  const dispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
   const setDispatchMinutes = useMonitorStore((s) => s.setDispatchMinutes)
+  const setDispatchSeconds = useMonitorStore((s) => s.setDispatchSeconds)
   const dispatchArmed = useMonitorStore((s) => s.dispatch.armed)
   const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
   const visibleExtraFields = EXTRA_FIELDS.slice(0, extraCount)
@@ -48,25 +50,41 @@ export function CallerInfoForm() {
         <span className="text-xs uppercase tracking-wider text-neutral-600">Analyse</span>
       </div>
       <div className="grid gap-3">
-        <label className="grid gap-1">
+        <div className="grid gap-1">
           <span className="text-xs uppercase tracking-wider text-neutral-400">
-            Dispatch countdown (min)
+            Dispatch countdown
           </span>
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={dispatchMinutes}
-            onChange={(e) => setDispatchMinutes(Number(e.target.value))}
-            aria-label="Dispatch countdown (min)"
-            className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
-          />
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={dispatchMinutes === 0 ? '' : dispatchMinutes}
+              placeholder="0"
+              onChange={(e) => setDispatchMinutes(Number(e.target.value))}
+              aria-label="Dispatch countdown minutes"
+              className="w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+            />
+            <span className="text-xs uppercase tracking-wider text-neutral-500">min</span>
+            <input
+              type="number"
+              min={0}
+              max={59}
+              step={1}
+              value={dispatchSeconds === 0 ? '' : dispatchSeconds}
+              placeholder="0"
+              onChange={(e) => setDispatchSeconds(Number(e.target.value))}
+              aria-label="Dispatch countdown seconds"
+              className="w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+            />
+            <span className="text-xs uppercase tracking-wider text-neutral-500">sec</span>
+          </div>
           <span className="text-xs text-neutral-600">
             {dispatchArmed
               ? 'Dispatch already armed — further Sends only update caller info.'
               : 'The first Send arms the dispatch and starts this countdown on the monitor.'}
           </span>
-        </label>
+        </div>
         {PRIMARY_FIELDS.map(({ field, label, multiline }) => (
           <label key={field} className="grid gap-1">
             <span className="text-xs uppercase tracking-wider text-neutral-400">{label}</span>
