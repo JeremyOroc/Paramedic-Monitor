@@ -67,8 +67,19 @@ function makeProps(overrides: Overrides = {}) {
 
 describe('DeviceShell', () => {
   afterEach(() => {
+    vi.restoreAllMocks()
     vi.useRealTimers()
   })
+
+  function turnPowerOff() {
+    fireEvent.click(screen.getByRole('button', { name: 'Power' }))
+  }
+
+  function mockRandomSequence(values: number[]) {
+    let index = 0
+    return vi.spyOn(Math, 'random').mockImplementation(() => values[index++] ?? 0.5)
+  }
+
   it('renders the WAGAMI wordmark', () => {
     render(<DeviceShell {...makeProps()} />)
     expect(screen.getByText('WAGAMI')).toBeInTheDocument()
@@ -88,9 +99,113 @@ describe('DeviceShell', () => {
     expect(power).toHaveAttribute('aria-pressed', 'false')
     fireEvent.click(power) // → booting
     expect(power).toHaveAttribute('aria-pressed', 'false')
-    // Advance past the 2-second boot timer
-    act(() => { vi.runAllTimers() })
+    // Advance past the 2-second boot timer.
+    act(() => { vi.advanceTimersByTime(2000) })
     expect(power).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('does not render off-state its_me immediately after power-off', () => {
+    vi.useFakeTimers()
+    mockRandomSequence([0.5])
+    render(<DeviceShell {...makeProps()} />)
+
+    turnPowerOff()
+
+    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('off-its-me-audio')).not.toBeInTheDocument()
+  })
+
+  it('keeps the powered-off screen black when the 1/100 its_me roll fails', () => {
+    vi.useFakeTimers()
+    mockRandomSequence([0.5, 0.5])
+    render(<DeviceShell {...makeProps()} />)
+
+    turnPowerOff()
+    act(() => { vi.advanceTimersByTime(1000) })
+
+    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('off-its-me-audio')).not.toBeInTheDocument()
+  })
+
+  it('plays off-state its_me when the 1/100 roll succeeds', () => {
+    vi.useFakeTimers()
+    mockRandomSequence([0.5, 0, 0.5])
+    render(<DeviceShell {...makeProps()} />)
+
+    turnPowerOff()
+    act(() => { vi.advanceTimersByTime(1000) })
+
+    expect(screen.getByTestId('off-its-me-video')).toHaveAttribute('src', '/videos/its_me.mp4')
+    expect(screen.getByTestId('off-its-me-audio')).toHaveAttribute('src', '/audio/its_me.mp3')
+  })
+
+  it('stops an off-state its_me burst after its random 500-5000ms duration', () => {
+    vi.useFakeTimers()
+    mockRandomSequence([0.5, 0, 0])
+    render(<DeviceShell {...makeProps()} />)
+
+    turnPowerOff()
+    act(() => { vi.advanceTimersByTime(1000) })
+    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(499) })
+    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+  })
+
+  it('pauses off-state its_me chance rolls during playback and resumes afterward', () => {
+    vi.useFakeTimers()
+    const random = mockRandomSequence([
+      0.5, 0, 1, // Golden miss, off-state hit, 5000ms duration.
+      0.5, 0.5, 0.5, 0.5, 0.5, // Golden misses while its_me is active.
+      0.5, 0, 0.5, // Golden miss, off-state hit after the burst ends, next duration.
+    ])
+    render(<DeviceShell {...makeProps()} />)
+
+    turnPowerOff()
+    act(() => { vi.advanceTimersByTime(1000) })
+    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(4000) })
+    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
+    expect(random).toHaveBeenCalledTimes(7)
+
+    act(() => { vi.advanceTimersByTime(1000) })
+    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(1000) })
+    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
+  })
+
+  it('cancels an active off-state its_me burst when powering on', () => {
+    vi.useFakeTimers()
+    mockRandomSequence([0.5, 0, 1])
+    render(<DeviceShell {...makeProps()} />)
+
+    turnPowerOff()
+    act(() => { vi.advanceTimersByTime(1000) })
+    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Power' }))
+
+    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+  })
+
+  it('lets Golden Freddy cancel and block off-state its_me bursts', () => {
+    vi.useFakeTimers()
+    mockRandomSequence([0, 0, 1])
+    render(<DeviceShell {...makeProps()} />)
+
+    turnPowerOff()
+    act(() => { vi.advanceTimersByTime(1000) })
+
+    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+    expect(document.querySelector('video[src="/videos/golden_freddy.mp4"]')).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(1000) })
+    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
   })
 
   it('renders the ANALYZE, CHARGE, and SHOCK buttons', () => {

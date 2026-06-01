@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-06-01] [monitor] — Randomize off-state its_me playback
+
+- Replaced the powered-off screen's continuous `its_me` audio/video loop with a black idle screen
+  that rolls a 1/100 chance once per second.
+- Successful off-state rolls now play `/videos/its_me.mp4` with `/audio/its_me.mp3` for a random
+  500-5000ms burst, pause further rolls while active, and cancel immediately on power-on or Golden
+  Freddy.
+- Added focused `DeviceShell` fake-timer tests for failed/successful rolls, auto-stop timing,
+  paused rolls during playback, power-on cancellation, and Golden Freddy precedence.
+
 ## [2026-05-31] [monitor] — Fix caller info panel not closing on Back
 
 - The Call Info panel (left CALL INFO soft key) had no way to close: the merged `CallerInfoModal`

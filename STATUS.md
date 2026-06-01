@@ -20,6 +20,10 @@
 - [x] `AGENTS.md` — role definitions, conventions, data flow contracts
 - [x] `STATUS.md` — this file
 - [x] `CHANGELOG.md` — history log
+- [x] **Randomized off-state its_me playback — COMPLETE:**
+  - [x] Powered-off screen is now black by default instead of looping `its_me` continuously
+  - [x] While powered off, `its_me` has a 1/100 per-second chance to play for a random 500-5000ms burst, with rolls paused during playback
+  - [x] Active bursts cancel on power-on and when Golden Freddy appears; focused `DeviceShell` tests cover the timing and cancellation behavior
 - [x] **Phase 1 — Scaffolding complete:**
   - [x] Next.js 16.2.4 app scaffolded (TypeScript, Tailwind, App Router, src/ dir)
   - [x] Dependencies installed: `@supabase/supabase-js`, `@supabase/ssr`, `zustand`, `nanoid`, `clsx`, `tailwind-merge`
