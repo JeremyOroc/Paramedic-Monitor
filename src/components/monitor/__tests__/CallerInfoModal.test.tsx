@@ -52,7 +52,7 @@ describe('CallerInfoModal', () => {
     renderModal()
 
     expect(screen.getByText('Dispatch Tablet')).toBeInTheDocument()
-    expect(screen.getByText('CAD')).toBeInTheDocument()
+    expect(screen.queryByText('CAD')).not.toBeInTheDocument()
     expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('border-dispatch-bezel')
   })
 

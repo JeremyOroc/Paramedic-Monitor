@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-06-01] [monitor] — Remove caller tablet CAD badge
+
+- Removed the small `CAD` label from the caller-info tablet header while keeping
+  the separate dispatch-tablet visual treatment.
+
 ## [2026-06-01] [monitor] — Restyle caller info as dispatch tablet
 
 - Restyled `CallerInfoModal` so the locked dispatch screen and the later

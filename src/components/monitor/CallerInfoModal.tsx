@@ -80,9 +80,6 @@ export function CallerInfoModal({
                     Caller Info
                   </h2>
                 </div>
-                <div className="text-right text-[10px] font-black uppercase tracking-[0.18em] text-dispatch-muted">
-                  CAD
-                </div>
               </div>
               {showCountdown && (
                 <div
