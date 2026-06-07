@@ -17,6 +17,7 @@ export function setAudioMuted(muted: boolean): void {
     pauseAlarm()
     pauseChargeBeep()
     pauseShockReadyBeep()
+    stopCprAudioSequence()
   }
 }
 
@@ -111,4 +112,53 @@ export function pauseShockReadyBeep(): void {
   if (!_shockReadyBeep) return
   _shockReadyBeep.pause()
   _shockReadyBeep.currentTime = 0
+}
+
+// ── CPR audio sequence ────────────────────────────────────────────────────────
+// perform_cpr.mp3 plays first; when it naturally ends, 100_bpm.mp3 starts.
+// Both are stopped together by stopCprAudioSequence().
+
+let _performCpr: HTMLAudioElement | null = null
+let _100bpm: HTMLAudioElement | null = null
+let _onPerformCprEnded: (() => void) | null = null
+
+if (typeof window !== 'undefined') {
+  _performCpr = new Audio('/audio/perform_cpr.mp3')
+  _performCpr.preload = 'auto'
+
+  _100bpm = new Audio('/audio/100_bpm.mp3')
+  _100bpm.preload = 'auto'
+
+  _performCpr.addEventListener('ended', () => {
+    if (!_muted && _100bpm) {
+      _100bpm.currentTime = 0
+      _100bpm.play().catch(() => {})
+    }
+    const cb = _onPerformCprEnded
+    _onPerformCprEnded = null
+    cb?.()
+  })
+}
+
+export function playCprAudioSequence(onEnded?: () => void): void {
+  if (typeof window === 'undefined') return
+  if (!_performCpr || !_100bpm) return
+  // Stop any in-progress sequence first
+  _onPerformCprEnded = null
+  _100bpm.pause()
+  _100bpm.currentTime = 0
+  _performCpr.pause()
+  _performCpr.currentTime = 0
+  _onPerformCprEnded = onEnded ?? null
+  if (_muted) return
+  _performCpr.play().catch(() => {})
+}
+
+export function stopCprAudioSequence(): void {
+  _onPerformCprEnded = null
+  if (!_performCpr || !_100bpm) return
+  _performCpr.pause()
+  _performCpr.currentTime = 0
+  _100bpm.pause()
+  _100bpm.currentTime = 0
 }

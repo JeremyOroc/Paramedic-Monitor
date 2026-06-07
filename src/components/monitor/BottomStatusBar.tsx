@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { DefibState } from '@/hooks/useDefibSequence'
 import { useCPRTimer } from '@/hooks/useCPRTimer'
 import { cn } from '@/lib/utils'
-import { playSystemAudio } from '@/lib/audio'
+import { playSystemAudio, stopCprAudioSequence } from '@/lib/audio'
 
 type BottomStatusBarProps = {
   defibState: DefibState
@@ -62,11 +62,21 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
   useEffect(() => {
     if (isDone && !prevIsDone.current) {
       if (defibState === 'cpr') {
+        stopCprAudioSequence()
         playSystemAudio('stop_cpr.mp3')
       }
     }
     prevIsDone.current = isDone
   }, [isDone, defibState])
+
+  // Stop 100bpm when CPR state exits early (e.g. Analyse pressed mid-CPR)
+  const prevDefibState = useRef(defibState)
+  useEffect(() => {
+    if (prevDefibState.current === 'cpr' && defibState !== 'cpr') {
+      stopCprAudioSequence()
+    }
+    prevDefibState.current = defibState
+  }, [defibState])
 
   const isCharging = defibState === 'charging'
   const isCharged = defibState === 'charged'

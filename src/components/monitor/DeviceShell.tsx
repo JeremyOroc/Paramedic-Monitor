@@ -634,7 +634,7 @@ function RightControlCluster({
 
   function handleAck() {
     if (ackActive) return
-    if (Math.random() >= 1 / 32768) return
+    if (Math.random() >= 1 / 10) return
     const duration = 750 + Math.random() * 3000
     setAckActive(true)
     setTimeout(() => setAckActive(false), duration)

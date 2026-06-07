@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { type PatientMode, type Rhythm } from '@/types/vitals'
-import { playSystemAudio } from '@/lib/audio'
+import { playSystemAudio, playCprAudioSequence } from '@/lib/audio'
 import {
   ANALYZE_CLEAR_MS,
   ANALYZE_ECG_MS,
@@ -115,8 +115,7 @@ export function useDefibSequence({
           playSystemAudio('shock_not_advised.mp3')
           runTimedPhase(ANALYZE_RESULT_MS, () => {
             setState('cpr')
-            setCprStartTime(Date.now())
-            playSystemAudio('perform_cpr.mp3')
+            playCprAudioSequence(() => setCprStartTime(Date.now()))
           })
         }
       })
@@ -140,8 +139,7 @@ export function useDefibSequence({
       setShockCount((n) => n + 1)
       setLastDeliveredJoules(joulesDelivered)
       setState('cpr')
-      setCprStartTime(Date.now())
-      playSystemAudio('perform_cpr.mp3')
+      playCprAudioSequence(() => setCprStartTime(Date.now()))
       setProgress(0)
       return
     }
