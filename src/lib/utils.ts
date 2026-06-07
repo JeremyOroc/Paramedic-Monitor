@@ -31,4 +31,12 @@ export const COLORS = {
   dispatchBezel: '#080808',
   dispatchField: '#ece5d5',
   dispatchLine: '#d1c3a5',
+  dispatchPanel: '#0b1117',
+  dispatchPanelSoft: '#1d2833',
+  dispatchBlue: '#1296e8',
+  dispatchGreen: '#24d43b',
+  dispatchRed: '#ff4055',
+  dispatchOrange: '#ff7638',
+  dispatchPurple: '#8c7be8',
+  dispatchYellow: '#f2b51b',
 } as const

@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-06-01] [monitor] — Add assignment-style caller info A/B variant
+
+- Added an icon-led `assignment` caller-info variant inspired by ambulance
+  dispatch assignment screens so address, call nature, times, caller notes, and
+  extra fields are easier to parse at a glance.
+- Tuned the assignment icon/action palette to match the reference colors more
+  closely and made the Acknowledge/Arrival/Transport row fixed and high-contrast
+  so all three options stay visible on the monitor.
+- The assignment dashboard is now the default caller-info display; the previous
+  tablet layout remains available for comparison with `?callerInfoVariant=classic`.
+- Kept the same Acknowledge, Arrival, and Transport buttons and logging behavior.
+
 ## [2026-06-01] [monitor] — Remove caller tablet CAD badge
 
 - Removed the small `CAD` label from the caller-info tablet header while keeping

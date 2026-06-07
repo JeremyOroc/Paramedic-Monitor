@@ -41,19 +41,29 @@ describe('CallerInfoModal', () => {
       },
     })
 
-    expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
     expect(screen.getByText('Code 3')).toBeInTheDocument()
     expect(screen.getByText('123 Rue Principale')).toBeInTheDocument()
     expect(screen.getByText('Douleur thoracique')).toBeInTheDocument()
     expect(screen.getByText('14:45')).toBeInTheDocument()
   })
 
-  it('renders as an external dispatch tablet surface', () => {
+  it('renders the assignment dashboard variant by default', () => {
     renderModal()
 
-    expect(screen.getByText('Dispatch Tablet')).toBeInTheDocument()
+    expect(screen.getByText('Connected')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
+    expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
     expect(screen.queryByText('CAD')).not.toBeInTheDocument()
     expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('border-dispatch-bezel')
+  })
+
+  it('can render the classic dispatch tablet variant for A/B comparison', () => {
+    renderModal({ variant: 'classic' })
+
+    expect(screen.getByText('Dispatch Tablet')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.queryByTestId('assignment-dashboard')).not.toBeInTheDocument()
   })
 
   it('uses custom extra labels when provided', () => {
@@ -80,12 +90,13 @@ describe('CallerInfoModal', () => {
       },
     })
 
-    expect(screen.getByText('Extra 1')).toBeInTheDocument()
+    expect(screen.getByText('Notes')).toBeInTheDocument()
     expect(screen.getByText('Porte cote nord')).toBeInTheDocument()
   })
 
-  it('renders extra rows after Heure in display order', () => {
+  it('renders extra rows after Heure in classic display order', () => {
     renderModal({
+      variant: 'classic',
       info: {
         ...DEFAULT_CALLER_INFO,
         time: '14:45',
@@ -112,6 +123,29 @@ describe('CallerInfoModal', () => {
     expect(screen.getByRole('button', { name: 'Acknowledge' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Arrival' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Transport' })).toBeInTheDocument()
+  })
+
+  it('keeps assignment action buttons visible even when disabled', () => {
+    renderModal({
+      buttonState: {
+        acknowledge: { disabled: true },
+        arrival: { disabled: true },
+        transport: { disabled: true },
+      },
+    })
+
+    expect(screen.getByRole('button', { name: 'Acknowledge' })).toHaveClass(
+      'min-h-[42px]',
+      'disabled:opacity-75',
+    )
+    expect(screen.getByRole('button', { name: 'Arrival' })).toHaveClass(
+      'min-h-[42px]',
+      'disabled:opacity-75',
+    )
+    expect(screen.getByRole('button', { name: 'Transport' })).toHaveClass(
+      'min-h-[42px]',
+      'disabled:opacity-75',
+    )
   })
 
   it('fires onCallerEvent with the matching key when a button is clicked', () => {
@@ -161,6 +195,6 @@ describe('CallerInfoModal', () => {
 
     expect(screen.getByLabelText('Caller info')).toHaveClass('inset-0')
     expect(screen.getByLabelText('Caller info')).not.toHaveClass('left-[56px]')
-    expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('h-[90%]')
+    expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('h-[92%]')
   })
 })

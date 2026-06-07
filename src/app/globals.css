@@ -37,6 +37,14 @@
   --color-dispatch-bezel: #080808;
   --color-dispatch-field: #ece5d5;
   --color-dispatch-line: #d1c3a5;
+  --color-dispatch-panel: #0b1117;
+  --color-dispatch-panel-soft: #1d2833;
+  --color-dispatch-blue: #1296e8;
+  --color-dispatch-green: #24d43b;
+  --color-dispatch-red: #ff4055;
+  --color-dispatch-orange: #ff7638;
+  --color-dispatch-purple: #8c7be8;
+  --color-dispatch-yellow: #f2b51b;
 }
 
 @media (prefers-color-scheme: dark) {

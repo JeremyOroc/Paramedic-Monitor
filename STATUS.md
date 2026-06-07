@@ -58,6 +58,8 @@
 - [x] **Dispatch locked/off hardware silence — COMPLETE:**
   - [x] While powered off or dispatch-locked, hardware controls are inert and do not play button audio; only the dispatch touchscreen buttons remain interactive on the locked caller-info screen
   - [x] Locked caller-info now fills the monitor screen as a touchscreen; both locked caller-info and the in-monitor Call Info view use a distinct dispatch-tablet/iPad visual treatment so they do not look like native monitor UI
+  - [x] Caller-info A/B test added: default icon-led `assignment` dashboard for fast parsing, with the previous tablet layout available via `?callerInfoVariant=classic`
+  - [x] Assignment dashboard icon/action colors now follow the reference palette, and all three action buttons stay visible on the monitor
 - [x] **Disconnected startup vitals/graphs — COMPLETE:**
   - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`
   - [x] Admin vital rows expose a right-side Off/On toggle; clicking anywhere in the toggle rectangle flips that specific vital on/off

@@ -15,7 +15,11 @@ import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal, PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
-import { CallerInfoModal, type CallerEventKey } from '@/components/monitor/CallerInfoModal'
+import {
+  CallerInfoModal,
+  type CallerEventKey,
+  type CallerInfoVariant,
+} from '@/components/monitor/CallerInfoModal'
 import { PatientInfoPanel } from '@/components/monitor/PatientInfoPanel'
 import { EventLogModal } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
@@ -47,7 +51,10 @@ function MonitorPage() {
   const arriveCall = useMonitorStore((s) => s.arriveCall)
   const transportCall = useMonitorStore((s) => s.transportCall)
 
-  const devBypass = useSearchParams().get('dev') === '1'
+  const searchParams = useSearchParams()
+  const devBypass = searchParams.get('dev') === '1'
+  const callerInfoVariant: CallerInfoVariant =
+    searchParams.get('callerInfoVariant') === 'classic' ? 'classic' : 'assignment'
 
   const controller = useMonitorController({
     confirmed,
@@ -92,6 +99,7 @@ function MonitorPage() {
       showCountdown={!countdown.isDone}
       countdownFormatted={countdown.formatted}
       fullScreen
+      variant={callerInfoVariant}
     />
   ) : (
     <div className="flex h-full w-full items-center justify-center bg-black">
@@ -234,6 +242,7 @@ function MonitorPage() {
         info={callerInfoConfirmed}
         onCallerEvent={onCallerEvent}
         buttonState={callerButtonState}
+        variant={callerInfoVariant}
       />
       <PatientInfoPanel
         open={controller.patientInfoOpen}

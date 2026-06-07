@@ -81,6 +81,7 @@ describe('MonitorPage', () => {
     await user.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
 
     expect(screen.queryByRole('heading', { name: 'Caller Info' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
   it('shows confirmed caller info when left sidebar ANALYSE is clicked', async () => {
@@ -95,9 +96,25 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
     await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
 
-    expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
     expect(screen.getByText('456 Avenue Centrale')).toBeInTheDocument()
     expect(screen.getByText('Difficultes respiratoires')).toBeInTheDocument()
+  })
+
+  it('can show the classic caller info variant for A/B comparison', async () => {
+    const user = userEvent.setup()
+    window.history.pushState({}, '', '/?dev=1&callerInfoVariant=classic')
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '456 Avenue Centrale')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+
+    expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
   it('starts with date and time selected', () => {

@@ -395,8 +395,14 @@ button is inert until a drill gate is satisfied.
 - The locked caller-info screen fills the monitor display as a touchscreen, but
   it must visually read as a separate dispatch tablet/iPad handoff rather than
   native monitor UI; the same tablet treatment is reused when Call Info is opened
-  again from inside the monitor. While powered off/locked, all hardware controls
-  are inert and silent; only touchscreen call milestone buttons can be used.
+  again from inside the monitor. Current A/B test default is the icon-led
+  `assignment` dashboard variant inspired by dispatch assignment screens; the
+  previous tablet layout remains available with `?callerInfoVariant=classic`.
+  The assignment variant should use the reference-style blue/green/orange/red/
+  purple/yellow icon palette, and the Acknowledge/Arrival/Transport action row
+  must remain visible on the monitor even when buttons are disabled.
+  While powered off/locked, all hardware controls are inert and silent; only
+  touchscreen call milestone buttons can be used.
 - Monitor vital numbers start/reset blank on the trainee screen after reset and
   caller-info-only dispatch; inactive SpO2 renders `SpO2 OFF`. Startup/reset
   blanks do not trigger alarms because each numeric vital has its own Off/On
