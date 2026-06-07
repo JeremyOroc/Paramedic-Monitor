@@ -49,16 +49,18 @@
 - [x] **Dispatch lock + countdown startup gate — COMPLETE:**
   - [x] Monitor boots locked-off for normal users; admin caller-info Send arms a lock + ETA countdown on first send (minutes + seconds fields), later Sends only update content; admin Reset = full reset to locked-off
   - [x] Unlock = Acknowledge → countdown 0 → Arrival; Transport enabled only after power-on; Ack/Arrival/Transport record EST wall-clock time, merged into the event log
-  - [x] Gate state persisted (store version 5, absolute countdown end-timestamp) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
+  - [x] Gate state persisted (store version 7, absolute countdown end-timestamp) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
   - [x] New `useCountdown` hook + `formatEstTime` util; caller-event state moved from controller to store; `initialPoweredOn` controller option; tests across store/hook/util/modal/controller + page flow tests run with `?dev=1`
 - [x] **Dispatch locked/off hardware silence — COMPLETE:**
   - [x] While powered off or dispatch-locked, hardware controls are inert and do not play button audio; only the dispatch touchscreen buttons remain interactive on the locked caller-info screen
   - [x] Locked caller-info now fills the monitor screen as a touchscreen; the normal Call Info sidebar modal layout is unchanged
-- [x] **Inactive zero startup vitals — COMPLETE:**
-  - [x] Monitor and admin vital numbers start/reset to inactive `0` values after reset and caller-info-only dispatch
-  - [x] Vital alarms stay inactive for startup/reset zeroes until instructor vitals are saved and sent; the Normal button still activates the default normal baseline through Save → Send
+- [x] **Disconnected startup vitals/graphs — COMPLETE:**
+  - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`
+  - [x] Admin vital rows expose a right-side Off/On toggle; clicking anywhere in the toggle rectangle flips that specific vital on/off
+  - [x] Vital alarms stay inactive for Off startup/reset vitals until each specific vital is turned On through Save → Send; numeric `0` is treated as a real alarmable value when On
+  - [x] ECG, SpO2, and EtCO2 graph channels start as spaced dashed disconnected traces via their `Off` selector options; choosing a non-Off option makes that graph live after Save → Send
 - [x] **Context-aware admin reset — COMPLETE:**
-  - [x] Monitor tab Reset clears only monitor vitals/rhythm/waveform state back to the inactive zero startup state
+  - [x] Monitor tab Reset clears only monitor vitals/rhythm/waveform state back to the disconnected blank startup state
   - [x] Caller Info tab Reset remains the full drill reset, clearing caller info, dispatch gate/countdown, logs, and vitals
 - [x] **Caller info call-milestone buttons — COMPLETE:**
   - [x] Acknowledge / Arrival / Transport buttons at the bottom of `CallerInfoModal` (now gated/logged via the dispatch store; superseded by the gate work above)

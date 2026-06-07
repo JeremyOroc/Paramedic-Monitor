@@ -394,15 +394,22 @@ button is inert until a drill gate is satisfied.
 - The locked caller-info screen fills the monitor display as a touchscreen. While
   powered off/locked, all hardware controls are inert and silent; only touchscreen
   call milestone buttons can be used.
-- Monitor and admin vital numbers start/reset to inactive `0` values after reset
-  and caller-info-only dispatch. Startup/reset zeroes do not trigger alarms
-  because vitals remain inactive until instructor vital edits, or the Normal
-  button, activate vitals through the existing Save → Send flow.
+- Monitor vital numbers start/reset blank on the trainee screen after reset and
+  caller-info-only dispatch; inactive SpO2 renders `SpO2 OFF`. Startup/reset
+  blanks do not trigger alarms because each numeric vital has its own Off/On
+  state. Admin vital rows expose a right-side toggle; clicking anywhere in that
+  toggle rectangle flips the specific vital Off/On. Stored `0` values are hidden
+  and silent while Off, but are real alarmable values once that vital is On and
+  sent through the existing Save → Send flow.
+- ECG, SpO2, and EtCO2 graphs start/reset as spaced dashed disconnected traces through
+  their `Off` selector options. The admin independently makes each graph live by
+  choosing a non-Off ECG/SpO2/EtCO2 option, and those choices use the same Save →
+  Send flow as other monitor fields.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
-  vitals/rhythm/waveform state back to the inactive zero startup state; on the
+  vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
   countdown, milestone logs, and monitor vitals.
-- Gate state is persisted (store version 5; countdown stored as an absolute
+- Gate state is persisted (store version 7; countdown stored as an absolute
   end-timestamp) so a mid-drill refresh resumes. `?dev=1` bypasses the gate.
 - New: `useCountdown` hook, `formatEstTime` util, store dispatch slice; caller-event
   state moved from `useMonitorController` into the store; controller gained an

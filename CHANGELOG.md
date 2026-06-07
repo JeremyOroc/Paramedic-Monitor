@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-06-01] [monitor] — Split vital Off state from zero values
+
+- Admin vital rows now have a right-side Off/On toggle. Clicking anywhere in the
+  toggle rectangle flips that vital between disconnected/off and active/on.
+- Startup/reset vitals begin Off, so stored `0` values stay hidden and silent
+  until the admin turns that specific vital On through Save → Send.
+- Numeric `0` is now a real active value when a vital is On; out-of-range alarms
+  are evaluated per active vital instead of using one global vitals-on flag.
+
+## [2026-06-01] [monitor] — Space disconnected graph dashes
+
+- Disconnected ECG, SpO2, and EtCO2 graph traces now render as spaced static
+  dash segments instead of tightly dotted lines, matching the monitor-off/probe
+  disconnected look requested for training drills.
+
+## [2026-06-01] [monitor] — Add disconnected graph startup controls
+
+- Monitor startup/reset now renders inactive FC, PNI, and EtCO2 values blank on
+  the trainee screen; SpO2 renders as `SpO2 OFF`.
+- ECG, SpO2, and EtCO2 graphs now default to dotted disconnected traces, so the
+  monitor visibly reads as not attached to the patient at drill start.
+- Added `Off` as the ECG disconnected option. ECG, SpO2, and EtCO2 now use their
+  existing option lists to control whether each graph is dotted/off or live, and
+  those selections flow through Save → Send independently from vital numbers.
+
 ## [2026-06-01] [monitor] — Use inactive zero startup vitals
 
 - Monitor and admin vitals now reset to numeric `0` values instead of the previous
