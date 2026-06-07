@@ -5,8 +5,10 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import {
   DEFAULT_VITALS,
   type Etco2Waveform,
+  type NumericVitalField,
   type Rhythm,
   type Spo2Waveform,
+  type VitalActiveState,
 } from '@/types/vitals'
 import {
   DEFAULT_CALLER_INFO,
@@ -39,12 +41,29 @@ const initial: Vitals = {
   bp_dia: 0,
   etco2: 0,
   spo2: 0,
-  rhythm: DEFAULT_VITALS.rhythm,
-  spo2_waveform: DEFAULT_VITALS.spo2_waveform,
-  etco2_waveform: DEFAULT_VITALS.etco2_waveform,
+  rhythm: 'off',
+  spo2_waveform: 'off',
+  etco2_waveform: 'off',
+}
+
+const inactiveVitals: VitalActiveState = {
+  hr: false,
+  bp_sys: false,
+  bp_dia: false,
+  etco2: false,
+  spo2: false,
+}
+
+const activeVitals: VitalActiveState = {
+  hr: true,
+  bp_sys: true,
+  bp_dia: true,
+  etco2: true,
+  spo2: true,
 }
 
 const VALID_RHYTHMS: ReadonlySet<Rhythm> = new Set([
+  'off',
   'nsr',
   'vf',
   'vt',
@@ -65,12 +84,30 @@ function normalizeVitals(vitals: Partial<Vitals> | undefined): Vitals {
   }
 }
 
-function isNumericVitalField(field: keyof Vitals): boolean {
+function isNumericVitalField(field: keyof Vitals): field is NumericVitalField {
   return field === 'hr' ||
     field === 'bp_sys' ||
     field === 'bp_dia' ||
     field === 'etco2' ||
     field === 'spo2'
+}
+
+function anyVitalActive(active: VitalActiveState): boolean {
+  return Object.values(active).some(Boolean)
+}
+
+function normalizeVitalActive(
+  active: Partial<VitalActiveState> | undefined,
+  legacyActive: boolean | undefined,
+): VitalActiveState {
+  if (!active) return legacyActive === true ? activeVitals : inactiveVitals
+  return {
+    hr: active.hr === true,
+    bp_sys: active.bp_sys === true,
+    bp_dia: active.bp_dia === true,
+    etco2: active.etco2 === true,
+    spo2: active.spo2 === true,
+  }
 }
 
 // Dispatch / startup-gate state. The admin "Send" arms this (lock + countdown);
@@ -119,6 +156,9 @@ export type MonitorState = {
   draftVitalsActive: boolean
   savedVitalsActive: boolean
   confirmedVitalsActive: boolean
+  draftVitalActive: VitalActiveState
+  savedVitalActive: VitalActiveState
+  confirmedVitalActive: VitalActiveState
   callerInfoDraft: CallerInfo
   callerInfoSaved: CallerInfo
   callerInfoConfirmed: CallerInfo
@@ -127,6 +167,7 @@ export type MonitorState = {
   dispatchMinutes: number
   dispatchSeconds: number
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
+  setDraftVitalActive: (field: NumericVitalField, active: boolean) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
   setPatientAge: (age: number) => void
   setPatientSex: (sex: PatientSex) => void
@@ -153,6 +194,9 @@ export const useMonitorStore = create<MonitorState>()(
       draftVitalsActive: false,
       savedVitalsActive: false,
       confirmedVitalsActive: false,
+      draftVitalActive: inactiveVitals,
+      savedVitalActive: inactiveVitals,
+      confirmedVitalActive: inactiveVitals,
       callerInfoDraft: DEFAULT_CALLER_INFO,
       callerInfoSaved: DEFAULT_CALLER_INFO,
       callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -161,10 +205,24 @@ export const useMonitorStore = create<MonitorState>()(
       dispatchMinutes: 0,
       dispatchSeconds: 0,
       setDraft: (field, value) =>
-        set((s) => ({
-          draft: { ...s.draft, [field]: value },
-          draftVitalsActive: isNumericVitalField(field) ? true : s.draftVitalsActive,
-        })),
+        set((s) => {
+          const draftVitalActive = isNumericVitalField(field)
+            ? { ...s.draftVitalActive, [field]: true }
+            : s.draftVitalActive
+          return {
+            draft: { ...s.draft, [field]: value },
+            draftVitalActive,
+            draftVitalsActive: anyVitalActive(draftVitalActive),
+          }
+        }),
+      setDraftVitalActive: (field, active) =>
+        set((s) => {
+          const draftVitalActive = { ...s.draftVitalActive, [field]: active }
+          return {
+            draftVitalActive,
+            draftVitalsActive: anyVitalActive(draftVitalActive),
+          }
+        }),
       setCallerInfoDraft: (field, value) =>
         set((s) => ({ callerInfoDraft: { ...s.callerInfoDraft, [field]: value } })),
       setPatientAge: (age) =>
@@ -225,6 +283,9 @@ export const useMonitorStore = create<MonitorState>()(
           draftVitalsActive: false,
           savedVitalsActive: false,
           confirmedVitalsActive: false,
+          draftVitalActive: inactiveVitals,
+          savedVitalActive: inactiveVitals,
+          confirmedVitalActive: inactiveVitals,
         }),
       resetVitalsToNormal: () =>
         set((s) => ({
@@ -236,19 +297,22 @@ export const useMonitorStore = create<MonitorState>()(
             etco2: DEFAULT_VITALS.etco2,
             spo2: DEFAULT_VITALS.spo2,
           },
+          draftVitalActive: activeVitals,
           draftVitalsActive: true,
         })),
       save: () =>
         set((s) => ({
           saved: { ...s.draft },
-          savedVitalsActive: s.draftVitalsActive,
+          savedVitalActive: { ...s.draftVitalActive },
+          savedVitalsActive: anyVitalActive(s.draftVitalActive),
           callerInfoSaved: { ...s.callerInfoDraft },
         })),
       send: () =>
         set((s) => {
           const base = {
             confirmed: { ...s.saved },
-            confirmedVitalsActive: s.savedVitalsActive,
+            confirmedVitalActive: { ...s.savedVitalActive },
+            confirmedVitalsActive: anyVitalActive(s.savedVitalActive),
             callerInfoConfirmed: { ...s.callerInfoSaved },
           }
           // The first Send arms the dispatch gate: lock + countdown. Later Sends
@@ -272,6 +336,9 @@ export const useMonitorStore = create<MonitorState>()(
           draftVitalsActive: false,
           savedVitalsActive: false,
           confirmedVitalsActive: false,
+          draftVitalActive: inactiveVitals,
+          savedVitalActive: inactiveVitals,
+          confirmedVitalActive: inactiveVitals,
           callerInfoDraft: DEFAULT_CALLER_INFO,
           callerInfoSaved: DEFAULT_CALLER_INFO,
           callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -283,7 +350,7 @@ export const useMonitorStore = create<MonitorState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 5,
+      version: 7,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist
@@ -292,6 +359,18 @@ export const useMonitorStore = create<MonitorState>()(
       migrate: (persistedState) => persistedState as MonitorState,
       merge: (persisted, current) => {
         const persistedState = persisted as Partial<MonitorState> | undefined
+        const draftVitalActive = normalizeVitalActive(
+          persistedState?.draftVitalActive,
+          persistedState?.draftVitalsActive,
+        )
+        const savedVitalActive = normalizeVitalActive(
+          persistedState?.savedVitalActive,
+          persistedState?.savedVitalsActive,
+        )
+        const confirmedVitalActive = normalizeVitalActive(
+          persistedState?.confirmedVitalActive,
+          persistedState?.confirmedVitalsActive,
+        )
 
         return {
           ...current,
@@ -299,9 +378,12 @@ export const useMonitorStore = create<MonitorState>()(
           draft: normalizeVitals(persistedState?.draft),
           saved: normalizeVitals(persistedState?.saved),
           confirmed: normalizeVitals(persistedState?.confirmed),
-          draftVitalsActive: persistedState?.draftVitalsActive === true,
-          savedVitalsActive: persistedState?.savedVitalsActive === true,
-          confirmedVitalsActive: persistedState?.confirmedVitalsActive === true,
+          draftVitalActive,
+          savedVitalActive,
+          confirmedVitalActive,
+          draftVitalsActive: anyVitalActive(draftVitalActive),
+          savedVitalsActive: anyVitalActive(savedVitalActive),
+          confirmedVitalsActive: anyVitalActive(confirmedVitalActive),
           callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
           callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
           callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),
