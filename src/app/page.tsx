@@ -279,6 +279,7 @@ function MonitorPage() {
         variant={callerInfoVariant}
         canEnterMonitor={gateSatisfied}
         onEnterMonitor={() => setEnteredMonitor(true)}
+        onBack={gateSatisfied ? () => setEnteredMonitor(true) : undefined}
       />
     )
   }
