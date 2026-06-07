@@ -10,6 +10,7 @@ import {
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
 import { COLORS, cn } from '@/lib/utils'
 import type { Etco2Waveform, Spo2Waveform } from '@/types/vitals'
+import { DisconnectedWaveform } from './DisconnectedWaveform'
 
 type SecondaryChannelProps = {
   channel: 'spo2' | 'etco2'
@@ -21,19 +22,20 @@ type SecondaryChannelProps = {
   className?: string
   selectedLabel?: boolean
   selectedScale?: boolean
+  connected?: boolean
 }
 
-export function SecondaryChannel({
+function LiveSecondaryCanvas({
   channel,
   hr,
   spo2,
   etco2,
   spo2Waveform,
   etco2Waveform,
-  className,
-  selectedLabel = false,
-  selectedScale = false,
-}: SecondaryChannelProps) {
+}: Pick<
+  SecondaryChannelProps,
+  'channel' | 'hr' | 'spo2' | 'etco2' | 'spo2Waveform' | 'etco2Waveform'
+>) {
   const isEtco2 = channel === 'etco2'
   const canvasRef = useWaveformRenderer(
     { channel, hr, spo2, etco2, spo2Waveform, etco2Waveform },
@@ -64,6 +66,23 @@ export function SecondaryChannel({
     [isEtco2],
   )
 
+  return <canvas ref={canvasRef} className="block h-full w-full" />
+}
+
+export function SecondaryChannel({
+  channel,
+  hr,
+  spo2,
+  etco2,
+  spo2Waveform,
+  etco2Waveform,
+  className,
+  selectedLabel = false,
+  selectedScale = false,
+  connected = true,
+}: SecondaryChannelProps) {
+  const isEtco2 = channel === 'etco2'
+
   return (
     <div className={cn('relative h-full w-full', className)}>
       <div
@@ -86,7 +105,21 @@ export function SecondaryChannel({
           <span>0</span>
         </div>
       )}
-      <canvas ref={canvasRef} className="block h-full w-full" />
+      {connected ? (
+        <LiveSecondaryCanvas
+          channel={channel}
+          hr={hr}
+          spo2={spo2}
+          etco2={etco2}
+          spo2Waveform={spo2Waveform}
+          etco2Waveform={etco2Waveform}
+        />
+      ) : (
+        <DisconnectedWaveform
+          channel={channel}
+          color={isEtco2 ? COLORS.purpleEtCO2 : COLORS.yellowSpO2}
+        />
+      )}
     </div>
   )
 }

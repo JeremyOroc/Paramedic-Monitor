@@ -5,6 +5,161 @@
 
 ---
 
+## [2026-06-01] [monitor] — Move caller info outside Zoll shell
+
+- Caller info now renders as a separate full-page iPad-style dispatch surface
+  before Arrival, hiding the Zoll monitor entirely until Arrival is logged.
+- After Arrival the Zoll monitor appears powered off; trainees still power it on
+  themselves.
+- Opening CALL INFO from the monitor now shows the same full-page caller-info
+  surface with a tablet Back button, instead of embedding caller info inside the
+  Zoll screen.
+- The full-page caller-info tablet keeps a 4:3 iPad-style ratio and mimics the
+  reference assignment dashboard layout, with the map area reserved for later.
+
+## [2026-06-01] [monitor] — Gray completed caller action buttons
+
+- Acknowledge, Arrival, and Transport buttons now turn neutral gray after they are
+  clicked/disabled, while staying readable in the assignment caller-info footer.
+
+## [2026-06-01] [monitor] — Add assignment-style caller info A/B variant
+
+- Added an icon-led `assignment` caller-info variant inspired by ambulance
+  dispatch assignment screens so address, call nature, times, caller notes, and
+  extra fields are easier to parse at a glance.
+- Tuned the assignment icon/action palette to match the reference colors more
+  closely and made the Acknowledge/Arrival/Transport row fixed and high-contrast
+  so all three options stay visible on the monitor.
+- The assignment dashboard is now the default caller-info display; the previous
+  tablet layout remains available for comparison with `?callerInfoVariant=classic`.
+- Kept the same Acknowledge, Arrival, and Transport buttons and logging behavior.
+
+## [2026-06-01] [monitor] — Remove caller tablet CAD badge
+
+- Removed the small `CAD` label from the caller-info tablet header while keeping
+  the separate dispatch-tablet visual treatment.
+
+## [2026-06-01] [monitor] — Restyle caller info as dispatch tablet
+
+- Restyled `CallerInfoModal` so the locked dispatch screen and the later
+  in-monitor Call Info view look like an external tablet/iPad CAD handoff rather
+  than native monitor UI.
+- Added dispatch-tablet color tokens and kept the existing caller-info fields,
+  countdown, and Acknowledge/Arrival/Transport interactions intact.
+
+## [2026-06-01] [monitor] — Reconcile caller-info lock with off-state playback
+
+- Updated the caller-info branch against `main` and resolved the `DeviceShell`
+  overlap between dispatch-lock silence and randomized off-state playback.
+- Dispatch-locked/off caller-info screens remain silent and inert; the randomized
+  off-state playback applies only to the normal unlocked power-off screen.
+
+## [2026-06-01] [monitor] — Split vital Off state from zero values
+
+- Admin vital rows now have a right-side Off/On toggle. Clicking anywhere in the
+  toggle rectangle flips that vital between disconnected/off and active/on.
+- Startup/reset vitals begin Off, so stored `0` values stay hidden and silent
+  until the admin turns that specific vital On through Save → Send.
+- Numeric `0` is now a real active value when a vital is On; out-of-range alarms
+  are evaluated per active vital instead of using one global vitals-on flag.
+
+## [2026-06-01] [monitor] — Space disconnected graph dashes
+
+- Disconnected ECG, SpO2, and EtCO2 graph traces now render as spaced static
+  dash segments instead of tightly dotted lines, matching the monitor-off/probe
+  disconnected look requested for training drills.
+
+## [2026-06-01] [monitor] — Add disconnected graph startup controls
+
+- Monitor startup/reset now renders inactive FC, PNI, and EtCO2 values blank on
+  the trainee screen; SpO2 renders as `SpO2 OFF`.
+- ECG, SpO2, and EtCO2 graphs now default to dotted disconnected traces, so the
+  monitor visibly reads as not attached to the patient at drill start.
+- Added `Off` as the ECG disconnected option. ECG, SpO2, and EtCO2 now use their
+  existing option lists to control whether each graph is dotted/off or live, and
+  those selections flow through Save → Send independently from vital numbers.
+
+## [2026-06-01] [monitor] — Use inactive zero startup vitals
+
+- Monitor and admin vitals now reset to numeric `0` values instead of the previous
+  blank display state.
+- Startup/reset zeroes stay inactive (`confirmedVitalsActive=false`), so they do
+  not trigger red alarm boxes or alarm audio until instructor vitals are saved and
+  sent.
+- Monitor-tab Reset now returns admin vitals and monitor vitals to inactive zeroes
+  while preserving caller info and dispatch state.
+
+## [2026-05-31] [instructor] — Scope admin Reset by tab
+
+- The admin **Reset** button is now tab-aware: on the Monitor tab it resets only
+  monitor vitals/rhythm/waveform state back to the blank inactive startup state;
+  it does not clear caller info or dispatch/drill state.
+- On the Caller Info tab, **Reset** still performs the full drill reset, clearing
+  caller info, dispatch gate/countdown, call milestone logs, and monitor vitals.
+- Added store and admin page tests for both reset paths.
+
+## [2026-05-31] [monitor] — Start monitor vitals blank
+
+- Confirmed monitor vitals now start inactive/blank instead of showing the normal
+  default numbers immediately. The underlying draft values still default to normal
+  so instructors can activate a normal baseline through the existing Normal →
+  Save → Send flow.
+- Alarm evaluation is disabled while confirmed vitals are inactive, so blank
+  startup vitals do not behave like zero HR/SpO2/BP and do not trigger alarm audio
+  or red vital boxes.
+- Added store, alarm, instructor button, and monitor page tests for the vitals
+  activation pipeline.
+
+## [2026-05-31] [monitor] — Tighten dispatch lock off-state behavior
+
+- While the monitor is powered off or dispatch-locked, all hardware controls are
+  inert and silent: left soft keys, nav cluster, alarm/patient-event buttons, and
+  defib controls no longer fire handlers or button-click audio behind the locked
+  screen.
+- The initial dispatch caller-info view now renders as a full monitor-screen
+  touchscreen, while the normal in-monitor Call Info panel keeps its shifted
+  sidebar modal layout.
+- Removed the power-off background audio so the off state remains silent.
+
+## [2026-05-31] [monitor] — Dispatch lock + countdown startup gate
+
+- Normal users now boot the monitor **locked and off**. The admin's caller-info
+  **Send** doubles as a dispatch: the first Send arms a lock + ETA countdown
+  (new whole-minutes field on the admin caller-info form) and pushes the caller
+  info; later Sends only update content. The admin **Reset** does a full reset to
+  locked-off.
+- On the locked screen the trainee sees the caller info + a counting-down MM:SS
+  timer. Unlock sequence: **Acknowledge** (clickable immediately) → countdown
+  reaches 0 → **Arrival** (enabled only after Ack + countdown-done) → power button
+  unlocks. **Transport** stays disabled until the monitor is powered on.
+- Acknowledge/Arrival/Transport now record **EST** wall-clock time (`HH:MM:SS`,
+  America/New_York) and are merged into the event log alongside meds/shocks.
+- Gate state lives in the persisted store (version 3→4) so a refresh mid-drill
+  resumes exactly (countdown via an absolute end-timestamp; ack/arrival flags
+  persist). Cross-tab admin→monitor uses the existing storage-rehydrate path.
+- `?dev=1` URL flag bypasses the whole gate (monitor boots on/unlocked) for quick
+  iteration. Pre-dispatch shows a plain dark standby; the blocked power button is
+  inert; the its_me power-off easter egg is preserved for normal post-unlock
+  power-offs.
+- Caller-event logging moved out of `useMonitorController` (added in the previous
+  change) into the store; the controller gained an `initialPoweredOn` option so
+  normal users start with alarms/timer off. New `useCountdown` hook and
+  `formatEstTime` util. Tests added/updated across store, hook, util, modal,
+  controller, and the page flow tests (which now render with `?dev=1`).
+
+## [2026-05-31] [monitor] — Add Acknowledge / Arrival / Transport buttons to Caller Info
+
+- Added three buttons to the bottom of the `CallerInfoModal`: Acknowledge, Arrival, Transport.
+  Clicking one appends a session-timestamped entry to the shared `eventLog`
+  (`Call - Acknowledge` / `Call - Arrival` / `Call - Transport`, mirroring the `Analyze - Shock`
+  convention), then disables that button so each milestone logs only once.
+- `useMonitorController` gained `callerEventsLogged` state, an `addCallerEvent` reducer action
+  (no-op once logged), and an `onCallerEvent(key, time)` callback; the flags reset on power off
+  alongside `eventLog`. `page.tsx` wires the handler with the existing `sessionTimer`.
+- Buttons are placeholder for roleplay logic — they only log timestamps for now.
+- Added `CallerInfoModal` tests (render, click fires correct key, disabled-when-logged) and a
+  `useMonitorController` test (logs prefixed entry once, ignores repeat clicks).
+
 ## [2026-06-01] [monitor] — Randomize off-state its_me playback
 
 - Replaced the powered-off screen's continuous `its_me` audio/video loop with a black idle screen

@@ -103,6 +103,9 @@ type UseMonitorControllerOptions = {
   patientInfo: PatientInfo
   setPatientAge: (age: number) => void
   setPatientSex: (sex: PatientSex) => void
+  // Normal users boot locked-off; the dispatch gate flips this on. Defaults to
+  // true so existing callers (and the dev bypass) keep the always-on behavior.
+  initialPoweredOn?: boolean
 }
 
 const initialState: MonitorControllerState = {
@@ -345,8 +348,13 @@ export function useMonitorController({
   patientInfo,
   setPatientAge,
   setPatientSex,
+  initialPoweredOn = true,
 }: UseMonitorControllerOptions) {
-  const [state, dispatch] = useReducer(reducer, initialState)
+  const [state, dispatch] = useReducer(reducer, initialPoweredOn, (poweredOn) => ({
+    ...initialState,
+    isPoweredOn: poweredOn,
+    isTimerRunning: poweredOn,
+  }))
   const captureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 

@@ -13,6 +13,7 @@ type VitalsStripProps = {
   bpDia: number | string
   etco2: number | string
   spo2: number | string
+  spo2Unit?: string
   activeAlarms?: AlarmChannel[]
   searching?: boolean
   selected?: MonitorSelection
@@ -31,6 +32,7 @@ export function VitalsStrip({
   bpDia,
   etco2,
   spo2,
+  spo2Unit = '%',
   activeAlarms,
   searching = true,
   selected,
@@ -104,7 +106,7 @@ export function VitalsStrip({
       <VitalBox
         label="SpO2"
         value={spo2}
-        unit="%"
+        unit={spo2Unit}
         color="yellowSpO2"
         alarming={alarms.includes('spo2')}
         selected={selected === 'spo2Vital'}

@@ -20,6 +20,8 @@ export default function AdminPage() {
   useStoreHydration()
   const [tab, setTab] = useState<AdminTab>('monitor')
   const reset = useMonitorStore((s) => s.reset)
+  const resetMonitorVitals = useMonitorStore((s) => s.resetMonitorVitals)
+  const handleReset = tab === 'monitor' ? resetMonitorVitals : reset
 
   return (
     <InstructorLayout>
@@ -66,7 +68,7 @@ export default function AdminPage() {
         <SendButton />
         <button
           type="button"
-          onClick={reset}
+          onClick={handleReset}
           className="ml-auto px-3 py-2 border border-neutral-700 text-neutral-400 font-mono uppercase tracking-wider text-xs hover:bg-neutral-800"
         >
           Reset

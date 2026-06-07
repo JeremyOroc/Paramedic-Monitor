@@ -20,6 +20,7 @@ function ageValue() {
 describe('MonitorPage — Patient Info menu', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
+    window.history.pushState({}, '', '/?dev=1') // bypass the dispatch lock gate
   })
 
   it('opens only from the 12-lead slot-2 key', async () => {

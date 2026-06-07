@@ -1,10 +1,14 @@
-export type Rhythm = 'nsr' | 'vf' | 'vt' | 'torsades' | 'asystole'
+export type Rhythm = 'off' | 'nsr' | 'vf' | 'vt' | 'torsades' | 'asystole'
 
 export type Spo2Waveform = 'normal' | 'weak' | 'off'
 
 export type Etco2Waveform = 'normal' | 'hypoventilation' | 'obstructed' | 'off'
 
 export type PatientMode = 'adult' | 'pediatric' | 'neonate'
+
+export type NumericVitalField = 'hr' | 'bp_sys' | 'bp_dia' | 'etco2' | 'spo2'
+
+export type VitalActiveState = Record<NumericVitalField, boolean>
 
 export type VitalsSnapshot = {
   hr: number
@@ -63,28 +67,49 @@ function isAbove(value: number, high: number): boolean {
   return Number.isFinite(value) && value > high
 }
 
-export function getActiveAlarms(vitals: AlarmVitals): AlarmChannel[] {
-  const active: AlarmChannel[] = []
+export function getActiveAlarms(
+  vitals: AlarmVitals,
+  active: Partial<VitalActiveState> = {
+    hr: true,
+    bp_sys: true,
+    bp_dia: true,
+    spo2: true,
+  },
+): AlarmChannel[] {
+  const alarms: AlarmChannel[] = []
 
   if (
-    isBelow(vitals.hr, ALARM_THRESHOLDS.hr.low) ||
-    isAbove(vitals.hr, ALARM_THRESHOLDS.hr.high)
+    active.hr !== false &&
+    (
+      isBelow(vitals.hr, ALARM_THRESHOLDS.hr.low) ||
+      isAbove(vitals.hr, ALARM_THRESHOLDS.hr.high)
+    )
   ) {
-    active.push('hr')
+    alarms.push('hr')
   }
 
   if (
-    isBelow(vitals.bp_sys, ALARM_THRESHOLDS.bp_sys.low) ||
-    isAbove(vitals.bp_sys, ALARM_THRESHOLDS.bp_sys.high) ||
-    isBelow(vitals.bp_dia, ALARM_THRESHOLDS.bp_dia.low) ||
-    isAbove(vitals.bp_dia, ALARM_THRESHOLDS.bp_dia.high)
+    (
+      active.bp_sys !== false &&
+      (
+        isBelow(vitals.bp_sys, ALARM_THRESHOLDS.bp_sys.low) ||
+        isAbove(vitals.bp_sys, ALARM_THRESHOLDS.bp_sys.high)
+      )
+    ) ||
+    (
+      active.bp_dia !== false &&
+      (
+        isBelow(vitals.bp_dia, ALARM_THRESHOLDS.bp_dia.low) ||
+        isAbove(vitals.bp_dia, ALARM_THRESHOLDS.bp_dia.high)
+      )
+    )
   ) {
-    active.push('bp')
+    alarms.push('bp')
   }
 
-  if (isBelow(vitals.spo2, ALARM_THRESHOLDS.spo2.low)) {
-    active.push('spo2')
+  if (active.spo2 !== false && isBelow(vitals.spo2, ALARM_THRESHOLDS.spo2.low)) {
+    alarms.push('spo2')
   }
 
-  return active
+  return alarms
 }

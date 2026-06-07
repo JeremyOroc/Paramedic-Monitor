@@ -23,6 +23,17 @@ describe('SendButton', () => {
     expect(screen.getByRole('button', { name: 'Send' })).not.toBeDisabled()
   })
 
+  it('enables when normal vitals are saved from the inactive blank start state', () => {
+    act(() => {
+      useMonitorStore.getState().resetVitalsToNormal()
+      useMonitorStore.getState().save()
+    })
+
+    render(<SendButton />)
+
+    expect(screen.getByRole('button', { name: 'Send' })).not.toBeDisabled()
+  })
+
   it('enables once caller info has been saved', () => {
     act(() => {
       useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')

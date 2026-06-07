@@ -22,4 +22,14 @@ describe('SaveButton', () => {
     render(<SaveButton />)
     expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled()
   })
+
+  it('enables when normal vitals are activated from the inactive blank start state', () => {
+    act(() => {
+      useMonitorStore.getState().resetVitalsToNormal()
+    })
+
+    render(<SaveButton />)
+
+    expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled()
+  })
 })

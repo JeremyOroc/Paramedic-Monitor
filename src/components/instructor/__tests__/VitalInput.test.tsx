@@ -9,19 +9,28 @@ describe('VitalInput', () => {
     useMonitorStore.getState().reset()
   })
 
-  it('reflects clean status initially', () => {
+  it('starts Off with clean status initially', () => {
     render(<VitalInput field="hr" label="FC" unit="bpm" />)
-    expect(screen.getByTestId('status-hr')).toHaveTextContent('—')
+    expect(screen.getByTestId('status-hr')).toHaveAttribute('data-status', 'clean')
+    expect(screen.getByRole('button', { name: 'FC off' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
   })
 
-  it('typing updates draft and shows edited status', async () => {
+  it('typing updates draft, turns the vital On, and marks it dirty', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" unit="bpm" />)
     const input = screen.getByLabelText('FC') as HTMLInputElement
     await user.clear(input)
     await user.type(input, '160')
     expect(useMonitorStore.getState().draft.hr).toBe(160)
-    expect(screen.getByTestId('status-hr')).toHaveTextContent('edited')
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+    expect(screen.getByTestId('status-hr')).toHaveAttribute('data-status', 'dirty')
+    expect(screen.getByRole('button', { name: 'FC on' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 
   it('shows pending status after save', async () => {
@@ -31,7 +40,7 @@ describe('VitalInput', () => {
     await user.clear(input)
     await user.type(input, '150')
     act(() => useMonitorStore.getState().save())
-    expect(screen.getByTestId('status-hr')).toHaveTextContent('pending')
+    expect(screen.getByTestId('status-hr')).toHaveAttribute('data-status', 'pending')
   })
 
   it('does not leave a leading zero when typing after a clear', async () => {
@@ -75,6 +84,41 @@ describe('VitalInput', () => {
     await user.type(input, '140')
     act(() => useMonitorStore.getState().save())
     act(() => useMonitorStore.getState().send())
-    expect(screen.getByTestId('status-hr')).toHaveTextContent('—')
+    expect(screen.getByTestId('status-hr')).toHaveAttribute('data-status', 'clean')
+  })
+
+  it('can turn a stored vital off without clearing its numeric value', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="hr" label="FC" />)
+    const input = screen.getByLabelText('FC') as HTMLInputElement
+    await user.clear(input)
+    await user.type(input, '0')
+    await user.click(screen.getByRole('button', { name: 'FC on' }))
+
+    expect(useMonitorStore.getState().draft.hr).toBe(0)
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
+    expect(screen.getByRole('button', { name: 'FC off' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+  })
+
+  it('toggles on and off from anywhere in the same right-side rectangle', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="hr" label="FC" />)
+
+    await user.click(screen.getByRole('button', { name: 'FC off' }))
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+    expect(screen.getByRole('button', { name: 'FC on' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'FC on' }))
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
+    expect(screen.getByRole('button', { name: 'FC off' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
   })
 })

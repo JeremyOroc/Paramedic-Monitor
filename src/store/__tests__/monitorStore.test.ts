@@ -1,32 +1,53 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useMonitorStore, STORAGE_KEY } from '../monitorStore'
-import { fieldStatus, hasDirty, hasPending } from '../fieldState'
+import {
+  fieldStatus,
+  hasDirty,
+  hasPending,
+  hasVitalActiveDirty,
+  hasVitalActivePending,
+  vitalStatus,
+} from '../fieldState'
 import { DEFAULT_VITALS } from '@/types/vitals'
 import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
 import { DEFAULT_PATIENT_INFO } from '@/types/patientInfo'
 
 const defaultsAsVitals = () => ({
-  hr: DEFAULT_VITALS.hr,
-  bp_sys: DEFAULT_VITALS.bp_sys,
-  bp_dia: DEFAULT_VITALS.bp_dia,
-  etco2: DEFAULT_VITALS.etco2,
-  spo2: DEFAULT_VITALS.spo2,
-  rhythm: DEFAULT_VITALS.rhythm,
-  spo2_waveform: DEFAULT_VITALS.spo2_waveform,
-  etco2_waveform: DEFAULT_VITALS.etco2_waveform,
+  hr: 0,
+  bp_sys: 0,
+  bp_dia: 0,
+  etco2: 0,
+  spo2: 0,
+  rhythm: 'off',
+  spo2_waveform: 'off',
+  etco2_waveform: 'off',
 })
+
+const inactiveVitalState = {
+  hr: false,
+  bp_sys: false,
+  bp_dia: false,
+  etco2: false,
+  spo2: false,
+}
 
 describe('monitorStore', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
   })
 
-  it('initial state has draft = saved = confirmed = DEFAULT_VITALS', () => {
+  it('initial state has inactive monitor vitals and disconnected waveforms', () => {
     const s = useMonitorStore.getState()
     const def = defaultsAsVitals()
     expect(s.draft).toEqual(def)
     expect(s.saved).toEqual(def)
     expect(s.confirmed).toEqual(def)
+    expect(s.draftVitalsActive).toBe(false)
+    expect(s.savedVitalsActive).toBe(false)
+    expect(s.confirmedVitalsActive).toBe(false)
+    expect(s.draftVitalActive).toEqual(inactiveVitalState)
+    expect(s.savedVitalActive).toEqual(inactiveVitalState)
+    expect(s.confirmedVitalActive).toEqual(inactiveVitalState)
     expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
@@ -36,8 +57,11 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setDraft('hr', 160)
     const s = useMonitorStore.getState()
     expect(s.draft.hr).toBe(160)
-    expect(s.saved.hr).toBe(DEFAULT_VITALS.hr)
-    expect(s.confirmed.hr).toBe(DEFAULT_VITALS.hr)
+    expect(s.draftVitalActive.hr).toBe(true)
+    expect(s.saved.hr).toBe(0)
+    expect(s.savedVitalActive.hr).toBe(false)
+    expect(s.confirmed.hr).toBe(0)
+    expect(s.confirmedVitalActive.hr).toBe(false)
   })
 
   it('save copies draft to saved without touching confirmed', () => {
@@ -45,7 +69,7 @@ describe('monitorStore', () => {
     useMonitorStore.getState().save()
     const s = useMonitorStore.getState()
     expect(s.saved.hr).toBe(160)
-    expect(s.confirmed.hr).toBe(DEFAULT_VITALS.hr)
+    expect(s.confirmed.hr).toBe(0)
   })
 
   it('send copies saved to confirmed', () => {
@@ -55,7 +79,7 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.hr).toBe(160)
   })
 
-  it('reset returns all three slices to defaults', () => {
+  it('reset returns all three slices to inactive vitals and disconnected waveforms', () => {
     useMonitorStore.getState().setDraft('hr', 200)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
@@ -65,6 +89,12 @@ describe('monitorStore', () => {
     expect(s.draft).toEqual(def)
     expect(s.saved).toEqual(def)
     expect(s.confirmed).toEqual(def)
+    expect(s.draftVitalsActive).toBe(false)
+    expect(s.savedVitalsActive).toBe(false)
+    expect(s.confirmedVitalsActive).toBe(false)
+    expect(s.draftVitalActive).toEqual(inactiveVitalState)
+    expect(s.savedVitalActive).toEqual(inactiveVitalState)
+    expect(s.confirmedVitalActive).toEqual(inactiveVitalState)
     expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
@@ -87,6 +117,42 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().callerInfoConfirmed.problem).toBe('Douleur thoracique')
     expect(useMonitorStore.getState().callerInfoConfirmed.extra1Label).toBe('Acces')
     expect(useMonitorStore.getState().callerInfoConfirmed.extra1).toBe('Porte cote nord')
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+  })
+
+  it('numeric vitals stay inactive until a vitals edit is saved and sent', () => {
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+
+    useMonitorStore.getState().setDraft('hr', 160)
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+    expect(useMonitorStore.getState().draftVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+
+    useMonitorStore.getState().save()
+    expect(useMonitorStore.getState().savedVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmedVitalActive.hr).toBe(true)
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().confirmed.hr).toBe(160)
+  })
+
+  it('can turn a stored zero vital on and off independently', () => {
+    useMonitorStore.getState().setDraft('hr', 0)
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+    useMonitorStore.getState().setDraftVitalActive('hr', false)
+    expect(useMonitorStore.getState().draft.hr).toBe(0)
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
+    expect(useMonitorStore.getState().draftVitalsActive).toBe(false)
+
+    useMonitorStore.getState().setDraftVitalActive('hr', true)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    expect(useMonitorStore.getState().confirmed.hr).toBe(0)
+    expect(useMonitorStore.getState().confirmedVitalActive.hr).toBe(true)
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(true)
   })
 
 
@@ -112,32 +178,87 @@ describe('monitorStore', () => {
       spo2: DEFAULT_VITALS.spo2,
       rhythm: 'vt',
     })
+    expect(s.draftVitalsActive).toBe(true)
+    expect(s.draftVitalActive).toEqual({
+      hr: true,
+      bp_sys: true,
+      bp_dia: true,
+      etco2: true,
+      spo2: true,
+    })
     expect(s.saved.hr).toBe(180)
     expect(s.confirmed.hr).toBe(180)
   })
 
+  it('resetMonitorVitals clears only monitor vitals back to inactive disconnected state', () => {
+    useMonitorStore.getState().setDraft('hr', 180)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().send()
+
+    useMonitorStore.getState().resetMonitorVitals()
+
+    const s = useMonitorStore.getState()
+    const def = defaultsAsVitals()
+    expect(s.draft).toEqual(def)
+    expect(s.saved).toEqual(def)
+    expect(s.confirmed).toEqual(def)
+    expect(s.draftVitalsActive).toBe(false)
+    expect(s.savedVitalsActive).toBe(false)
+    expect(s.confirmedVitalsActive).toBe(false)
+    expect(s.draftVitalActive).toEqual(inactiveVitalState)
+    expect(s.savedVitalActive).toEqual(inactiveVitalState)
+    expect(s.confirmedVitalActive).toEqual(inactiveVitalState)
+    expect(s.callerInfoConfirmed.address).toBe('123 Rue Principale')
+    expect(s.dispatch.armed).toBe(true)
+  })
+
   it('rhythm flows through the same draft → save → send pipeline', () => {
     useMonitorStore.getState().setDraft('rhythm', 'vf')
-    expect(useMonitorStore.getState().confirmed.rhythm).toBe('nsr')
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('vf')
   })
 
-  it('spo2_waveform defaults to normal and flows through save → send', () => {
-    expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('normal')
+  it('spo2_waveform defaults to off and flows through save → send', () => {
+    expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('off')
     useMonitorStore.getState().setDraft('spo2_waveform', 'weak')
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
     expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('weak')
   })
 
-  it('etco2_waveform defaults to normal and flows through save → send', () => {
-    expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('normal')
+  it('etco2_waveform defaults to off and flows through save → send', () => {
+    expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('off')
     useMonitorStore.getState().setDraft('etco2_waveform', 'obstructed')
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
     expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('obstructed')
+  })
+
+  it('off channel modes flow through save → send without activating vital alarms', () => {
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
+
+    useMonitorStore.getState().setDraft('rhythm', 'nsr')
+    useMonitorStore.getState().setDraft('spo2_waveform', 'normal')
+    expect(useMonitorStore.getState().draftVitalsActive).toBe(false)
+
+    useMonitorStore.getState().save()
+    expect(useMonitorStore.getState().saved.rhythm).toBe('nsr')
+    expect(useMonitorStore.getState().saved.spo2_waveform).toBe('normal')
+    expect(useMonitorStore.getState().saved.etco2_waveform).toBe('off')
+    expect(useMonitorStore.getState().savedVitalsActive).toBe(false)
+
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('nsr')
+    expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('normal')
+    expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('off')
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
   })
 
   it('patientInfo defaults, then setPatientAge clamps and setPatientSex updates', () => {
@@ -160,6 +281,90 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setPatientSex('F')
     useMonitorStore.getState().reset()
     expect(useMonitorStore.getState().patientInfo).toEqual(DEFAULT_PATIENT_INFO)
+  })
+})
+
+describe('dispatch gate', () => {
+  beforeEach(() => {
+    useMonitorStore.getState().reset()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('starts disarmed with empty caller events', () => {
+    const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
+    expect(dispatch.armed).toBe(false)
+    expect(dispatch.countdownEndsAt).toBeNull()
+    expect(dispatch.callerEvents).toEqual([])
+    expect(dispatchMinutes).toBe(0)
+    expect(dispatchSeconds).toBe(0)
+  })
+
+  it('first send arms the gate with an absolute countdown end from minutes + seconds', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().setDispatchSeconds(30)
+    useMonitorStore.getState().send()
+
+    const { dispatch } = useMonitorStore.getState()
+    expect(dispatch.armed).toBe(true)
+    expect(dispatch.countdownEndsAt).toBe(1_000_000 + (5 * 60 + 30) * 1000)
+  })
+
+  it('clamps dispatch seconds to 0–59', () => {
+    useMonitorStore.getState().setDispatchSeconds(90)
+    expect(useMonitorStore.getState().dispatchSeconds).toBe(59)
+    useMonitorStore.getState().setDispatchSeconds(-5)
+    expect(useMonitorStore.getState().dispatchSeconds).toBe(0)
+  })
+
+  it('later sends do not re-arm or move the countdown', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().send()
+    const firstEnd = useMonitorStore.getState().dispatch.countdownEndsAt
+
+    useMonitorStore.getState().setDispatchMinutes(99)
+    useMonitorStore.getState().send()
+
+    expect(useMonitorStore.getState().dispatch.countdownEndsAt).toBe(firstEnd)
+  })
+
+  it('acknowledge/arrive/transport log once and append EST entries', () => {
+    const s = useMonitorStore.getState()
+    s.acknowledgeCall('14:05:11')
+    s.acknowledgeCall('14:06:00') // ignored — already acknowledged
+    s.arriveCall('14:10:14')
+    s.transportCall('15:20:30')
+
+    const { dispatch } = useMonitorStore.getState()
+    expect(dispatch.acknowledgedAt).toBe('14:05:11')
+    expect(dispatch.arrivedAt).toBe('14:10:14')
+    expect(dispatch.transportedAt).toBe('15:20:30')
+    expect(dispatch.callerEvents).toEqual([
+      { name: 'Call - Acknowledge', time: '14:05:11' },
+      { name: 'Call - Arrival', time: '14:10:14' },
+      { name: 'Call - Transport', time: '15:20:30' },
+    ])
+  })
+
+  it('reset clears the dispatch gate', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().acknowledgeCall('14:05:11')
+
+    useMonitorStore.getState().reset()
+
+    const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
+    expect(dispatch.armed).toBe(false)
+    expect(dispatch.countdownEndsAt).toBeNull()
+    expect(dispatch.acknowledgedAt).toBeNull()
+    expect(dispatch.callerEvents).toEqual([])
+    expect(dispatchMinutes).toBe(0)
+    expect(dispatchSeconds).toBe(0)
   })
 })
 
@@ -195,6 +400,7 @@ describe('persist migration', () => {
     expect(s.confirmed.hr).toBe(137) // preserved from the old payload
     expect(s.callerInfoConfirmed.address).toBe('5 Rue Test')
     expect(s.patientInfo).toEqual(DEFAULT_PATIENT_INFO) // seeded by merge
+    expect(s.confirmedVitalsActive).toBe(false)
   })
 
   it('normalizes removed PEA rhythms in persisted vitals', async () => {
@@ -218,6 +424,31 @@ describe('persist migration', () => {
     expect(s.saved.rhythm).toBe(DEFAULT_VITALS.rhythm)
     expect(s.confirmed.rhythm).toBe(DEFAULT_VITALS.rhythm)
   })
+
+  it('seeds a default dispatch slice for a payload without one', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        state: { confirmed: { ...DEFAULT_VITALS, hr: 99 } },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const s = useMonitorStore.getState()
+    expect(s.confirmed.hr).toBe(99)
+    expect(s.dispatch).toEqual({
+      armed: false,
+      countdownEndsAt: null,
+      acknowledgedAt: null,
+      arrivedAt: null,
+      transportedAt: null,
+      callerEvents: [],
+    })
+    expect(s.dispatchMinutes).toBe(0)
+    expect(s.dispatchSeconds).toBe(0)
+  })
 })
 
 describe('fieldStatus + has* helpers', () => {
@@ -228,8 +459,21 @@ describe('fieldStatus + has* helpers', () => {
   it('clean initially', () => {
     const s = useMonitorStore.getState()
     expect(fieldStatus('hr', s.draft, s.saved, s.confirmed)).toBe('clean')
+    expect(
+      vitalStatus(
+        'hr',
+        s.draft,
+        s.saved,
+        s.confirmed,
+        s.draftVitalActive,
+        s.savedVitalActive,
+        s.confirmedVitalActive,
+      ),
+    ).toBe('clean')
     expect(hasDirty(s.draft, s.saved)).toBe(false)
+    expect(hasVitalActiveDirty(s.draftVitalActive, s.savedVitalActive)).toBe(false)
     expect(hasPending(s.saved, s.confirmed)).toBe(false)
+    expect(hasVitalActivePending(s.savedVitalActive, s.confirmedVitalActive)).toBe(false)
   })
 
   it('dirty after setDraft, pending after save, clean after send', () => {
@@ -250,5 +494,37 @@ describe('fieldStatus + has* helpers', () => {
     expect(fieldStatus('hr', s.draft, s.saved, s.confirmed)).toBe('clean')
     expect(hasDirty(s.draft, s.saved)).toBe(false)
     expect(hasPending(s.saved, s.confirmed)).toBe(false)
+  })
+
+  it('tracks active-state dirty and pending changes', () => {
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    let s = useMonitorStore.getState()
+    expect(
+      vitalStatus(
+        'spo2',
+        s.draft,
+        s.saved,
+        s.confirmed,
+        s.draftVitalActive,
+        s.savedVitalActive,
+        s.confirmedVitalActive,
+      ),
+    ).toBe('dirty')
+    expect(hasVitalActiveDirty(s.draftVitalActive, s.savedVitalActive)).toBe(true)
+
+    useMonitorStore.getState().save()
+    s = useMonitorStore.getState()
+    expect(
+      vitalStatus(
+        'spo2',
+        s.draft,
+        s.saved,
+        s.confirmed,
+        s.draftVitalActive,
+        s.savedVitalActive,
+        s.confirmedVitalActive,
+      ),
+    ).toBe('pending')
+    expect(hasVitalActivePending(s.savedVitalActive, s.confirmedVitalActive)).toBe(true)
   })
 })

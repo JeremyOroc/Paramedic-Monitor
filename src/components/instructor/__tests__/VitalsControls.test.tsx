@@ -38,6 +38,13 @@ describe('VitalsControls', () => {
     expect(state.draft.bp_sys).toBe(DEFAULT_VITALS.bp_sys)
     expect(state.draft.bp_dia).toBe(DEFAULT_VITALS.bp_dia)
     expect(state.draft.spo2).toBe(DEFAULT_VITALS.spo2)
+    expect(state.draftVitalActive).toEqual({
+      hr: true,
+      bp_sys: true,
+      bp_dia: true,
+      etco2: true,
+      spo2: true,
+    })
     expect(state.confirmed.hr).toBe(180)
   })
 })

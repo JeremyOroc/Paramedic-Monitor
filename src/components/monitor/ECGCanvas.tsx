@@ -4,14 +4,16 @@ import { ECG_RHYTHMS, ECG_SWEEP_MS, getEcgRhythm } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
 import { COLORS, cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
+import { DisconnectedWaveform } from './DisconnectedWaveform'
 
 type ECGCanvasProps = {
   rhythm: Rhythm
   hr: number
+  connected?: boolean
   className?: string
 }
 
-export function ECGCanvas({ rhythm, hr, className }: ECGCanvasProps) {
+function LiveECGCanvas({ rhythm, hr, className }: Omit<ECGCanvasProps, 'connected'>) {
   const canvasRef = useWaveformRenderer(
     { rhythm, hr },
     (get) => ({
@@ -28,4 +30,23 @@ export function ECGCanvas({ rhythm, hr, className }: ECGCanvasProps) {
   )
 
   return <canvas ref={canvasRef} className={cn('block h-full w-full', className)} />
+}
+
+export function ECGCanvas({
+  rhythm,
+  hr,
+  connected = true,
+  className,
+}: ECGCanvasProps) {
+  if (!connected) {
+    return (
+      <DisconnectedWaveform
+        channel="ecg"
+        color={COLORS.ecgGreen}
+        className={className}
+      />
+    )
+  }
+
+  return <LiveECGCanvas rhythm={rhythm} hr={hr} className={className} />
 }
