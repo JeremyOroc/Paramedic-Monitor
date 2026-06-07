@@ -1,20 +1,20 @@
 'use client'
 
 import { useMonitorStore } from '@/store/monitorStore'
-import { hasCallerInfoDirty, hasDirty } from '@/store/fieldState'
+import { hasCallerInfoDirty, hasDirty, hasVitalActiveDirty } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
 
 export function SaveButton() {
   const draft = useMonitorStore((s) => s.draft)
   const saved = useMonitorStore((s) => s.saved)
-  const draftVitalsActive = useMonitorStore((s) => s.draftVitalsActive)
-  const savedVitalsActive = useMonitorStore((s) => s.savedVitalsActive)
+  const draftVitalActive = useMonitorStore((s) => s.draftVitalActive)
+  const savedVitalActive = useMonitorStore((s) => s.savedVitalActive)
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const callerInfoSaved = useMonitorStore((s) => s.callerInfoSaved)
   const save = useMonitorStore((s) => s.save)
   const disabled =
     !hasDirty(draft, saved) &&
-    draftVitalsActive === savedVitalsActive &&
+    !hasVitalActiveDirty(draftVitalActive, savedVitalActive) &&
     !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved)
 
   return (
