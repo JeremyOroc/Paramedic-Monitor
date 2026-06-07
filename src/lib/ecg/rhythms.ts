@@ -357,6 +357,7 @@ function synthTorsades(seed = 12): Float32Array {
 
 
 export const ECG_RHYTHMS: Record<Rhythm, WaveformDef> = {
+  off:      { data: new Float32Array([0, 0, 0, 0]), cycleMs: 1000 },
   nsr:      { data: synthNSR(),      cycleMs: null },
   vf:       { data: synthTorsades(17), cycleMs: TORSADES_TUNING.cycleMs },
   vt:       { data: synthVT(1),      cycleMs: VT_TUNING.cycleMs },

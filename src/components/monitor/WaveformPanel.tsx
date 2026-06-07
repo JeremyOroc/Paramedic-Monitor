@@ -32,6 +32,9 @@ export function WaveformPanel({
   showAllSecondaryChannels = false,
   selected,
 }: WaveformPanelProps) {
+  const ecgConnected = rhythm !== 'off'
+  const spo2Connected = spo2Waveform !== 'off'
+  const etco2Connected = etco2Waveform !== 'off'
   const ecgLabel = (
     <div className="absolute top-1 left-2 z-10 flex items-center gap-16 text-xs font-mono font-bold text-ecg-green">
       <span className={cn('px-1 py-0.5', selected === 'padsLabel' && 'bg-[var(--color-selection-blue)] text-white')}>
@@ -48,7 +51,12 @@ export function WaveformPanel({
       <div className="h-full w-full grid grid-rows-[1.05fr_1fr_0.78fr] bg-black">
         <div className="relative min-h-0 border-b border-neutral-800">
           {ecgLabel}
-          <ECGCanvas rhythm={rhythm} hr={hr} className="h-full w-full" />
+          <ECGCanvas
+            rhythm={rhythm}
+            hr={hr}
+            connected={ecgConnected}
+            className="h-full w-full"
+          />
         </div>
         <div className="relative min-h-0 border-b border-neutral-800">
           <SecondaryChannel
@@ -60,6 +68,7 @@ export function WaveformPanel({
             etco2Waveform={etco2Waveform}
             selectedLabel={selected === 'etco2Label'}
             selectedScale={selected === 'etco2Scale'}
+            connected={etco2Connected}
           />
         </div>
         <div className="relative min-h-0">
@@ -72,6 +81,7 @@ export function WaveformPanel({
             etco2Waveform={etco2Waveform}
             selectedLabel={selected === 'spo2Label'}
             selectedScale={selected === 'spo2Scale'}
+            connected={spo2Connected}
           />
         </div>
       </div>
@@ -82,7 +92,12 @@ export function WaveformPanel({
     <div className="h-full w-full flex flex-col bg-black">
       <div className="relative flex-1 min-h-0 border-b border-neutral-800">
         {ecgLabel}
-        <ECGCanvas rhythm={rhythm} hr={hr} className="h-full w-full" />
+        <ECGCanvas
+          rhythm={rhythm}
+          hr={hr}
+          connected={ecgConnected}
+          className="h-full w-full"
+        />
         {showApplyElectrodes && (
           <div className="absolute inset-x-0 bottom-0">
             <ApplyElectrodesBar />
@@ -99,6 +114,7 @@ export function WaveformPanel({
           etco2Waveform={etco2Waveform}
           selectedLabel={selected === `${secondaryChannel}Label`}
           selectedScale={selected === `${secondaryChannel}Scale`}
+          connected={secondaryChannel === 'etco2' ? etco2Connected : spo2Connected}
         />
       </div>
     </div>
