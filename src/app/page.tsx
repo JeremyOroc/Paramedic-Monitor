@@ -37,6 +37,7 @@ function MonitorPage() {
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const confirmedVitalsActive = useMonitorStore((s) => s.confirmedVitalsActive)
+  const confirmedVitalActive = useMonitorStore((s) => s.confirmedVitalActive)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
   const patientInfo = useMonitorStore((s) => s.patientInfo)
   const setPatientAge = useMonitorStore((s) => s.setPatientAge)
@@ -112,6 +113,7 @@ function MonitorPage() {
     controller.isPoweredOn,
     controller.isMuted,
     confirmedVitalsActive,
+    confirmedVitalActive,
   )
   const {
     phase: nibpPhase,
@@ -188,16 +190,17 @@ function MonitorPage() {
             ? null
             : (
                 <VitalsStrip
-                  hr={confirmedVitalsActive ? confirmed.hr : 0}
-                  bpSys={confirmedVitalsActive ? confirmed.bp_sys : 0}
-                  bpDia={confirmedVitalsActive ? confirmed.bp_dia : 0}
-                  etco2={confirmedVitalsActive ? confirmed.etco2 : 0}
-                  spo2={confirmedVitalsActive ? confirmed.spo2 : 0}
+                  hr={confirmedVitalActive.hr ? confirmed.hr : ''}
+                  bpSys={confirmedVitalActive.bp_sys ? confirmed.bp_sys : ''}
+                  bpDia={confirmedVitalActive.bp_dia ? confirmed.bp_dia : ''}
+                  etco2={confirmedVitalActive.etco2 ? confirmed.etco2 : ''}
+                  spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
+                  spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}
                   activeAlarms={alarm.activeAlarms}
                   searching={false}
                   selected={controller.activeSelectedControl}
-                  nibpPhase={confirmedVitalsActive ? nibpPhase : undefined}
-                  nibpDisplayValue={confirmedVitalsActive ? nibpDisplayValue : undefined}
+                  nibpPhase={confirmedVitalActive.bp_sys ? nibpPhase : undefined}
+                  nibpDisplayValue={confirmedVitalActive.bp_sys ? nibpDisplayValue : undefined}
                 />
               )
         }
@@ -334,7 +337,7 @@ function MonitorPage() {
       audio={{
         isMuted: controller.isMuted,
         onToggleMute: controller.onToggleMute,
-        onPatientEvent: confirmedVitalsActive ? handlePatientEvent : undefined,
+        onPatientEvent: confirmedVitalActive.bp_sys ? handlePatientEvent : undefined,
       }}
     />
   )

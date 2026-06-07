@@ -53,12 +53,32 @@ describe('useAlarm', () => {
 
   it('stays silent and returns no active alarms while vitals are not active', () => {
     const { result } = renderHook(() =>
-      useAlarm({ ...healthyVitals, hr: 0, spo2: 0 }, true, false, false),
+      useAlarm({ ...healthyVitals, hr: 0, spo2: 0 }, true, false, true, {
+        hr: false,
+        bp_sys: false,
+        bp_dia: false,
+        spo2: false,
+      }),
     )
 
     expect(result.current.activeAlarms).toEqual([])
     expect(result.current.isAlarming).toBe(false)
     expect(playAlarm).not.toHaveBeenCalled()
     expect(pauseAlarm).toHaveBeenCalled()
+  })
+
+  it('alarms active zero values per vital', () => {
+    const { result } = renderHook(() =>
+      useAlarm({ ...healthyVitals, hr: 0, spo2: 0 }, true, false, true, {
+        hr: true,
+        bp_sys: false,
+        bp_dia: false,
+        spo2: false,
+      }),
+    )
+
+    expect(result.current.activeAlarms).toEqual(['hr'])
+    expect(result.current.isAlarming).toBe(true)
+    expect(playAlarm).toHaveBeenCalled()
   })
 })

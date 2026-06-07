@@ -43,11 +43,20 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
 vi.mock('@/components/monitor/WaveformPanel', () => ({
   WaveformPanel: ({
     showAllSecondaryChannels,
+    rhythm,
+    spo2Waveform,
+    etco2Waveform,
   }: {
     showAllSecondaryChannels?: boolean
+    rhythm?: string
+    spo2Waveform?: string
+    etco2Waveform?: string
   }) => (
     <div>
       Waveform panel
+      <span>{rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}</span>
+      <span>{spo2Waveform !== 'off' ? 'live-spo2' : 'disconnected-spo2'}</span>
+      <span>{etco2Waveform !== 'off' ? 'live-etco2' : 'disconnected-etco2'}</span>
       {showAllSecondaryChannels && <span>expanded-waveforms</span>}
     </div>
   ),
@@ -100,18 +109,21 @@ describe('MonitorPage', () => {
     )
   })
 
-  it('starts with zero vital numbers without active alarms', () => {
+  it('starts with blank disconnected vitals without active alarms', () => {
     render(<MonitorPage />)
 
     const vitalValues = screen.getAllByTestId('vital-value').map((node) => node.textContent)
-    expect(vitalValues).toEqual(['0', '00', '0', '0'])
+    expect(vitalValues).toEqual(['', '', '', 'SpO2 OFF'])
     expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
     expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
     expect(screen.getByText('EtCO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
     expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
   })
 
-  it('shows vital numbers after vitals are saved and sent', () => {
+  it('shows vital numbers after vitals are saved and sent while graphs remain disconnected', () => {
     act(() => {
       useMonitorStore.getState().setDraft('hr', 150)
       useMonitorStore.getState().setDraft('bp_sys', 110)
@@ -127,6 +139,52 @@ describe('MonitorPage', () => {
     expect(screen.getByText('110')).toBeInTheDocument()
     expect(screen.getByText('70')).toBeInTheDocument()
     expect(screen.getByText('97')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
+  })
+
+  it('distinguishes inactive 0 from active 0 for alarms', () => {
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 0)
+      useMonitorStore.getState().setDraftVitalActive('hr', false)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    const { unmount } = render(<MonitorPage />)
+    expect(screen.getAllByTestId('vital-value')[0]).toHaveTextContent('')
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'false',
+    )
+    unmount()
+
+    act(() => {
+      useMonitorStore.getState().setDraftVitalActive('hr', true)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+    render(<MonitorPage />)
+
+    expect(screen.getAllByTestId('vital-value')[0]).toHaveTextContent('0')
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'true',
+    )
+  })
+
+  it('can show only selected live graph channels after non-off options are saved and sent', () => {
+    act(() => {
+      useMonitorStore.getState().setDraft('rhythm', 'nsr')
+      useMonitorStore.getState().setDraft('spo2_waveform', 'normal')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('live-ecg')).toBeInTheDocument()
+    expect(screen.getByText('live-spo2')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
   })
 
   it('cycles to the bottom status toggle in reverse and hides the bottom panel on enter', async () => {

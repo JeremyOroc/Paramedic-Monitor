@@ -22,6 +22,28 @@ describe('VitalsStrip', () => {
     expect(screen.queryByText('120/89')).toBeNull()
   })
 
+  it('supports inactive blank vitals with SpO2 OFF', () => {
+    render(
+      <VitalsStrip
+        hr=""
+        bpSys=""
+        bpDia=""
+        etco2=""
+        spo2="SpO2 OFF"
+        spo2Unit=""
+        activeAlarms={[]}
+      />,
+    )
+
+    const values = screen.getAllByTestId('vital-value').map((node) => node.textContent)
+    expect(values).toEqual(['', '', '', 'SpO2 OFF'])
+    expect(screen.queryByText('%')).not.toBeInTheDocument()
+    expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'false',
+    )
+  })
+
   it('alarms HR, the whole NIBP box, and SpO2 from thresholds', () => {
     render(
       <VitalsStrip hr={141} bpSys={120} bpDia={226} etco2={35} spo2={89} />,
