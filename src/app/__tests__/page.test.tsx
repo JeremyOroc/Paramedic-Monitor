@@ -138,6 +138,8 @@ describe('MonitorPage', () => {
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
     const goToMonitor = screen.getByRole('button', { name: 'Go to monitor' })
     expect(goToMonitor).toBeEnabled()
+    // The familiar Back button returns once the gate is satisfied.
+    expect(screen.getByRole('button', { name: 'Back to monitor' })).toBeInTheDocument()
 
     await user.click(goToMonitor)
 
