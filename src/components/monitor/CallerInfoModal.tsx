@@ -389,10 +389,11 @@ function CallerEventButtons({
           disabled={buttonState[key].disabled}
           onClick={() => onCallerEvent(key)}
           className={cn(
-            'min-h-[42px] rounded-md px-1.5 py-2 text-[11px] font-black uppercase leading-tight tracking-normal shadow-sm enabled:active:translate-y-px disabled:cursor-not-allowed disabled:opacity-75 disabled:saturate-50',
+            'min-h-[42px] rounded-md px-1.5 py-2 text-[11px] font-black uppercase leading-tight tracking-normal shadow-sm enabled:active:translate-y-px disabled:cursor-not-allowed',
             variant === 'classic'
               ? 'border border-dispatch-ink bg-dispatch-paper text-dispatch-ink enabled:hover:bg-dispatch-field'
               : assignmentClassName,
+            'disabled:border-neutral-600 disabled:bg-neutral-700 disabled:text-neutral-300 disabled:opacity-85 disabled:saturate-0',
           )}
         >
           {label}

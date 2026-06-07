@@ -400,7 +400,8 @@ button is inert until a drill gate is satisfied.
   previous tablet layout remains available with `?callerInfoVariant=classic`.
   The assignment variant should use the reference-style blue/green/orange/red/
   purple/yellow icon palette, and the Acknowledge/Arrival/Transport action row
-  must remain visible on the monitor even when buttons are disabled.
+  must remain visible on the monitor even when buttons are disabled. Completed
+  caller action buttons gray out after they are clicked/logged.
   While powered off/locked, all hardware controls are inert and silent; only
   touchscreen call milestone buttons can be used.
 - Monitor vital numbers start/reset blank on the trainee screen after reset and

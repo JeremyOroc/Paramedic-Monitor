@@ -136,15 +136,18 @@ describe('CallerInfoModal', () => {
 
     expect(screen.getByRole('button', { name: 'Acknowledge' })).toHaveClass(
       'min-h-[42px]',
-      'disabled:opacity-75',
+      'disabled:bg-neutral-700',
+      'disabled:text-neutral-300',
     )
     expect(screen.getByRole('button', { name: 'Arrival' })).toHaveClass(
       'min-h-[42px]',
-      'disabled:opacity-75',
+      'disabled:bg-neutral-700',
+      'disabled:text-neutral-300',
     )
     expect(screen.getByRole('button', { name: 'Transport' })).toHaveClass(
       'min-h-[42px]',
-      'disabled:opacity-75',
+      'disabled:bg-neutral-700',
+      'disabled:text-neutral-300',
     )
   })
 

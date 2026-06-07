@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-06-01] [monitor] — Gray completed caller action buttons
+
+- Acknowledge, Arrival, and Transport buttons now turn neutral gray after they are
+  clicked/disabled, while staying readable in the assignment caller-info footer.
+
 ## [2026-06-01] [monitor] — Add assignment-style caller info A/B variant
 
 - Added an icon-led `assignment` caller-info variant inspired by ambulance
