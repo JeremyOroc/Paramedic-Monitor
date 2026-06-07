@@ -28,7 +28,7 @@ describe('ChannelSelector (generic)', () => {
 
   it('marks the current draft value as pressed', () => {
     render(<ChannelSelector field="spo2_waveform" label="SpO2" options={SPO2_OPTIONS} />)
-    expect(screen.getByRole('button', { name: 'Normal' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Off' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -45,12 +45,13 @@ describe('ChannelSelector (generic)', () => {
   it('reflects pending status after save and clean after send', async () => {
     const user = userEvent.setup()
     render(<ChannelSelector field="spo2_waveform" label="SpO2" options={SPO2_OPTIONS} />)
-    await user.click(screen.getByRole('button', { name: 'Off' }))
+    await user.click(screen.getByRole('button', { name: 'Normal' }))
     act(() => useMonitorStore.getState().save())
     expect(screen.getByTestId('status-spo2_waveform')).toHaveTextContent('pending')
     act(() => useMonitorStore.getState().send())
     expect(screen.getByTestId('status-spo2_waveform')).toHaveTextContent('—')
   })
+
 })
 
 describe('specialized selector wrappers', () => {
@@ -58,8 +59,12 @@ describe('specialized selector wrappers', () => {
     useMonitorStore.getState().reset()
   })
 
-  it('EcgRhythmSelector renders 5 rhythm buttons', () => {
+  it('EcgRhythmSelector renders 6 rhythm buttons with Off as the disconnected option', () => {
     render(<EcgRhythmSelector />)
+    expect(screen.getByRole('button', { name: 'Off' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     expect(screen.getByRole('button', { name: 'NSR' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'VF' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'VT' })).toBeInTheDocument()

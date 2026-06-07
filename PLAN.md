@@ -380,6 +380,55 @@ snapshot of the current state. Confirmed behavior:
 
 **Milestone:** Clicking Adult label shows mode picker. BP animation plays before numbers appear.
 
+**Requirement change (2026-05-31) — Dispatch lock + countdown startup gate:**
+Supersedes the earlier "power button is local only / never gates the monitor UI"
+note (Phase 3). Normal users now boot the monitor **locked-off**; the power
+button is inert until a drill gate is satisfied.
+- The admin caller-info **Send** doubles as the dispatch signal. New minutes +
+  seconds "Dispatch countdown" fields on the admin caller-info form set the ETA.
+  The **first** Send arms the lock + countdown and pushes caller info; later Sends
+  only update content. Admin **Reset** = full reset to locked-off.
+- Locked screen shows caller info + a counting-down MM:SS timer. Unlock order:
+  Acknowledge (immediate) → countdown 0 → Arrival → power unlocks. Transport is
+  enabled only after power-on. Acknowledge/Arrival/Transport stamp **EST**
+  wall-clock time and are merged into the event log with meds/shocks.
+- The locked caller-info screen no longer renders inside the Zoll monitor shell.
+  Before Arrival, caller info takes over the full browser page as a separate
+  iPad-style dispatch surface, so the Zoll is not visible. After Arrival, the
+  Zoll monitor appears powered off and trainees power it on themselves.
+- Opening CALL INFO after the monitor is available shows the same full-page
+  caller-info/iPad surface with its own tablet Back button to return to the Zoll.
+  Current A/B test default is the icon-led `assignment` dashboard variant inspired
+  by dispatch assignment screens; the previous tablet layout remains available
+  with `?callerInfoVariant=classic`. The full-page tablet keeps an iPad-oriented
+  4:3 ratio, uses the reference-style blue/green/orange/red/purple/yellow icon
+  palette, and reserves the right-side map/location area for a future map.
+- The Acknowledge/Arrival/Transport action row must remain visible on the caller
+  info tablet even when buttons are disabled. Completed caller action buttons
+  gray out after they are clicked/logged.
+  While powered off/locked, all hardware controls are inert and silent; only
+  touchscreen call milestone buttons can be used.
+- Monitor vital numbers start/reset blank on the trainee screen after reset and
+  caller-info-only dispatch; inactive SpO2 renders `SpO2 OFF`. Startup/reset
+  blanks do not trigger alarms because each numeric vital has its own Off/On
+  state. Admin vital rows expose a right-side toggle; clicking anywhere in that
+  toggle rectangle flips the specific vital Off/On. Stored `0` values are hidden
+  and silent while Off, but are real alarmable values once that vital is On and
+  sent through the existing Save → Send flow.
+- ECG, SpO2, and EtCO2 graphs start/reset as spaced dashed disconnected traces through
+  their `Off` selector options. The admin independently makes each graph live by
+  choosing a non-Off ECG/SpO2/EtCO2 option, and those choices use the same Save →
+  Send flow as other monitor fields.
+- Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
+  vitals/rhythm/waveform state back to the disconnected blank startup state; on the
+  Caller Info tab it resets the full drill, including caller info, dispatch gate,
+  countdown, milestone logs, and monitor vitals.
+- Gate state is persisted (store version 7; countdown stored as an absolute
+  end-timestamp) so a mid-drill refresh resumes. `?dev=1` bypasses the gate.
+- New: `useCountdown` hook, `formatEstTime` util, store dispatch slice; caller-event
+  state moved from `useMonitorController` into the store; controller gained an
+  `initialPoweredOn` option.
+
 ---
 
 ### Phase 10 — Scenario Builder

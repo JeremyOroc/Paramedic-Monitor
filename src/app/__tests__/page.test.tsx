@@ -19,7 +19,7 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
     softKeys: { onLeftAnalyse: () => void }
     nav: { onMoveUp: () => void; onMoveDown: () => void; onEnter: () => void }
   }) => (
-    <div>
+    <div data-testid="device-shell">
       {screen}
       <button type="button" onClick={defib.onAnalyse}>
         Analyze rhythm
@@ -43,11 +43,20 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
 vi.mock('@/components/monitor/WaveformPanel', () => ({
   WaveformPanel: ({
     showAllSecondaryChannels,
+    rhythm,
+    spo2Waveform,
+    etco2Waveform,
   }: {
     showAllSecondaryChannels?: boolean
+    rhythm?: string
+    spo2Waveform?: string
+    etco2Waveform?: string
   }) => (
     <div>
       Waveform panel
+      <span>{rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}</span>
+      <span>{spo2Waveform !== 'off' ? 'live-spo2' : 'disconnected-spo2'}</span>
+      <span>{etco2Waveform !== 'off' ? 'live-etco2' : 'disconnected-etco2'}</span>
       {showAllSecondaryChannels && <span>expanded-waveforms</span>}
     </div>
   ),
@@ -56,6 +65,7 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
 describe('MonitorPage', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
+    window.history.pushState({}, '', '/?dev=1') // bypass the dispatch lock gate
   })
 
   it('does not open caller info modal when ANALYZE is clicked', async () => {
@@ -71,6 +81,7 @@ describe('MonitorPage', () => {
     await user.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
 
     expect(screen.queryByRole('heading', { name: 'Caller Info' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
   it('shows confirmed caller info when left sidebar ANALYSE is clicked', async () => {
@@ -85,9 +96,121 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
     await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
 
-    expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
-    expect(screen.getByText('456 Avenue Centrale')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
+    expect(screen.getAllByText('456 Avenue Centrale').length).toBeGreaterThan(0)
     expect(screen.getByText('Difficultes respiratoires')).toBeInTheDocument()
+  })
+
+  it('shows caller info as a full-page dispatch tablet before arrival', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '456 Avenue Centrale')
+      useMonitorStore.getState().setCallerInfoDraft('problem', 'Difficultes respiratoires')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.queryByTestId('device-shell')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Caller info')).toHaveClass('fixed', 'inset-0')
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
+    expect(screen.getAllByText('456 Avenue Centrale').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Back to monitor' })).not.toBeInTheDocument()
+  })
+
+  it('stays on the dispatch tablet after arrival until Go to Monitor is tapped', async () => {
+    const user = userEvent.setup()
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+      store.acknowledgeCall('14:05:00')
+      store.arriveCall('14:06:00')
+    })
+
+    render(<MonitorPage />)
+
+    // No auto-switch: the dispatch tablet is still up, now with the opt-in button.
+    expect(screen.queryByTestId('device-shell')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
+    const goToMonitor = screen.getByRole('button', { name: 'Go to monitor' })
+    expect(goToMonitor).toBeEnabled()
+
+    await user.click(goToMonitor)
+
+    expect(screen.getByTestId('device-shell')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
+  })
+
+  it('disables Go to Monitor before arrival completes the gate', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByRole('button', { name: 'Go to monitor' })).toBeDisabled()
+  })
+
+  it('opens caller info from the monitor as a full-page tablet with Back', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '456 Avenue Centrale')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+
+    expect(screen.getByLabelText('Caller info')).toHaveClass('fixed', 'inset-0')
+    expect(screen.getByRole('button', { name: 'Back to monitor' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Back to monitor' }))
+
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
+  })
+
+  it('offers an enabled Go to Monitor button when caller info is opened from the monitor', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '456 Avenue Centrale')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+
+    const goToMonitor = screen.getByRole('button', { name: 'Go to monitor' })
+    expect(goToMonitor).toBeEnabled()
+
+    await user.click(goToMonitor)
+
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
+  })
+
+  it('can show the classic caller info variant for A/B comparison', async () => {
+    const user = userEvent.setup()
+    window.history.pushState({}, '', '/?dev=1&callerInfoVariant=classic')
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '456 Avenue Centrale')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+
+    expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
   it('starts with date and time selected', () => {
@@ -97,6 +220,84 @@ describe('MonitorPage', () => {
       'bg-[var(--color-selection-blue)]',
       'text-white',
     )
+  })
+
+  it('starts with blank disconnected vitals without active alarms', () => {
+    render(<MonitorPage />)
+
+    const vitalValues = screen.getAllByTestId('vital-value').map((node) => node.textContent)
+    expect(vitalValues).toEqual(['', '', '', 'SpO2 OFF'])
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('EtCO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+  })
+
+  it('shows vital numbers after vitals are saved and sent while graphs remain disconnected', () => {
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 150)
+      useMonitorStore.getState().setDraft('bp_sys', 110)
+      useMonitorStore.getState().setDraft('bp_dia', 70)
+      useMonitorStore.getState().setDraft('spo2', 97)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('150')).toBeInTheDocument()
+    expect(screen.getByText('110')).toBeInTheDocument()
+    expect(screen.getByText('70')).toBeInTheDocument()
+    expect(screen.getByText('97')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
+  })
+
+  it('distinguishes inactive 0 from active 0 for alarms', () => {
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 0)
+      useMonitorStore.getState().setDraftVitalActive('hr', false)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    const { unmount } = render(<MonitorPage />)
+    expect(screen.getAllByTestId('vital-value')[0]).toHaveTextContent('')
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'false',
+    )
+    unmount()
+
+    act(() => {
+      useMonitorStore.getState().setDraftVitalActive('hr', true)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+    render(<MonitorPage />)
+
+    expect(screen.getAllByTestId('vital-value')[0]).toHaveTextContent('0')
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'true',
+    )
+  })
+
+  it('can show only selected live graph channels after non-off options are saved and sent', () => {
+    act(() => {
+      useMonitorStore.getState().setDraft('rhythm', 'nsr')
+      useMonitorStore.getState().setDraft('spo2_waveform', 'normal')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('live-ecg')).toBeInTheDocument()
+    expect(screen.getByText('live-spo2')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
   })
 
   it('cycles to the bottom status toggle in reverse and hides the bottom panel on enter', async () => {

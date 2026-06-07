@@ -45,4 +45,40 @@ describe('getActiveAlarms', () => {
       }),
     ).toEqual(['hr', 'bp', 'spo2'])
   })
+
+  it('does not alarm inactive vitals even when their stored value is 0', () => {
+    expect(
+      getActiveAlarms(
+        {
+          hr: 0,
+          bp_sys: 0,
+          bp_dia: 0,
+          spo2: 0,
+        },
+        {
+          hr: false,
+          bp_sys: false,
+          bp_dia: false,
+          spo2: false,
+        },
+      ),
+    ).toEqual([])
+  })
+
+  it('alarms an active vital with value 0', () => {
+    expect(
+      getActiveAlarms(
+        {
+          ...healthyVitals,
+          hr: 0,
+        },
+        {
+          hr: true,
+          bp_sys: false,
+          bp_dia: false,
+          spo2: false,
+        },
+      ),
+    ).toEqual(['hr'])
+  })
 })

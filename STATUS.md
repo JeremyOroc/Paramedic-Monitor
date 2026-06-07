@@ -50,6 +50,29 @@
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence
   - [x] Tests: 21 passing (MonitorLayout, LeftSidebar, PatientModeModal, useDefibSequence)
   - [x] TypeScript clean; dev server serves at `localhost:3000`
+- [x] **Dispatch lock + countdown startup gate — COMPLETE:**
+  - [x] Monitor boots locked-off for normal users; admin caller-info Send arms a lock + ETA countdown on first send (minutes + seconds fields), later Sends only update content; admin Reset = full reset to locked-off
+  - [x] Unlock = Acknowledge → countdown 0 → Arrival; Transport enabled only after power-on; Ack/Arrival/Transport record EST wall-clock time, merged into the event log
+  - [x] Gate state persisted (store version 7, absolute countdown end-timestamp) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
+  - [x] New `useCountdown` hook + `formatEstTime` util; caller-event state moved from controller to store; `initialPoweredOn` controller option; tests across store/hook/util/modal/controller + page flow tests run with `?dev=1`
+- [x] **Dispatch locked/off hardware silence — COMPLETE:**
+  - [x] While powered off or dispatch-locked, hardware controls are inert and do not play button audio; only the dispatch touchscreen buttons remain interactive on the locked caller-info screen
+  - [x] Locked caller-info now fills the monitor screen as a touchscreen; both locked caller-info and the in-monitor Call Info view use a distinct dispatch-tablet/iPad visual treatment so they do not look like native monitor UI
+  - [x] Caller-info A/B test added: default icon-led `assignment` dashboard for fast parsing, with the previous tablet layout available via `?callerInfoVariant=classic`
+  - [x] Assignment dashboard icon/action colors now follow the reference palette, and all three action buttons stay visible on the monitor
+  - [x] Completed caller action buttons gray out after they are clicked/logged
+  - [x] Caller info now renders outside the Zoll shell: pre-Arrival it owns the full page, after Arrival the Zoll appears powered off, and in-monitor CALL INFO opens a full-page iPad surface with Back
+  - [x] Full-page caller info keeps an iPad-oriented 4:3 frame and mimics the reference assignment dashboard layout; map/location area is reserved for later
+- [x] **Disconnected startup vitals/graphs — COMPLETE:**
+  - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`
+  - [x] Admin vital rows expose a right-side Off/On toggle; clicking anywhere in the toggle rectangle flips that specific vital on/off
+  - [x] Vital alarms stay inactive for Off startup/reset vitals until each specific vital is turned On through Save → Send; numeric `0` is treated as a real alarmable value when On
+  - [x] ECG, SpO2, and EtCO2 graph channels start as spaced dashed disconnected traces via their `Off` selector options; choosing a non-Off option makes that graph live after Save → Send
+- [x] **Context-aware admin reset — COMPLETE:**
+  - [x] Monitor tab Reset clears only monitor vitals/rhythm/waveform state back to the disconnected blank startup state
+  - [x] Caller Info tab Reset remains the full drill reset, clearing caller info, dispatch gate/countdown, logs, and vitals
+- [x] **Caller info call-milestone buttons — COMPLETE:**
+  - [x] Acknowledge / Arrival / Transport buttons at the bottom of `CallerInfoModal` (now gated/logged via the dispatch store; superseded by the gate work above)
 - [x] **Caller info Back-to-close fix — COMPLETE:**
   - [x] Back now closes the Call Info panel (controller `back` reducer handles `callerInfoOpen`); the merged modal has no in-panel close button
   - [x] Stale `CallerInfoModal` close-button test replaced; controller test added; full suite green (241 tests)

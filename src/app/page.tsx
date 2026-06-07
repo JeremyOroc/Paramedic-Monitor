@@ -1,5 +1,7 @@
 'use client'
 
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -13,7 +15,11 @@ import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal, PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
-import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
+import {
+  CallerInfoModal,
+  type CallerEventKey,
+  type CallerInfoVariant,
+} from '@/components/monitor/CallerInfoModal'
 import { PatientInfoPanel } from '@/components/monitor/PatientInfoPanel'
 import { EventLogModal } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
@@ -22,28 +28,80 @@ import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { useMonitorClock } from '@/hooks/useMonitorClock'
 import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
+import { useCountdown } from '@/hooks/useCountdown'
 import { useNibpReading } from '@/hooks/useNibpReading'
+import { formatEstTime } from '@/lib/estTime'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { setAudioMuted } from '@/lib/audio'
 
-export default function MonitorPage() {
+function MonitorPage() {
   const { date, time } = useMonitorClock()
 
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
+  const confirmedVitalsActive = useMonitorStore((s) => s.confirmedVitalsActive)
+  const confirmedVitalActive = useMonitorStore((s) => s.confirmedVitalActive)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
   const patientInfo = useMonitorStore((s) => s.patientInfo)
   const setPatientAge = useMonitorStore((s) => s.setPatientAge)
   const setPatientSex = useMonitorStore((s) => s.setPatientSex)
+  const dispatchState = useMonitorStore((s) => s.dispatch)
+  const acknowledgeCall = useMonitorStore((s) => s.acknowledgeCall)
+  const arriveCall = useMonitorStore((s) => s.arriveCall)
+  const transportCall = useMonitorStore((s) => s.transportCall)
+
+  const searchParams = useSearchParams()
+  const devBypass = searchParams.get('dev') === '1'
+  const callerInfoVariant: CallerInfoVariant =
+    searchParams.get('callerInfoVariant') === 'classic' ? 'classic' : 'assignment'
 
   const controller = useMonitorController({
     confirmed,
     patientInfo,
     setPatientAge,
     setPatientSex,
+    initialPoweredOn: devBypass,
   })
   const sessionTimer = useSessionTimer(controller.isTimerRunning)
+
+  // Dispatch startup gate: countdown is travel-time to scene; the trainee must
+  // Acknowledge, wait out the countdown, then mark Arrival before power unlocks.
+  const countdown = useCountdown(dispatchState.countdownEndsAt)
+  const gateSatisfied =
+    !!dispatchState.acknowledgedAt && countdown.isDone && !!dispatchState.arrivedAt
+  const powerLocked = !devBypass && !gateSatisfied
+
+  const callerButtonState: Record<CallerEventKey, { disabled: boolean }> = {
+    acknowledge: { disabled: dispatchState.acknowledgedAt !== null },
+    arrival: {
+      disabled:
+        !(dispatchState.acknowledgedAt && countdown.isDone) || dispatchState.arrivedAt !== null,
+    },
+    transport: { disabled: !controller.isPoweredOn || dispatchState.transportedAt !== null },
+  }
+
+  const onCallerEvent = (key: CallerEventKey) => {
+    const est = formatEstTime()
+    if (key === 'acknowledge') acknowledgeCall(est)
+    else if (key === 'arrival') arriveCall(est)
+    else transportCall(est)
+  }
+
+  const mergedEventLog = [...dispatchState.callerEvents, ...controller.eventLog]
+  // Arrival used to flip straight to the monitor. Now the dispatch tablet stays
+  // up after the gate is satisfied until the trainee taps "Go to Monitor".
+  const [enteredMonitor, setEnteredMonitor] = useState(false)
+  const showDispatchCallerPage =
+    !devBypass && dispatchState.armed && !(gateSatisfied && enteredMonitor)
+
+  const standbyLockScreen = (
+    <div className="flex h-full w-full items-center justify-center bg-black">
+      <span className="font-mono text-sm uppercase tracking-[0.3em] text-neutral-700">
+        Standby
+      </span>
+    </div>
+  )
 
   const defib = useDefibSequence({
     patientMode: controller.patientMode,
@@ -52,7 +110,13 @@ export default function MonitorPage() {
       controller.onAnalyzeResult(result, sessionTimer)
     },
   })
-  const alarm = useAlarm(confirmed, controller.isPoweredOn, controller.isMuted)
+  const alarm = useAlarm(
+    confirmed,
+    controller.isPoweredOn,
+    controller.isMuted,
+    confirmedVitalsActive,
+    confirmedVitalActive,
+  )
   const {
     phase: nibpPhase,
     displayValue: nibpDisplayValue,
@@ -128,16 +192,17 @@ export default function MonitorPage() {
             ? null
             : (
                 <VitalsStrip
-                  hr={confirmed.hr}
-                  bpSys={confirmed.bp_sys}
-                  bpDia={confirmed.bp_dia}
-                  etco2={confirmed.etco2}
-                  spo2={confirmed.spo2}
+                  hr={confirmedVitalActive.hr ? confirmed.hr : ''}
+                  bpSys={confirmedVitalActive.bp_sys ? confirmed.bp_sys : ''}
+                  bpDia={confirmedVitalActive.bp_dia ? confirmed.bp_dia : ''}
+                  etco2={confirmedVitalActive.etco2 ? confirmed.etco2 : ''}
+                  spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
+                  spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}
                   activeAlarms={alarm.activeAlarms}
                   searching={false}
                   selected={controller.activeSelectedControl}
-                  nibpPhase={nibpPhase}
-                  nibpDisplayValue={nibpDisplayValue}
+                  nibpPhase={confirmedVitalActive.bp_sys ? nibpPhase : undefined}
+                  nibpDisplayValue={confirmedVitalActive.bp_sys ? nibpDisplayValue : undefined}
                 />
               )
         }
@@ -166,10 +231,6 @@ export default function MonitorPage() {
           )
         }
       />
-      <CallerInfoModal
-        open={controller.callerInfoOpen}
-        info={callerInfoConfirmed}
-      />
       <PatientInfoPanel
         open={controller.patientInfoOpen}
         age={controller.displayAge}
@@ -179,7 +240,7 @@ export default function MonitorPage() {
       />
       <EventLogModal
         open={controller.eventLogOpen}
-        log={controller.eventLog}
+        log={mergedEventLog}
       />
       {controller.isTwelveLead && controller.captureState === 'acquiring' && (
         <div className="absolute inset-0 z-40">
@@ -205,72 +266,114 @@ export default function MonitorPage() {
     </div>
   )
 
+  if (showDispatchCallerPage) {
+    return (
+      <CallerInfoModal
+        open
+        info={callerInfoConfirmed}
+        onCallerEvent={onCallerEvent}
+        buttonState={callerButtonState}
+        showCountdown={!countdown.isDone}
+        countdownFormatted={countdown.formatted}
+        fullScreen
+        variant={callerInfoVariant}
+        canEnterMonitor={gateSatisfied}
+        onEnterMonitor={() => setEnteredMonitor(true)}
+      />
+    )
+  }
+
   return (
-    <DeviceShell
-      screen={screen}
-      screenModal={
-        <PatientModeModal
-          open={controller.patientModalOpen}
-          current={controller.patientMode}
-          highlighted={
-            PATIENT_MODE_OPTIONS[controller.patientModeHighlightedIndex]?.value ?? 'adult'
-          }
-          onSelect={controller.onSelectPatientMode}
-          onClose={controller.onClosePatientModal}
-        />
-      }
-      twelveLeadActive={controller.isTwelveLead}
-      captureLock={controller.captureLock}
-      defib={{
-        state: defib.state,
-        energy: defib.energy,
-        progress: defib.progress,
-        canAnalyse: defib.canAnalyse,
-        canCharge: defib.canCharge,
-        canShock: defib.canShock,
-        canAdjustEnergy: defib.canAdjustEnergy,
-        onAnalyse: defib.onAnalyse,
-        onCharge: defib.onCharge,
-        onShock: defib.onShock,
-        onEnergyUp: defib.onEnergyUp,
-        onEnergyDown: defib.onEnergyDown,
-      }}
-      softKeys={{
-        onTwelveLead: controller.onTwelveLead,
-        onToggleEtco2: controller.onToggleEtco2,
-        onTreatment: controller.onTreatment,
-        onLeftAnalyse: controller.onLeftAnalyse,
-        onBack: controller.onBack,
-        onPatientInfo: controller.onPatientInfo,
-        onCaptureTwelveLead: controller.onCaptureTwelveLead,
-        onPrint: controller.onPrint,
-      }}
-      nav={{
-        onMoveUp: controller.onMoveUp,
-        onMoveDown: controller.onMoveDown,
-        onEnter: controller.onEnter,
-      }}
-      meds={{
-        mode: controller.medicationMode,
-        page: controller.medicationPage,
-        onMedClick: (name) => controller.onMedClick(name, sessionTimer),
-        onMedPageChange: controller.onMedPageChange,
-        onMedInfo: controller.onMedInfo,
-        onMedBack: controller.onMedBack,
-      }}
-      power={{
-        onPowerOn: controller.onPowerOn,
-        onPowerOff: () => {
-          controller.onPowerOff()
-          defib.reset()
-          setAudioMuted(false)
-        },
-      }}
-      audio={{
-        isMuted: controller.isMuted,
-        onToggleMute: controller.onToggleMute,
-        onPatientEvent: handlePatientEvent,
-      }}
-    />
+    <div className="relative h-screen w-screen overflow-hidden">
+      <DeviceShell
+        screen={screen}
+        initialPowerState={devBypass ? 'on' : 'off'}
+        powerLocked={powerLocked}
+        lockScreen={standbyLockScreen}
+        screenModal={
+          <PatientModeModal
+            open={controller.patientModalOpen}
+            current={controller.patientMode}
+            highlighted={
+              PATIENT_MODE_OPTIONS[controller.patientModeHighlightedIndex]?.value ?? 'adult'
+            }
+            onSelect={controller.onSelectPatientMode}
+            onClose={controller.onClosePatientModal}
+          />
+        }
+        twelveLeadActive={controller.isTwelveLead}
+        captureLock={controller.captureLock}
+        defib={{
+          state: defib.state,
+          energy: defib.energy,
+          progress: defib.progress,
+          canAnalyse: defib.canAnalyse,
+          canCharge: defib.canCharge,
+          canShock: defib.canShock,
+          canAdjustEnergy: defib.canAdjustEnergy,
+          onAnalyse: defib.onAnalyse,
+          onCharge: defib.onCharge,
+          onShock: defib.onShock,
+          onEnergyUp: defib.onEnergyUp,
+          onEnergyDown: defib.onEnergyDown,
+        }}
+        softKeys={{
+          onTwelveLead: controller.onTwelveLead,
+          onToggleEtco2: controller.onToggleEtco2,
+          onTreatment: controller.onTreatment,
+          onLeftAnalyse: controller.onLeftAnalyse,
+          onBack: controller.onBack,
+          onPatientInfo: controller.onPatientInfo,
+          onCaptureTwelveLead: controller.onCaptureTwelveLead,
+          onPrint: controller.onPrint,
+        }}
+        nav={{
+          onMoveUp: controller.onMoveUp,
+          onMoveDown: controller.onMoveDown,
+          onEnter: controller.onEnter,
+        }}
+        meds={{
+          mode: controller.medicationMode,
+          page: controller.medicationPage,
+          onMedClick: (name) => controller.onMedClick(name, sessionTimer),
+          onMedPageChange: controller.onMedPageChange,
+          onMedInfo: controller.onMedInfo,
+          onMedBack: controller.onMedBack,
+        }}
+        power={{
+          onPowerOn: controller.onPowerOn,
+          onPowerOff: () => {
+            controller.onPowerOff()
+            defib.reset()
+            setAudioMuted(false)
+          },
+        }}
+        audio={{
+          isMuted: controller.isMuted,
+          onToggleMute: controller.onToggleMute,
+          onPatientEvent: confirmedVitalActive.bp_sys ? handlePatientEvent : undefined,
+        }}
+      />
+      <CallerInfoModal
+        open={controller.callerInfoOpen}
+        info={callerInfoConfirmed}
+        onCallerEvent={onCallerEvent}
+        buttonState={callerButtonState}
+        fullScreen
+        variant={callerInfoVariant}
+        onBack={controller.onBack}
+        canEnterMonitor
+        onEnterMonitor={controller.onBack}
+      />
+    </div>
+  )
+}
+
+// useSearchParams requires a Suspense boundary in the App Router.
+export default function MonitorPageRoute() {
+  return (
+    <Suspense fallback={null}>
+      <MonitorPage />
+    </Suspense>
   )
 }

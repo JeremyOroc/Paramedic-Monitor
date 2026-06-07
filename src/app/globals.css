@@ -28,6 +28,23 @@
   --color-print-grid-bold: #d09a78;
   --color-print-ink: #161616;
   --color-acquire-green: #7cc24a;
+  --color-dispatch-wall: #d8c799;
+  --color-dispatch-surface: #c98243;
+  --color-dispatch-paper: #f7f4ea;
+  --color-dispatch-ink: #151515;
+  --color-dispatch-muted: #6f675c;
+  --color-dispatch-accent: #c9a03c;
+  --color-dispatch-bezel: #080808;
+  --color-dispatch-field: #ece5d5;
+  --color-dispatch-line: #d1c3a5;
+  --color-dispatch-panel: #0b1117;
+  --color-dispatch-panel-soft: #1d2833;
+  --color-dispatch-blue: #1296e8;
+  --color-dispatch-green: #24d43b;
+  --color-dispatch-red: #ff4055;
+  --color-dispatch-orange: #ff7638;
+  --color-dispatch-purple: #8c7be8;
+  --color-dispatch-yellow: #f2b51b;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -65,4 +82,14 @@ body {
 
 .vital-alarm-flash {
   animation: vital-alarm-flash 1.9s ease-in-out infinite;
+}
+
+.dispatch-tablet-frame-assignment {
+  width: min(94vw, calc(92vh * 4 / 3), 1120px);
+  aspect-ratio: 4 / 3;
+}
+
+.dispatch-tablet-frame-classic {
+  width: min(88vw, calc(90vh * 4 / 3), 720px);
+  aspect-ratio: 4 / 3;
 }

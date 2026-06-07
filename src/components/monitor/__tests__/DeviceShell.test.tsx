@@ -1,12 +1,26 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, act, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { DeviceShell } from '../DeviceShell'
+import type { ReactNode } from 'react'
 import type { DefibState } from '@/hooks/useDefibSequence'
+import { playButtonClick } from '@/lib/audio'
+import { DeviceShell } from '../DeviceShell'
+
+vi.mock('@/lib/audio', () => ({
+  playButtonClick: vi.fn(),
+}))
 
 type Overrides = {
   twelveLeadActive?: boolean
   captureLock?: boolean
+  initialPowerState?: 'on' | 'booting' | 'off'
+  powerLocked?: boolean
+  lockScreen?: ReactNode
+  audio?: {
+    isMuted?: boolean
+    onToggleMute?: () => void
+    onPatientEvent?: () => void
+  }
   defib?: Partial<{
     state: DefibState
     energy: number
@@ -59,9 +73,13 @@ function makeProps(overrides: Overrides = {}) {
     screen: <div>monitor-screen</div>,
     twelveLeadActive: overrides.twelveLeadActive ?? false,
     captureLock: overrides.captureLock,
+    initialPowerState: overrides.initialPowerState,
+    powerLocked: overrides.powerLocked,
+    lockScreen: overrides.lockScreen,
     defib,
     softKeys,
     nav,
+    audio: overrides.audio,
   }
 }
 
@@ -69,6 +87,7 @@ describe('DeviceShell', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.useRealTimers()
+    vi.clearAllMocks()
   })
 
   function turnPowerOff() {
@@ -316,6 +335,53 @@ describe('DeviceShell', () => {
     // Back still works.
     await user.click(screen.getByRole('button', { name: 'Back' }))
     expect(props.softKeys.onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps every hardware control inert and silent while powered off and locked', async () => {
+    const user = userEvent.setup()
+    const onToggleMute = vi.fn()
+    const onPatientEvent = vi.fn()
+    const props = makeProps({
+      initialPowerState: 'off',
+      powerLocked: true,
+      lockScreen: <button type="button">Dispatch touchscreen</button>,
+      defib: {
+        canAnalyse: true,
+        canCharge: true,
+        canShock: true,
+        canAdjustEnergy: true,
+      },
+      audio: { onToggleMute, onPatientEvent },
+    })
+
+    render(<DeviceShell {...props} />)
+
+    await user.click(screen.getByRole('button', { name: 'Power' }))
+    await user.click(screen.getByRole('button', { name: '12-lead view' }))
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(screen.getByRole('button', { name: 'Move up' }))
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    await user.click(screen.getByRole('button', { name: 'Enter' }))
+    await user.click(screen.getByRole('button', { name: 'Alarm' }))
+    await user.click(screen.getByRole('button', { name: 'Patient event' }))
+    await user.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
+    await user.click(screen.getByRole('button', { name: 'Charge defibrillator' }))
+    await user.click(screen.getByRole('button', { name: 'Shock' }))
+
+    expect(props.softKeys.onTwelveLead).not.toHaveBeenCalled()
+    expect(props.softKeys.onLeftAnalyse).not.toHaveBeenCalled()
+    expect(props.softKeys.onBack).not.toHaveBeenCalled()
+    expect(props.nav.onMoveUp).not.toHaveBeenCalled()
+    expect(props.nav.onMoveDown).not.toHaveBeenCalled()
+    expect(props.nav.onEnter).not.toHaveBeenCalled()
+    expect(props.defib.onAnalyse).not.toHaveBeenCalled()
+    expect(props.defib.onCharge).not.toHaveBeenCalled()
+    expect(props.defib.onShock).not.toHaveBeenCalled()
+    expect(onToggleMute).not.toHaveBeenCalled()
+    expect(onPatientEvent).not.toHaveBeenCalled()
+    expect(playButtonClick).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Dispatch touchscreen' })).toBeEnabled()
   })
 
   it('keeps unmapped 12-lead soft keys inert', async () => {
