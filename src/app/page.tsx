@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
@@ -89,7 +89,11 @@ function MonitorPage() {
   }
 
   const mergedEventLog = [...dispatchState.callerEvents, ...controller.eventLog]
-  const showDispatchCallerPage = !devBypass && dispatchState.armed && !gateSatisfied
+  // Arrival used to flip straight to the monitor. Now the dispatch tablet stays
+  // up after the gate is satisfied until the trainee taps "Go to Monitor".
+  const [enteredMonitor, setEnteredMonitor] = useState(false)
+  const showDispatchCallerPage =
+    !devBypass && dispatchState.armed && !(gateSatisfied && enteredMonitor)
 
   const standbyLockScreen = (
     <div className="flex h-full w-full items-center justify-center bg-black">
@@ -273,6 +277,8 @@ function MonitorPage() {
         countdownFormatted={countdown.formatted}
         fullScreen
         variant={callerInfoVariant}
+        canEnterMonitor={gateSatisfied}
+        onEnterMonitor={() => setEnteredMonitor(true)}
       />
     )
   }
@@ -356,6 +362,8 @@ function MonitorPage() {
         fullScreen
         variant={callerInfoVariant}
         onBack={controller.onBack}
+        canEnterMonitor
+        onEnterMonitor={controller.onBack}
       />
     </div>
   )

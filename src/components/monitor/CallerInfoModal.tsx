@@ -26,6 +26,10 @@ type CallerInfoModalProps = {
   variant?: CallerInfoVariant
   /** Full-page in-monitor caller info uses this tablet button to return to the Zoll. */
   onBack?: () => void
+  /** Dispatch page: tap to leave the tablet and open the monitor. */
+  onEnterMonitor?: () => void
+  /** Whether the "Go to Monitor" action is currently allowed (gate satisfied). */
+  canEnterMonitor?: boolean
 }
 
 const CALLER_EVENT_BUTTONS: {
@@ -122,6 +126,8 @@ export function CallerInfoModal({
   fullScreen = false,
   variant = 'assignment',
   onBack,
+  onEnterMonitor,
+  canEnterMonitor = false,
 }: CallerInfoModalProps) {
   if (!open) return null
 
@@ -178,6 +184,8 @@ export function CallerInfoModal({
               countdownFormatted={countdownFormatted}
               buttonState={buttonState}
               onCallerEvent={onCallerEvent}
+              onEnterMonitor={onEnterMonitor}
+              canEnterMonitor={canEnterMonitor}
             />
           ) : (
             <AssignmentCallerInfoContent
@@ -188,6 +196,8 @@ export function CallerInfoModal({
               countdownFormatted={countdownFormatted}
               buttonState={buttonState}
               onCallerEvent={onCallerEvent}
+              onEnterMonitor={onEnterMonitor}
+              canEnterMonitor={canEnterMonitor}
             />
           )}
         </div>
@@ -206,6 +216,8 @@ type CallerInfoContentProps = {
   countdownFormatted: string
   buttonState: Record<CallerEventKey, { disabled: boolean }>
   onCallerEvent: (key: CallerEventKey) => void
+  onEnterMonitor?: () => void
+  canEnterMonitor?: boolean
 }
 
 function ClassicCallerInfoContent({
@@ -216,6 +228,8 @@ function ClassicCallerInfoContent({
   countdownFormatted,
   buttonState,
   onCallerEvent,
+  onEnterMonitor,
+  canEnterMonitor = false,
 }: CallerInfoContentProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-neutral-900 bg-dispatch-paper text-dispatch-ink">
@@ -266,6 +280,13 @@ function ClassicCallerInfoContent({
             Aucune information d&apos;appel.
           </p>
         )}
+        {onEnterMonitor && (
+          <EnterMonitorButton
+            onEnterMonitor={onEnterMonitor}
+            canEnterMonitor={canEnterMonitor}
+            className="mt-4"
+          />
+        )}
       </div>
       <CallerEventButtons
         variant="classic"
@@ -284,6 +305,8 @@ function AssignmentCallerInfoContent({
   countdownFormatted,
   buttonState,
   onCallerEvent,
+  onEnterMonitor,
+  canEnterMonitor = false,
 }: CallerInfoContentProps) {
   const priority = info.interventionPriorityCode.trim() || 'Priority Pending'
   const location = info.address.trim() || '-'
@@ -424,6 +447,13 @@ function AssignmentCallerInfoContent({
             <p className="mt-2 text-xs font-bold text-neutral-300">Current Status:</p>
             <p className="text-lg font-black uppercase text-dispatch-green">Available</p>
           </div>
+          {onEnterMonitor && (
+            <EnterMonitorButton
+              onEnterMonitor={onEnterMonitor}
+              canEnterMonitor={canEnterMonitor}
+              className="mt-3"
+            />
+          )}
         </div>
       </div>
       <CallerEventButtons
@@ -432,6 +462,32 @@ function AssignmentCallerInfoContent({
         onCallerEvent={onCallerEvent}
       />
     </div>
+  )
+}
+
+function EnterMonitorButton({
+  onEnterMonitor,
+  canEnterMonitor,
+  className,
+}: {
+  onEnterMonitor: () => void
+  canEnterMonitor: boolean
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-label="Go to monitor"
+      disabled={!canEnterMonitor}
+      onClick={onEnterMonitor}
+      className={cn(
+        'w-full rounded-md border border-dispatch-blue bg-dispatch-blue px-4 py-3 text-sm font-black uppercase tracking-wide text-black shadow-sm enabled:hover:brightness-110 enabled:active:translate-y-px',
+        'disabled:cursor-not-allowed disabled:border-neutral-600 disabled:bg-neutral-700 disabled:text-neutral-300 disabled:opacity-85 disabled:saturate-0',
+        className,
+      )}
+    >
+      Go to Monitor
+    </button>
   )
 }
 

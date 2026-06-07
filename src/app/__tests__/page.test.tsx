@@ -119,7 +119,8 @@ describe('MonitorPage', () => {
     expect(screen.queryByRole('button', { name: 'Back to monitor' })).not.toBeInTheDocument()
   })
 
-  it('shows the Zoll shell after arrival without powering it on automatically', () => {
+  it('stays on the dispatch tablet after arrival until Go to Monitor is tapped', async () => {
+    const user = userEvent.setup()
     window.history.pushState({}, '', '/')
     act(() => {
       const store = useMonitorStore.getState()
@@ -132,8 +133,30 @@ describe('MonitorPage', () => {
 
     render(<MonitorPage />)
 
+    // No auto-switch: the dispatch tablet is still up, now with the opt-in button.
+    expect(screen.queryByTestId('device-shell')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
+    const goToMonitor = screen.getByRole('button', { name: 'Go to monitor' })
+    expect(goToMonitor).toBeEnabled()
+
+    await user.click(goToMonitor)
+
     expect(screen.getByTestId('device-shell')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
+  })
+
+  it('disables Go to Monitor before arrival completes the gate', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByRole('button', { name: 'Go to monitor' })).toBeDisabled()
   })
 
   it('opens caller info from the monitor as a full-page tablet with Back', async () => {
@@ -151,6 +174,25 @@ describe('MonitorPage', () => {
     expect(screen.getByRole('button', { name: 'Back to monitor' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Back to monitor' }))
+
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
+  })
+
+  it('offers an enabled Go to Monitor button when caller info is opened from the monitor', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '456 Avenue Centrale')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+
+    const goToMonitor = screen.getByRole('button', { name: 'Go to monitor' })
+    expect(goToMonitor).toBeEnabled()
+
+    await user.click(goToMonitor)
 
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
