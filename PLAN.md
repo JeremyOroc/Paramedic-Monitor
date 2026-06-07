@@ -392,16 +392,20 @@ button is inert until a drill gate is satisfied.
   Acknowledge (immediate) → countdown 0 → Arrival → power unlocks. Transport is
   enabled only after power-on. Acknowledge/Arrival/Transport stamp **EST**
   wall-clock time and are merged into the event log with meds/shocks.
-- The locked caller-info screen fills the monitor display as a touchscreen, but
-  it must visually read as a separate dispatch tablet/iPad handoff rather than
-  native monitor UI; the same tablet treatment is reused when Call Info is opened
-  again from inside the monitor. Current A/B test default is the icon-led
-  `assignment` dashboard variant inspired by dispatch assignment screens; the
-  previous tablet layout remains available with `?callerInfoVariant=classic`.
-  The assignment variant should use the reference-style blue/green/orange/red/
-  purple/yellow icon palette, and the Acknowledge/Arrival/Transport action row
-  must remain visible on the monitor even when buttons are disabled. Completed
-  caller action buttons gray out after they are clicked/logged.
+- The locked caller-info screen no longer renders inside the Zoll monitor shell.
+  Before Arrival, caller info takes over the full browser page as a separate
+  iPad-style dispatch surface, so the Zoll is not visible. After Arrival, the
+  Zoll monitor appears powered off and trainees power it on themselves.
+- Opening CALL INFO after the monitor is available shows the same full-page
+  caller-info/iPad surface with its own tablet Back button to return to the Zoll.
+  Current A/B test default is the icon-led `assignment` dashboard variant inspired
+  by dispatch assignment screens; the previous tablet layout remains available
+  with `?callerInfoVariant=classic`. The full-page tablet keeps an iPad-oriented
+  4:3 ratio, uses the reference-style blue/green/orange/red/purple/yellow icon
+  palette, and reserves the right-side map/location area for a future map.
+- The Acknowledge/Arrival/Transport action row must remain visible on the caller
+  info tablet even when buttons are disabled. Completed caller action buttons
+  gray out after they are clicked/logged.
   While powered off/locked, all hardware controls are inert and silent; only
   touchscreen call milestone buttons can be used.
 - Monitor vital numbers start/reset blank on the trainee screen after reset and

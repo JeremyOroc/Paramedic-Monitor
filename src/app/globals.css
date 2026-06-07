@@ -83,3 +83,13 @@ body {
 .vital-alarm-flash {
   animation: vital-alarm-flash 1.9s ease-in-out infinite;
 }
+
+.dispatch-tablet-frame-assignment {
+  width: min(94vw, calc(92vh * 4 / 3), 1120px);
+  aspect-ratio: 4 / 3;
+}
+
+.dispatch-tablet-frame-classic {
+  width: min(88vw, calc(90vh * 4 / 3), 720px);
+  aspect-ratio: 4 / 3;
+}

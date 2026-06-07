@@ -20,10 +20,12 @@ type CallerInfoModalProps = {
   /** Show the dispatch ETA countdown (locked phase only). */
   showCountdown?: boolean
   countdownFormatted?: string
-  /** Locked dispatch mode uses this as a touchscreen that fills the monitor display. */
+  /** Full-page dispatch mode renders as a separate iPad-style surface. */
   fullScreen?: boolean
   /** A/B switch: classic tablet or icon-led assignment dashboard. */
   variant?: CallerInfoVariant
+  /** Full-page in-monitor caller info uses this tablet button to return to the Zoll. */
+  onBack?: () => void
 }
 
 const CALLER_EVENT_BUTTONS: {
@@ -119,6 +121,7 @@ export function CallerInfoModal({
   countdownFormatted = '00:00',
   fullScreen = false,
   variant = 'assignment',
+  onBack,
 }: CallerInfoModalProps) {
   if (!open) return null
 
@@ -133,9 +136,19 @@ export function CallerInfoModal({
       aria-label="Caller info"
       className={cn(
         'absolute z-30 font-sans',
-        fullScreen ? 'inset-0' : 'left-[56px] top-[56px] bottom-0 right-0',
+        fullScreen ? 'fixed inset-0 z-50' : 'left-[56px] top-[56px] bottom-0 right-0',
       )}
     >
+      {fullScreen && onBack && (
+        <button
+          type="button"
+          aria-label="Back to monitor"
+          onClick={onBack}
+          className="absolute left-5 top-5 z-50 rounded-md border border-dispatch-line bg-dispatch-paper px-4 py-2 text-sm font-black uppercase text-dispatch-ink shadow-lg enabled:active:translate-y-px"
+        >
+          Back
+        </button>
+      )}
       <div
         className={cn(
           'flex h-full w-full items-center justify-center overflow-hidden',
@@ -148,10 +161,10 @@ export function CallerInfoModal({
             'relative flex overflow-hidden rounded-[22px] border-[7px] border-dispatch-bezel bg-dispatch-bezel shadow-2xl',
             variant === 'assignment'
               ? fullScreen
-                ? 'h-[92%] w-[94%] max-w-[780px]'
+                ? 'dispatch-tablet-frame-assignment'
                 : 'h-[94%] w-[92%] min-w-[390px] max-w-[740px]'
               : fullScreen
-                ? 'h-[90%] w-[88%] max-w-[720px]'
+                ? 'dispatch-tablet-frame-classic'
                 : 'h-[92%] w-[84%] min-w-[360px] max-w-[680px]',
           )}
         >
@@ -272,87 +285,146 @@ function AssignmentCallerInfoContent({
   buttonState,
   onCallerEvent,
 }: CallerInfoContentProps) {
+  const priority = info.interventionPriorityCode.trim() || 'Priority Pending'
+  const location = info.address.trim() || '-'
+  const receivedTime = info.time.trim() || '--:--'
+
   return (
     <div
       data-testid="assignment-dashboard"
       className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-neutral-800 bg-dispatch-panel text-white"
     >
-      <header className="shrink-0 border-b border-neutral-700 px-4 pb-2 pt-3">
-        <div className="grid grid-cols-[1fr_auto] items-start gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-dispatch-panel-soft text-dispatch-orange">
-              <AssignmentIcon name="bell" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-dispatch-green">
-                Connected
-              </p>
-              <h2 className="mt-0.5 text-lg font-black uppercase leading-none tracking-normal">
-                New Assignment
-              </h2>
-            </div>
-          </div>
-          {showCountdown && (
-            <div
-              aria-label="Dispatch countdown"
-              className="rounded-md border border-neutral-700 bg-black/30 px-2.5 py-1.5 text-right"
-            >
-              <p className="text-[9px] font-black uppercase tracking-[0.16em] text-neutral-400">
-                Response Timer
-              </p>
-              <p className="font-mono text-xl font-black tabular-nums text-dispatch-red">
-                {countdownFormatted}
-              </p>
-            </div>
-          )}
+      <header className="grid shrink-0 grid-cols-[1fr_auto_auto] items-center border-b border-neutral-700 bg-black/30 text-xs font-black uppercase">
+        <div className="flex items-center gap-2 border-r border-neutral-700 px-4 py-2 text-dispatch-green">
+          <span className="grid h-5 w-5 place-items-center">
+            <AssignmentSignalIcon />
+          </span>
+          <span>Connected</span>
+        </div>
+        <div className="border-r border-neutral-700 px-4 py-2 text-neutral-300">
+          <span className="font-mono normal-case tabular-nums">{receivedTime}</span>
+        </div>
+        <div className="px-4 py-2 text-neutral-300">
+          Unit <span className="text-dispatch-blue">421</span>
         </div>
       </header>
-      <div className="min-h-0 flex-1 overflow-hidden px-4 py-2">
-        {hasInfo ? (
-          <ul className="grid gap-1">
-            {displayFields.map(({ field, label, labelField }) => {
-              const meta = ASSIGNMENT_FIELD_META[field]
-              const resolvedLabel =
-                labelField && info[labelField].trim() !== ''
-                  ? info[labelField]
-                  : meta?.label ?? label
-              return (
-                <li
-                  key={field}
-                  data-testid={`assignment-info-${field}`}
-                  className="grid min-h-[34px] grid-cols-[32px_1fr] gap-2 border-b border-neutral-800 pb-1 last:border-b-0"
-                >
-                  <span
-                    className={cn(
-                      'mt-0.5 grid h-6 w-6 place-items-center',
-                      meta?.colorClassName ?? 'text-dispatch-blue',
-                    )}
-                    aria-hidden="true"
+      <div className="grid shrink-0 grid-cols-[1fr_minmax(190px,0.78fr)] border-b border-neutral-700">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-dispatch-panel-soft text-dispatch-orange">
+            <AssignmentIcon name="bell" />
+          </span>
+          <h2 className="text-xl font-black uppercase leading-none tracking-normal">
+            New Assignment
+          </h2>
+        </div>
+        <div
+          aria-label={showCountdown ? 'Dispatch countdown' : undefined}
+          className="border-l border-neutral-700 px-4 py-3"
+        >
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-neutral-400">
+            Response Timer
+          </p>
+          <p
+            className="font-mono text-2xl font-black tabular-nums text-dispatch-red"
+          >
+            {showCountdown ? countdownFormatted : '--:--'}
+          </p>
+        </div>
+      </div>
+      <div className="grid min-h-0 flex-1 grid-cols-[1.08fr_minmax(210px,0.92fr)] overflow-hidden">
+        <div className="min-h-0 overflow-hidden border-r border-neutral-700 px-4 py-3">
+          <div className="mb-3 grid grid-cols-[1fr_auto] gap-4 border-b border-neutral-700 pb-3">
+            <div>
+              <p className="text-lg font-black text-dispatch-blue">
+                Call Assignment
+              </p>
+            </div>
+            <div className="border-l border-neutral-600 pl-4">
+              <p className="text-lg font-black uppercase leading-tight text-dispatch-red">
+                {priority}
+              </p>
+              <p className="text-xs font-bold text-dispatch-red">Lights & Sirens</p>
+            </div>
+          </div>
+          {hasInfo ? (
+            <ul className="grid gap-1">
+              {displayFields.map(({ field, label, labelField }) => {
+                const meta = ASSIGNMENT_FIELD_META[field]
+                const resolvedLabel =
+                  labelField && info[labelField].trim() !== ''
+                    ? info[labelField]
+                    : meta?.label ?? label
+                return (
+                  <li
+                    key={field}
+                    data-testid={`assignment-info-${field}`}
+                    className="grid min-h-[34px] grid-cols-[32px_1fr] gap-2 border-b border-neutral-800 pb-1 last:border-b-0"
                   >
-                    <AssignmentIcon name={meta?.icon ?? 'note'} />
-                  </span>
-                  <span className="min-w-0">
                     <span
                       className={cn(
-                        'block text-[10px] font-black uppercase tracking-[0.12em]',
+                        'mt-0.5 grid h-6 w-6 place-items-center',
                         meta?.colorClassName ?? 'text-dispatch-blue',
                       )}
+                      aria-hidden="true"
                     >
-                      {resolvedLabel}
+                      <AssignmentIcon name={meta?.icon ?? 'note'} />
                     </span>
-                    <span className="block overflow-hidden break-words text-xs font-bold leading-tight text-neutral-100">
-                      {info[field] || '-'}
+                    <span className="min-w-0">
+                      <span
+                        className={cn(
+                          'block text-[10px] font-black uppercase tracking-[0.12em]',
+                          meta?.colorClassName ?? 'text-dispatch-blue',
+                        )}
+                      >
+                        {resolvedLabel}
+                      </span>
+                      <span className="block overflow-hidden break-words text-xs font-bold leading-tight text-neutral-100">
+                        {info[field] || '-'}
+                      </span>
                     </span>
-                  </span>
-                </li>
-              )
-            })}
-          </ul>
-        ) : (
-          <p className="text-sm font-bold text-neutral-400">
-            Aucune information d&apos;appel.
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="text-sm font-bold text-neutral-400">
+              Aucune information d&apos;appel.
+            </p>
+          )}
+        </div>
+        <div className="min-h-0 px-4 py-3">
+          <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-dispatch-blue">
+            Location
           </p>
-        )}
+          <div className="flex h-[58%] min-h-[140px] flex-col justify-between rounded-md border border-neutral-700 bg-dispatch-panel-soft p-4">
+            <div className="flex items-start gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/30 text-dispatch-red">
+                <AssignmentIcon name="location" />
+              </span>
+              <div>
+                <p className="text-sm font-black text-neutral-100">{location}</p>
+                <p className="mt-1 text-xs font-bold text-neutral-400">Map view can be added later</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 border-t border-neutral-700 pt-3">
+              <div>
+                <p className="text-[10px] font-black uppercase text-dispatch-blue">Distance</p>
+                <p className="text-sm font-black text-white">-- km</p>
+              </div>
+              <div className="border-l border-neutral-700 pl-4">
+                <p className="text-[10px] font-black uppercase text-dispatch-blue">ETA</p>
+                <p className="font-mono text-sm font-black text-white">{showCountdown ? countdownFormatted : '--:--'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-3 rounded-md border border-neutral-700 bg-black/25 p-4">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-dispatch-blue">
+              Unit Status
+            </p>
+            <p className="mt-2 text-xs font-bold text-neutral-300">Current Status:</p>
+            <p className="text-lg font-black uppercase text-dispatch-green">Available</p>
+          </div>
+        </div>
       </div>
       <CallerEventButtons
         variant="assignment"
@@ -464,4 +536,15 @@ function AssignmentIcon({ name }: { name: AssignmentIconName }) {
         </svg>
       )
   }
+}
+
+function AssignmentSignalIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none">
+      <path d="M5 12a7 7 0 0 1 14 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 12a4 4 0 0 1 8 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M11 12a1 1 0 0 1 2 0" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <path d="M12 13v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
 }

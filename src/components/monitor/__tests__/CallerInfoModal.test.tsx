@@ -42,10 +42,10 @@ describe('CallerInfoModal', () => {
     })
 
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
-    expect(screen.getByText('Code 3')).toBeInTheDocument()
-    expect(screen.getByText('123 Rue Principale')).toBeInTheDocument()
+    expect(screen.getAllByText('Code 3').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('123 Rue Principale').length).toBeGreaterThan(0)
     expect(screen.getByText('Douleur thoracique')).toBeInTheDocument()
-    expect(screen.getByText('14:45')).toBeInTheDocument()
+    expect(screen.getAllByText('14:45').length).toBeGreaterThan(0)
   })
 
   it('renders the assignment dashboard variant by default', () => {
@@ -115,6 +115,16 @@ describe('CallerInfoModal', () => {
     renderModal()
 
     expect(screen.queryByRole('button', { name: 'Close caller info' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Back to monitor' })).toBeNull()
+  })
+
+  it('shows a tablet Back button when provided', () => {
+    const onBack = vi.fn()
+    renderModal({ fullScreen: true, onBack })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to monitor' }))
+
+    expect(onBack).toHaveBeenCalledTimes(1)
   })
 
   it('renders Acknowledge, Arrival and Transport buttons', () => {
@@ -196,8 +206,10 @@ describe('CallerInfoModal', () => {
   it('can fill the full monitor screen for the locked dispatch touchscreen', () => {
     renderModal({ fullScreen: true })
 
-    expect(screen.getByLabelText('Caller info')).toHaveClass('inset-0')
+    expect(screen.getByLabelText('Caller info')).toHaveClass('fixed', 'inset-0')
     expect(screen.getByLabelText('Caller info')).not.toHaveClass('left-[56px]')
-    expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('h-[92%]')
+    expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass(
+      'dispatch-tablet-frame-assignment',
+    )
   })
 })

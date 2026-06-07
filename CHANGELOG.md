@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-06-01] [monitor] — Move caller info outside Zoll shell
+
+- Caller info now renders as a separate full-page iPad-style dispatch surface
+  before Arrival, hiding the Zoll monitor entirely until Arrival is logged.
+- After Arrival the Zoll monitor appears powered off; trainees still power it on
+  themselves.
+- Opening CALL INFO from the monitor now shows the same full-page caller-info
+  surface with a tablet Back button, instead of embedding caller info inside the
+  Zoll screen.
+- The full-page caller-info tablet keeps a 4:3 iPad-style ratio and mimics the
+  reference assignment dashboard layout, with the map area reserved for later.
+
 ## [2026-06-01] [monitor] — Gray completed caller action buttons
 
 - Acknowledge, Arrival, and Transport buttons now turn neutral gray after they are

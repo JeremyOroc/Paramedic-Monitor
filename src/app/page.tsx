@@ -89,19 +89,9 @@ function MonitorPage() {
   }
 
   const mergedEventLog = [...dispatchState.callerEvents, ...controller.eventLog]
+  const showDispatchCallerPage = !devBypass && dispatchState.armed && !gateSatisfied
 
-  const lockScreen = dispatchState.armed ? (
-    <CallerInfoModal
-      open
-      info={callerInfoConfirmed}
-      onCallerEvent={onCallerEvent}
-      buttonState={callerButtonState}
-      showCountdown={!countdown.isDone}
-      countdownFormatted={countdown.formatted}
-      fullScreen
-      variant={callerInfoVariant}
-    />
-  ) : (
+  const standbyLockScreen = (
     <div className="flex h-full w-full items-center justify-center bg-black">
       <span className="font-mono text-sm uppercase tracking-[0.3em] text-neutral-700">
         Standby
@@ -237,13 +227,6 @@ function MonitorPage() {
           )
         }
       />
-      <CallerInfoModal
-        open={controller.callerInfoOpen}
-        info={callerInfoConfirmed}
-        onCallerEvent={onCallerEvent}
-        buttonState={callerButtonState}
-        variant={callerInfoVariant}
-      />
       <PatientInfoPanel
         open={controller.patientInfoOpen}
         age={controller.displayAge}
@@ -279,76 +262,102 @@ function MonitorPage() {
     </div>
   )
 
+  if (showDispatchCallerPage) {
+    return (
+      <CallerInfoModal
+        open
+        info={callerInfoConfirmed}
+        onCallerEvent={onCallerEvent}
+        buttonState={callerButtonState}
+        showCountdown={!countdown.isDone}
+        countdownFormatted={countdown.formatted}
+        fullScreen
+        variant={callerInfoVariant}
+      />
+    )
+  }
+
   return (
-    <DeviceShell
-      screen={screen}
-      initialPowerState={devBypass ? 'on' : 'off'}
-      powerLocked={powerLocked}
-      lockScreen={lockScreen}
-      screenModal={
-        <PatientModeModal
-          open={controller.patientModalOpen}
-          current={controller.patientMode}
-          highlighted={
-            PATIENT_MODE_OPTIONS[controller.patientModeHighlightedIndex]?.value ?? 'adult'
-          }
-          onSelect={controller.onSelectPatientMode}
-          onClose={controller.onClosePatientModal}
-        />
-      }
-      twelveLeadActive={controller.isTwelveLead}
-      captureLock={controller.captureLock}
-      defib={{
-        state: defib.state,
-        energy: defib.energy,
-        progress: defib.progress,
-        canAnalyse: defib.canAnalyse,
-        canCharge: defib.canCharge,
-        canShock: defib.canShock,
-        canAdjustEnergy: defib.canAdjustEnergy,
-        onAnalyse: defib.onAnalyse,
-        onCharge: defib.onCharge,
-        onShock: defib.onShock,
-        onEnergyUp: defib.onEnergyUp,
-        onEnergyDown: defib.onEnergyDown,
-      }}
-      softKeys={{
-        onTwelveLead: controller.onTwelveLead,
-        onToggleEtco2: controller.onToggleEtco2,
-        onTreatment: controller.onTreatment,
-        onLeftAnalyse: controller.onLeftAnalyse,
-        onBack: controller.onBack,
-        onPatientInfo: controller.onPatientInfo,
-        onCaptureTwelveLead: controller.onCaptureTwelveLead,
-        onPrint: controller.onPrint,
-      }}
-      nav={{
-        onMoveUp: controller.onMoveUp,
-        onMoveDown: controller.onMoveDown,
-        onEnter: controller.onEnter,
-      }}
-      meds={{
-        mode: controller.medicationMode,
-        page: controller.medicationPage,
-        onMedClick: (name) => controller.onMedClick(name, sessionTimer),
-        onMedPageChange: controller.onMedPageChange,
-        onMedInfo: controller.onMedInfo,
-        onMedBack: controller.onMedBack,
-      }}
-      power={{
-        onPowerOn: controller.onPowerOn,
-        onPowerOff: () => {
-          controller.onPowerOff()
-          defib.reset()
-          setAudioMuted(false)
-        },
-      }}
-      audio={{
-        isMuted: controller.isMuted,
-        onToggleMute: controller.onToggleMute,
-        onPatientEvent: confirmedVitalActive.bp_sys ? handlePatientEvent : undefined,
-      }}
-    />
+    <div className="relative h-screen w-screen overflow-hidden">
+      <DeviceShell
+        screen={screen}
+        initialPowerState={devBypass ? 'on' : 'off'}
+        powerLocked={powerLocked}
+        lockScreen={standbyLockScreen}
+        screenModal={
+          <PatientModeModal
+            open={controller.patientModalOpen}
+            current={controller.patientMode}
+            highlighted={
+              PATIENT_MODE_OPTIONS[controller.patientModeHighlightedIndex]?.value ?? 'adult'
+            }
+            onSelect={controller.onSelectPatientMode}
+            onClose={controller.onClosePatientModal}
+          />
+        }
+        twelveLeadActive={controller.isTwelveLead}
+        captureLock={controller.captureLock}
+        defib={{
+          state: defib.state,
+          energy: defib.energy,
+          progress: defib.progress,
+          canAnalyse: defib.canAnalyse,
+          canCharge: defib.canCharge,
+          canShock: defib.canShock,
+          canAdjustEnergy: defib.canAdjustEnergy,
+          onAnalyse: defib.onAnalyse,
+          onCharge: defib.onCharge,
+          onShock: defib.onShock,
+          onEnergyUp: defib.onEnergyUp,
+          onEnergyDown: defib.onEnergyDown,
+        }}
+        softKeys={{
+          onTwelveLead: controller.onTwelveLead,
+          onToggleEtco2: controller.onToggleEtco2,
+          onTreatment: controller.onTreatment,
+          onLeftAnalyse: controller.onLeftAnalyse,
+          onBack: controller.onBack,
+          onPatientInfo: controller.onPatientInfo,
+          onCaptureTwelveLead: controller.onCaptureTwelveLead,
+          onPrint: controller.onPrint,
+        }}
+        nav={{
+          onMoveUp: controller.onMoveUp,
+          onMoveDown: controller.onMoveDown,
+          onEnter: controller.onEnter,
+        }}
+        meds={{
+          mode: controller.medicationMode,
+          page: controller.medicationPage,
+          onMedClick: (name) => controller.onMedClick(name, sessionTimer),
+          onMedPageChange: controller.onMedPageChange,
+          onMedInfo: controller.onMedInfo,
+          onMedBack: controller.onMedBack,
+        }}
+        power={{
+          onPowerOn: controller.onPowerOn,
+          onPowerOff: () => {
+            controller.onPowerOff()
+            defib.reset()
+            setAudioMuted(false)
+          },
+        }}
+        audio={{
+          isMuted: controller.isMuted,
+          onToggleMute: controller.onToggleMute,
+          onPatientEvent: confirmedVitalActive.bp_sys ? handlePatientEvent : undefined,
+        }}
+      />
+      <CallerInfoModal
+        open={controller.callerInfoOpen}
+        info={callerInfoConfirmed}
+        onCallerEvent={onCallerEvent}
+        buttonState={callerButtonState}
+        fullScreen
+        variant={callerInfoVariant}
+        onBack={controller.onBack}
+      />
+    </div>
   )
 }
 

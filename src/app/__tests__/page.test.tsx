@@ -19,7 +19,7 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
     softKeys: { onLeftAnalyse: () => void }
     nav: { onMoveUp: () => void; onMoveDown: () => void; onEnter: () => void }
   }) => (
-    <div>
+    <div data-testid="device-shell">
       {screen}
       <button type="button" onClick={defib.onAnalyse}>
         Analyze rhythm
@@ -97,8 +97,62 @@ describe('MonitorPage', () => {
     await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
 
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
-    expect(screen.getByText('456 Avenue Centrale')).toBeInTheDocument()
+    expect(screen.getAllByText('456 Avenue Centrale').length).toBeGreaterThan(0)
     expect(screen.getByText('Difficultes respiratoires')).toBeInTheDocument()
+  })
+
+  it('shows caller info as a full-page dispatch tablet before arrival', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '456 Avenue Centrale')
+      useMonitorStore.getState().setCallerInfoDraft('problem', 'Difficultes respiratoires')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.queryByTestId('device-shell')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Caller info')).toHaveClass('fixed', 'inset-0')
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
+    expect(screen.getAllByText('456 Avenue Centrale').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Back to monitor' })).not.toBeInTheDocument()
+  })
+
+  it('shows the Zoll shell after arrival without powering it on automatically', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+      store.acknowledgeCall('14:05:00')
+      store.arriveCall('14:06:00')
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByTestId('device-shell')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
+  })
+
+  it('opens caller info from the monitor as a full-page tablet with Back', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '456 Avenue Centrale')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+
+    expect(screen.getByLabelText('Caller info')).toHaveClass('fixed', 'inset-0')
+    expect(screen.getByRole('button', { name: 'Back to monitor' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Back to monitor' }))
+
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
   it('can show the classic caller info variant for A/B comparison', async () => {
