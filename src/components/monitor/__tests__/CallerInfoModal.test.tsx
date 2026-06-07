@@ -48,6 +48,14 @@ describe('CallerInfoModal', () => {
     expect(screen.getByText('14:45')).toBeInTheDocument()
   })
 
+  it('renders as an external dispatch tablet surface', () => {
+    renderModal()
+
+    expect(screen.getByText('Dispatch Tablet')).toBeInTheDocument()
+    expect(screen.getByText('CAD')).toBeInTheDocument()
+    expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('border-dispatch-bezel')
+  })
+
   it('uses custom extra labels when provided', () => {
     renderModal({
       info: {
@@ -153,5 +161,6 @@ describe('CallerInfoModal', () => {
 
     expect(screen.getByLabelText('Caller info')).toHaveClass('inset-0')
     expect(screen.getByLabelText('Caller info')).not.toHaveClass('left-[56px]')
+    expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('h-[90%]')
   })
 })

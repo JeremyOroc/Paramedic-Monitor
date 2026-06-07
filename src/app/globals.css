@@ -28,6 +28,15 @@
   --color-print-grid-bold: #d09a78;
   --color-print-ink: #161616;
   --color-acquire-green: #7cc24a;
+  --color-dispatch-wall: #d8c799;
+  --color-dispatch-surface: #c98243;
+  --color-dispatch-paper: #f7f4ea;
+  --color-dispatch-ink: #151515;
+  --color-dispatch-muted: #6f675c;
+  --color-dispatch-accent: #c9a03c;
+  --color-dispatch-bezel: #080808;
+  --color-dispatch-field: #ece5d5;
+  --color-dispatch-line: #d1c3a5;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -22,4 +22,13 @@ export const COLORS = {
   printGridBold:'#d09a78',
   printInk:     '#161616',
   acquireGreen: '#7cc24a',
+  dispatchWall: '#d8c799',
+  dispatchSurface: '#c98243',
+  dispatchPaper: '#f7f4ea',
+  dispatchInk: '#151515',
+  dispatchMuted: '#6f675c',
+  dispatchAccent: '#c9a03c',
+  dispatchBezel: '#080808',
+  dispatchField: '#ece5d5',
+  dispatchLine: '#d1c3a5',
 } as const

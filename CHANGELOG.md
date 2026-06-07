@@ -5,6 +5,21 @@
 
 ---
 
+## [2026-06-01] [monitor] — Restyle caller info as dispatch tablet
+
+- Restyled `CallerInfoModal` so the locked dispatch screen and the later
+  in-monitor Call Info view look like an external tablet/iPad CAD handoff rather
+  than native monitor UI.
+- Added dispatch-tablet color tokens and kept the existing caller-info fields,
+  countdown, and Acknowledge/Arrival/Transport interactions intact.
+
+## [2026-06-01] [monitor] — Reconcile caller-info lock with off-state playback
+
+- Updated the caller-info branch against `main` and resolved the `DeviceShell`
+  overlap between dispatch-lock silence and randomized off-state playback.
+- Dispatch-locked/off caller-info screens remain silent and inert; the randomized
+  off-state playback applies only to the normal unlocked power-off screen.
+
 ## [2026-06-01] [monitor] — Split vital Off state from zero values
 
 - Admin vital rows now have a right-side Off/On toggle. Clicking anywhere in the
@@ -110,6 +125,16 @@
 - Buttons are placeholder for roleplay logic — they only log timestamps for now.
 - Added `CallerInfoModal` tests (render, click fires correct key, disabled-when-logged) and a
   `useMonitorController` test (logs prefixed entry once, ignores repeat clicks).
+
+## [2026-06-01] [monitor] — Randomize off-state its_me playback
+
+- Replaced the powered-off screen's continuous `its_me` audio/video loop with a black idle screen
+  that rolls a 1/100 chance once per second.
+- Successful off-state rolls now play `/videos/its_me.mp4` with `/audio/its_me.mp3` for a random
+  500-5000ms burst, pause further rolls while active, and cancel immediately on power-on or Golden
+  Freddy.
+- Added focused `DeviceShell` fake-timer tests for failed/successful rolls, auto-stop timing,
+  paused rolls during playback, power-on cancellation, and Golden Freddy precedence.
 
 ## [2026-05-31] [monitor] — Fix caller info panel not closing on Back
 

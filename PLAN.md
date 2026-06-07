@@ -210,7 +210,7 @@ paramedic-monitor/
 8. `BottomStatusBar` — "Mode Adult | 120 J Selected | ⚡ | 0"
 9. `DefibButtonRow` — ANALYSE | ▲▼ | CHARGE | SHOCK (styled, not wired)
    - Physical shell also includes an inert PACER button, matching the reference hardware
-   - Top-rim power button toggles green/red locally; it does not shut down the monitor UI
+   - Top-rim power button toggles green/red locally, shows a boot screen on power-up, and shows a black powered-off screen. While powered off, `its_me` audio/video has a 1/100 chance per second to play for a random 500-5000ms burst; it does not loop continuously.
   - Grey physical soft keys own left-sidebar interactions: 12-lead, EtCO2 toggle, left-menu ANALYSE (opens caller info modal only), and Back
    - Inner dark sidebar labels are visual only and must not be clickable
    - Right physical Move up / Move down / Enter buttons cycle a blue selected state through monitor header, right vitals, visible waveform labels/scales, ECG labels, and the minus toggle row. Enter is inert except on the minus toggle.
@@ -226,6 +226,7 @@ paramedic-monitor/
 
 **Testing:**
 - Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
+- Off-state media tests cover delayed 1/100 `its_me` rolls, failed rolls, random-duration auto-stop, paused rolls during playback, power-on cancellation, and Golden Freddy precedence.
 - Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
 - Controller tests cover initial monitor state, selection toggling, patient-info draft/commit/cancel,
   12-lead capture timers, Back precedence, and power-off cleanup.
@@ -391,9 +392,11 @@ button is inert until a drill gate is satisfied.
   Acknowledge (immediate) → countdown 0 → Arrival → power unlocks. Transport is
   enabled only after power-on. Acknowledge/Arrival/Transport stamp **EST**
   wall-clock time and are merged into the event log with meds/shocks.
-- The locked caller-info screen fills the monitor display as a touchscreen. While
-  powered off/locked, all hardware controls are inert and silent; only touchscreen
-  call milestone buttons can be used.
+- The locked caller-info screen fills the monitor display as a touchscreen, but
+  it must visually read as a separate dispatch tablet/iPad handoff rather than
+  native monitor UI; the same tablet treatment is reused when Call Info is opened
+  again from inside the monitor. While powered off/locked, all hardware controls
+  are inert and silent; only touchscreen call milestone buttons can be used.
 - Monitor vital numbers start/reset blank on the trainee screen after reset and
   caller-info-only dispatch; inactive SpO2 renders `SpO2 OFF`. Startup/reset
   blanks do not trigger alarms because each numeric vital has its own Off/On

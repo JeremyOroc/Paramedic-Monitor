@@ -20,6 +20,10 @@
 - [x] `AGENTS.md` — role definitions, conventions, data flow contracts
 - [x] `STATUS.md` — this file
 - [x] `CHANGELOG.md` — history log
+- [x] **Randomized off-state its_me playback — COMPLETE:**
+  - [x] Powered-off screen is now black by default instead of looping `its_me` continuously
+  - [x] While powered off, `its_me` has a 1/100 per-second chance to play for a random 500-5000ms burst, with rolls paused during playback
+  - [x] Active bursts cancel on power-on and when Golden Freddy appears; focused `DeviceShell` tests cover the timing and cancellation behavior
 - [x] **Phase 1 — Scaffolding complete:**
   - [x] Next.js 16.2.4 app scaffolded (TypeScript, Tailwind, App Router, src/ dir)
   - [x] Dependencies installed: `@supabase/supabase-js`, `@supabase/ssr`, `zustand`, `nanoid`, `clsx`, `tailwind-merge`
@@ -53,7 +57,7 @@
   - [x] New `useCountdown` hook + `formatEstTime` util; caller-event state moved from controller to store; `initialPoweredOn` controller option; tests across store/hook/util/modal/controller + page flow tests run with `?dev=1`
 - [x] **Dispatch locked/off hardware silence — COMPLETE:**
   - [x] While powered off or dispatch-locked, hardware controls are inert and do not play button audio; only the dispatch touchscreen buttons remain interactive on the locked caller-info screen
-  - [x] Locked caller-info now fills the monitor screen as a touchscreen; the normal Call Info sidebar modal layout is unchanged
+  - [x] Locked caller-info now fills the monitor screen as a touchscreen; both locked caller-info and the in-monitor Call Info view use a distinct dispatch-tablet/iPad visual treatment so they do not look like native monitor UI
 - [x] **Disconnected startup vitals/graphs — COMPLETE:**
   - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`
   - [x] Admin vital rows expose a right-side Off/On toggle; clicking anywhere in the toggle rectangle flips that specific vital on/off
