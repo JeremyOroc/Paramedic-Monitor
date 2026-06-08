@@ -74,10 +74,20 @@ export function VitalsStrip({
             </span>
           </div>
         </div>
-      ) : nibpPhase === 'counting' || nibpPhase === 'settled' ? (
+      ) : nibpPhase === 'counting' ? (
         <VitalBox
           label="PNI"
           value={nibpDisplayValue}
+          unit="mmHg"
+          color="cyanBP"
+          alarming={alarms.includes('bp')}
+          selected={selected === 'nibpVital'}
+          className="flex-1 min-h-0"
+        />
+      ) : nibpPhase === 'settled' ? (
+        <VitalBox
+          label="PNI"
+          stackedValues={{ top: bpSys, bottom: bpDia }}
           unit="mmHg"
           color="cyanBP"
           alarming={alarms.includes('bp')}

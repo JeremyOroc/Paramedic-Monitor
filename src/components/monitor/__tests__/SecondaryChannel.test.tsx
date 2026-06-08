@@ -32,6 +32,13 @@ describe('SecondaryChannel', () => {
     expect(screen.getByText('0')).toBeInTheDocument()
   })
 
+  it('shows the EtCO2 loading trace before live or disconnected waveform output', () => {
+    render(<SecondaryChannel {...baseProps} channel="etco2" connected={false} loading />)
+
+    expect(screen.getByTestId('etco2-loading-trace')).toBeInTheDocument()
+    expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
+  })
+
   it('applies blue selection to title metadata independently', () => {
     render(
       <SecondaryChannel

@@ -4,6 +4,15 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type NibpPhase = 'idle' | 'please_wait' | 'reading' | 'counting' | 'settled'
 
+export type NibpSnapshot = {
+  bpSys: number
+  bpDia: number
+  active: {
+    bp_sys: boolean
+    bp_dia: boolean
+  }
+}
+
 const PLEASE_WAIT_MS = 3000
 const READING_MS = 500
 const COUNTING_MS = 8000
@@ -45,14 +54,34 @@ function buildCountingSequence(target: number): { sequence: number[]; intervalMs
   return { sequence, intervalMs }
 }
 
-export function useNibpReading(bpSys: number) {
+function normalizeSnapshot(pending: number | NibpSnapshot): NibpSnapshot {
+  if (typeof pending === 'number') {
+    return {
+      bpSys: pending,
+      bpDia: 0,
+      active: { bp_sys: true, bp_dia: true },
+    }
+  }
+  return pending
+}
+
+export function useNibpReading(
+  pending: number | NibpSnapshot,
+  onComplete?: (snapshot: NibpSnapshot) => void,
+) {
   const [phase, setPhase] = useState<NibpPhase>('idle')
   const [displayValue, setDisplayValue] = useState<string | number>('')
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  // Snapshot bpSys at the moment reading starts — store changes mid-read don't affect it
-  const bpSysRef = useRef<number>(bpSys)
+  // Snapshot pending BP at the moment reading starts — store changes mid-read don't affect it.
+  const pendingRef = useRef<NibpSnapshot>(normalizeSnapshot(pending))
+  const onCompleteRef = useRef(onComplete)
+
+  useEffect(() => {
+    pendingRef.current = normalizeSnapshot(pending)
+    onCompleteRef.current = onComplete
+  })
 
   function clearTimers() {
     if (timerRef.current !== null) {
@@ -65,9 +94,9 @@ export function useNibpReading(bpSys: number) {
     }
   }
 
-  const startReading = useCallback((snapshotBpSys: number) => {
+  const startReading = useCallback((snapshot: NibpSnapshot) => {
     clearTimers()
-    bpSysRef.current = snapshotBpSys
+    pendingRef.current = snapshot
 
     setPhase('please_wait')
     setDisplayValue('Please Wait')
@@ -77,7 +106,7 @@ export function useNibpReading(bpSys: number) {
       setDisplayValue('Reading in Progress')
 
       timerRef.current = setTimeout(() => {
-        const target = snapshotBpSys + 30
+        const target = snapshot.bpSys + 30
         const { sequence, intervalMs } = buildCountingSequence(target)
         let stepIndex = 0
 
@@ -94,8 +123,10 @@ export function useNibpReading(bpSys: number) {
             intervalRef.current = null
             // Target value is now visible; after a brief pause drop to settled bpSys
             timerRef.current = setTimeout(() => {
-              setPhase('settled')
-              setDisplayValue(snapshotBpSys)
+              const isActive = snapshot.active.bp_sys || snapshot.active.bp_dia
+              setPhase(isActive ? 'settled' : 'idle')
+              setDisplayValue(isActive ? snapshot.bpSys : '')
+              onCompleteRef.current?.(snapshot)
             }, 100)
           }
         }, intervalMs)
@@ -105,14 +136,14 @@ export function useNibpReading(bpSys: number) {
 
   const handlePatientEvent = useCallback(() => {
     if (phase === 'idle' || phase === 'settled') {
-      startReading(bpSys)
+      startReading(normalizeSnapshot(pending))
     } else {
       // Cancel: return to idle, restore confirmed store values
       clearTimers()
       setPhase('idle')
       setDisplayValue('')
     }
-  }, [phase, bpSys, startReading])
+  }, [phase, pending, startReading])
 
   // Cleanup on unmount
   useEffect(() => {

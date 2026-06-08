@@ -63,6 +63,19 @@ const activeVitals: VitalActiveState = {
   spo2: true,
 }
 
+type BpDisplay = Pick<Vitals, 'bp_sys' | 'bp_dia'>
+type BpActiveState = Pick<VitalActiveState, 'bp_sys' | 'bp_dia'>
+
+const initialBpDisplay: BpDisplay = {
+  bp_sys: initial.bp_sys,
+  bp_dia: initial.bp_dia,
+}
+
+const inactiveBpActive: BpActiveState = {
+  bp_sys: inactiveVitals.bp_sys,
+  bp_dia: inactiveVitals.bp_dia,
+}
+
 const VALID_RHYTHMS: ReadonlySet<Rhythm> = new Set([
   'off',
   'nsr',
@@ -82,6 +95,26 @@ function normalizeVitals(vitals: Partial<Vitals> | undefined): Vitals {
     ...initial,
     ...vitals,
     rhythm: normalizeRhythm(vitals?.rhythm),
+  }
+}
+
+function normalizeBpDisplay(
+  bp: Partial<BpDisplay> | undefined,
+  fallback: Vitals,
+): BpDisplay {
+  return {
+    bp_sys: typeof bp?.bp_sys === 'number' ? bp.bp_sys : fallback.bp_sys,
+    bp_dia: typeof bp?.bp_dia === 'number' ? bp.bp_dia : fallback.bp_dia,
+  }
+}
+
+function normalizeBpActive(
+  active: Partial<BpActiveState> | undefined,
+  fallback: VitalActiveState,
+): BpActiveState {
+  return {
+    bp_sys: typeof active?.bp_sys === 'boolean' ? active.bp_sys : fallback.bp_sys,
+    bp_dia: typeof active?.bp_dia === 'boolean' ? active.bp_dia : fallback.bp_dia,
   }
 }
 
@@ -174,6 +207,9 @@ export type MonitorState = {
   dispatch: DispatchState
   dispatchMinutes: number
   dispatchSeconds: number
+  monitorResetVersion: number
+  acceptedBp: BpDisplay
+  acceptedBpActive: BpActiveState
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
   setDraftVitalActive: (field: NumericVitalField, active: boolean) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
@@ -184,6 +220,7 @@ export type MonitorState = {
   acknowledgeCall: (estTime: string) => void
   arriveCall: (estTime: string) => void
   transportCall: (estTime: string) => void
+  acceptBpReading: (bp: BpDisplay, active: BpActiveState) => void
   resetMonitorVitals: () => void
   resetVitalsToNormal: () => void
   save: () => void
@@ -212,6 +249,9 @@ export const useMonitorStore = create<MonitorState>()(
       dispatch: DEFAULT_DISPATCH,
       dispatchMinutes: 0,
       dispatchSeconds: 0,
+      monitorResetVersion: 0,
+      acceptedBp: initialBpDisplay,
+      acceptedBpActive: inactiveBpActive,
       setDraft: (field, value) =>
         set((s) => {
           const draftVitalActive = isNumericVitalField(field)
@@ -283,8 +323,13 @@ export const useMonitorStore = create<MonitorState>()(
             },
           }
         }),
-      resetMonitorVitals: () =>
+      acceptBpReading: (bp, active) =>
         set({
+          acceptedBp: { bp_sys: bp.bp_sys, bp_dia: bp.bp_dia },
+          acceptedBpActive: { bp_sys: active.bp_sys, bp_dia: active.bp_dia },
+        }),
+      resetMonitorVitals: () =>
+        set((s) => ({
           draft: initial,
           saved: initial,
           confirmed: initial,
@@ -294,7 +339,10 @@ export const useMonitorStore = create<MonitorState>()(
           draftVitalActive: inactiveVitals,
           savedVitalActive: inactiveVitals,
           confirmedVitalActive: inactiveVitals,
-        }),
+          monitorResetVersion: s.monitorResetVersion + 1,
+          acceptedBp: initialBpDisplay,
+          acceptedBpActive: inactiveBpActive,
+        })),
       resetVitalsToNormal: () =>
         set((s) => ({
           draft: {
@@ -338,7 +386,7 @@ export const useMonitorStore = create<MonitorState>()(
           }
         }),
       reset: () =>
-        set({
+        set((s) => ({
           draft: initial,
           saved: initial,
           confirmed: initial,
@@ -355,7 +403,10 @@ export const useMonitorStore = create<MonitorState>()(
           dispatch: DEFAULT_DISPATCH,
           dispatchMinutes: 0,
           dispatchSeconds: 0,
-        }),
+          monitorResetVersion: s.monitorResetVersion + 1,
+          acceptedBp: initialBpDisplay,
+          acceptedBpActive: inactiveBpActive,
+        })),
     }),
     {
       name: STORAGE_KEY,
@@ -380,13 +431,14 @@ export const useMonitorStore = create<MonitorState>()(
           persistedState?.confirmedVitalActive,
           persistedState?.confirmedVitalsActive,
         )
+        const confirmed = normalizeVitals(persistedState?.confirmed)
 
         return {
           ...current,
           ...persistedState,
           draft: normalizeVitals(persistedState?.draft),
           saved: normalizeVitals(persistedState?.saved),
-          confirmed: normalizeVitals(persistedState?.confirmed),
+          confirmed,
           draftVitalActive,
           savedVitalActive,
           confirmedVitalActive,
@@ -409,6 +461,15 @@ export const useMonitorStore = create<MonitorState>()(
             typeof persistedState?.dispatchSeconds === 'number'
               ? persistedState.dispatchSeconds
               : 0,
+          monitorResetVersion:
+            typeof persistedState?.monitorResetVersion === 'number'
+              ? persistedState.monitorResetVersion
+              : 0,
+          acceptedBp: normalizeBpDisplay(persistedState?.acceptedBp, confirmed),
+          acceptedBpActive: normalizeBpActive(
+            persistedState?.acceptedBpActive,
+            confirmedVitalActive,
+          ),
         }
       },
     },

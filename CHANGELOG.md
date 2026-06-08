@@ -5,6 +5,27 @@
 
 ---
 
+## [2026-06-08] [monitor] — Show settled PNI as sys/dia
+
+- Completed BP readings now settle to the stacked PNI display with systolic on
+  top, diastolic on bottom, and the existing divider line.
+- The NIBP count-up remains a single-number systolic-style animation.
+- Added regression coverage for counting, settled, and partial-active BP
+  reading display.
+
+## [2026-06-08] [monitor] — Gate BP readings and EtCO2 loading
+
+- PNI/BP values now stay on the last accepted reading after admin Save → Send;
+  new BP values, BP alarms, and BP Off apply only after the outer-shell BP
+  reading sequence completes without cancellation.
+- Added one-time EtCO2 graph loading: the first ETCO2 toggle after monitor reset
+  shows an 8-second half-opacity purple loading line and only skips loading
+  after a full completion.
+- Medication and analyze event-log rows now use real Eastern HH:MM:SS time
+  instead of the session timer.
+- Added regression coverage for BP commit/cancel/off behavior, EtCO2 loading,
+  reset behavior, and real-time event stamps.
+
 ## [2026-06-08] [monitor] — Require Go to Monitor after every dispatch
 
 - Added per-dispatch run identity so the caller-info iPad does not reuse a prior

@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
@@ -40,16 +40,29 @@ function MonitorPage() {
 
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
-  const confirmedVitalsActive = useMonitorStore((s) => s.confirmedVitalsActive)
   const confirmedVitalActive = useMonitorStore((s) => s.confirmedVitalActive)
+  const acceptedBp = useMonitorStore((s) => s.acceptedBp)
+  const acceptedBpActive = useMonitorStore((s) => s.acceptedBpActive)
+  const acceptBpReading = useMonitorStore((s) => s.acceptBpReading)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
   const patientInfo = useMonitorStore((s) => s.patientInfo)
   const setPatientAge = useMonitorStore((s) => s.setPatientAge)
   const setPatientSex = useMonitorStore((s) => s.setPatientSex)
   const dispatchState = useMonitorStore((s) => s.dispatch)
+  const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
   const acknowledgeCall = useMonitorStore((s) => s.acknowledgeCall)
   const arriveCall = useMonitorStore((s) => s.arriveCall)
   const transportCall = useMonitorStore((s) => s.transportCall)
+  const [etco2LoadState, setEtco2LoadState] = useState({
+    resetVersion: monitorResetVersion,
+    loading: false,
+    loaded: false,
+  })
+  const etco2LoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const etco2Loading =
+    etco2LoadState.resetVersion === monitorResetVersion && etco2LoadState.loading
+  const etco2Loaded =
+    etco2LoadState.resetVersion === monitorResetVersion && etco2LoadState.loaded
 
   const searchParams = useSearchParams()
   const devBypass = searchParams.get('dev') === '1'
@@ -106,25 +119,104 @@ function MonitorPage() {
     </div>
   )
 
+  const clearEtco2LoadTimer = useCallback(() => {
+    if (etco2LoadTimerRef.current) {
+      clearTimeout(etco2LoadTimerRef.current)
+      etco2LoadTimerRef.current = null
+    }
+  }, [])
+
+  const cancelEtco2Loading = useCallback(() => {
+    clearEtco2LoadTimer()
+    setEtco2LoadState((state) => ({ ...state, loading: false }))
+  }, [clearEtco2LoadTimer])
+
+  const startEtco2Loading = useCallback(() => {
+    const resetVersion = monitorResetVersion
+    clearEtco2LoadTimer()
+    setEtco2LoadState({ resetVersion, loading: true, loaded: false })
+    etco2LoadTimerRef.current = setTimeout(() => {
+      etco2LoadTimerRef.current = null
+      setEtco2LoadState((state) =>
+        state.resetVersion === resetVersion
+          ? { resetVersion, loading: false, loaded: true }
+          : state,
+      )
+    }, 8000)
+  }, [clearEtco2LoadTimer, monitorResetVersion])
+
+  useEffect(() => {
+    return clearEtco2LoadTimer
+  }, [clearEtco2LoadTimer])
+
+  const handleToggleEtco2 = useCallback(() => {
+    const willShowEtco2 = controller.secondary !== 'etco2'
+    controller.onToggleEtco2()
+    if (willShowEtco2 && !etco2Loaded) {
+      startEtco2Loading()
+      return
+    }
+    if (!willShowEtco2 && etco2Loading) {
+      cancelEtco2Loading()
+    }
+  }, [
+    cancelEtco2Loading,
+    controller,
+    etco2Loaded,
+    etco2Loading,
+    startEtco2Loading,
+  ])
+
   const defib = useDefibSequence({
     patientMode: controller.patientMode,
     rhythm: confirmed.rhythm,
     onAnalyzeResult(result) {
-      controller.onAnalyzeResult(result, sessionTimer)
+      controller.onAnalyzeResult(result, formatEstTime())
     },
   })
+  const alarmVitals = {
+    ...confirmed,
+    bp_sys: acceptedBp.bp_sys,
+    bp_dia: acceptedBp.bp_dia,
+  }
+  const alarmActive = {
+    ...confirmedVitalActive,
+    bp_sys: acceptedBpActive.bp_sys,
+    bp_dia: acceptedBpActive.bp_dia,
+  }
   const alarm = useAlarm(
-    confirmed,
+    alarmVitals,
     controller.isPoweredOn,
     controller.isMuted,
-    confirmedVitalsActive,
-    confirmedVitalActive,
+    true,
+    alarmActive,
   )
   const {
     phase: nibpPhase,
     displayValue: nibpDisplayValue,
     handlePatientEvent,
-  } = useNibpReading(confirmed.bp_sys)
+  } = useNibpReading(
+    {
+      bpSys: confirmed.bp_sys,
+      bpDia: confirmed.bp_dia,
+      active: {
+        bp_sys: confirmedVitalActive.bp_sys,
+        bp_dia: confirmedVitalActive.bp_dia,
+      },
+    },
+    (snapshot) => {
+      acceptBpReading(
+        { bp_sys: snapshot.bpSys, bp_dia: snapshot.bpDia },
+        snapshot.active,
+      )
+    },
+  )
+  const bpButtonEnabled =
+    acceptedBpActive.bp_sys ||
+    acceptedBpActive.bp_dia ||
+    confirmedVitalActive.bp_sys ||
+    confirmedVitalActive.bp_dia
+  const acceptedBpDisplayActive = acceptedBpActive.bp_sys || acceptedBpActive.bp_dia
 
   useDefibAudio(defib.state, controller.isMuted)
 
@@ -188,6 +280,7 @@ function MonitorPage() {
               showApplyElectrodes={false}
               showAllSecondaryChannels={!controller.bottomStatusVisible}
               selected={controller.activeSelectedControl}
+              etco2Loading={etco2Loading}
             />
           )
         }
@@ -197,16 +290,16 @@ function MonitorPage() {
             : (
                 <VitalsStrip
                   hr={confirmedVitalActive.hr ? confirmed.hr : ''}
-                  bpSys={confirmedVitalActive.bp_sys ? confirmed.bp_sys : ''}
-                  bpDia={confirmedVitalActive.bp_dia ? confirmed.bp_dia : ''}
+                  bpSys={acceptedBpDisplayActive ? acceptedBp.bp_sys : ''}
+                  bpDia={acceptedBpDisplayActive ? acceptedBp.bp_dia : ''}
                   etco2={confirmedVitalActive.etco2 ? confirmed.etco2 : ''}
                   spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
                   spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}
                   activeAlarms={alarm.activeAlarms}
                   searching={false}
                   selected={controller.activeSelectedControl}
-                  nibpPhase={confirmedVitalActive.bp_sys ? nibpPhase : undefined}
-                  nibpDisplayValue={confirmedVitalActive.bp_sys ? nibpDisplayValue : undefined}
+                  nibpPhase={bpButtonEnabled ? nibpPhase : undefined}
+                  nibpDisplayValue={bpButtonEnabled ? nibpDisplayValue : undefined}
                 />
               )
         }
@@ -324,7 +417,7 @@ function MonitorPage() {
         }}
         softKeys={{
           onTwelveLead: controller.onTwelveLead,
-          onToggleEtco2: controller.onToggleEtco2,
+          onToggleEtco2: handleToggleEtco2,
           onTreatment: controller.onTreatment,
           onLeftAnalyse: controller.onLeftAnalyse,
           onBack: controller.onBack,
@@ -340,7 +433,7 @@ function MonitorPage() {
         meds={{
           mode: controller.medicationMode,
           page: controller.medicationPage,
-          onMedClick: (name) => controller.onMedClick(name, sessionTimer),
+          onMedClick: (name) => controller.onMedClick(name, formatEstTime()),
           onMedPageChange: controller.onMedPageChange,
           onMedInfo: controller.onMedInfo,
           onMedBack: controller.onMedBack,
@@ -348,6 +441,7 @@ function MonitorPage() {
         power={{
           onPowerOn: controller.onPowerOn,
           onPowerOff: () => {
+            if (etco2Loading) cancelEtco2Loading()
             controller.onPowerOff()
             defib.reset()
             setAudioMuted(false)
@@ -356,7 +450,7 @@ function MonitorPage() {
         audio={{
           isMuted: controller.isMuted,
           onToggleMute: controller.onToggleMute,
-          onPatientEvent: confirmedVitalActive.bp_sys ? handlePatientEvent : undefined,
+          onPatientEvent: bpButtonEnabled ? handlePatientEvent : undefined,
         }}
       />
       <CallerInfoModal

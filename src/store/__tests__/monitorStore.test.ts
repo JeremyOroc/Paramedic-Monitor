@@ -194,11 +194,16 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setDraft('hr', 180)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
+    useMonitorStore.getState().acceptBpReading(
+      { bp_sys: 120, bp_dia: 80 },
+      { bp_sys: true, bp_dia: true },
+    )
     useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
     useMonitorStore.getState().setDispatchMinutes(5)
     useMonitorStore.getState().send()
+    const resetVersion = useMonitorStore.getState().monitorResetVersion
 
     useMonitorStore.getState().resetMonitorVitals()
 
@@ -213,8 +218,33 @@ describe('monitorStore', () => {
     expect(s.draftVitalActive).toEqual(inactiveVitalState)
     expect(s.savedVitalActive).toEqual(inactiveVitalState)
     expect(s.confirmedVitalActive).toEqual(inactiveVitalState)
+    expect(s.acceptedBp).toEqual({ bp_sys: 0, bp_dia: 0 })
+    expect(s.acceptedBpActive).toEqual({ bp_sys: false, bp_dia: false })
+    expect(s.monitorResetVersion).toBe(resetVersion + 1)
     expect(s.callerInfoConfirmed.address).toBe('123 Rue Principale')
     expect(s.dispatch.armed).toBe(true)
+  })
+
+  it('keeps accepted BP unchanged on send until a completed reading commits it', () => {
+    useMonitorStore.getState().acceptBpReading(
+      { bp_sys: 120, bp_dia: 80 },
+      { bp_sys: true, bp_dia: true },
+    )
+    useMonitorStore.getState().setDraft('bp_sys', 170)
+    useMonitorStore.getState().setDraft('bp_dia', 110)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    expect(useMonitorStore.getState().confirmed.bp_sys).toBe(170)
+    expect(useMonitorStore.getState().confirmed.bp_dia).toBe(110)
+    expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 120, bp_dia: 80 })
+
+    useMonitorStore.getState().acceptBpReading(
+      { bp_sys: 170, bp_dia: 110 },
+      { bp_sys: true, bp_dia: true },
+    )
+
+    expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 170, bp_dia: 110 })
   })
 
   it('rhythm flows through the same draft → save → send pipeline', () => {
