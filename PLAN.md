@@ -389,9 +389,11 @@ button is inert until a drill gate is satisfied.
   The **first** Send arms the lock + countdown and pushes caller info; later Sends
   only update content. Admin **Reset** = full reset to locked-off.
 - Locked screen shows caller info + a counting-down MM:SS timer. Unlock order:
-  Acknowledge (immediate) → countdown 0 → Arrival → power unlocks. Transport is
-  enabled only after power-on. Acknowledge/Arrival/Transport stamp **EST**
-  wall-clock time and are merged into the event log with meds/shocks.
+  Acknowledge (immediate) → countdown 0 → Arrival → **Go to Monitor** → power
+  unlocks. Arrival only enables the explicit Go to Monitor action; it never
+  auto-enters the Zoll, including after admin Reset and a second dispatch run.
+  Transport is enabled only after power-on. Acknowledge/Arrival/Transport stamp
+  **EST** wall-clock time and are merged into the event log with meds/shocks.
 - The locked caller-info screen no longer renders inside the Zoll monitor shell.
   Before Arrival, caller info takes over the full browser page as a separate
   iPad-style dispatch surface, so the Zoll is not visible. After Arrival, the
@@ -424,7 +426,9 @@ button is inert until a drill gate is satisfied.
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
   countdown, milestone logs, and monitor vitals.
 - Gate state is persisted (store version 7; countdown stored as an absolute
-  end-timestamp) so a mid-drill refresh resumes. `?dev=1` bypasses the gate.
+  end-timestamp, with a per-dispatch run id) so a mid-drill refresh resumes and
+  repeated reset/re-arm scenarios do not reuse the previous Go to Monitor state.
+  `?dev=1` bypasses the gate.
 - New: `useCountdown` hook, `formatEstTime` util, store dispatch slice; caller-event
   state moved from `useMonitorController` into the store; controller gained an
   `initialPoweredOn` option.

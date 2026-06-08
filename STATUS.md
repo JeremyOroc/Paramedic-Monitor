@@ -67,6 +67,7 @@
   - [x] Assignment dashboard icon/action colors now follow the reference palette, and all three action buttons stay visible on the monitor
   - [x] Completed caller action buttons gray out after they are clicked/logged
   - [x] Caller info now renders outside the Zoll shell: pre-Arrival it owns the full page, after Arrival the Zoll appears powered off, and in-monitor CALL INFO opens a full-page iPad surface with Back
+  - [x] Arrival now only enables Go to Monitor; every dispatch run, including after admin Reset, must be entered explicitly before the Zoll appears
   - [x] Full-page caller info keeps an iPad-oriented 4:3 frame and mimics the reference assignment dashboard layout; map/location area is reserved for later
 - [x] **Disconnected startup vitals/graphs — COMPLETE:**
   - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`
