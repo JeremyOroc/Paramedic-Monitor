@@ -57,9 +57,10 @@
   - [x] TypeScript clean; dev server serves at `localhost:3000`
 - [x] **Dispatch lock + countdown startup gate — COMPLETE:**
   - [x] Monitor boots locked-off for normal users; admin caller-info Send arms a lock + ETA countdown on first send (minutes + seconds fields), later Sends only update content; admin Reset = full reset to locked-off
-  - [x] Unlock = Acknowledge → countdown 0 → Arrival; Transport enabled only after power-on; Ack/Arrival/Transport record EST wall-clock time, merged into the event log
-  - [x] Gate state persisted (store version 7, absolute countdown end-timestamp) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
-  - [x] New `useCountdown` hook + `formatEstTime` util; caller-event state moved from controller to store; `initialPoweredOn` controller option; tests across store/hook/util/modal/controller + page flow tests run with `?dev=1`
+  - [x] Unlock = Acknowledge → countdown 0 → Arrival → Go to Monitor; Transport enabled only after power-on; Ack/Arrival/Transport record EST wall-clock time, merged into the event log
+  - [x] Assignment dashboard timers now split correctly: Response Timer counts up from dispatch Send, while ETA counts down to the configured scene-arrival countdown
+  - [x] Gate state persisted (store version 7, absolute response start timestamp, absolute countdown end-timestamp, per-dispatch run id) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
+  - [x] New `useCountdown` + `useElapsedTimer` hooks and `formatEstTime` util; caller-event state moved from controller to store; `initialPoweredOn` controller option; tests across store/hook/util/modal/controller + page flow tests run with `?dev=1`
 - [x] **Dispatch locked/off hardware silence — COMPLETE:**
   - [x] While powered off or dispatch-locked, hardware controls are inert and do not play button audio; only the dispatch touchscreen buttons remain interactive on the locked caller-info screen
   - [x] Locked caller-info now fills the monitor screen as a touchscreen; both locked caller-info and the in-monitor Call Info view use a distinct dispatch-tablet/iPad visual treatment so they do not look like native monitor UI

@@ -394,6 +394,9 @@ button is inert until a drill gate is satisfied.
   auto-enters the Zoll, including after admin Reset and a second dispatch run.
   Transport is enabled only after power-on. Acknowledge/Arrival/Transport stamp
   **EST** wall-clock time and are merged into the event log with meds/shocks.
+- On the assignment-style caller-info iPad, **Response Timer** counts up from the
+  first dispatch Send while **ETA** counts down to the configured dispatch
+  countdown. They are separate values and must not mirror each other.
 - The locked caller-info screen no longer renders inside the Zoll monitor shell.
   Before Arrival, caller info takes over the full browser page as a separate
   iPad-style dispatch surface, so the Zoll is not visible. After Arrival, the
@@ -426,12 +429,13 @@ button is inert until a drill gate is satisfied.
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
   countdown, milestone logs, and monitor vitals.
 - Gate state is persisted (store version 7; countdown stored as an absolute
-  end-timestamp, with a per-dispatch run id) so a mid-drill refresh resumes and
-  repeated reset/re-arm scenarios do not reuse the previous Go to Monitor state.
-  `?dev=1` bypasses the gate.
-- New: `useCountdown` hook, `formatEstTime` util, store dispatch slice; caller-event
-  state moved from `useMonitorController` into the store; controller gained an
-  `initialPoweredOn` option.
+  end-timestamp, response timer stored as an absolute start timestamp, and a
+  per-dispatch run id) so a mid-drill refresh resumes and repeated reset/re-arm
+  scenarios do not reuse the previous Go to Monitor state. `?dev=1` bypasses the
+  gate.
+- New: `useCountdown` and `useElapsedTimer` hooks, `formatEstTime` util, store
+  dispatch slice; caller-event state moved from `useMonitorController` into the
+  store; controller gained an `initialPoweredOn` option.
 
 ---
 

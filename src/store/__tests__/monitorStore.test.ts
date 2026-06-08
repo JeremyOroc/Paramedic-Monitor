@@ -296,6 +296,7 @@ describe('dispatch gate', () => {
   it('starts disarmed with empty caller events', () => {
     const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
+    expect(dispatch.startedAt).toBeNull()
     expect(dispatch.countdownEndsAt).toBeNull()
     expect(dispatch.callerEvents).toEqual([])
     expect(dispatchMinutes).toBe(0)
@@ -311,6 +312,7 @@ describe('dispatch gate', () => {
     const { dispatch } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(true)
     expect(dispatch.runId).not.toBe('')
+    expect(dispatch.startedAt).toBe(1_000_000)
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + (5 * 60 + 30) * 1000)
   })
 
@@ -340,12 +342,14 @@ describe('dispatch gate', () => {
     useMonitorStore.getState().send()
     const firstEnd = useMonitorStore.getState().dispatch.countdownEndsAt
     const firstRunId = useMonitorStore.getState().dispatch.runId
+    const firstStart = useMonitorStore.getState().dispatch.startedAt
 
     useMonitorStore.getState().setDispatchMinutes(99)
     useMonitorStore.getState().send()
 
     expect(useMonitorStore.getState().dispatch.countdownEndsAt).toBe(firstEnd)
     expect(useMonitorStore.getState().dispatch.runId).toBe(firstRunId)
+    expect(useMonitorStore.getState().dispatch.startedAt).toBe(firstStart)
   })
 
   it('acknowledge/arrive/transport log once and append EST entries', () => {
@@ -377,6 +381,7 @@ describe('dispatch gate', () => {
     const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
     expect(dispatch.runId).toBe('')
+    expect(dispatch.startedAt).toBeNull()
     expect(dispatch.countdownEndsAt).toBeNull()
     expect(dispatch.acknowledgedAt).toBeNull()
     expect(dispatch.callerEvents).toEqual([])
@@ -458,6 +463,7 @@ describe('persist migration', () => {
     expect(s.dispatch).toEqual({
       runId: '',
       armed: false,
+      startedAt: null,
       countdownEndsAt: null,
       acknowledgedAt: null,
       arrivedAt: null,
@@ -482,13 +488,17 @@ describe('persist migration', () => {
             transportedAt: null,
             callerEvents: [],
           },
+          dispatchMinutes: 5,
+          dispatchSeconds: 0,
         },
       }),
     )
 
     await useMonitorStore.persist.rehydrate()
 
-    expect(useMonitorStore.getState().dispatch.runId).toBe('legacy-1234567')
+    const dispatch = useMonitorStore.getState().dispatch
+    expect(dispatch.runId).toBe('legacy-1234567')
+    expect(dispatch.startedAt).toBe(1_234_567 - 5 * 60_000)
   })
 })
 

@@ -20,6 +20,8 @@ type CallerInfoModalProps = {
   /** Show the dispatch ETA countdown (locked phase only). */
   showCountdown?: boolean
   countdownFormatted?: string
+  /** Assignment dashboard response timer, counting up from dispatch start. */
+  responseFormatted?: string
   /** Full-page dispatch mode renders as a separate iPad-style surface. */
   fullScreen?: boolean
   /** A/B switch: classic tablet or icon-led assignment dashboard. */
@@ -123,6 +125,7 @@ export function CallerInfoModal({
   buttonState,
   showCountdown = false,
   countdownFormatted = '00:00',
+  responseFormatted = '00:00',
   fullScreen = false,
   variant = 'assignment',
   onBack,
@@ -182,6 +185,7 @@ export function CallerInfoModal({
               displayFields={displayFields}
               showCountdown={showCountdown}
               countdownFormatted={countdownFormatted}
+              responseFormatted={responseFormatted}
               buttonState={buttonState}
               onCallerEvent={onCallerEvent}
               onEnterMonitor={onEnterMonitor}
@@ -194,6 +198,7 @@ export function CallerInfoModal({
               displayFields={displayFields}
               showCountdown={showCountdown}
               countdownFormatted={countdownFormatted}
+              responseFormatted={responseFormatted}
               buttonState={buttonState}
               onCallerEvent={onCallerEvent}
               onEnterMonitor={onEnterMonitor}
@@ -214,6 +219,7 @@ type CallerInfoContentProps = {
   displayFields: DisplayField[]
   showCountdown: boolean
   countdownFormatted: string
+  responseFormatted: string
   buttonState: Record<CallerEventKey, { disabled: boolean }>
   onCallerEvent: (key: CallerEventKey) => void
   onEnterMonitor?: () => void
@@ -303,6 +309,7 @@ function AssignmentCallerInfoContent({
   displayFields,
   showCountdown,
   countdownFormatted,
+  responseFormatted,
   buttonState,
   onCallerEvent,
   onEnterMonitor,
@@ -340,17 +347,14 @@ function AssignmentCallerInfoContent({
             New Assignment
           </h2>
         </div>
-        <div
-          aria-label={showCountdown ? 'Dispatch countdown' : undefined}
-          className="border-l border-neutral-700 px-4 py-3"
-        >
+        <div aria-label="Response timer" className="border-l border-neutral-700 px-4 py-3">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-neutral-400">
             Response Timer
           </p>
           <p
             className="font-mono text-2xl font-black tabular-nums text-dispatch-red"
           >
-            {showCountdown ? countdownFormatted : '--:--'}
+            {responseFormatted}
           </p>
         </div>
       </div>
@@ -436,7 +440,9 @@ function AssignmentCallerInfoContent({
               </div>
               <div className="border-l border-neutral-700 pl-4">
                 <p className="text-[10px] font-black uppercase text-dispatch-blue">ETA</p>
-                <p className="font-mono text-sm font-black text-white">{showCountdown ? countdownFormatted : '--:--'}</p>
+                <p aria-label="ETA" className="font-mono text-sm font-black text-white">
+                  {showCountdown ? countdownFormatted : '00:00'}
+                </p>
               </div>
             </div>
           </div>

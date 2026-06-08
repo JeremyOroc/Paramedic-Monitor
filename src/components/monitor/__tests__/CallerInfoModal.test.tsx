@@ -186,12 +186,13 @@ describe('CallerInfoModal', () => {
   })
 
   it('shows the dispatch countdown only when showCountdown is set', () => {
-    const { rerender } = renderModal()
+    const { rerender } = renderModal({ variant: 'classic' })
     expect(screen.queryByLabelText('Dispatch countdown')).toBeNull()
 
     rerender(
       <CallerInfoModal
         open
+        variant="classic"
         info={DEFAULT_CALLER_INFO}
         onCallerEvent={() => {}}
         buttonState={ALL_ENABLED}
@@ -201,6 +202,17 @@ describe('CallerInfoModal', () => {
     )
 
     expect(screen.getByLabelText('Dispatch countdown')).toHaveTextContent('04:59')
+  })
+
+  it('shows response timer separately from the ETA countdown in assignment view', () => {
+    renderModal({
+      showCountdown: true,
+      countdownFormatted: '04:59',
+      responseFormatted: '01:12',
+    })
+
+    expect(screen.getByLabelText('Response timer')).toHaveTextContent('01:12')
+    expect(screen.getByLabelText('ETA')).toHaveTextContent('04:59')
   })
 
   it('can fill the full monitor screen for the locked dispatch touchscreen', () => {

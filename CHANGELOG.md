@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-06-08] [monitor] — Split response timer from ETA countdown
+
+- Added a dispatch start timestamp and `useElapsedTimer` so the assignment
+  dashboard Response Timer counts up from dispatch Send.
+- Kept ETA tied to the existing countdown end timestamp so it counts down toward
+  scene arrival instead of mirroring the response timer.
+- Added hook, store, and caller-info modal tests for the split timer behavior.
+
 ## [2026-06-08] [monitor] — Require Go to Monitor after every dispatch
 
 - Added per-dispatch run identity so the caller-info iPad does not reuse a prior
