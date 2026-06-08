@@ -89,11 +89,14 @@ function MonitorPage() {
   }
 
   const mergedEventLog = [...dispatchState.callerEvents, ...controller.eventLog]
-  // Arrival used to flip straight to the monitor. Now the dispatch tablet stays
-  // up after the gate is satisfied until the trainee taps "Go to Monitor".
-  const [enteredMonitor, setEnteredMonitor] = useState(false)
+  // Arrival used to flip straight to the monitor. Now each dispatch run keeps
+  // the tablet up until the trainee explicitly taps "Go to Monitor".
+  const [enteredMonitorRunId, setEnteredMonitorRunId] = useState<string | null>(null)
+  const enterCurrentDispatch = () => setEnteredMonitorRunId(dispatchState.runId)
+  const hasEnteredCurrentDispatch =
+    dispatchState.runId !== '' && enteredMonitorRunId === dispatchState.runId
   const showDispatchCallerPage =
-    !devBypass && dispatchState.armed && !(gateSatisfied && enteredMonitor)
+    !devBypass && dispatchState.armed && !(gateSatisfied && hasEnteredCurrentDispatch)
 
   const standbyLockScreen = (
     <div className="flex h-full w-full items-center justify-center bg-black">
@@ -279,8 +282,8 @@ function MonitorPage() {
         fullScreen
         variant={callerInfoVariant}
         canEnterMonitor={gateSatisfied}
-        onEnterMonitor={() => setEnteredMonitor(true)}
-        onBack={gateSatisfied ? () => setEnteredMonitor(true) : undefined}
+        onEnterMonitor={enterCurrentDispatch}
+        onBack={gateSatisfied ? enterCurrentDispatch : undefined}
       />
     )
   }

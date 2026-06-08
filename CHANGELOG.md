@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-06-08] [monitor] — Require Go to Monitor after every dispatch
+
+- Added per-dispatch run identity so the caller-info iPad does not reuse a prior
+  Go to Monitor tap after admin Reset.
+- Arrival now keeps the dispatch tablet visible and only enables Go to Monitor
+  for the current dispatch run.
+- Added regression coverage for completing a scenario, resetting the drill, and
+  requiring Go to Monitor again on the next scenario.
+
 ## [2026-06-08] [monitor] — Remove jumpscare playback
 
 - Commented out the FNAF/its_me/Golden Freddy/Chica jumpscare video and audio

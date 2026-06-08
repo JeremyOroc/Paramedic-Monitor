@@ -147,6 +147,38 @@ describe('MonitorPage', () => {
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
+  it('requires Go to Monitor again after a full drill reset', async () => {
+    const user = userEvent.setup()
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', 'First scenario')
+      store.save()
+      store.send()
+      store.acknowledgeCall('14:05:00')
+      store.arriveCall('14:06:00')
+    })
+
+    render(<MonitorPage />)
+    await user.click(screen.getByRole('button', { name: 'Go to monitor' }))
+    expect(screen.getByTestId('device-shell')).toBeInTheDocument()
+
+    act(() => {
+      useMonitorStore.getState().reset()
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', 'Second scenario')
+      store.save()
+      store.send()
+      store.acknowledgeCall('15:05:00')
+      store.arriveCall('15:06:00')
+    })
+
+    expect(screen.queryByTestId('device-shell')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
+    expect(screen.getAllByText('Second scenario').length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: 'Go to monitor' })).toBeEnabled()
+  })
+
   it('disables Go to Monitor before arrival completes the gate', () => {
     window.history.pushState({}, '', '/')
     act(() => {

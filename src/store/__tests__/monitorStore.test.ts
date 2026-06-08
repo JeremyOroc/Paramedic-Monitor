@@ -310,7 +310,21 @@ describe('dispatch gate', () => {
 
     const { dispatch } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(true)
+    expect(dispatch.runId).not.toBe('')
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + (5 * 60 + 30) * 1000)
+  })
+
+  it('creates a fresh dispatch run id after a full reset and re-arm', () => {
+    useMonitorStore.getState().send()
+    const firstRunId = useMonitorStore.getState().dispatch.runId
+
+    useMonitorStore.getState().reset()
+    useMonitorStore.getState().send()
+
+    const secondRunId = useMonitorStore.getState().dispatch.runId
+    expect(firstRunId).not.toBe('')
+    expect(secondRunId).not.toBe('')
+    expect(secondRunId).not.toBe(firstRunId)
   })
 
   it('clamps dispatch seconds to 0–59', () => {
@@ -325,11 +339,13 @@ describe('dispatch gate', () => {
     useMonitorStore.getState().setDispatchMinutes(5)
     useMonitorStore.getState().send()
     const firstEnd = useMonitorStore.getState().dispatch.countdownEndsAt
+    const firstRunId = useMonitorStore.getState().dispatch.runId
 
     useMonitorStore.getState().setDispatchMinutes(99)
     useMonitorStore.getState().send()
 
     expect(useMonitorStore.getState().dispatch.countdownEndsAt).toBe(firstEnd)
+    expect(useMonitorStore.getState().dispatch.runId).toBe(firstRunId)
   })
 
   it('acknowledge/arrive/transport log once and append EST entries', () => {
@@ -360,6 +376,7 @@ describe('dispatch gate', () => {
 
     const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
+    expect(dispatch.runId).toBe('')
     expect(dispatch.countdownEndsAt).toBeNull()
     expect(dispatch.acknowledgedAt).toBeNull()
     expect(dispatch.callerEvents).toEqual([])
@@ -439,6 +456,7 @@ describe('persist migration', () => {
     const s = useMonitorStore.getState()
     expect(s.confirmed.hr).toBe(99)
     expect(s.dispatch).toEqual({
+      runId: '',
       armed: false,
       countdownEndsAt: null,
       acknowledgedAt: null,
@@ -448,6 +466,29 @@ describe('persist migration', () => {
     })
     expect(s.dispatchMinutes).toBe(0)
     expect(s.dispatchSeconds).toBe(0)
+  })
+
+  it('seeds a legacy run id for an armed persisted dispatch without one', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 7,
+        state: {
+          dispatch: {
+            armed: true,
+            countdownEndsAt: 1_234_567,
+            acknowledgedAt: '14:05:11',
+            arrivedAt: '14:10:14',
+            transportedAt: null,
+            callerEvents: [],
+          },
+        },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    expect(useMonitorStore.getState().dispatch.runId).toBe('legacy-1234567')
   })
 })
 

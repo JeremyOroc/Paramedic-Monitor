@@ -2,6 +2,7 @@
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { nanoid } from 'nanoid'
 import {
   DEFAULT_VITALS,
   type Etco2Waveform,
@@ -114,6 +115,7 @@ function normalizeVitalActive(
 // the trainee must Acknowledge, wait out the countdown, then mark Arrival before
 // the monitor power button works. Persisted so a refresh resumes the drill.
 export type DispatchState = {
+  runId: string
   armed: boolean
   countdownEndsAt: number | null // absolute ms epoch; survives refresh
   acknowledgedAt: string | null // EST HH:MM:SS
@@ -123,6 +125,7 @@ export type DispatchState = {
 }
 
 export const DEFAULT_DISPATCH: DispatchState = {
+  runId: '',
   armed: false,
   countdownEndsAt: null,
   acknowledgedAt: null,
@@ -138,10 +141,15 @@ const CALLER_EVENT_LABELS = {
 } as const
 
 function normalizeDispatch(dispatch: Partial<DispatchState> | undefined): DispatchState {
+  const runId = typeof dispatch?.runId === 'string' ? dispatch.runId : ''
+  const armed = dispatch?.armed === true
+  const countdownEndsAt =
+    typeof dispatch?.countdownEndsAt === 'number' ? dispatch.countdownEndsAt : null
+
   return {
-    armed: dispatch?.armed === true,
-    countdownEndsAt:
-      typeof dispatch?.countdownEndsAt === 'number' ? dispatch.countdownEndsAt : null,
+    runId: runId || (armed ? `legacy-${countdownEndsAt ?? 'active'}` : ''),
+    armed,
+    countdownEndsAt,
     acknowledgedAt: typeof dispatch?.acknowledgedAt === 'string' ? dispatch.acknowledgedAt : null,
     arrivedAt: typeof dispatch?.arrivedAt === 'string' ? dispatch.arrivedAt : null,
     transportedAt: typeof dispatch?.transportedAt === 'string' ? dispatch.transportedAt : null,
@@ -323,6 +331,7 @@ export const useMonitorStore = create<MonitorState>()(
             ...base,
             dispatch: {
               ...s.dispatch,
+              runId: nanoid(),
               armed: true,
               countdownEndsAt: Date.now() + durationMs,
             },
