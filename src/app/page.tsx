@@ -127,6 +127,7 @@ function MonitorPage() {
 
   const screen = (
     <div className="relative h-full w-full">
+      {/* Removed jumpscare: Chica overlay/video is disabled and left here only as history.
       {controller.jumpscareActive && (
         <div
           className="absolute inset-0 z-50 bg-black"
@@ -140,7 +141,7 @@ function MonitorPage() {
             onEnded={() => controller.onSetJumpscareActive(false)}
           />
         </div>
-      )}
+      )} */}
       <MonitorLayout
         topBar={
           <TopStatusBar

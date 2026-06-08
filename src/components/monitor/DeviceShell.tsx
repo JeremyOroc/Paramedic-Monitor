@@ -225,12 +225,14 @@ export function DeviceShell({
   const onPatientEvent = audio?.onPatientEvent
 
   const [powerState, setPowerState] = useState<PowerState>(initialPowerState)
-  const [jumpscareActive, setJumpscareActive] = useState(false)
-  const [offItsMeActive, setOffItsMeActive] = useState(false)
-  const [goldenFreddyActive, setGoldenFreddyActive] = useState(false)
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const goldenFreddyPendingRef = useRef(false)
   const controlsEnabled = powerState === 'on' && !powerLocked
+
+  // Removed jumpscare: former powered-on/off its_me and Golden Freddy state.
+  // const [jumpscareActive, setJumpscareActive] = useState(false)
+  // const [offItsMeActive, setOffItsMeActive] = useState(false)
+  // const [goldenFreddyActive, setGoldenFreddyActive] = useState(false)
+  // const goldenFreddyPendingRef = useRef(false)
 
   // If the gate re-locks while the monitor is on (e.g. admin Reset mid-drill),
   // force it back to off so the lock screen takes over.
@@ -238,75 +240,76 @@ export function DeviceShell({
     if (!powerLocked || powerState === 'off') return
     if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
     const id = setTimeout(() => {
-      setJumpscareActive(false)
-      setOffItsMeActive(false)
-      setGoldenFreddyActive(false)
-      goldenFreddyPendingRef.current = false
+      // Removed jumpscare: no prank overlays need to be cleared on re-lock.
+      // setJumpscareActive(false)
+      // setOffItsMeActive(false)
+      // setGoldenFreddyActive(false)
+      // goldenFreddyPendingRef.current = false
       setPowerState('off')
       onPowerOff?.()
     }, 0)
     return () => clearTimeout(id)
   }, [powerLocked, powerState, onPowerOff])
 
-  // 1/1000 per second jumpscare while monitor is on and not already playing
-  useEffect(() => {
-    if (powerState !== 'on' || jumpscareActive || goldenFreddyActive) return
-    const id = setInterval(() => {
-      if (Math.random() < 1 / 1000) setJumpscareActive(true)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [powerState, jumpscareActive, goldenFreddyActive])
+  // Removed jumpscare: powered-on random its_me overlay disabled.
+  // useEffect(() => {
+  //   if (powerState !== 'on' || jumpscareActive || goldenFreddyActive) return
+  //   const id = setInterval(() => {
+  //     if (Math.random() < 1 / 1000) setJumpscareActive(true)
+  //   }, 1000)
+  //   return () => clearInterval(id)
+  // }, [powerState, jumpscareActive, goldenFreddyActive])
 
-  // Auto-dismiss the powered-on jumpscare after a random 1-5 second burst.
-  useEffect(() => {
-    if (!jumpscareActive || powerState !== 'on') return
-    const duration = 1000 + Math.random() * 4000
-    const id = setTimeout(() => setJumpscareActive(false), duration)
-    return () => clearTimeout(id)
-  }, [jumpscareActive, powerState])
+  // Removed jumpscare: powered-on random its_me auto-dismiss disabled.
+  // useEffect(() => {
+  //   if (!jumpscareActive || powerState !== 'on') return
+  //   const duration = 1000 + Math.random() * 4000
+  //   const id = setTimeout(() => setJumpscareActive(false), duration)
+  //   return () => clearTimeout(id)
+  // }, [jumpscareActive, powerState])
 
-  // 1/100 per second off-state its_me burst while the powered-off screen is idle.
-  useEffect(() => {
-    if (powerState !== 'off' || powerLocked || offItsMeActive || goldenFreddyActive) return
-    const id = setInterval(() => {
-      if (goldenFreddyPendingRef.current) return
-      if (Math.random() < 1 / 100) setOffItsMeActive(true)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [powerState, powerLocked, offItsMeActive, goldenFreddyActive])
+  // Removed jumpscare: powered-off random its_me burst disabled.
+  // useEffect(() => {
+  //   if (powerState !== 'off' || powerLocked || offItsMeActive || goldenFreddyActive) return
+  //   const id = setInterval(() => {
+  //     if (goldenFreddyPendingRef.current) return
+  //     if (Math.random() < 1 / 100) setOffItsMeActive(true)
+  //   }, 1000)
+  //   return () => clearInterval(id)
+  // }, [powerState, powerLocked, offItsMeActive, goldenFreddyActive])
 
-  // Auto-dismiss the off-state its_me burst after a random 500-5000ms.
-  useEffect(() => {
-    if (!offItsMeActive || powerState !== 'off' || powerLocked || goldenFreddyActive) return
-    const duration = 500 + Math.random() * 4500
-    const id = setTimeout(() => setOffItsMeActive(false), duration)
-    return () => clearTimeout(id)
-  }, [offItsMeActive, powerState, powerLocked, goldenFreddyActive])
+  // Removed jumpscare: powered-off random its_me auto-dismiss disabled.
+  // useEffect(() => {
+  //   if (!offItsMeActive || powerState !== 'off' || powerLocked || goldenFreddyActive) return
+  //   const duration = 500 + Math.random() * 4500
+  //   const id = setTimeout(() => setOffItsMeActive(false), duration)
+  //   return () => clearTimeout(id)
+  // }, [offItsMeActive, powerState, powerLocked, goldenFreddyActive])
 
-  // 1/32768 per second golden freddy — any power state, cancels its_me
-  useEffect(() => {
-    if (powerLocked || goldenFreddyActive) return
-    const id = setInterval(() => {
-      if (Math.random() < 1 / 32768) {
-        goldenFreddyPendingRef.current = true
-        setJumpscareActive(false)
-        setOffItsMeActive(false)
-        setGoldenFreddyActive(true)
-      }
-    }, 1000)
-    return () => clearInterval(id)
-  }, [powerLocked, goldenFreddyActive])
+  // Removed jumpscare: Golden Freddy random overlay disabled.
+  // useEffect(() => {
+  //   if (powerLocked || goldenFreddyActive) return
+  //   const id = setInterval(() => {
+  //     if (Math.random() < 1 / 32768) {
+  //       goldenFreddyPendingRef.current = true
+  //       setJumpscareActive(false)
+  //       setOffItsMeActive(false)
+  //       setGoldenFreddyActive(true)
+  //     }
+  //   }, 1000)
+  //   return () => clearInterval(id)
+  // }, [powerLocked, goldenFreddyActive])
 
-  // Auto-dismiss golden freddy after 750–3000ms
-  useEffect(() => {
-    if (!goldenFreddyActive) return
-    const duration = 750 + Math.random() * 2250
-    const id = setTimeout(() => {
-      goldenFreddyPendingRef.current = false
-      setGoldenFreddyActive(false)
-    }, duration)
-    return () => clearTimeout(id)
-  }, [goldenFreddyActive])
+  // Removed jumpscare: Golden Freddy auto-dismiss disabled.
+  // useEffect(() => {
+  //   if (!goldenFreddyActive) return
+  //   const duration = 750 + Math.random() * 2250
+  //   const id = setTimeout(() => {
+  //     goldenFreddyPendingRef.current = false
+  //     setGoldenFreddyActive(false)
+  //   }, duration)
+  //   return () => clearTimeout(id)
+  // }, [goldenFreddyActive])
 
   // During a 12-lead capture every control except Back is inert: handlers become
   // no-ops and the defib row is fully disabled. Back stays live so the user can
@@ -349,11 +352,13 @@ export function DeviceShell({
     if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
     if (powerState === 'on') {
       onPowerOff?.()
-      setJumpscareActive(false)
-      setOffItsMeActive(false)
+      // Removed jumpscare: no prank overlays need to be cleared on power-off.
+      // setJumpscareActive(false)
+      // setOffItsMeActive(false)
       setPowerState('off')
     } else {
-      setOffItsMeActive(false)
+      // Removed jumpscare: no off-state its_me burst needs cancellation.
+      // setOffItsMeActive(false)
       setPowerState('booting')
       bootTimerRef.current = setTimeout(() => {
         setPowerState('on')
@@ -387,6 +392,7 @@ export function DeviceShell({
                       </div>
                     ) : (
                       <div className="absolute inset-0 z-50 overflow-hidden bg-black">
+                        {/* Removed jumpscare: powered-off its_me audio/video disabled.
                         {offItsMeActive && (
                           <>
                             <video
@@ -400,8 +406,10 @@ export function DeviceShell({
                             <audio data-testid="off-its-me-audio" src="/audio/its_me.mp3" autoPlay />
                           </>
                         )}
+                        */}
                       </div>
                     ))}
+                  {/* Removed jumpscare: powered-on its_me audio/video disabled.
                   {jumpscareActive && powerState === 'on' && (
                     <div className="absolute inset-0 z-50 overflow-hidden bg-black">
                       <video
@@ -414,6 +422,8 @@ export function DeviceShell({
                       <audio src="/audio/its_me.mp3" autoPlay />
                     </div>
                   )}
+                  */}
+                  {/* Removed jumpscare: Golden Freddy random overlay disabled.
                   {goldenFreddyActive && (
                     <div className="absolute inset-0 z-[60] overflow-hidden bg-black">
                       <video
@@ -424,6 +434,7 @@ export function DeviceShell({
                       />
                     </div>
                   )}
+                  */}
                   {screenModal}
                 </div>
               </div>
@@ -501,48 +512,52 @@ function PowerButton({ powerState, powerLocked, onToggle }: PowerButtonProps) {
 }
 
 function BootScreen() {
-  const [prankCombo] = useState<1 | 2 | 'golden' | null>(() => {
-    const r = Math.random()
-    if (r < 0.25) return null
-    if (r < 0.50) return 1
-    if (r < 0.75) return 2
-    return 'golden'
-  })
-  const [goldenVisible, setGoldenVisible] = useState(true)
-  const audioRef = useRef<HTMLAudioElement | null>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
+  // Removed jumpscare: boot-screen random FNAF/Golden Freddy clips disabled.
+  // const [prankCombo] = useState<1 | 2 | 'golden' | null>(() => {
+  //   const r = Math.random()
+  //   if (r < 0.25) return null
+  //   if (r < 0.50) return 1
+  //   if (r < 0.75) return 2
+  //   return 'golden'
+  // })
+  // const [goldenVisible, setGoldenVisible] = useState(true)
+  // const audioRef = useRef<HTMLAudioElement | null>(null)
+  // const videoRef = useRef<HTMLVideoElement | null>(null)
 
-  useEffect(() => {
-    const audio = audioRef.current
-    const video = videoRef.current
+  // Removed jumpscare: boot-screen FNAF audio playback disabled.
+  // useEffect(() => {
+  //   const audio = audioRef.current
+  //   const video = videoRef.current
+  //
+  //   if (!audio) return
+  //   if (!video) return
+  //
+  //   video.playbackRate = 1
+  //   if (prankCombo === 1) {
+  //     audio.currentTime = 0.3
+  //     video.playbackRate = 1.5
+  //   }
+  //   audio.play().catch(() => {})
+  //   const cutoff = setTimeout(() => {
+  //     audio.pause()
+  //     audio.currentTime = 0
+  //   }, 2500)
+  //   return () => {
+  //     clearTimeout(cutoff)
+  //     audio.pause()
+  //   }
+  // }, [prankCombo])
 
-    if (!audio) return
-    if (!video) return
-
-    video.playbackRate = 1
-    if (prankCombo === 1) {
-      audio.currentTime = 0.3
-      video.playbackRate = 1.5
-    }
-    audio.play().catch(() => {})
-    const cutoff = setTimeout(() => {
-      audio.pause()
-      audio.currentTime = 0
-    }, 2500)
-    return () => {
-      clearTimeout(cutoff)
-      audio.pause()
-    }
-  }, [prankCombo])
-
-  useEffect(() => {
-    if (prankCombo !== 'golden') return
-    const id = setTimeout(() => setGoldenVisible(false), 2000)
-    return () => clearTimeout(id)
-  }, [prankCombo])
+  // Removed jumpscare: boot-screen Golden Freddy timeout disabled.
+  // useEffect(() => {
+  //   if (prankCombo !== 'golden') return
+  //   const id = setTimeout(() => setGoldenVisible(false), 2000)
+  //   return () => clearTimeout(id)
+  // }, [prankCombo])
 
   return (
     <div className="relative h-full w-full bg-black">
+      {/* Removed jumpscare: boot-screen FNAF videos/audio disabled.
       {(prankCombo === 1 || prankCombo === 2) && (
         <>
           <video
@@ -559,6 +574,8 @@ function BootScreen() {
           />
         </>
       )}
+      */}
+      {/* Removed jumpscare: boot-screen Golden Freddy video disabled.
       {prankCombo === 'golden' && goldenVisible && (
         <video
           src="/videos/golden_freddy.mp4"
@@ -567,6 +584,7 @@ function BootScreen() {
           className="absolute inset-0 h-full w-full object-cover"
         />
       )}
+      */}
       <span className="absolute bottom-[8%] right-[6%] select-none font-mono text-[clamp(18px,2.4vw,36px)] font-black text-white">
         WAGAMI
       </span>
@@ -630,24 +648,25 @@ function RightControlCluster({
   onToggleMute,
   onPatientEvent,
 }: RightControlClusterProps) {
-  const [ackActive, setAckActive] = useState(false)
-
-  function handleAck() {
-    if (ackActive) return
-    if (Math.random() >= 1 / 10) return
-    const duration = 750 + Math.random() * 3000
-    setAckActive(true)
-    setTimeout(() => setAckActive(false), duration)
-  }
+  // Removed jumpscare: alarm-ack Golden Freddy Easter egg disabled.
+  // const [ackActive, setAckActive] = useState(false)
+  //
+  // function handleAck() {
+  //   if (ackActive) return
+  //   if (Math.random() >= 1 / 10) return
+  //   const duration = 750 + Math.random() * 3000
+  //   setAckActive(true)
+  //   setTimeout(() => setAckActive(false), duration)
+  // }
 
   return (
     <div className="relative min-h-0">
       <PhysicalButton
         ariaLabel="Alarm acknowledge"
-        onClick={handleAck}
         disabled={disabled}
         className="absolute left-[23%] top-[1.5%] h-[22%] w-[54%] rounded-[24px] bg-[#474747] border-[#dfe1e2]"
       />
+      {/* Removed jumpscare: alarm-ack Golden Freddy overlay disabled.
       {ackActive && (
         <div className="pointer-events-none absolute left-[23%] top-[1.5%] z-50 h-[22%] w-[54%] overflow-hidden rounded-[24px]">
           <video
@@ -658,6 +677,7 @@ function RightControlCluster({
           />
         </div>
       )}
+      */}
       <div className="absolute inset-x-[2%] bottom-[0%] top-[29%] rounded-[19px] bg-[#b9b9b8] shadow-[inset_7px_8px_10px_rgba(255,255,255,0.26),inset_-8px_-9px_10px_rgba(102,102,102,0.2)]">
         <PhysicalButton
           ariaLabel="Home"

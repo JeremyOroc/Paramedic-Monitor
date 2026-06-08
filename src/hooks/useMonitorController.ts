@@ -185,7 +185,9 @@ function reducer(
         return { ...state, bottomStatusVisible: !state.bottomStatusVisible }
       }
       if (action.activeSelectedControl === 'battery') {
-        return { ...state, jumpscareActive: true }
+        // Removed jumpscare: battery selection no longer triggers the Chica overlay.
+        // return { ...state, jumpscareActive: true }
+        return state
       }
       if (action.activeSelectedControl === 'patientMode') {
         const currentIndex = PATIENT_MODE_OPTIONS.findIndex((o) => o.value === state.patientMode)

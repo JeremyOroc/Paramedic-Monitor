@@ -1,6 +1,6 @@
 const POOL_SIZE = 5
 const BUTTON_CLICK_SRC = '/audio/button_click.mp3'
-const ALARM_SRC = '/audio/fnaf2_hallway.mp3'
+const ALARM_SRC = '/audio/alarm.mp3'
 const CHARGE_BEEP_SRC = '/audio/charge_beep.mp3'
 const SHOCK_READY_SRC = '/audio/shock_ready_beep.mp3'
 

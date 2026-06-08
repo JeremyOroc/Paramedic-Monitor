@@ -99,6 +99,18 @@ describe('DeviceShell', () => {
     return vi.spyOn(Math, 'random').mockImplementation(() => values[index++] ?? 0.5)
   }
 
+  function expectNoJumpscareMedia() {
+    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('off-its-me-audio')).not.toBeInTheDocument()
+    expect(document.querySelector('video[src="/videos/its_me.mp4"]')).not.toBeInTheDocument()
+    expect(document.querySelector('audio[src="/audio/its_me.mp3"]')).not.toBeInTheDocument()
+    expect(document.querySelector('video[src="/videos/jumpscare1.mov"]')).not.toBeInTheDocument()
+    expect(document.querySelector('video[src="/videos/jumpscare2.mov"]')).not.toBeInTheDocument()
+    expect(document.querySelector('audio[src="/audio/jumpscare_fnaf1.mp3"]')).not.toBeInTheDocument()
+    expect(document.querySelector('audio[src="/audio/jumpscare_fnaf2.mp3"]')).not.toBeInTheDocument()
+    expect(document.querySelector('video[src="/videos/golden_freddy.mp4"]')).not.toBeInTheDocument()
+  }
+
   it('renders the WAGAMI wordmark', () => {
     render(<DeviceShell {...makeProps()} />)
     expect(screen.getByText('WAGAMI')).toBeInTheDocument()
@@ -123,108 +135,61 @@ describe('DeviceShell', () => {
     expect(power).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('does not render off-state its_me immediately after power-off', () => {
+  it('keeps the powered-off screen black after power-off', () => {
     vi.useFakeTimers()
     mockRandomSequence([0.5])
     render(<DeviceShell {...makeProps()} />)
 
     turnPowerOff()
 
-    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('off-its-me-audio')).not.toBeInTheDocument()
+    expectNoJumpscareMedia()
   })
 
-  it('keeps the powered-off screen black when the 1/100 its_me roll fails', () => {
+  it('does not render off-state its_me after the old successful random roll window', () => {
     vi.useFakeTimers()
-    mockRandomSequence([0.5, 0.5])
+    mockRandomSequence([0, 0, 0, 0, 0])
     render(<DeviceShell {...makeProps()} />)
 
     turnPowerOff()
-    act(() => { vi.advanceTimersByTime(1000) })
+    act(() => { vi.advanceTimersByTime(6000) })
 
-    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('off-its-me-audio')).not.toBeInTheDocument()
+    expectNoJumpscareMedia()
   })
 
-  it('plays off-state its_me when the 1/100 roll succeeds', () => {
+  it('does not render boot-screen FNAF media during power-on', () => {
     vi.useFakeTimers()
-    mockRandomSequence([0.5, 0, 0.5])
+    mockRandomSequence([0, 0, 0])
     render(<DeviceShell {...makeProps()} />)
 
     turnPowerOff()
-    act(() => { vi.advanceTimersByTime(1000) })
-
-    expect(screen.getByTestId('off-its-me-video')).toHaveAttribute('src', '/videos/its_me.mp4')
-    expect(screen.getByTestId('off-its-me-audio')).toHaveAttribute('src', '/audio/its_me.mp3')
-  })
-
-  it('stops an off-state its_me burst after its random 500-5000ms duration', () => {
-    vi.useFakeTimers()
-    mockRandomSequence([0.5, 0, 0])
-    render(<DeviceShell {...makeProps()} />)
-
-    turnPowerOff()
-    act(() => { vi.advanceTimersByTime(1000) })
-    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
-
-    act(() => { vi.advanceTimersByTime(499) })
-    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
-
-    act(() => { vi.advanceTimersByTime(1) })
-    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
-  })
-
-  it('pauses off-state its_me chance rolls during playback and resumes afterward', () => {
-    vi.useFakeTimers()
-    const random = mockRandomSequence([
-      0.5, 0, 1, // Golden miss, off-state hit, 5000ms duration.
-      0.5, 0.5, 0.5, 0.5, 0.5, // Golden misses while its_me is active.
-      0.5, 0, 0.5, // Golden miss, off-state hit after the burst ends, next duration.
-    ])
-    render(<DeviceShell {...makeProps()} />)
-
-    turnPowerOff()
-    act(() => { vi.advanceTimersByTime(1000) })
-    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
-
-    act(() => { vi.advanceTimersByTime(4000) })
-    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
-    expect(random).toHaveBeenCalledTimes(7)
-
-    act(() => { vi.advanceTimersByTime(1000) })
-    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
-
-    act(() => { vi.advanceTimersByTime(1000) })
-    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
-  })
-
-  it('cancels an active off-state its_me burst when powering on', () => {
-    vi.useFakeTimers()
-    mockRandomSequence([0.5, 0, 1])
-    render(<DeviceShell {...makeProps()} />)
-
-    turnPowerOff()
-    act(() => { vi.advanceTimersByTime(1000) })
-    expect(screen.getByTestId('off-its-me-video')).toBeInTheDocument()
-
     fireEvent.click(screen.getByRole('button', { name: 'Power' }))
 
-    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+    expect(screen.getAllByText('WAGAMI').length).toBeGreaterThan(0)
+    expectNoJumpscareMedia()
   })
 
-  it('lets Golden Freddy cancel and block off-state its_me bursts', () => {
+  it('finishes booting without playing jumpscare media', () => {
     vi.useFakeTimers()
-    mockRandomSequence([0, 0, 1])
+    mockRandomSequence([0, 0, 0])
     render(<DeviceShell {...makeProps()} />)
+    const power = screen.getByRole('button', { name: 'Power' })
 
     turnPowerOff()
-    act(() => { vi.advanceTimersByTime(1000) })
+    fireEvent.click(power)
+    act(() => { vi.advanceTimersByTime(2000) })
 
-    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
-    expect(document.querySelector('video[src="/videos/golden_freddy.mp4"]')).toBeInTheDocument()
+    expect(power).toHaveAttribute('aria-pressed', 'true')
+    expectNoJumpscareMedia()
+  })
 
-    act(() => { vi.advanceTimersByTime(1000) })
-    expect(screen.queryByTestId('off-its-me-video')).not.toBeInTheDocument()
+  it('does not render the alarm-ack Golden Freddy Easter egg', () => {
+    vi.useFakeTimers()
+    mockRandomSequence([0, 0, 0])
+    render(<DeviceShell {...makeProps()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alarm acknowledge' }))
+
+    expectNoJumpscareMedia()
   })
 
   it('renders the ANALYZE, CHARGE, and SHOCK buttons', () => {

@@ -20,6 +20,11 @@
 - [x] `AGENTS.md` — role definitions, conventions, data flow contracts
 - [x] `STATUS.md` — this file
 - [x] `CHANGELOG.md` — history log
+- [x] **Jumpscare playback removal — COMPLETE:**
+  - [x] Commented out FNAF/its_me/Golden Freddy/Chica jumpscare video and audio pathways in monitor shell, boot screen, page overlay, and controller trigger
+  - [x] Left existing jumpscare assets in `public/` but removed active app references/playback
+  - [x] Normal simulator audio remains active; vital alarms now use `/audio/alarm.mp3`
+  - [x] Regression tests updated so old random rolls/triggers do not render prank media
 - [x] **Randomized off-state its_me playback — COMPLETE:**
   - [x] Powered-off screen is now black by default instead of looping `its_me` continuously
   - [x] While powered off, `its_me` has a 1/100 per-second chance to play for a random 500-5000ms burst, with rolls paused during playback

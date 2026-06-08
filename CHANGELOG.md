@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-06-08] [monitor] — Remove jumpscare playback
+
+- Commented out the FNAF/its_me/Golden Freddy/Chica jumpscare video and audio
+  pathways while keeping the media files in `public/`.
+- Battery selection, boot, powered-on/off idle states, and alarm acknowledge no
+  longer render or play prank media.
+- Kept normal simulator audio active and switched vital alarm playback to
+  `/audio/alarm.mp3`.
+- Updated tests and project tracking to treat jumpscare playback as removed.
+
 ## [2026-06-01] [monitor] — Move caller info outside Zoll shell
 
 - Caller info now renders as a separate full-page iPad-style dispatch surface

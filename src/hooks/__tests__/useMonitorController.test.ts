@@ -81,6 +81,19 @@ describe('useMonitorController', () => {
     expect(result.current.activeSelectedControl).toBe('bottomStatusToggle')
   })
 
+  it('does not activate a jumpscare when battery is selected on Enter', () => {
+    const { result } = setup()
+
+    act(() => result.current.onMoveUp())
+    act(() => result.current.onMoveUp())
+    act(() => result.current.onMoveUp())
+    expect(result.current.activeSelectedControl).toBe('battery')
+
+    act(() => result.current.onEnter())
+
+    expect(result.current.jumpscareActive).toBe(false)
+  })
+
   it('edits patient info through a draft and commits on Enter', () => {
     const { result, setPatientAge, setPatientSex } = setup()
 
