@@ -26,6 +26,14 @@
   - [x] Added regression coverage for SpO2/EtCO2 graph On and Off behavior after Save → Send
   - [x] Updated selector coverage so the removed admin options stay hidden
 - [x] Requirements gathering (Phases 1–2 of project planning)
+- [x] **Admin vital zero-focus input polish — COMPLETE:**
+  - [x] FC, SpO2, BP sys, BP dia, and EtCO2 inputs clear a visible `0` on focus
+  - [x] Focus-only clearing does not dirty the vital; blur restores untouched zero values
+  - [x] Non-zero values remain visible on focus and typed values still strip leading zeroes
+- [x] **SpO2 monitor pulse fill icon — COMPLETE:**
+  - [x] Numeric SpO2 values render a small yellow outlined fill bar beside the number
+  - [x] Fill animation samples the selected SpO2 pleth waveform shape and timing
+  - [x] SpO2 OFF/disconnected state does not render the pulse icon
 - [x] Zoll X Series UI reference documented (`screenshots/SCREENSHOTS_SUMMARY.md`)
 - [x] Architecture designed (layers, component tree, state, realtime, ECG strategy)
 - [x] `PLAN.md` — full development plan with 11 phases

@@ -1,5 +1,7 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 import { cn } from '@/lib/utils'
 
 type VitalColor = 'ecgGreen' | 'cyanBP' | 'purpleEtCO2' | 'yellowSpO2'
@@ -20,6 +22,7 @@ type VitalBoxProps = {
   selected?: boolean
   className?: string
   valueClassName?: string
+  valueAccessory?: ReactNode
 }
 
 const COLOR_CLASS: Record<VitalColor, string> = {
@@ -57,6 +60,7 @@ export function VitalBox({
   selected = false,
   className,
   valueClassName,
+  valueAccessory,
 }: VitalBoxProps) {
   const colorClass = COLOR_CLASS[color]
   const labelBgClass = LABEL_BG_CLASS[color]
@@ -100,10 +104,19 @@ export function VitalBox({
           </div>
         ) : (
           <div
-            className={cn(VALUE_CLASS, valueColorClass, flashClass, valueClassName)}
+            className={cn(
+              VALUE_CLASS,
+              valueColorClass,
+              flashClass,
+              valueAccessory && 'gap-2',
+              valueClassName,
+            )}
             data-testid="vital-value"
           >
-            {value}
+            <span className={cn(valueColorClass, flashClass, valueClassName)}>
+              {value}
+            </span>
+            {valueAccessory}
           </div>
         )}
         {subLabel && (

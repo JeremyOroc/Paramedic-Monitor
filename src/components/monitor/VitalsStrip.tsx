@@ -2,10 +2,12 @@
 
 import { getActiveAlarms, type AlarmChannel } from '@/types/vitals'
 import type { MonitorSelection } from '@/types/monitorSelection'
+import type { Spo2Waveform } from '@/types/vitals'
 import { cn } from '@/lib/utils'
 import type { NibpPhase } from '@/hooks/useNibpReading'
 
 import { VitalBox } from './VitalBox'
+import { Spo2PulseBar } from './Spo2PulseBar'
 
 type VitalsStripProps = {
   hr: number | string
@@ -13,6 +15,7 @@ type VitalsStripProps = {
   bpDia: number | string
   etco2: number | string
   spo2: number | string
+  spo2Waveform?: Spo2Waveform
   spo2Unit?: string
   activeAlarms?: AlarmChannel[]
   searching?: boolean
@@ -32,6 +35,7 @@ export function VitalsStrip({
   bpDia,
   etco2,
   spo2,
+  spo2Waveform = 'normal',
   spo2Unit = '%',
   activeAlarms,
   searching = true,
@@ -40,8 +44,13 @@ export function VitalsStrip({
   nibpDisplayValue,
 }: VitalsStripProps) {
   const spo2ValueClassName = typeof spo2 === 'string' ? 'text-[1.25rem]' : 'text-[2.35rem]'
+  const hrNumber = toNumber(hr)
+  const showSpo2PulseBar =
+    typeof spo2 === 'number' &&
+    Number.isFinite(hrNumber) &&
+    spo2Waveform !== 'off'
   const alarms = activeAlarms ?? getActiveAlarms({
-    hr: toNumber(hr),
+    hr: hrNumber,
     bp_sys: toNumber(bpSys),
     bp_dia: toNumber(bpDia),
     spo2: toNumber(spo2),
@@ -113,6 +122,15 @@ export function VitalsStrip({
         selected={selected === 'spo2Vital'}
         className="flex-1 min-h-0"
         valueClassName={spo2ValueClassName}
+        valueAccessory={
+          showSpo2PulseBar ? (
+            <Spo2PulseBar
+              hr={hrNumber}
+              spo2={spo2}
+              spo2Waveform={spo2Waveform}
+            />
+          ) : undefined
+        }
       />
       {searching && (
         <div className="px-3 py-1 text-[10px] font-mono text-neutral-400 italic">
