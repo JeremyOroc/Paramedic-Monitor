@@ -5,6 +5,44 @@
 
 ---
 
+## [2026-06-08] [instructor] — Add categorized ECG rhythm picker
+
+- Replaced always-visible ECG rhythm buttons with a compact `Rhythm Options`
+  picker in the ECG admin row.
+- The opened picker shows rhythm category buttons first, then shows only the
+  selected category's rhythm options underneath in the same style as the SpO2
+  and EtCO2 option buttons.
+- Added NSR and Cardiac Arrest rhythm options, with muted empty-category
+  placeholders when Heart Block, Bundle Branch Block, or MI is selected.
+
+## [2026-06-08] [instructor] — Sleeken admin vital number inputs
+
+- Restyled admin vital number inputs as inset console fields with right-aligned
+  tabular values and embedded unit labels.
+- Tightened the number fields into compact value slots with subtle underline
+  state instead of large rectangular input bars.
+- Narrowed the admin number slots further so the rows leave more room for the
+  paired graph controls.
+- Dropped the monitor SpO2 value font slightly, with a smaller disconnected
+  `SpO2 OFF` state so it fits the right-side vital box more comfortably.
+- Removed browser number spinners from the admin vital fields while preserving
+  the existing input, Off/On, Save, and Send behavior.
+
+## [2026-06-08] [instructor] — Align graph controls with admin vitals
+
+- Moved ECG, SpO2, and EtCO2 graph controls into the admin vitals panel so each
+  graph control sits beside its matching vital row.
+- Reused the same Off/On toggle component for numeric vitals and graph channel
+  connection state, removing duplicate graph-level `Off` option buttons.
+- Widened the admin console container so the paired rows stay readable on
+  iPad-width instructor screens.
+
+## [2026-06-08] [instructor] — Reorder admin vitals panel
+
+- Reordered the admin vitals controls to FC → SpO2 → BP sys/dia → EtCO2.
+- Kept the monitor-side vitals strip order unchanged.
+- Updated the admin vitals controls test and project docs for the new panel order.
+
 ## [2026-06-08] [monitor] — Split response timer from ETA countdown
 
 - Added a dispatch start timestamp and `useElapsedTimer` so the assignment

@@ -19,6 +19,7 @@ type VitalBoxProps = {
   alarming?: boolean
   selected?: boolean
   className?: string
+  valueClassName?: string
 }
 
 const COLOR_CLASS: Record<VitalColor, string> = {
@@ -55,6 +56,7 @@ export function VitalBox({
   alarming = false,
   selected = false,
   className,
+  valueClassName,
 }: VitalBoxProps) {
   const colorClass = COLOR_CLASS[color]
   const labelBgClass = LABEL_BG_CLASS[color]
@@ -98,7 +100,7 @@ export function VitalBox({
           </div>
         ) : (
           <div
-            className={cn(VALUE_CLASS, valueColorClass, flashClass)}
+            className={cn(VALUE_CLASS, valueColorClass, flashClass, valueClassName)}
             data-testid="vital-value"
           >
             {value}

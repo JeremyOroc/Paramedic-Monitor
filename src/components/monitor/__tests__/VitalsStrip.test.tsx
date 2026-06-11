@@ -37,11 +37,20 @@ describe('VitalsStrip', () => {
 
     const values = screen.getAllByTestId('vital-value').map((node) => node.textContent)
     expect(values).toEqual(['', '', '', 'SpO2 OFF'])
+    expect(screen.getByText('SpO2 OFF')).toHaveClass('text-[1.25rem]')
     expect(screen.queryByText('%')).not.toBeInTheDocument()
     expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute(
       'data-alarming',
       'false',
     )
+  })
+
+  it('renders the monitor SpO2 numeric value slightly smaller than the other single vitals', () => {
+    render(
+      <VitalsStrip hr={80} bpSys={120} bpDia={89} etco2={35} spo2={98} />,
+    )
+
+    expect(screen.getByText('98')).toHaveClass('text-[2.35rem]')
   })
 
   it('alarms HR, the whole NIBP box, and SpO2 from thresholds', () => {

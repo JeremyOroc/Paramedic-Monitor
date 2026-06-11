@@ -72,9 +72,15 @@
   - [x] Full-page caller info keeps an iPad-oriented 4:3 frame and mimics the reference assignment dashboard layout; map/location area is reserved for later
 - [x] **Disconnected startup vitals/graphs — COMPLETE:**
   - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`
+  - [x] Admin vitals panel rows ordered FC → SpO2 → BP sys/dia → EtCO2
   - [x] Admin vital rows expose a right-side Off/On toggle; clicking anywhere in the toggle rectangle flips that specific vital on/off
+  - [x] Admin vital number fields use narrow, right-aligned console slots with unit labels embedded inside the field
+  - [x] Monitor SpO2 uses a slightly smaller value font, with a smaller `SpO2 OFF` disconnected display for fit
+  - [x] Admin graph controls now sit beside their matching vital rows: ECG beside FC, SpO2 beside SpO2, and EtCO2 beside EtCO2
+  - [x] ECG, SpO2, and EtCO2 graph connection state reuses the same Off/On toggle treatment as numeric vitals
+  - [x] ECG rhythm selection uses a compact `Rhythm Options` picker with category buttons first and only the selected category's rhythm options shown underneath
   - [x] Vital alarms stay inactive for Off startup/reset vitals until each specific vital is turned On through Save → Send; numeric `0` is treated as a real alarmable value when On
-  - [x] ECG, SpO2, and EtCO2 graph channels start as spaced dashed disconnected traces via their `Off` selector options; choosing a non-Off option makes that graph live after Save → Send
+  - [x] ECG, SpO2, and EtCO2 graph channels start as spaced dashed disconnected traces; switching the graph toggle On makes that graph live after Save → Send
 - [x] **Context-aware admin reset — COMPLETE:**
   - [x] Monitor tab Reset clears only monitor vitals/rhythm/waveform state back to the disconnected blank startup state
   - [x] Caller Info tab Reset remains the full drill reset, clearing caller info, dispatch gate/countdown, logs, and vitals
