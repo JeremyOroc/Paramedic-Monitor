@@ -423,6 +423,9 @@ button is inert until a drill gate is satisfied.
   right-aligned console slots with the unit label embedded inside the field. On
   the monitor, SpO2 uses a slightly smaller value font, with a smaller `SpO2 OFF`
   disconnected display for fit.
+- Admin vital number inputs clear a visible `0` on focus for FC, SpO2, BP sys,
+  BP dia, and EtCO2. This is visual only until typing; blur restores untouched
+  zeroes, and non-zero values stay visible on focus.
 - Admin vitals are ordered FC → SpO2 → BP sys/dia → EtCO2. The ECG graph/rhythm
   control sits to the right of FC. SpO2 and EtCO2 do not render right-side graph
   controls; their left-side vital On/Off toggles stage both numeric active state
@@ -443,6 +446,10 @@ button is inert until a drill gate is satisfied.
   On stages `normal`, Off stages `off`, and both continue through the normal
   Save → Send draft workflow. ECG graph controls do not display a visible
   `dirty` badge after local changes, and can still show `pending` after Save.
+- Monitor SpO2 numeric vital values include a small yellow outlined vertical
+  pulse-fill icon beside the number. The fill samples the selected SpO2 pleth
+  waveform shape using the same pulse timing as the SpO2 graph, and is hidden
+  when SpO2 is disconnected or displaying `SpO2 OFF`.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
   vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,

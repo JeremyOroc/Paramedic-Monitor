@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-06-11] [monitor] — Add SpO2 pulse fill icon
+
+- Added a yellow outlined pulse-fill bar beside numeric SpO2 values in the monitor vital box.
+- The fill now samples the selected SpO2 pleth waveform shape while using the same pulse timing as the SpO2 graph.
+- Added focused coverage for the pulse bar timing and SpO2 active/off rendering states.
+
+## [2026-06-11] [instructor] — Clear zeroed admin vitals on focus
+
+- Admin vital number inputs now clear a visible `0` when focused so typed values do not keep a leading zero.
+- The focus clear is visual only; untouched fields restore `0` on blur and do not become dirty until typed.
+- Added coverage for FC, SpO2, BP sys, BP dia, and EtCO2 input behavior.
+
 ## [2026-06-11] [instructor] — Verify SpO2/EtCO2 graph Save-Send flow
 
 - Added admin-page coverage proving SpO2 and EtCO2 vital toggles turn their graphs on after Save → Send.

@@ -80,6 +80,9 @@ export function VitalInput({ field, label, unit, min, max }: VitalInputProps) {
           min={min}
           max={max}
           value={text}
+          onFocus={() => {
+            if (value === 0) setText('')
+          }}
           onChange={(e) => {
             // Strip leading zeros ("020" → "20") but keep a single "0"; allow empty.
             const raw = e.target.value.replace(/^0+(?=\d)/, '')

@@ -203,6 +203,7 @@ function MonitorPage() {
                   bpDia={confirmedVitalActive.bp_dia ? confirmed.bp_dia : ''}
                   etco2={confirmedVitalActive.etco2 ? confirmed.etco2 : ''}
                   spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
+                  spo2Waveform={confirmed.spo2_waveform}
                   spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}
                   activeAlarms={alarm.activeAlarms}
                   searching={false}

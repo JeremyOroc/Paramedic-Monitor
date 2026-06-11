@@ -38,6 +38,7 @@ describe('VitalsStrip', () => {
     const values = screen.getAllByTestId('vital-value').map((node) => node.textContent)
     expect(values).toEqual(['', '', '', 'SpO2 OFF'])
     expect(screen.getByText('SpO2 OFF')).toHaveClass('text-[1.25rem]')
+    expect(screen.queryByTestId('spo2-pulse-bar')).not.toBeInTheDocument()
     expect(screen.queryByText('%')).not.toBeInTheDocument()
     expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute(
       'data-alarming',
@@ -51,6 +52,37 @@ describe('VitalsStrip', () => {
     )
 
     expect(screen.getByText('98')).toHaveClass('text-[2.35rem]')
+  })
+
+  it('renders the SpO2 pulse bar beside an active numeric SpO2 value', () => {
+    render(
+      <VitalsStrip
+        hr={80}
+        bpSys={120}
+        bpDia={89}
+        etco2={35}
+        spo2={98}
+        spo2Waveform="normal"
+      />,
+    )
+
+    expect(screen.getByTestId('spo2-pulse-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('spo2-pulse-fill')).toBeInTheDocument()
+  })
+
+  it('does not render the SpO2 pulse bar when the SpO2 waveform is off', () => {
+    render(
+      <VitalsStrip
+        hr={80}
+        bpSys={120}
+        bpDia={89}
+        etco2={35}
+        spo2={98}
+        spo2Waveform="off"
+      />,
+    )
+
+    expect(screen.queryByTestId('spo2-pulse-bar')).not.toBeInTheDocument()
   })
 
   it('alarms HR, the whole NIBP box, and SpO2 from thresholds', () => {
