@@ -208,6 +208,7 @@ paramedic-monitor/
    - Right vitals column width is `96px`; prefer tighter padding or smaller text over moving or hiding vitals.
    - BP/PNI has an accepted-reading layer: admin Save → Send stages BP changes, but displayed BP values, BP alarms, and BP Off update only after the outer-shell BP reading sequence completes without cancellation.
    - After the BP reading completes, PNI settles to the stacked systolic/diastolic layout with the divider line; only the count-up phase uses a single systolic-style number.
+   - During active BP reading phases (Please Wait, Reading in Progress, and count-up), suppress only the BP alarm channel so PNI does not flash red/white and BP does not drive alarm audio; HR and SpO2 alarms remain active.
 7. `RightNavCluster` — 6 nav buttons (alarm, home, back, enter●, forward, camera)
 8. `BottomStatusBar` — "Mode Adult | 120 J Selected | ⚡ | 0"
 9. `DefibButtonRow` — ANALYSE | ▲▼ | CHARGE | SHOCK (styled, not wired)
@@ -232,6 +233,7 @@ paramedic-monitor/
 - Jumpscare removal tests cover former off-state rolls, boot-screen clips, alarm-ack Easter eggs, and battery-triggered overlays staying inactive while legitimate simulator cues remain available.
 - BP/EtCO2 tests cover staged BP commit/cancel/off behavior, BP alarm gating, EtCO2 loading/restart/reset behavior, and real-time event-log stamps for medications/analyze rows.
 - Settled PNI tests cover single-number counting, stacked sys/dia settled output, and partial-active BP display after completion.
+- BP alarm-suppression tests cover active NIBP suppression, cancel restore, completion restore, and HR/SpO2 alarms staying active during BP reading.
 - Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
 - Controller tests cover initial monitor state, selection toggling, patient-info draft/commit/cancel,
   12-lead capture timers, Back precedence, and power-off cleanup.

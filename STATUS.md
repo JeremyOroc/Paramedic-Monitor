@@ -20,6 +20,10 @@
 - [x] `AGENTS.md` — role definitions, conventions, data flow contracts
 - [x] `STATUS.md` — this file
 - [x] `CHANGELOG.md` — history log
+- [x] **BP alarm suppression during NIBP reading — COMPLETE:**
+  - [x] BP/PNI alarm visual styling and audio contribution are suppressed during Please Wait, Reading in Progress, and count-up
+  - [x] Cancelling restores the old accepted BP alarm state; completion resumes BP alarm behavior with the final accepted BP
+  - [x] HR and SpO2 alarms remain active while BP reading suppresses only the BP channel
 - [x] **Settled PNI sys/dia display — COMPLETE:**
   - [x] NIBP count-up remains single-number during counting
   - [x] Completed readings settle to stacked systolic/diastolic PNI with the existing divider

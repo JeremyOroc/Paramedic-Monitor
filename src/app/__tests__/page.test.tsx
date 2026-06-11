@@ -3,9 +3,23 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
+import { pauseAlarm, playAlarm } from '@/lib/audio'
 import { useMonitorStore } from '@/store/monitorStore'
 
 import MonitorPage from '../page'
+
+vi.mock('@/lib/audio', () => ({
+  pauseAlarm: vi.fn(),
+  playAlarm: vi.fn(),
+  setAudioMuted: vi.fn(),
+  playChargeBeep: vi.fn(),
+  pauseChargeBeep: vi.fn(),
+  playShockReadyBeep: vi.fn(),
+  pauseShockReadyBeep: vi.fn(),
+  playSystemAudio: vi.fn(),
+  playCprAudioSequence: vi.fn(),
+  stopCprAudioSequence: vi.fn(),
+}))
 
 vi.mock('@/components/monitor/DeviceShell', () => ({
   DeviceShell: ({
@@ -97,6 +111,8 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
 describe('MonitorPage', () => {
   beforeEach(() => {
     vi.useRealTimers()
+    vi.mocked(playAlarm).mockClear()
+    vi.mocked(pauseAlarm).mockClear()
     useMonitorStore.getState().reset()
     window.history.pushState({}, '', '/?dev=1') // bypass the dispatch lock gate
   })
@@ -465,6 +481,92 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
 
     expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+  })
+
+  it('suppresses only the BP alarm channel during active NIBP readings and restores it on cancel', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 220, bp_dia: 230 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 118)
+      useMonitorStore.getState().setDraft('bp_dia', 76)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(playAlarm).toHaveBeenCalled()
+
+    vi.mocked(playAlarm).mockClear()
+    vi.mocked(pauseAlarm).mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+    expect(pauseAlarm).toHaveBeenCalled()
+    expect(playAlarm).not.toHaveBeenCalled()
+
+    act(() => { vi.advanceTimersByTime(3000 + 500) })
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+
+    vi.mocked(playAlarm).mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(playAlarm).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('restores BP alarm behavior after a completed alarming NIBP reading', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 220)
+      useMonitorStore.getState().setDraft('bp_dia', 230)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(playAlarm).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('keeps HR and SpO2 alarms active while BP alarm is suppressed during NIBP', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 220, bp_dia: 230 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('hr', 150)
+      useMonitorStore.getState().setDraft('spo2', 80)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    vi.mocked(playAlarm).mockClear()
+    vi.mocked(pauseAlarm).mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+    expect(pauseAlarm).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 
   it('distinguishes inactive 0 from active 0 for alarms', () => {

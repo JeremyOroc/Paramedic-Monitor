@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-06-11] [monitor] — Suppress BP alarms during NIBP reading
+
+- BP/PNI alarm audio contribution and red/white visual styling are now
+  suppressed while NIBP is actively reading: Please Wait, Reading in Progress,
+  and count-up.
+- Cancelling a reading restores the old accepted BP alarm state, while a
+  completed reading resumes BP alarm behavior using the final accepted BP.
+- HR and SpO2 alarms remain active during BP readings.
+
 ## [2026-06-08] [monitor] — Show settled PNI as sys/dia
 
 - Completed BP readings now settle to the stacked PNI display with systolic on

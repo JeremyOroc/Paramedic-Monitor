@@ -184,13 +184,6 @@ function MonitorPage() {
     bp_sys: acceptedBpActive.bp_sys,
     bp_dia: acceptedBpActive.bp_dia,
   }
-  const alarm = useAlarm(
-    alarmVitals,
-    controller.isPoweredOn,
-    controller.isMuted,
-    true,
-    alarmActive,
-  )
   const {
     phase: nibpPhase,
     displayValue: nibpDisplayValue,
@@ -210,6 +203,22 @@ function MonitorPage() {
         snapshot.active,
       )
     },
+  )
+  const isNibpReadingActive =
+    nibpPhase === 'please_wait' ||
+    nibpPhase === 'reading' ||
+    nibpPhase === 'counting'
+  const audioAlarmActive = {
+    ...alarmActive,
+    bp_sys: isNibpReadingActive ? false : alarmActive.bp_sys,
+    bp_dia: isNibpReadingActive ? false : alarmActive.bp_dia,
+  }
+  const alarm = useAlarm(
+    alarmVitals,
+    controller.isPoweredOn,
+    controller.isMuted,
+    true,
+    audioAlarmActive,
   )
   const bpButtonEnabled =
     acceptedBpActive.bp_sys ||
@@ -295,7 +304,11 @@ function MonitorPage() {
                   etco2={confirmedVitalActive.etco2 ? confirmed.etco2 : ''}
                   spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
                   spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}
-                  activeAlarms={alarm.activeAlarms}
+                  activeAlarms={
+                    isNibpReadingActive
+                      ? alarm.activeAlarms.filter((channel) => channel !== 'bp')
+                      : alarm.activeAlarms
+                  }
                   searching={false}
                   selected={controller.activeSelectedControl}
                   nibpPhase={bpButtonEnabled ? nibpPhase : undefined}
