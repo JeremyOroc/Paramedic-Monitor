@@ -3,11 +3,7 @@
 import { ChannelSelector } from './ChannelSelector'
 import type { Etco2Waveform } from '@/types/vitals'
 
-const ETCO2_OPTIONS: ReadonlyArray<{ value: Etco2Waveform; label: string }> = [
-  { value: 'normal', label: 'Normal' },
-  { value: 'hypoventilation', label: 'Hypo' },
-  { value: 'obstructed', label: 'Obstr.' },
-]
+const ETCO2_OPTIONS: ReadonlyArray<{ value: Etco2Waveform; label: string }> = []
 
 export function Etco2WaveformSelector() {
   return (
@@ -17,6 +13,7 @@ export function Etco2WaveformSelector() {
       options={ETCO2_OPTIONS}
       disconnectedValue="off"
       defaultConnectedValue="normal"
+      hideDirtyStatus
     />
   )
 }

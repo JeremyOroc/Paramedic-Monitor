@@ -14,6 +14,7 @@ type ChannelSelectorProps<F extends keyof Vitals> = {
   options: ReadonlyArray<Option<F>>
   disconnectedValue?: Vitals[F]
   defaultConnectedValue?: Vitals[F]
+  hideDirtyStatus?: boolean
 }
 
 const OPTION_GRID_CLASS: Record<number, string> = {
@@ -30,6 +31,7 @@ export function ChannelSelector<F extends keyof Vitals>({
   options,
   disconnectedValue,
   defaultConnectedValue,
+  hideDirtyStatus = false,
 }: ChannelSelectorProps<F>) {
   const draft = useMonitorStore((s) => s.draft)
   const saved = useMonitorStore((s) => s.saved)
@@ -45,6 +47,7 @@ export function ChannelSelector<F extends keyof Vitals>({
   const connected = disconnectedValue === undefined || current !== disconnectedValue
   const fallbackConnectedValue = defaultConnectedValue ?? connectedOptions[0]?.value
   const gridClass = OPTION_GRID_CLASS[connectedOptions.length] ?? 'grid-cols-3'
+  const displayStatus = hideDirtyStatus && status === 'dirty' ? 'clean' : status
 
   return (
     <section className="flex h-full flex-col gap-3 border border-neutral-800 bg-neutral-950 p-3">
@@ -69,13 +72,13 @@ export function ChannelSelector<F extends keyof Vitals>({
           <span
             className={cn(
               'text-xs uppercase tracking-wider',
-              status === 'clean' && 'text-neutral-500',
-              status === 'dirty' && 'text-cyan-bp',
-              status === 'pending' && 'text-pending-amber',
+              displayStatus === 'clean' && 'text-neutral-500',
+              displayStatus === 'dirty' && 'text-cyan-bp',
+              displayStatus === 'pending' && 'text-pending-amber',
             )}
             data-testid={`status-${field}`}
           >
-            {status === 'clean' ? '-' : status}
+            {displayStatus === 'clean' ? '-' : displayStatus}
           </span>
         </div>
       </div>

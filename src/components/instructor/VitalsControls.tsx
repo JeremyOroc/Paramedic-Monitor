@@ -3,8 +3,6 @@
 import { useMonitorStore } from '@/store/monitorStore'
 
 import { EcgRhythmSelector } from './EcgRhythmSelector'
-import { Etco2WaveformSelector } from './Etco2WaveformSelector'
-import { Spo2WaveformSelector } from './Spo2WaveformSelector'
 import { VitalInput } from './VitalInput'
 
 export function VitalsControls() {
@@ -34,9 +32,7 @@ export function VitalsControls() {
         <div className="flex items-center" data-testid="admin-vital-row-spo2">
           <VitalInput field="spo2" label="SpO2" unit="%" min={0} max={100} />
         </div>
-        <div data-testid="admin-graph-row-spo2">
-          <Spo2WaveformSelector />
-        </div>
+        <div aria-hidden="true" />
 
         <div className="flex items-center" data-testid="admin-vital-row-bp-sys">
           <VitalInput field="bp_sys" label="BP sys" unit="mmHg" min={0} max={300} />
@@ -51,9 +47,7 @@ export function VitalsControls() {
         <div className="flex items-center" data-testid="admin-vital-row-etco2">
           <VitalInput field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
         </div>
-        <div data-testid="admin-graph-row-etco2">
-          <Etco2WaveformSelector />
-        </div>
+        <div aria-hidden="true" />
       </div>
     </section>
   )

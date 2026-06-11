@@ -35,25 +35,23 @@ describe('VitalsControls', () => {
     expect(bpDia.compareDocumentPosition(etco2)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
-  it('aligns graph controls beside the matching admin vital rows', () => {
+  it('keeps ECG beside FC and removes SpO2/EtCO2 right-side graph controls', () => {
     render(<VitalsControls />)
 
     const fcRow = screen.getByTestId('admin-vital-row-fc')
     const ecgRow = screen.getByTestId('admin-graph-row-ecg')
     const spo2Row = screen.getByTestId('admin-vital-row-spo2')
-    const spo2GraphRow = screen.getByTestId('admin-graph-row-spo2')
     const etco2Row = screen.getByTestId('admin-vital-row-etco2')
-    const etco2GraphRow = screen.getByTestId('admin-graph-row-etco2')
 
     expect(within(fcRow).getByLabelText('FC')).toBeInTheDocument()
     expect(within(ecgRow).getByRole('heading', { name: 'ECG' })).toBeInTheDocument()
     expect(within(spo2Row).getByLabelText('SpO2')).toBeInTheDocument()
-    expect(within(spo2GraphRow).getByRole('heading', { name: 'SpO2' })).toBeInTheDocument()
     expect(within(etco2Row).getByLabelText('EtCO2')).toBeInTheDocument()
-    expect(within(etco2GraphRow).getByRole('heading', { name: 'EtCO2' })).toBeInTheDocument()
+    expect(screen.queryByTestId('admin-graph-row-spo2')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-graph-row-etco2')).not.toBeInTheDocument()
   })
 
-  it('uses the shared Off/On toggle for ECG, SpO2, and EtCO2 graph controls', async () => {
+  it('keeps ECG as the only right-side graph control', async () => {
     const user = userEvent.setup()
     render(<VitalsControls />)
 
@@ -62,20 +60,29 @@ describe('VitalsControls', () => {
         name: 'ECG off',
       }),
     )
-    await user.click(
-      within(screen.getByTestId('admin-graph-row-spo2')).getByRole('button', {
-        name: 'SpO2 off',
-      }),
-    )
-    await user.click(
-      within(screen.getByTestId('admin-graph-row-etco2')).getByRole('button', {
-        name: 'EtCO2 off',
-      }),
-    )
 
     expect(useMonitorStore.getState().draft.rhythm).toBe('nsr')
+  })
+
+  it('uses left-side SpO2 and EtCO2 toggles to stage graph connection state', async () => {
+    const user = userEvent.setup()
+    render(<VitalsControls />)
+
+    await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
+    await user.click(screen.getByRole('button', { name: 'EtCO2 off' }))
+
+    expect(useMonitorStore.getState().draftVitalActive.spo2).toBe(true)
     expect(useMonitorStore.getState().draft.spo2_waveform).toBe('normal')
+    expect(useMonitorStore.getState().draftVitalActive.etco2).toBe(true)
     expect(useMonitorStore.getState().draft.etco2_waveform).toBe('normal')
+
+    await user.click(screen.getByRole('button', { name: 'SpO2 on' }))
+    await user.click(screen.getByRole('button', { name: 'EtCO2 on' }))
+
+    expect(useMonitorStore.getState().draftVitalActive.spo2).toBe(false)
+    expect(useMonitorStore.getState().draft.spo2_waveform).toBe('off')
+    expect(useMonitorStore.getState().draftVitalActive.etco2).toBe(false)
+    expect(useMonitorStore.getState().draft.etco2_waveform).toBe('off')
   })
 
   it('resets draft vital numbers to normal defaults without sending them', async () => {
@@ -103,6 +110,8 @@ describe('VitalsControls', () => {
       etco2: true,
       spo2: true,
     })
+    expect(state.draft.spo2_waveform).toBe('normal')
+    expect(state.draft.etco2_waveform).toBe('normal')
     expect(state.confirmed.hr).toBe(180)
   })
 })

@@ -13,6 +13,18 @@
 ---
 
 ## Completed
+- [x] **Local developer setup helper — COMPLETE:**
+  - [x] Dependencies installed with a project-local portable Node.js runtime because system `npm` was unavailable
+  - [x] Added `start-local.ps1` for launching the Next.js dev server with the portable runtime
+  - [x] Ignored local portable runtime/cache/log artifacts in `.gitignore`
+- [x] **Admin waveform option cleanup — COMPLETE:**
+  - [x] Removed `Weak` from the admin SpO2 waveform selector
+  - [x] Removed `Hypo` and `Obstr.` from the admin EtCO2 waveform selector
+  - [x] Removed the visible `Normal` buttons so SpO2 and EtCO2 graph controls are toggle-only
+  - [x] Hid visible `dirty` badges for ECG, SpO2, and EtCO2 graph controls while preserving draft Save/Send behavior
+  - [x] Removed the right-side SpO2 and EtCO2 graph rows and moved graph on/off staging into the left vital toggles
+  - [x] Added regression coverage for SpO2/EtCO2 graph On and Off behavior after Save → Send
+  - [x] Updated selector coverage so the removed admin options stay hidden
 - [x] Requirements gathering (Phases 1–2 of project planning)
 - [x] Zoll X Series UI reference documented (`screenshots/SCREENSHOTS_SUMMARY.md`)
 - [x] Architecture designed (layers, component tree, state, realtime, ECG strategy)

@@ -113,29 +113,29 @@ describe('specialized selector wrappers', () => {
 
     expect(useMonitorStore.getState().draft.rhythm).toBe('torsades')
     expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
-    expect(screen.getByTestId('status-rhythm')).toHaveTextContent('dirty')
+    expect(screen.getByTestId('status-rhythm')).toHaveTextContent('-')
   })
 
-  it('Spo2WaveformSelector renders connected options with a shared disconnected toggle', () => {
+  it('Spo2WaveformSelector renders as a toggle-only graph control', () => {
     render(<Spo2WaveformSelector />)
     expect(screen.getByRole('button', { name: 'SpO2 off' })).toHaveAttribute(
       'aria-pressed',
       'false',
     )
-    expect(screen.getByRole('button', { name: 'Normal' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Weak' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Normal' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Weak' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Off' })).not.toBeInTheDocument()
   })
 
-  it('Etco2WaveformSelector renders connected options with a shared disconnected toggle', () => {
+  it('Etco2WaveformSelector renders as a toggle-only graph control', () => {
     render(<Etco2WaveformSelector />)
     expect(screen.getByRole('button', { name: 'EtCO2 off' })).toHaveAttribute(
       'aria-pressed',
       'false',
     )
-    expect(screen.getByRole('button', { name: 'Normal' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Hypo' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Obstr.' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Normal' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Hypo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Obstr.' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Off' })).not.toBeInTheDocument()
   })
 
@@ -156,6 +156,9 @@ describe('specialized selector wrappers', () => {
     expect(useMonitorStore.getState().draft.rhythm).toBe('nsr')
     expect(useMonitorStore.getState().draft.spo2_waveform).toBe('normal')
     expect(useMonitorStore.getState().draft.etco2_waveform).toBe('normal')
+    expect(screen.getByTestId('status-rhythm')).toHaveTextContent('-')
+    expect(screen.getByTestId('status-spo2_waveform')).toHaveTextContent('-')
+    expect(screen.getByTestId('status-etco2_waveform')).toHaveTextContent('-')
 
     await user.click(screen.getByRole('button', { name: 'ECG on' }))
     await user.click(screen.getByRole('button', { name: 'SpO2 on' }))
