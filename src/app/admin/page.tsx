@@ -4,9 +4,6 @@ import { useState } from 'react'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
-import { EcgRhythmSelector } from '@/components/instructor/EcgRhythmSelector'
-import { Spo2WaveformSelector } from '@/components/instructor/Spo2WaveformSelector'
-import { Etco2WaveformSelector } from '@/components/instructor/Etco2WaveformSelector'
 import { CallerInfoForm } from '@/components/instructor/CallerInfoForm'
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
@@ -54,12 +51,7 @@ export default function AdminPage() {
         </button>
       </div>
       {tab === 'monitor' ? (
-        <>
-          <VitalsControls />
-          <EcgRhythmSelector />
-          <Spo2WaveformSelector />
-          <Etco2WaveformSelector />
-        </>
+        <VitalsControls />
       ) : (
         <CallerInfoForm />
       )}

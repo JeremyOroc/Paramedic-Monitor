@@ -4,18 +4,32 @@ import { useMonitorStore, type Vitals } from '@/store/monitorStore'
 import { fieldStatus } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
 
+import { OnOffToggle } from './OnOffToggle'
+
 type Option<F extends keyof Vitals> = { value: Vitals[F]; label: string }
 
 type ChannelSelectorProps<F extends keyof Vitals> = {
   field: F
   label: string
   options: ReadonlyArray<Option<F>>
+  disconnectedValue?: Vitals[F]
+  defaultConnectedValue?: Vitals[F]
+}
+
+const OPTION_GRID_CLASS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
 }
 
 export function ChannelSelector<F extends keyof Vitals>({
   field,
   label,
   options,
+  disconnectedValue,
+  defaultConnectedValue,
 }: ChannelSelectorProps<F>) {
   const draft = useMonitorStore((s) => s.draft)
   const saved = useMonitorStore((s) => s.saved)
@@ -24,28 +38,49 @@ export function ChannelSelector<F extends keyof Vitals>({
 
   const status = fieldStatus(field, draft, saved, confirmed)
   const current = draft[field]
+  const connectedOptions =
+    disconnectedValue === undefined
+      ? options
+      : options.filter((option) => option.value !== disconnectedValue)
+  const connected = disconnectedValue === undefined || current !== disconnectedValue
+  const fallbackConnectedValue = defaultConnectedValue ?? connectedOptions[0]?.value
+  const gridClass = OPTION_GRID_CLASS[connectedOptions.length] ?? 'grid-cols-3'
 
   return (
-    <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
-      <div className="flex items-center justify-between">
+    <section className="flex h-full flex-col gap-3 border border-neutral-800 bg-neutral-950 p-3">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm uppercase tracking-wider text-neutral-400">{label}</h2>
-        <span
-          className={cn(
-            'text-xs uppercase tracking-wider',
-            status === 'clean' && 'text-neutral-500',
-            status === 'dirty' && 'text-cyan-bp',
-            status === 'pending' && 'text-pending-amber',
+        <div className="flex items-center gap-2">
+          {disconnectedValue !== undefined && (
+            <OnOffToggle
+              active={connected}
+              label={label}
+              onToggle={(nextConnected) => {
+                if (!nextConnected) {
+                  setDraft(field, disconnectedValue)
+                  return
+                }
+                if (fallbackConnectedValue !== undefined) {
+                  setDraft(field, fallbackConnectedValue)
+                }
+              }}
+            />
           )}
-          data-testid={`status-${field}`}
-        >
-          {status === 'clean' ? '—' : status}
-        </span>
+          <span
+            className={cn(
+              'text-xs uppercase tracking-wider',
+              status === 'clean' && 'text-neutral-500',
+              status === 'dirty' && 'text-cyan-bp',
+              status === 'pending' && 'text-pending-amber',
+            )}
+            data-testid={`status-${field}`}
+          >
+            {status === 'clean' ? '-' : status}
+          </span>
+        </div>
       </div>
-      <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
-      >
-        {options.map((o) => {
+      <div className={cn('grid gap-1', gridClass)}>
+        {connectedOptions.map((o) => {
           const selected = current === o.value
           return (
             <button

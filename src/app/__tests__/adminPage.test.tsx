@@ -17,9 +17,9 @@ describe('AdminPage', () => {
 
     expect(screen.getByRole('button', { name: 'Monitor' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Vitals')).toBeInTheDocument()
-    expect(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Off' })).toBeInTheDocument()
-    expect(within(screen.getByRole('heading', { name: 'SpO2' }).closest('section')!).getByRole('button', { name: 'Off' })).toBeInTheDocument()
-    expect(within(screen.getByRole('heading', { name: 'EtCO2' }).closest('section')!).getByRole('button', { name: 'Off' })).toBeInTheDocument()
+    expect(within(screen.getByTestId('admin-graph-row-ecg')).getByRole('button', { name: 'ECG off' })).toBeInTheDocument()
+    expect(within(screen.getByTestId('admin-graph-row-spo2')).getByRole('button', { name: 'SpO2 off' })).toBeInTheDocument()
+    expect(within(screen.getByTestId('admin-graph-row-etco2')).getByRole('button', { name: 'EtCO2 off' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Adresse')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Caller Info' }))
@@ -77,15 +77,17 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'NSR' }))
+    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Cardiac Arrest' }))
+    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'VF' }))
     await user.click(within(screen.getByRole('heading', { name: 'SpO2' }).closest('section')!).getByRole('button', { name: 'Normal' }))
 
-    expect(useMonitorStore.getState().draft.rhythm).toBe('nsr')
+    expect(useMonitorStore.getState().draft.rhythm).toBe('vf')
     expect(useMonitorStore.getState().draft.spo2_waveform).toBe('normal')
     expect(useMonitorStore.getState().draft.etco2_waveform).toBe('off')
     expect(useMonitorStore.getState().draftVitalsActive).toBe(false)
     expect(screen.getByTestId('status-rhythm')).toHaveTextContent('dirty')
     expect(screen.getByTestId('status-spo2_waveform')).toHaveTextContent('dirty')
-    expect(screen.getByTestId('status-etco2_waveform')).toHaveTextContent('—')
+    expect(screen.getByTestId('status-etco2_waveform')).toHaveTextContent('-')
   })
 })

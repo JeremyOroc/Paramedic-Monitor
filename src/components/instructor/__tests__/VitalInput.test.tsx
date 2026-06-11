@@ -18,6 +18,19 @@ describe('VitalInput', () => {
     )
   })
 
+  it('renders the number field as a compact right-aligned console slot with embedded unit text', () => {
+    render(<VitalInput field="hr" label="FC" unit="bpm" />)
+
+    const input = screen.getByLabelText('FC')
+    const shell = screen.getByTestId('vital-input-shell-hr')
+
+    expect(input).toHaveClass('text-right')
+    expect(shell).toHaveClass('w-24')
+    expect(shell).toHaveClass('bg-transparent')
+    expect(shell).toContainElement(input)
+    expect(shell).toContainElement(screen.getByText('bpm'))
+  })
+
   it('typing updates draft, turns the vital On, and marks it dirty', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" unit="bpm" />)

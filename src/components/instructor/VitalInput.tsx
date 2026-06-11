@@ -1,10 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+
 import { useMonitorStore } from '@/store/monitorStore'
 import { vitalStatus } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
 import type { NumericVitalField } from '@/types/vitals'
+
+import { OnOffToggle } from './OnOffToggle'
 
 type VitalInputProps = {
   field: NumericVitalField
@@ -15,9 +18,11 @@ type VitalInputProps = {
 }
 
 const STATUS_CLASS: Record<'clean' | 'dirty' | 'pending', string> = {
-  clean: 'border-neutral-700 bg-neutral-900',
-  dirty: 'border-cyan-bp/60 bg-neutral-900 ring-1 ring-cyan-bp/40',
-  pending: 'border-pending-amber bg-pending-amber/20 ring-1 ring-pending-amber',
+  clean: 'border-transparent border-b-neutral-700 bg-transparent',
+  dirty:
+    'border-transparent border-b-cyan-bp bg-cyan-bp/5 shadow-[0_8px_18px_-18px_rgba(0,255,255,0.9)]',
+  pending:
+    'border-transparent border-b-pending-amber bg-pending-amber/10 shadow-[0_8px_18px_-18px_rgba(255,170,0,0.9)]',
 }
 
 export function VitalInput({ field, label, unit, min, max }: VitalInputProps) {
@@ -57,62 +62,52 @@ export function VitalInput({ field, label, unit, min, max }: VitalInputProps) {
   }, [value])
 
   return (
-    <label className="flex items-center gap-3">
+    <label className="flex w-full items-center gap-3">
       <span className="w-20 text-sm text-neutral-300">{label}</span>
-      <input
-        type="number"
-        inputMode="numeric"
-        min={min}
-        max={max}
-        value={text}
-        onChange={(e) => {
-          // Strip leading zeros ("020" → "20") but keep a single "0"; allow empty.
-          const raw = e.target.value.replace(/^0+(?=\d)/, '')
-          setText(raw)
-          setDraft(field, parseVital(raw) as never)
-        }}
-        onBlur={() => setText(String(value))}
-        aria-label={label}
+      <div
         className={cn(
-          'flex-1 px-3 py-2 border font-mono text-white tabular-nums',
-          'focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+          'group relative flex w-24 shrink-0 items-center border border-b',
+          'transition-[border-color,box-shadow,background-color] duration-150',
+          'focus-within:border-transparent focus-within:border-b-cyan-bp focus-within:bg-cyan-bp/5',
+          'focus-within:shadow-[0_8px_18px_-18px_rgba(0,255,255,0.9)]',
           STATUS_CLASS[status],
         )}
-      />
-      {unit && <span className="w-12 text-xs text-neutral-500">{unit}</span>}
-      <button
-        type="button"
-        onClick={() => setDraftVitalActive(field, !active)}
-        aria-label={`${label} ${active ? 'on' : 'off'}`}
-        aria-pressed={active}
-        className={cn(
-          'grid w-20 grid-cols-2 overflow-hidden border border-neutral-700 font-mono text-[10px] font-bold uppercase tracking-wider',
-          active ? 'border-cyan-bp' : 'border-neutral-700',
-        )}
-        data-testid={`status-${field}`}
-        data-status={status}
+        data-testid={`vital-input-shell-${field}`}
       >
-        <span
+        <input
+          type="number"
+          inputMode="numeric"
+          min={min}
+          max={max}
+          value={text}
+          onChange={(e) => {
+            // Strip leading zeros ("020" → "20") but keep a single "0"; allow empty.
+            const raw = e.target.value.replace(/^0+(?=\d)/, '')
+            setText(raw)
+            setDraft(field, parseVital(raw) as never)
+          }}
+          onBlur={() => setText(String(value))}
+          aria-label={label}
           className={cn(
-            'px-1.5 py-1 text-center',
-            !active
-              ? 'bg-neutral-300 text-black'
-              : 'bg-neutral-900 text-neutral-500',
+            'h-8 min-w-0 flex-1 bg-transparent py-1 pl-1 pr-8 text-right',
+            'font-mono text-base font-semibold text-white tabular-nums outline-none',
+            'placeholder:text-neutral-700 [appearance:textfield]',
+            '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
           )}
-        >
-          Off
-        </span>
-        <span
-          className={cn(
-            'border-l border-neutral-700 px-1.5 py-1 text-center',
-            active
-              ? 'bg-cyan-bp text-black'
-              : 'bg-neutral-900 text-neutral-500',
-          )}
-        >
-          On
-        </span>
-      </button>
+        />
+        {unit && (
+          <span className="pointer-events-none absolute right-2 text-[9px] font-bold uppercase tracking-wider text-neutral-500 group-focus-within:text-cyan-bp">
+            {unit}
+          </span>
+        )}
+      </div>
+      <OnOffToggle
+        active={active}
+        label={label}
+        onToggle={(nextActive) => setDraftVitalActive(field, nextActive)}
+        status={status}
+        testId={`status-${field}`}
+      />
     </label>
   )
 }

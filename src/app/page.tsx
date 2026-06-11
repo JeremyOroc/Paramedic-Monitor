@@ -29,6 +29,7 @@ import { useMonitorClock } from '@/hooks/useMonitorClock'
 import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { useCountdown } from '@/hooks/useCountdown'
+import { useElapsedTimer } from '@/hooks/useElapsedTimer'
 import { useNibpReading } from '@/hooks/useNibpReading'
 import { formatEstTime } from '@/lib/estTime'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -68,6 +69,7 @@ function MonitorPage() {
   // Dispatch startup gate: countdown is travel-time to scene; the trainee must
   // Acknowledge, wait out the countdown, then mark Arrival before power unlocks.
   const countdown = useCountdown(dispatchState.countdownEndsAt)
+  const responseTimer = useElapsedTimer(dispatchState.startedAt)
   const gateSatisfied =
     !!dispatchState.acknowledgedAt && countdown.isDone && !!dispatchState.arrivedAt
   const powerLocked = !devBypass && !gateSatisfied
@@ -279,6 +281,7 @@ function MonitorPage() {
         buttonState={callerButtonState}
         showCountdown={!countdown.isDone}
         countdownFormatted={countdown.formatted}
+        responseFormatted={responseTimer.formatted}
         fullScreen
         variant={callerInfoVariant}
         canEnterMonitor={gateSatisfied}
@@ -369,6 +372,8 @@ function MonitorPage() {
         onBack={controller.onBack}
         canEnterMonitor
         onEnterMonitor={controller.onBack}
+        responseFormatted={responseTimer.formatted}
+        countdownFormatted={countdown.formatted}
       />
     </div>
   )

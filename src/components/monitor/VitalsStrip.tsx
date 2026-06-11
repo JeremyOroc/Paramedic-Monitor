@@ -39,6 +39,7 @@ export function VitalsStrip({
   nibpPhase,
   nibpDisplayValue,
 }: VitalsStripProps) {
+  const spo2ValueClassName = typeof spo2 === 'string' ? 'text-[1.25rem]' : 'text-[2.35rem]'
   const alarms = activeAlarms ?? getActiveAlarms({
     hr: toNumber(hr),
     bp_sys: toNumber(bpSys),
@@ -111,6 +112,7 @@ export function VitalsStrip({
         alarming={alarms.includes('spo2')}
         selected={selected === 'spo2Vital'}
         className="flex-1 min-h-0"
+        valueClassName={spo2ValueClassName}
       />
       {searching && (
         <div className="px-3 py-1 text-[10px] font-mono text-neutral-400 italic">
