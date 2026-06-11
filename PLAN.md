@@ -423,9 +423,10 @@ button is inert until a drill gate is satisfied.
   right-aligned console slots with the unit label embedded inside the field. On
   the monitor, SpO2 uses a slightly smaller value font, with a smaller `SpO2 OFF`
   disconnected display for fit.
-- Admin vitals are ordered FC → SpO2 → BP sys/dia → EtCO2. Graph controls sit to
-  the right of the matching rows: ECG beside FC, SpO2 waveform beside SpO2, and
-  EtCO2 waveform beside EtCO2. BP rows have no paired graph control.
+- Admin vitals are ordered FC → SpO2 → BP sys/dia → EtCO2. The ECG graph/rhythm
+  control sits to the right of FC. SpO2 and EtCO2 do not render right-side graph
+  controls; their left-side vital On/Off toggles stage both numeric active state
+  and graph connection state.
 - ECG rhythm selection stays compact by default, showing the current rhythm and a
   `Rhythm Options` button. Opening the picker shows category buttons for `NSR`,
   `Cardiac Arrest`, `Heart Block`, `Bundle Branch Block`, and `MI`, then shows
@@ -438,6 +439,10 @@ button is inert until a drill gate is satisfied.
   vitals instead of duplicate `Off` option buttons. Switching a graph On selects
   its default connected waveform/rhythm, and connected waveform/rhythm choices
   still use the same Save → Send flow as other monitor fields.
+- Admin SpO2 and EtCO2 graph controls are built into the left-side vital toggles:
+  On stages `normal`, Off stages `off`, and both continue through the normal
+  Save → Send draft workflow. ECG graph controls do not display a visible
+  `dirty` badge after local changes, and can still show `pending` after Save.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
   vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,

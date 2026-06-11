@@ -5,6 +5,25 @@
 
 ---
 
+## [2026-06-11] [instructor] — Verify SpO2/EtCO2 graph Save-Send flow
+
+- Added admin-page coverage proving SpO2 and EtCO2 vital toggles turn their graphs on after Save → Send.
+- Added coverage for turning those same graph states back off after a second Save → Send.
+
+## [2026-06-11] [instructor] — Move SpO2/EtCO2 graph toggles into vitals
+
+- Removed the right-side admin SpO2 and EtCO2 graph controls from the Vitals panel.
+- Wired the left-side SpO2 and EtCO2 vital toggles to stage their matching graph waveform as `normal` or `off`.
+- Preserved the Save → Send pipeline and kept ECG as the only right-side graph/rhythm control.
+
+## [2026-06-11] [instructor] — Remove extra admin waveform choices
+
+- Removed `Weak` from the admin SpO2 waveform selector.
+- Removed `Hypo` and `Obstr.` from the admin EtCO2 waveform selector.
+- Removed the visible `Normal` buttons so SpO2 and EtCO2 graph controls are toggle-only.
+- Hid visible `dirty` badges for ECG, SpO2, and EtCO2 graph controls while preserving draft Save/Send behavior.
+- Updated selector tests and project tracking for the reduced admin options.
+
 ## [2026-06-08] [instructor] — Add categorized ECG rhythm picker
 
 - Replaced always-visible ECG rhythm buttons with a compact `Rhythm Options`
@@ -50,6 +69,12 @@
 - Kept ETA tied to the existing countdown end timestamp so it counts down toward
   scene arrival instead of mirroring the response timer.
 - Added hook, store, and caller-info modal tests for the split timer behavior.
+
+## [2026-06-11] [setup] — Add local portable Node start helper
+
+- Installed dependencies using a project-local portable Node.js runtime because system `npm` was unavailable.
+- Added `start-local.ps1` so the app can be started locally with the portable runtime.
+- Ignored portable Node, npm cache, downloaded zip, and dev-server logs.
 
 ## [2026-06-08] [monitor] — Require Go to Monitor after every dispatch
 

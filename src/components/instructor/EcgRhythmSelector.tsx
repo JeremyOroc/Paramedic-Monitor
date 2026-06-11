@@ -67,6 +67,7 @@ export function EcgRhythmSelector() {
   const current = draft.rhythm
   const connected = current !== 'off'
   const status = fieldStatus('rhythm', draft, saved, confirmed)
+  const displayStatus = status === 'dirty' ? 'clean' : status
   const optionsId = 'ecg-rhythm-options'
   const selectedCategory =
     ECG_RHYTHM_CATEGORIES.find((category) => category.label === selectedCategoryLabel) ??
@@ -115,13 +116,13 @@ export function EcgRhythmSelector() {
           <span
             className={cn(
               'text-xs uppercase tracking-wider',
-              status === 'clean' && 'text-neutral-500',
-              status === 'dirty' && 'text-cyan-bp',
-              status === 'pending' && 'text-pending-amber',
+              displayStatus === 'clean' && 'text-neutral-500',
+              displayStatus === 'dirty' && 'text-cyan-bp',
+              displayStatus === 'pending' && 'text-pending-amber',
             )}
             data-testid="status-rhythm"
           >
-            {status === 'clean' ? '-' : status}
+            {displayStatus === 'clean' ? '-' : displayStatus}
           </span>
         </div>
       </div>

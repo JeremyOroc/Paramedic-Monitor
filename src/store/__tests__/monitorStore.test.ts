@@ -241,6 +241,47 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('obstructed')
   })
 
+  it('SpO2 and EtCO2 active toggles stage matching graph connection state', () => {
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    useMonitorStore.getState().setDraftVitalActive('etco2', true)
+
+    let s = useMonitorStore.getState()
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.saved.spo2_waveform).toBe('off')
+    expect(s.confirmed.etco2_waveform).toBe('off')
+
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    s = useMonitorStore.getState()
+    expect(s.confirmedVitalActive.spo2).toBe(true)
+    expect(s.confirmed.spo2_waveform).toBe('normal')
+    expect(s.confirmedVitalActive.etco2).toBe(true)
+    expect(s.confirmed.etco2_waveform).toBe('normal')
+
+    useMonitorStore.getState().setDraftVitalActive('spo2', false)
+    useMonitorStore.getState().setDraftVitalActive('etco2', false)
+    s = useMonitorStore.getState()
+    expect(s.draftVitalActive.spo2).toBe(false)
+    expect(s.draft.spo2_waveform).toBe('off')
+    expect(s.draftVitalActive.etco2).toBe(false)
+    expect(s.draft.etco2_waveform).toBe('off')
+  })
+
+  it('unrelated vital active toggles do not change SpO2 or EtCO2 graph state', () => {
+    useMonitorStore.getState().setDraft('spo2_waveform', 'weak')
+    useMonitorStore.getState().setDraft('etco2_waveform', 'obstructed')
+    useMonitorStore.getState().setDraftVitalActive('hr', true)
+    useMonitorStore.getState().setDraftVitalActive('bp_sys', true)
+    useMonitorStore.getState().setDraftVitalActive('bp_dia', true)
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.spo2_waveform).toBe('weak')
+    expect(s.draft.etco2_waveform).toBe('obstructed')
+  })
+
   it('off channel modes flow through save → send without activating vital alarms', () => {
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
 

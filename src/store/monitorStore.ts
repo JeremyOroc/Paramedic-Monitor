@@ -235,7 +235,11 @@ export const useMonitorStore = create<MonitorState>()(
       setDraftVitalActive: (field, active) =>
         set((s) => {
           const draftVitalActive = { ...s.draftVitalActive, [field]: active }
+          const draft = { ...s.draft }
+          if (field === 'spo2') draft.spo2_waveform = active ? 'normal' : 'off'
+          if (field === 'etco2') draft.etco2_waveform = active ? 'normal' : 'off'
           return {
+            draft,
             draftVitalActive,
             draftVitalsActive: anyVitalActive(draftVitalActive),
           }
@@ -313,6 +317,8 @@ export const useMonitorStore = create<MonitorState>()(
             bp_dia: DEFAULT_VITALS.bp_dia,
             etco2: DEFAULT_VITALS.etco2,
             spo2: DEFAULT_VITALS.spo2,
+            etco2_waveform: 'normal',
+            spo2_waveform: 'normal',
           },
           draftVitalActive: activeVitals,
           draftVitalsActive: true,
