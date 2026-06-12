@@ -427,6 +427,12 @@ button is inert until a drill gate is satisfied.
 - Admin vital number inputs clear a visible `0` on focus for FC, SpO2, BP sys,
   BP dia, and EtCO2. This is visual only until typing; blur restores untouched
   zeroes, and non-zero values stay visible on focus.
+- The admin Caller Info tab includes an auto-sort paste textarea above the
+  existing fields. It parses labelled French/English dispatch text into the six
+  main caller-info draft fields, including `Label: value`, `Label - value`, and
+  label-on-next-line formats. Matching fields overwrite immediately in draft
+  state, optional extras are ignored, and trainees only see changes after the
+  normal Save → Send flow.
 - The admin dashboard includes a third `Patient Information` tab with two
   square SAMPLE and OPQRST checklist panels. Letter buttons render as compact
   left-aligned vertical columns, toggle an ECG-green selected state

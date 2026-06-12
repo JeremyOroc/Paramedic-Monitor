@@ -62,6 +62,28 @@ describe('CallerInfoForm', () => {
     expect(draft.time).toBe('14:35')
   })
 
+  it('auto-sorts pasted labels whose values are on following lines', () => {
+    render(<CallerInfoForm />)
+
+    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+      target: {
+        value: [
+          'Adresse',
+          '789 Rue du Parc',
+          'Probleme',
+          'Syncope',
+          'Heure',
+          '17:20',
+        ].join('\n'),
+      },
+    })
+
+    const draft = useMonitorStore.getState().callerInfoDraft
+    expect(draft.address).toBe('789 Rue du Parc')
+    expect(draft.problem).toBe('Syncope')
+    expect(draft.time).toBe('17:20')
+  })
+
   it('auto-sort overwrites matching fields without creating extra rows', () => {
     useMonitorStore.getState().setCallerInfoDraft('address', 'Old address')
     useMonitorStore.getState().setCallerInfoDraft('problem', 'Old problem')

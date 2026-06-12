@@ -42,7 +42,7 @@
   - [x] Checklist state is page-only, survives tab switching during the session, and does not use Save/Send
 - [x] **Caller info auto-sort paste box — COMPLETE:**
   - [x] Added an admin-only auto-sort textarea above the Caller Info fields
-  - [x] Labelled French/English lines fill the six main caller-info draft fields
+  - [x] Labelled French/English lines fill the six main caller-info draft fields, including label-on-next-line and dash-separated formats
   - [x] Matching fields overwrite immediately while preserving the existing Save → Send workflow
 - [x] Zoll X Series UI reference documented (`screenshots/SCREENSHOTS_SUMMARY.md`)
 - [x] Architecture designed (layers, component tree, state, realtime, ECG strategy)

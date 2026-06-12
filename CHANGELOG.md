@@ -8,7 +8,7 @@
 ## [2026-06-11] [instructor] — Add caller info auto-sort paste box
 
 - Added an admin Caller Info paste box that parses labelled lines into the existing draft fields.
-- Supports French and English aliases for priority code, address, problem, information, update, and time.
+- Supports French and English aliases for priority code, address, problem, information, update, and time, including label-on-next-line and dash-separated formats.
 - Preserved Save → Send behavior; auto-sort updates drafts only until the instructor saves and sends.
 
 ## [2026-06-11] [instructor] — Compact patient information checklist buttons

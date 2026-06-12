@@ -48,6 +48,42 @@ describe('parseCallerInfoAutoSort', () => {
     })
   })
 
+  it('parses labels with values on following lines', () => {
+    expect(
+      parseCallerInfoAutoSort(
+        [
+          'Adresse',
+          '789 Rue du Parc',
+          'Appartement 4',
+          'Probleme',
+          'Syncope',
+          'Information',
+          'Patient respire normalement',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      address: '789 Rue du Parc\nAppartement 4',
+      problem: 'Syncope',
+      information: 'Patient respire normalement',
+    })
+  })
+
+  it('parses dash-separated labelled lines', () => {
+    expect(
+      parseCallerInfoAutoSort(
+        [
+          'Code - P3',
+          'Address - 10 Main Street',
+          'Update - Staging requested',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      interventionPriorityCode: 'P3',
+      address: '10 Main Street',
+      update: 'Staging requested',
+    })
+  })
+
   it('allows labelled empty values to clear matching fields', () => {
     expect(parseCallerInfoAutoSort('Adresse:')).toEqual({ address: '' })
   })
