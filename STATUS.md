@@ -66,6 +66,19 @@
 - [x] `AGENTS.md` — role definitions, conventions, data flow contracts
 - [x] `STATUS.md` — this file
 - [x] `CHANGELOG.md` — history log
+- [x] **BP alarm suppression during NIBP reading — COMPLETE:**
+  - [x] BP/PNI alarm visual styling and audio contribution are suppressed during Please Wait, Reading in Progress, and count-up
+  - [x] Cancelling restores the old accepted BP alarm state; completion resumes BP alarm behavior with the final accepted BP
+  - [x] HR and SpO2 alarms remain active while BP reading suppresses only the BP channel
+- [x] **Settled PNI sys/dia display — COMPLETE:**
+  - [x] NIBP count-up remains single-number during counting
+  - [x] Completed readings settle to stacked systolic/diastolic PNI with the existing divider
+  - [x] Partial-active BP readings still show both sys and dia once the reading completes
+- [x] **Gated BP readings + EtCO2 loading — COMPLETE:**
+  - [x] Admin-sent BP/PNI changes remain pending until the outer-shell BP reading completes; cancellation keeps the old accepted BP
+  - [x] BP alarms and BP Off now follow the accepted BP reading state instead of changing immediately on Send
+  - [x] First ETCO2 toggle after monitor reset shows an 8-second purple loading line; incomplete loads restart and completed loads are not repeated until reset
+  - [x] Medication/analyze event-log rows use real Eastern HH:MM:SS time instead of the session timer
 - [x] **Jumpscare playback removal — COMPLETE:**
   - [x] Commented out FNAF/its_me/Golden Freddy/Chica jumpscare video and audio pathways in monitor shell, boot screen, page overlay, and controller trigger
   - [x] Left existing jumpscare assets in `public/` but removed active app references/playback

@@ -84,6 +84,20 @@ body {
   animation: vital-alarm-flash 1.9s ease-in-out infinite;
 }
 
+.etco2-loading-line {
+  animation: etco2-loading-line 8s linear forwards;
+  transform: scaleX(0);
+}
+
+@keyframes etco2-loading-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 .dispatch-tablet-frame-assignment {
   width: min(94vw, calc(92vh * 4 / 3), 1120px);
   aspect-ratio: 4 / 3;

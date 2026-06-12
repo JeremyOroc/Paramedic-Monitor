@@ -18,6 +18,7 @@ type WaveformPanelProps = {
   showApplyElectrodes?: boolean
   showAllSecondaryChannels?: boolean
   selected?: MonitorSelection
+  etco2Loading?: boolean
 }
 
 export function WaveformPanel({
@@ -31,6 +32,7 @@ export function WaveformPanel({
   showApplyElectrodes = true,
   showAllSecondaryChannels = false,
   selected,
+  etco2Loading = false,
 }: WaveformPanelProps) {
   const ecgConnected = rhythm !== 'off'
   const spo2Connected = spo2Waveform !== 'off'
@@ -74,6 +76,7 @@ export function WaveformPanel({
             selectedLabel={selected === 'etco2Label'}
             selectedScale={selected === 'etco2Scale'}
             connected={etco2Connected}
+            loading={etco2Loading}
           />
         </div>
         <div className="relative min-h-0">

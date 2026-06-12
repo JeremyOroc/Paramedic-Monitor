@@ -23,6 +23,7 @@ type SecondaryChannelProps = {
   selectedLabel?: boolean
   selectedScale?: boolean
   connected?: boolean
+  loading?: boolean
 }
 
 function LiveSecondaryCanvas({
@@ -80,6 +81,7 @@ export function SecondaryChannel({
   selectedLabel = false,
   selectedScale = false,
   connected = true,
+  loading = false,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
 
@@ -105,7 +107,14 @@ export function SecondaryChannel({
           <span>0</span>
         </div>
       )}
-      {connected ? (
+      {isEtco2 && loading ? (
+        <div
+          data-testid="etco2-loading-trace"
+          className="absolute inset-0 overflow-hidden bg-black"
+        >
+          <div className="etco2-loading-line absolute left-0 top-1/2 h-[2px] w-full origin-left bg-purple-etco2 opacity-50" />
+        </div>
+      ) : connected ? (
         <LiveSecondaryCanvas
           channel={channel}
           hr={hr}

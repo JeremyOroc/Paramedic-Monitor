@@ -50,6 +50,23 @@ describe('useNibpReading', () => {
     expect(result.current.displayValue).toBe(110)
   })
 
+  it('commits the pending BP snapshot only after the full sequence completes', () => {
+    const onComplete = vi.fn()
+    const pending = {
+      bpSys: 118,
+      bpDia: 76,
+      active: { bp_sys: true, bp_dia: true },
+    }
+    const { result } = renderHook(() => useNibpReading(pending, onComplete))
+
+    act(() => result.current.handlePatientEvent())
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 7000) })
+    expect(onComplete).not.toHaveBeenCalled()
+
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(onComplete).toHaveBeenCalledWith(pending)
+  })
+
   it('cancel during please_wait returns to idle', () => {
     const { result } = renderHook(() => useNibpReading(110))
     act(() => result.current.handlePatientEvent())
@@ -68,12 +85,39 @@ describe('useNibpReading', () => {
   })
 
   it('cancel during counting returns to idle', () => {
-    const { result } = renderHook(() => useNibpReading(110))
+    const onComplete = vi.fn()
+    const { result } = renderHook(() => useNibpReading(110, onComplete))
     act(() => result.current.handlePatientEvent())
     act(() => { vi.advanceTimersByTime(3000 + 500 + 1000) })
     expect(result.current.phase).toBe('counting')
     act(() => result.current.handlePatientEvent())
     expect(result.current.phase).toBe('idle')
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+
+  it('commits an inactive BP snapshot by returning to idle with blank display', () => {
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useNibpReading(
+        {
+          bpSys: 0,
+          bpDia: 0,
+          active: { bp_sys: false, bp_dia: false },
+        },
+        onComplete,
+      ),
+    )
+
+    act(() => result.current.handlePatientEvent())
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+
+    expect(result.current.phase).toBe('idle')
+    expect(result.current.displayValue).toBe('')
+    expect(onComplete).toHaveBeenCalledWith({
+      bpSys: 0,
+      bpDia: 0,
+      active: { bp_sys: false, bp_dia: false },
+    })
   })
 
   it('pressing after settled starts a new reading (not idle)', () => {

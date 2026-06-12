@@ -22,6 +22,42 @@ describe('VitalsStrip', () => {
     expect(screen.queryByText('120/89')).toBeNull()
   })
 
+  it('keeps NIBP count-up as a single systolic-style value', () => {
+    render(
+      <VitalsStrip
+        hr={80}
+        bpSys={118}
+        bpDia={76}
+        etco2={35}
+        spo2={98}
+        nibpPhase="counting"
+        nibpDisplayValue={73}
+      />,
+    )
+
+    expect(screen.getByText('73')).toBeInTheDocument()
+    expect(screen.queryByText('118')).not.toBeInTheDocument()
+    expect(screen.queryByText('76')).not.toBeInTheDocument()
+  })
+
+  it('renders settled NIBP as stacked sys and dia with a divider', () => {
+    const { container } = render(
+      <VitalsStrip
+        hr={80}
+        bpSys={118}
+        bpDia={76}
+        etco2={35}
+        spo2={98}
+        nibpPhase="settled"
+        nibpDisplayValue={118}
+      />,
+    )
+
+    expect(screen.getByText('118')).toBeInTheDocument()
+    expect(screen.getByText('76')).toBeInTheDocument()
+    expect(container.querySelector('hr')).toBeInTheDocument()
+  })
+
   it('supports inactive blank vitals with SpO2 OFF', () => {
     render(
       <VitalsStrip

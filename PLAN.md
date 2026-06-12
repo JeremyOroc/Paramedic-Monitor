@@ -207,6 +207,9 @@ paramedic-monitor/
 6. `VitalsStrip` — right column: FC green / PNI cyan / EtCO2 purple / SpO2 yellow / Searching
    - Vitals must stay in the right-side column. Do not move HR, BP, EtCO2, or SpO2 into the bottom bar; bottom space is reserved for status/defib controls.
    - Right vitals column width is `96px`; prefer tighter padding or smaller text over moving or hiding vitals.
+   - BP/PNI has an accepted-reading layer: admin Save → Send stages BP changes, but displayed BP values, BP alarms, and BP Off update only after the outer-shell BP reading sequence completes without cancellation.
+   - After the BP reading completes, PNI settles to the stacked systolic/diastolic layout with the divider line; only the count-up phase uses a single systolic-style number.
+   - During active BP reading phases (Please Wait, Reading in Progress, and count-up), suppress only the BP alarm channel so PNI does not flash red/white and BP does not drive alarm audio; HR and SpO2 alarms remain active.
 7. `RightNavCluster` — 6 nav buttons (alarm, home, back, enter●, forward, camera)
 8. `BottomStatusBar` — "Mode Adult | 120 J Selected | ⚡ | 0"
 9. `DefibButtonRow` — ANALYSE | ▲▼ | CHARGE | SHOCK (styled, not wired)
@@ -218,6 +221,7 @@ paramedic-monitor/
    - Header/subbar reference controls include a combined date/time selectable region, patient-mode selectable region, beacon icon, selectable battery icon, a small minus rectangle beneath date/time, and a larger empty rectangle beside it.
    - The minus toggle hides or restores the bottom status/defib/CPR panel. When hidden, the main waveform area expands to show ECG, EtCO2, and SpO2 rows while the right vitals column stays unchanged.
    - Graph title metadata displays `SpO2 1x` and, when EtCO2 is visible, `EtCO2 0 to 60 mmHg`; this text does not change the internal EtCO2 renderer scale.
+   - The first EtCO2 toggle after monitor reset shows an 8-second half-opacity purple flat loading line before normal EtCO2 rendering; toggling away before completion restarts loading, while completed loads are skipped until the next monitor reset.
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
 11. Color reference: `#000000` bg, `#00ff41` ECG green, `#00ffff` cyan BP, `#cc44ff` purple EtCO2, `#ffff00` yellow SpO2
 12. `MonitorPage` render composition is kept separate from interaction state. Local monitor UI state
@@ -228,6 +232,9 @@ paramedic-monitor/
 **Testing:**
 - Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
 - Jumpscare removal tests cover former off-state rolls, boot-screen clips, alarm-ack Easter eggs, and battery-triggered overlays staying inactive while legitimate simulator cues remain available.
+- BP/EtCO2 tests cover staged BP commit/cancel/off behavior, BP alarm gating, EtCO2 loading/restart/reset behavior, and real-time event-log stamps for medications/analyze rows.
+- Settled PNI tests cover single-number counting, stacked sys/dia settled output, and partial-active BP display after completion.
+- BP alarm-suppression tests cover active NIBP suppression, cancel restore, completion restore, and HR/SpO2 alarms staying active during BP reading.
 - Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
 - Controller tests cover initial monitor state, selection toggling, patient-info draft/commit/cancel,
   12-lead capture timers, Back precedence, and power-off cleanup.

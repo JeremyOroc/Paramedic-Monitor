@@ -1,11 +1,25 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
+import { pauseAlarm, playAlarm } from '@/lib/audio'
 import { useMonitorStore } from '@/store/monitorStore'
 
 import MonitorPage from '../page'
+
+vi.mock('@/lib/audio', () => ({
+  pauseAlarm: vi.fn(),
+  playAlarm: vi.fn(),
+  setAudioMuted: vi.fn(),
+  playChargeBeep: vi.fn(),
+  pauseChargeBeep: vi.fn(),
+  playShockReadyBeep: vi.fn(),
+  pauseShockReadyBeep: vi.fn(),
+  playSystemAudio: vi.fn(),
+  playCprAudioSequence: vi.fn(),
+  stopCprAudioSequence: vi.fn(),
+}))
 
 vi.mock('@/components/monitor/DeviceShell', () => ({
   DeviceShell: ({
@@ -13,11 +27,22 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
     defib,
     softKeys,
     nav,
+    meds,
+    audio,
   }: {
     screen: ReactNode
     defib: { onAnalyse: () => void }
-    softKeys: { onLeftAnalyse: () => void; onToggleEtco2: () => void }
+    softKeys: {
+      onLeftAnalyse: () => void
+      onToggleEtco2: () => void
+      onTreatment: () => void
+    }
     nav: { onMoveUp: () => void; onMoveDown: () => void; onEnter: () => void }
+    meds?: {
+      onMedClick?: (name: string) => void
+      onMedInfo?: () => void
+    }
+    audio?: { onPatientEvent?: () => void }
   }) => (
     <div data-testid="device-shell">
       {screen}
@@ -29,6 +54,18 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
       </button>
       <button type="button" onClick={softKeys.onToggleEtco2}>
         Toggle EtCO2
+      </button>
+      <button type="button" onClick={softKeys.onTreatment}>
+        Treatment
+      </button>
+      <button type="button" onClick={() => meds?.onMedClick?.('O2')}>
+        Administer O2
+      </button>
+      <button type="button" onClick={meds?.onMedInfo}>
+        Med Info
+      </button>
+      <button type="button" onClick={audio?.onPatientEvent}>
+        Patient event
       </button>
       <button type="button" onClick={nav.onMoveUp}>
         Move up
@@ -83,8 +120,15 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
 
 describe('MonitorPage', () => {
   beforeEach(() => {
+    vi.useRealTimers()
+    vi.mocked(playAlarm).mockClear()
+    vi.mocked(pauseAlarm).mockClear()
     useMonitorStore.getState().reset()
     window.history.pushState({}, '', '/?dev=1') // bypass the dispatch lock gate
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('does not open caller info modal when ANALYZE is clicked', async () => {
@@ -290,8 +334,13 @@ describe('MonitorPage', () => {
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
   })
 
-  it('shows typed SpO2 number and selected SpO2 graph after save and send', () => {
+  it('holds sent BP values until a full NIBP reading completes', () => {
+    vi.useFakeTimers()
     act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
       useMonitorStore.getState().setDraft('hr', 150)
       useMonitorStore.getState().setDraft('bp_sys', 110)
       useMonitorStore.getState().setDraft('bp_dia', 70)
@@ -303,12 +352,75 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
 
     expect(screen.getByText('150')).toBeInTheDocument()
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByText('80')).toBeInTheDocument()
+    expect(screen.queryByText('110')).not.toBeInTheDocument()
+    expect(screen.queryByText('70')).not.toBeInTheDocument()
+    expect(screen.getByText('97')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+
     expect(screen.getByText('110')).toBeInTheDocument()
     expect(screen.getByText('70')).toBeInTheDocument()
+    expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 110, bp_dia: 70 })
+    vi.useRealTimers()
+  })
+
+  it('shows typed SpO2 number and selected SpO2 graph after save and send', () => {
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('hr', 150)
+      useMonitorStore.getState().setDraft('bp_sys', 110)
+      useMonitorStore.getState().setDraft('bp_dia', 70)
+      useMonitorStore.getState().setDraft('spo2', 97)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('150')).toBeInTheDocument()
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByText('80')).toBeInTheDocument()
+    expect(screen.queryByText('110')).not.toBeInTheDocument()
+    expect(screen.queryByText('70')).not.toBeInTheDocument()
     expect(screen.getByText('97')).toBeInTheDocument()
     expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
     expect(screen.getByText('live-spo2')).toBeInTheDocument()
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+  })
+
+  it('shows both BP numbers after a completed partial-active NIBP reading', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 130)
+      useMonitorStore.getState().setDraft('bp_dia', 85)
+      useMonitorStore.getState().setDraftVitalActive('bp_sys', false)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+
+    expect(screen.getByText('130')).toBeInTheDocument()
+    expect(screen.getByText('85')).toBeInTheDocument()
+    expect(useMonitorStore.getState().acceptedBpActive).toEqual({
+      bp_sys: false,
+      bp_dia: true,
+    })
+    vi.useRealTimers()
   })
 
   it('keeps typed EtCO2 graph hidden until the CO2 button selects EtCO2', async () => {
@@ -329,6 +441,190 @@ describe('MonitorPage', () => {
 
     expect(screen.getByText('live-etco2')).toBeInTheDocument()
     expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+  })
+
+  it('keeps old BP when the NIBP reading is cancelled', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 160)
+      useMonitorStore.getState().setDraft('bp_dia', 100)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+    act(() => { vi.advanceTimersByTime(3000) })
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByText('80')).toBeInTheDocument()
+    expect(screen.queryByText('160')).not.toBeInTheDocument()
+    expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 120, bp_dia: 80 })
+    vi.useRealTimers()
+  })
+
+  it('holds pending BP Off until a completed NIBP reading blanks PNI', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraftVitalActive('bp_sys', false)
+      useMonitorStore.getState().setDraftVitalActive('bp_dia', false)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByText('80')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+
+    expect(useMonitorStore.getState().acceptedBpActive).toEqual({ bp_sys: false, bp_dia: false })
+    const vitalValues = screen.getAllByTestId('vital-value').map((node) => node.textContent)
+    expect(vitalValues[1]).toBe('')
+    vi.useRealTimers()
+  })
+
+  it('uses the BP snapshot from reading start even if admin sends another BP mid-read', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 150)
+      useMonitorStore.getState().setDraft('bp_dia', 90)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+
+    act(() => {
+      useMonitorStore.getState().setDraft('bp_sys', 170)
+      useMonitorStore.getState().setDraft('bp_dia', 110)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+      vi.advanceTimersByTime(3000 + 500 + 8000 + 100)
+    })
+
+    expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 150, bp_dia: 90 })
+    vi.useRealTimers()
+  })
+
+  it('uses accepted BP, not pending BP, for alarm state', () => {
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 220)
+      useMonitorStore.getState().setDraft('bp_dia', 230)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+  })
+
+  it('suppresses only the BP alarm channel during active NIBP readings and restores it on cancel', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 220, bp_dia: 230 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 118)
+      useMonitorStore.getState().setDraft('bp_dia', 76)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(playAlarm).toHaveBeenCalled()
+
+    vi.mocked(playAlarm).mockClear()
+    vi.mocked(pauseAlarm).mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+    expect(pauseAlarm).toHaveBeenCalled()
+    expect(playAlarm).not.toHaveBeenCalled()
+
+    act(() => { vi.advanceTimersByTime(3000 + 500) })
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+
+    vi.mocked(playAlarm).mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(playAlarm).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('restores BP alarm behavior after a completed alarming NIBP reading', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 220)
+      useMonitorStore.getState().setDraft('bp_dia', 230)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(playAlarm).toHaveBeenCalled()
+    vi.useRealTimers()
+  })
+
+  it('keeps HR and SpO2 alarms active while BP alarm is suppressed during NIBP', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 220, bp_dia: 230 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('hr', 150)
+      useMonitorStore.getState().setDraft('spo2', 80)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+    vi.mocked(playAlarm).mockClear()
+    vi.mocked(pauseAlarm).mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
+
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+    expect(pauseAlarm).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 
   it('distinguishes inactive 0 from active 0 for alarms', () => {
@@ -419,6 +715,97 @@ describe('MonitorPage', () => {
     expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
     expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
+  })
+
+  it('shows EtCO2 loading on first toggle and only marks it loaded after 8 seconds', () => {
+    vi.useFakeTimers()
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(screen.getByText('showing-etco2')).toBeInTheDocument()
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(7999) })
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(screen.queryByText('etco2-loading')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(screen.queryByText('etco2-loading')).not.toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('restarts EtCO2 loading if toggled away before completion', () => {
+    vi.useFakeTimers()
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    act(() => { vi.advanceTimersByTime(3000) })
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(screen.queryByText('etco2-loading')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+    act(() => { vi.advanceTimersByTime(7999) })
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('makes EtCO2 load again after monitor reset', () => {
+    vi.useFakeTimers()
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    act(() => { vi.advanceTimersByTime(8000) })
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(screen.queryByText('etco2-loading')).not.toBeInTheDocument()
+
+    act(() => useMonitorStore.getState().resetMonitorVitals())
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('stamps medication events with real Eastern time instead of session time', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-15T18:30:45Z'))
+    render(<MonitorPage />)
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Treatment' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Administer O2' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Med Info' }))
+    })
+
+    expect(screen.getAllByText('O2').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('13:30:45').length).toBeGreaterThan(0)
+    expect(screen.queryByText('00:00')).not.toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('stamps analyze event rows with real Eastern time', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-15T18:30:45Z'))
+    act(() => {
+      useMonitorStore.getState().setDraft('rhythm', 'nsr')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+    render(<MonitorPage />)
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
+    })
+    act(() => { vi.advanceTimersByTime(5000) })
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Med Info' }))
+    })
+
+    expect(screen.getByText('Analyze - No Shock')).toBeInTheDocument()
+    expect(screen.getAllByText('13:30:50').length).toBeGreaterThan(0)
+    vi.useRealTimers()
   })
 
   it('cycles to the bottom status toggle in reverse and hides the bottom panel on enter', async () => {
