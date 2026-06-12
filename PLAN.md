@@ -99,6 +99,7 @@ paramedic-monitor/
 │   │   │   ├── SessionHeader.tsx     # session code display + student count
 │   │   │   ├── VitalsControls.tsx    # vital inputs + Send button
 │   │   │   ├── VitalInput.tsx        # input with pending-color state
+│   │   │   ├── PatientInformationPanel.tsx # SAMPLE/OPQRST local checklist tab
 │   │   │   ├── SendButton.tsx        # broadcasts + inserts snapshot
 │   │   │   ├── RhythmSelector.tsx    # 3-category expandable tree
 │   │   │   ├── RhythmCategory.tsx
@@ -426,6 +427,12 @@ button is inert until a drill gate is satisfied.
 - Admin vital number inputs clear a visible `0` on focus for FC, SpO2, BP sys,
   BP dia, and EtCO2. This is visual only until typing; blur restores untouched
   zeroes, and non-zero values stay visible on focus.
+- The admin dashboard includes a third `Patient Information` tab with two
+  square SAMPLE and OPQRST checklist panels. Letter buttons render as compact
+  left-aligned vertical columns, toggle an ECG-green selected state
+  independently, stay local to the admin page session, survive tab switching
+  while the page remains mounted, and do not use Save/Send or update the
+  trainee monitor.
 - Admin vitals are ordered FC → SpO2 → BP sys/dia → EtCO2. The ECG graph/rhythm
   control sits to the right of FC. SpO2 and EtCO2 do not render right-side graph
   controls; their left-side vital On/Off toggles stage both numeric active state
@@ -453,7 +460,8 @@ button is inert until a drill gate is satisfied.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
   vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
-  countdown, milestone logs, and monitor vitals.
+  countdown, milestone logs, and monitor vitals. On the Patient Information tab,
+  Reset clears only the local SAMPLE/OPQRST checklist selections.
 - Gate state is persisted (store version 7; countdown stored as an absolute
   end-timestamp, response timer stored as an absolute start timestamp, and a
   per-dispatch run id) so a mid-drill refresh resumes and repeated reset/re-arm

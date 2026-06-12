@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-06-11] [instructor] — Add caller info auto-sort paste box
+
+- Added an admin Caller Info paste box that parses labelled lines into the existing draft fields.
+- Supports French and English aliases for priority code, address, problem, information, update, and time.
+- Preserved Save → Send behavior; auto-sort updates drafts only until the instructor saves and sends.
+
+## [2026-06-11] [instructor] — Compact patient information checklist buttons
+
+- Changed SAMPLE and OPQRST letter buttons from large two-row grids to compact vertical columns.
+- Kept the existing page-only green toggle behavior and independent checklist selections.
+- Added coverage for the compact left-aligned checklist layout.
+
+## [2026-06-11] [instructor] — Add admin patient information checklist
+
+- Added a third admin tab, `Patient Information`, beside Monitor and Caller Info.
+- Added page-only SAMPLE and OPQRST checklist panels with independent green letter toggles.
+- Kept selections local to the admin page session and added focused page/component coverage.
+
 ## [2026-06-11] [monitor] — Add SpO2 pulse fill icon
 
 - Added a yellow outlined pulse-fill bar beside numeric SpO2 values in the monitor vital box.

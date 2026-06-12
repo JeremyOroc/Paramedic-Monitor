@@ -34,6 +34,16 @@
   - [x] Numeric SpO2 values render a small yellow outlined fill bar beside the number
   - [x] Fill animation samples the selected SpO2 pleth waveform shape and timing
   - [x] SpO2 OFF/disconnected state does not render the pulse icon
+- [x] **Admin patient information checklist — COMPLETE:**
+  - [x] Added a third admin tab named Patient Information
+  - [x] Added side-by-side Sample and OPQRST square checklist panels
+  - [x] Letter buttons toggle an ECG-green selected state independently
+  - [x] Letter buttons now render as compact left-aligned vertical columns
+  - [x] Checklist state is page-only, survives tab switching during the session, and does not use Save/Send
+- [x] **Caller info auto-sort paste box — COMPLETE:**
+  - [x] Added an admin-only auto-sort textarea above the Caller Info fields
+  - [x] Labelled French/English lines fill the six main caller-info draft fields
+  - [x] Matching fields overwrite immediately while preserving the existing Save → Send workflow
 - [x] Zoll X Series UI reference documented (`screenshots/SCREENSHOTS_SUMMARY.md`)
 - [x] Architecture designed (layers, component tree, state, realtime, ECG strategy)
 - [x] `PLAN.md` — full development plan with 11 phases

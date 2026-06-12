@@ -1,7 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 
+import {
+  CALLER_INFO_AUTO_SORT_FIELDS,
+  parseCallerInfoAutoSort,
+} from '@/lib/callerInfoAutoSort'
 import { cn } from '@/lib/utils'
 import { useMonitorStore } from '@/store/monitorStore'
 
@@ -39,9 +43,23 @@ export function CallerInfoForm() {
   const setDispatchMinutes = useMonitorStore((s) => s.setDispatchMinutes)
   const setDispatchSeconds = useMonitorStore((s) => s.setDispatchSeconds)
   const dispatchArmed = useMonitorStore((s) => s.dispatch.armed)
+  const [autoSortText, setAutoSortText] = useState('')
   const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
   const visibleExtraFields = EXTRA_FIELDS.slice(0, extraCount)
   const extraLimitReached = extraCount >= EXTRA_FIELDS.length
+
+  const handleAutoSortChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const nextText = event.target.value
+    setAutoSortText(nextText)
+    const parsed = parseCallerInfoAutoSort(nextText)
+
+    for (const field of CALLER_INFO_AUTO_SORT_FIELDS) {
+      const value = parsed[field]
+      if (value !== undefined) {
+        setCallerInfoDraft(field, value)
+      }
+    }
+  }
 
   return (
     <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
@@ -50,6 +68,19 @@ export function CallerInfoForm() {
         <span className="text-xs uppercase tracking-wider text-neutral-600">Analyse</span>
       </div>
       <div className="grid gap-3">
+        <label className="grid gap-1">
+          <span className="text-xs uppercase tracking-wider text-neutral-400">
+            Auto-sort caller info
+          </span>
+          <textarea
+            value={autoSortText}
+            onChange={handleAutoSortChange}
+            aria-label="Auto-sort caller info"
+            rows={5}
+            placeholder="Adresse:&#10;Probleme:&#10;Information:&#10;Mise a jour:&#10;Heure:"
+            className="min-h-28 resize-y border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+          />
+        </label>
         <div className="grid gap-1">
           <span className="text-xs uppercase tracking-wider text-neutral-400">
             Dispatch countdown

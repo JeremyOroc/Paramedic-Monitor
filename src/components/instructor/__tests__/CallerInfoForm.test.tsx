@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
@@ -15,6 +15,7 @@ describe('CallerInfoForm', () => {
     render(<CallerInfoForm />)
 
     expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Auto-sort caller info')).toBeInTheDocument()
     expect(screen.getByLabelText('Intervention prioritaire code')).toBeInTheDocument()
     expect(screen.getByLabelText('Adresse')).toBeInTheDocument()
     expect(screen.getByLabelText('Probleme')).toBeInTheDocument()
@@ -34,6 +35,67 @@ describe('CallerInfoForm', () => {
 
     expect(useMonitorStore.getState().callerInfoDraft.address).toBe('123 Rue Principale')
     expect(useMonitorStore.getState().callerInfoDraft.problem).toBe('Douleur thoracique')
+  })
+
+  it('auto-sorts labelled paste text into the main caller info draft fields', () => {
+    render(<CallerInfoForm />)
+
+    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+      target: {
+        value: [
+          'Code: P1',
+          'Adresse: 123 Rue Principale',
+          'Probleme: Douleur thoracique',
+          'Information: Patient conscient',
+          'Mise a jour: Police sur place',
+          'Heure: 14:35',
+        ].join('\n'),
+      },
+    })
+
+    const draft = useMonitorStore.getState().callerInfoDraft
+    expect(draft.interventionPriorityCode).toBe('P1')
+    expect(draft.address).toBe('123 Rue Principale')
+    expect(draft.problem).toBe('Douleur thoracique')
+    expect(draft.information).toBe('Patient conscient')
+    expect(draft.update).toBe('Police sur place')
+    expect(draft.time).toBe('14:35')
+  })
+
+  it('auto-sort overwrites matching fields without creating extra rows', () => {
+    useMonitorStore.getState().setCallerInfoDraft('address', 'Old address')
+    useMonitorStore.getState().setCallerInfoDraft('problem', 'Old problem')
+    render(<CallerInfoForm />)
+
+    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+      target: {
+        value: [
+          'Address: 456 Avenue Centrale',
+          'Problem: Difficult breathing',
+          'Access: Side door',
+        ].join('\n'),
+      },
+    })
+
+    const draft = useMonitorStore.getState().callerInfoDraft
+    expect(draft.address).toBe('456 Avenue Centrale')
+    expect(draft.problem).toBe('Difficult breathing')
+    expect(draft.extra1Label).toBe('')
+    expect(draft.extra1).toBe('')
+    expect(screen.queryByLabelText('Extra 1 title')).toBeNull()
+  })
+
+  it('auto-sort updates draft only before Save', () => {
+    render(<CallerInfoForm />)
+
+    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+      target: { value: 'Adresse: 123 Rue Principale' },
+    })
+
+    const state = useMonitorStore.getState()
+    expect(state.callerInfoDraft.address).toBe('123 Rue Principale')
+    expect(state.callerInfoSaved.address).toBe('')
+    expect(state.callerInfoConfirmed.address).toBe('')
   })
 
   it('lets the instructor name the extra caller info rows', async () => {
