@@ -14,31 +14,53 @@ const baseProps = {
 }
 
 describe('WaveformPanel', () => {
-  it('renders disconnected dotted traces for each disabled graph channel', () => {
+  it('shows selected SpO2 in normal mode when SpO2 is on', () => {
     render(
       <WaveformPanel
         {...baseProps}
-        rhythm="off"
-        spo2Waveform="off"
         etco2Waveform="off"
-        showAllSecondaryChannels
       />,
     )
 
-    const channels = screen
-      .getAllByTestId('disconnected-waveform')
-      .map((node) => node.getAttribute('data-channel'))
-    expect(channels).toEqual(['ecg', 'etco2', 'spo2'])
-
-    expect(screen.getAllByTestId('disconnected-dash-line')[0].style.backgroundImage)
-      .toContain('20px 34px')
+    expect(screen.getByText('SpO2')).toBeInTheDocument()
+    expect(screen.queryByText('EtCO2')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
   })
 
-  it('keeps enabled channels live while disabled channels stay dotted', () => {
+  it('shows selected EtCO2 in normal mode when EtCO2 is on', () => {
+    render(
+      <WaveformPanel
+        {...baseProps}
+        secondaryChannel="etco2"
+        spo2Waveform="off"
+      />,
+    )
+
+    expect(screen.getByText('EtCO2')).toBeInTheDocument()
+    expect(screen.queryByText('SpO2')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
+  })
+
+  it('hides the normal secondary row when selected channel is off and the other is on', () => {
+    render(
+      <WaveformPanel
+        {...baseProps}
+        secondaryChannel="etco2"
+        etco2Waveform="off"
+      />,
+    )
+
+    expect(screen.queryByText('SpO2')).not.toBeInTheDocument()
+    expect(screen.queryByText('EtCO2')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
+  })
+
+  it('shows selected disconnected trace in normal mode when both secondary channels are off', () => {
     render(
       <WaveformPanel
         {...baseProps}
         spo2Waveform="off"
+        etco2Waveform="off"
       />,
     )
 
@@ -46,5 +68,26 @@ describe('WaveformPanel', () => {
       .getAllByTestId('disconnected-waveform')
       .map((node) => node.getAttribute('data-channel'))
     expect(channels).toEqual(['spo2'])
+    expect(screen.getByText('SpO2')).toBeInTheDocument()
+    expect(screen.queryByText('EtCO2')).not.toBeInTheDocument()
+  })
+
+  it('shows both secondary rows in expanded mode and uses dashed traces for off rows', () => {
+    render(
+      <WaveformPanel
+        {...baseProps}
+        etco2Waveform="off"
+        showAllSecondaryChannels
+      />,
+    )
+
+    expect(screen.getByText('EtCO2')).toBeInTheDocument()
+    expect(screen.getByText('SpO2')).toBeInTheDocument()
+    expect(screen.getByText('EtCO2').compareDocumentPosition(screen.getByText('SpO2')))
+      .toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    const channels = screen
+      .getAllByTestId('disconnected-waveform')
+      .map((node) => node.getAttribute('data-channel'))
+    expect(channels).toEqual(['etco2'])
   })
 })

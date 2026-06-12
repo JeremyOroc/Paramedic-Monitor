@@ -59,6 +59,36 @@ describe('VitalInput', () => {
     )
   })
 
+  it('typing SpO2 connects the SpO2 graph in draft state', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="spo2" label="SpO2" unit="%" />)
+    const input = screen.getByLabelText('SpO2') as HTMLInputElement
+
+    await user.click(input)
+    await user.type(input, '98')
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.spo2).toBe(98)
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draft.etco2_waveform).toBe('off')
+  })
+
+  it('typing EtCO2 connects the EtCO2 graph in draft state', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="etco2" label="EtCO2" unit="mmHg" />)
+    const input = screen.getByLabelText('EtCO2') as HTMLInputElement
+
+    await user.click(input)
+    await user.type(input, '35')
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.etco2).toBe(35)
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.draft.spo2_waveform).toBe('off')
+  })
+
   it('shows pending status after save', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" />)

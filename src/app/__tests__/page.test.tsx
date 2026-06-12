@@ -16,7 +16,7 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
   }: {
     screen: ReactNode
     defib: { onAnalyse: () => void }
-    softKeys: { onLeftAnalyse: () => void }
+    softKeys: { onLeftAnalyse: () => void; onToggleEtco2: () => void }
     nav: { onMoveUp: () => void; onMoveDown: () => void; onEnter: () => void }
   }) => (
     <div data-testid="device-shell">
@@ -26,6 +26,9 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
       </button>
       <button type="button" onClick={softKeys.onLeftAnalyse}>
         Call Info (sidebar)
+      </button>
+      <button type="button" onClick={softKeys.onToggleEtco2}>
+        Toggle EtCO2
       </button>
       <button type="button" onClick={nav.onMoveUp}>
         Move up
@@ -42,24 +45,40 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
 
 vi.mock('@/components/monitor/WaveformPanel', () => ({
   WaveformPanel: ({
+    secondaryChannel,
     showAllSecondaryChannels,
     rhythm,
     spo2Waveform,
     etco2Waveform,
   }: {
+    secondaryChannel?: 'spo2' | 'etco2'
     showAllSecondaryChannels?: boolean
     rhythm?: string
     spo2Waveform?: string
     etco2Waveform?: string
-  }) => (
-    <div>
-      Waveform panel
-      <span>{rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}</span>
-      <span>{spo2Waveform !== 'off' ? 'live-spo2' : 'disconnected-spo2'}</span>
-      <span>{etco2Waveform !== 'off' ? 'live-etco2' : 'disconnected-etco2'}</span>
-      {showAllSecondaryChannels && <span>expanded-waveforms</span>}
-    </div>
-  ),
+  }) => {
+    const selected = secondaryChannel ?? 'spo2'
+    const selectedWaveform = selected === 'etco2' ? etco2Waveform : spo2Waveform
+    const bothSecondaryOff = spo2Waveform === 'off' && etco2Waveform === 'off'
+
+    return (
+      <div>
+        Waveform panel
+        <span>{rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}</span>
+        {showAllSecondaryChannels ? (
+          <>
+            <span>{etco2Waveform !== 'off' ? 'live-etco2' : 'disconnected-etco2'}</span>
+            <span>{spo2Waveform !== 'off' ? 'live-spo2' : 'disconnected-spo2'}</span>
+            <span>expanded-waveforms</span>
+          </>
+        ) : selectedWaveform !== 'off' ? (
+          <span>{selected === 'etco2' ? 'live-etco2' : 'live-spo2'}</span>
+        ) : bothSecondaryOff ? (
+          <span>{selected === 'etco2' ? 'disconnected-etco2' : 'disconnected-spo2'}</span>
+        ) : null}
+      </div>
+    )
+  },
 }))
 
 describe('MonitorPage', () => {
@@ -267,10 +286,11 @@ describe('MonitorPage', () => {
     expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
     expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
     expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
-    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
   })
 
-  it('shows vital numbers after vitals are saved and sent while graphs remain disconnected', () => {
+  it('shows typed SpO2 number and selected SpO2 graph after save and send', () => {
     act(() => {
       useMonitorStore.getState().setDraft('hr', 150)
       useMonitorStore.getState().setDraft('bp_sys', 110)
@@ -287,6 +307,28 @@ describe('MonitorPage', () => {
     expect(screen.getByText('70')).toBeInTheDocument()
     expect(screen.getByText('97')).toBeInTheDocument()
     expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
+    expect(screen.getByText('live-spo2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+  })
+
+  it('keeps typed EtCO2 graph hidden until the CO2 button selects EtCO2', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setDraft('etco2', 35)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('35')).toBeInTheDocument()
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+
+    expect(screen.getByText('live-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
   })
 
   it('distinguishes inactive 0 from active 0 for alarms', () => {
@@ -319,10 +361,10 @@ describe('MonitorPage', () => {
     )
   })
 
-  it('can show only selected live graph channels after non-off options are saved and sent', () => {
+  it('shows selected SpO2 graph after the SpO2 vital toggle is saved and sent', () => {
     act(() => {
       useMonitorStore.getState().setDraft('rhythm', 'nsr')
-      useMonitorStore.getState().setDraft('spo2_waveform', 'normal')
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -331,7 +373,52 @@ describe('MonitorPage', () => {
 
     expect(screen.getByText('live-ecg')).toBeInTheDocument()
     expect(screen.getByText('live-spo2')).toBeInTheDocument()
-    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+  })
+
+  it('uses the CO2 soft key to switch the single secondary graph slot to EtCO2', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setDraft('spo2', 97)
+      useMonitorStore.getState().setDraft('etco2', 35)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('live-spo2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+
+    expect(screen.getByText('live-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+  })
+
+  it('hides live secondary graphs after their vital toggles are turned off and sent', () => {
+    act(() => {
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
+      useMonitorStore.getState().setDraftVitalActive('etco2', true)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('live-spo2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+
+    act(() => {
+      useMonitorStore.getState().setDraftVitalActive('spo2', false)
+      useMonitorStore.getState().setDraftVitalActive('etco2', false)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+    expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
   })
 
   it('cycles to the bottom status toggle in reverse and hides the bottom panel on enter', async () => {
@@ -344,6 +431,8 @@ describe('MonitorPage', () => {
 
     expect(screen.queryByText('APPL ELECT.')).not.toBeInTheDocument()
     expect(screen.getByText('expanded-waveforms')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Toggle bottom status panel' })).toHaveClass(
       'bg-[var(--color-selection-blue)]',
       'text-white',

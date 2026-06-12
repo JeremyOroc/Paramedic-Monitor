@@ -35,6 +35,11 @@ export function WaveformPanel({
   const ecgConnected = rhythm !== 'off'
   const spo2Connected = spo2Waveform !== 'off'
   const etco2Connected = etco2Waveform !== 'off'
+  const selectedSecondaryConnected =
+    secondaryChannel === 'etco2' ? etco2Connected : spo2Connected
+  const bothSecondaryOff = !spo2Connected && !etco2Connected
+  const normalSecondaryChannel =
+    selectedSecondaryConnected || bothSecondaryOff ? secondaryChannel : null
   const ecgLabel = (
     <div className="absolute top-1 left-2 z-10 flex items-center gap-16 text-xs font-mono font-bold text-ecg-green">
       <span className={cn('px-1 py-0.5', selected === 'padsLabel' && 'bg-[var(--color-selection-blue)] text-white')}>
@@ -48,7 +53,7 @@ export function WaveformPanel({
 
   if (showAllSecondaryChannels) {
     return (
-      <div className="h-full w-full grid grid-rows-[1.05fr_1fr_0.78fr] bg-black">
+      <div className="grid h-full w-full grid-rows-[1.05fr_1fr_0.78fr] bg-black">
         <div className="relative min-h-0 border-b border-neutral-800">
           {ecgLabel}
           <ECGCanvas
@@ -89,8 +94,18 @@ export function WaveformPanel({
   }
 
   return (
-    <div className="h-full w-full flex flex-col bg-black">
-      <div className="relative flex-1 min-h-0 border-b border-neutral-800">
+    <div
+      className={cn(
+        'grid h-full w-full bg-black',
+        normalSecondaryChannel ? 'grid-rows-2' : 'grid-rows-1',
+      )}
+    >
+      <div
+        className={cn(
+          'relative min-h-0',
+          normalSecondaryChannel && 'border-b border-neutral-800',
+        )}
+      >
         {ecgLabel}
         <ECGCanvas
           rhythm={rhythm}
@@ -104,19 +119,21 @@ export function WaveformPanel({
           </div>
         )}
       </div>
-      <div className="relative flex-1 min-h-0">
-        <SecondaryChannel
-          channel={secondaryChannel}
-          hr={hr}
-          spo2={spo2}
-          etco2={etco2}
-          spo2Waveform={spo2Waveform}
-          etco2Waveform={etco2Waveform}
-          selectedLabel={selected === `${secondaryChannel}Label`}
-          selectedScale={selected === `${secondaryChannel}Scale`}
-          connected={secondaryChannel === 'etco2' ? etco2Connected : spo2Connected}
-        />
-      </div>
+      {normalSecondaryChannel && (
+        <div className="relative min-h-0">
+          <SecondaryChannel
+            channel={normalSecondaryChannel}
+            hr={hr}
+            spo2={spo2}
+            etco2={etco2}
+            spo2Waveform={spo2Waveform}
+            etco2Waveform={etco2Waveform}
+            selectedLabel={selected === `${normalSecondaryChannel}Label`}
+            selectedScale={selected === `${normalSecondaryChannel}Scale`}
+            connected={selectedSecondaryConnected}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -34,6 +34,27 @@
   - [x] Numeric SpO2 values render a small yellow outlined fill bar beside the number
   - [x] Fill animation samples the selected SpO2 pleth waveform shape and timing
   - [x] SpO2 OFF/disconnected state does not render the pulse icon
+- [x] **Monitor SpO2/EtCO2 graph visibility — COMPLETE:**
+  - [x] Normal monitor mode shows one secondary graph slot at a time
+  - [x] The CO2 soft key switches the secondary graph slot between SpO2 and EtCO2
+  - [x] Typing SpO2 or EtCO2 numbers in admin stages the matching graph connection for Save → Send
+  - [x] Bottom-panel-hidden expanded mode shows both SpO2 and EtCO2 rows, with Off rows disconnected
+- [x] **Admin patient information checklist — COMPLETE:**
+  - [x] Added a third admin tab named Patient Information
+  - [x] Added side-by-side Sample and OPQRST square checklist panels
+  - [x] Letter buttons toggle an ECG-green selected state independently
+  - [x] Letter buttons now render as compact left-aligned vertical columns
+  - [x] Each letter has a page-only text input beside it for SAMPLE/OPQRST notes
+  - [x] Added an auto-sort textarea that fills `Letter: value` notes, routing repeated S/P labels to SAMPLE first and OPQRST second
+  - [x] Checklist and text state is page-only, survives tab switching during the session, and does not use Save/Send
+- [x] **Caller info auto-sort paste box — COMPLETE:**
+  - [x] Added an admin-only auto-sort textarea above the Caller Info fields
+  - [x] Labelled French/English lines fill the six main caller-info draft fields, including label-on-next-line and dash-separated formats
+  - [x] Added Call #, Priority, and MPDS Code fields that appear on admin and trainee caller-info views after Save → Send
+  - [x] Dispatch-format labels map into their matching fields, with patient/details/units combined into Information
+  - [x] Removed the legacy Intervention prioritaire code field and reordered Caller Info so Dispatch countdown appears before Call / Priority / MPDS
+  - [x] Assignment caller-info screen keeps the large Priority badge without a duplicate Priority details row
+  - [x] Matching fields overwrite immediately while preserving the existing Save → Send workflow
 - [x] Zoll X Series UI reference documented (`screenshots/SCREENSHOTS_SUMMARY.md`)
 - [x] Architecture designed (layers, component tree, state, realtime, ECG strategy)
 - [x] `PLAN.md` — full development plan with 11 phases
@@ -189,7 +210,7 @@
   - [x] While the reprint is up only Back works (`captureLock` extended with `printPreviewOpen`); Back dismisses it; sidebar PRINT label highlights while open
   - [x] Tests: `printFlow` (inert with no capture, reprint + Back dismiss + lock-to-Back, forgotten after power cycle), `DeviceShell` printer key fires `onPrint`
 - [x] **Caller info on ANALYZE — COMPLETE:**
-  - [x] Admin dashboard includes a separate Caller Info tab with fields: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button capped at three optional title/input rows
+  - [x] Admin dashboard includes a separate Caller Info tab with fields: Dispatch countdown, Call #, Priority, MPDS Code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button capped at three optional title/input rows
   - [x] Caller info uses draft/saved/confirmed state and the existing Save → Send workflow
   - [x] Monitor shows the sent caller info when the bottom physical ANALYZE button is clicked
   - [x] Left-side menu ANALYSE soft key (and matching physical left soft key) opens caller info modal only; it does not start the defib analyze sequence
