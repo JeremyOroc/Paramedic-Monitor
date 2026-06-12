@@ -99,6 +99,7 @@ paramedic-monitor/
 │   │   │   ├── SessionHeader.tsx     # session code display + student count
 │   │   │   ├── VitalsControls.tsx    # vital inputs + Send button
 │   │   │   ├── VitalInput.tsx        # input with pending-color state
+│   │   │   ├── PatientInformationPanel.tsx # SAMPLE/OPQRST local checklist tab
 │   │   │   ├── SendButton.tsx        # broadcasts + inserts snapshot
 │   │   │   ├── RhythmSelector.tsx    # 3-category expandable tree
 │   │   │   ├── RhythmCategory.tsx
@@ -304,9 +305,9 @@ snapshot of the current state. Confirmed behavior:
 
 **Steps:**
 1. `InstructorLayout` — dark panel, responsive columns
-2. `VitalsControls` + `VitalInput` — inputs for HR, BP sys/dia, EtCO2, SpO2
+2. `VitalsControls` + `VitalInput` — inputs ordered FC, SpO2, BP sys/dia, EtCO2
    - Include a top-of-vitals `Normal` button that resets draft vital numbers to normal defaults while preserving rhythm/waveform selections and the Save → Send workflow
-   - Include `CallerInfoForm` in its own admin tab for dispatch/caller info shown on the monitor after ANALYZE: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button that reveals up to three optional title/input extra rows
+   - Include `CallerInfoForm` in its own admin tab for dispatch/caller info shown on the monitor after ANALYZE: Dispatch countdown, Call #, Priority, MPDS Code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button that reveals up to three optional title/input extra rows
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
 4. On input change → set `pendingFlags[field] = true` → field turns amber/orange (pending color)
 5. `SendButton` — sets `pendingFlags` all false, sets `confirmedVitals = draftVitals`
@@ -401,6 +402,9 @@ button is inert until a drill gate is satisfied.
   auto-enters the Zoll, including after admin Reset and a second dispatch run.
   Transport is enabled only after power-on. Acknowledge/Arrival/Transport stamp
   **EST** wall-clock time and are merged into the event log with meds/shocks.
+- On the assignment-style caller-info iPad, **Response Timer** counts up from the
+  first dispatch Send while **ETA** counts down to the configured dispatch
+  countdown. They are separate values and must not mirror each other.
 - The locked caller-info screen no longer renders inside the Zoll monitor shell.
   Before Arrival, caller info takes over the full browser page as a separate
   iPad-style dispatch surface, so the Zoll is not visible. After Arrival, the
@@ -423,22 +427,83 @@ button is inert until a drill gate is satisfied.
   state. Admin vital rows expose a right-side toggle; clicking anywhere in that
   toggle rectangle flips the specific vital Off/On. Stored `0` values are hidden
   and silent while Off, but are real alarmable values once that vital is On and
-  sent through the existing Save → Send flow.
-- ECG, SpO2, and EtCO2 graphs start/reset as spaced dashed disconnected traces through
-  their `Off` selector options. The admin independently makes each graph live by
-  choosing a non-Off ECG/SpO2/EtCO2 option, and those choices use the same Save →
-  Send flow as other monitor fields.
+  sent through the existing Save → Send flow. Admin number fields use narrow,
+  right-aligned console slots with the unit label embedded inside the field. On
+  the monitor, SpO2 uses a slightly smaller value font, with a smaller `SpO2 OFF`
+  disconnected display for fit.
+- Admin vital number inputs clear a visible `0` on focus for FC, SpO2, BP sys,
+  BP dia, and EtCO2. This is visual only until typing; blur restores untouched
+  zeroes, and non-zero values stay visible on focus.
+- The admin Vitals panel includes an auto-sort textarea for labelled FC/HR,
+  SpO2/saturation, BP/TA, and EtCO2/CO2 text. It updates only matched draft
+  vitals, supports combined BP values like `BP: 186/102` or `BP: 95/60`
+  plus separate systolic/diastolic labels, and keeps Save → Send unchanged.
+- The admin Caller Info tab is ordered as auto-sort paste box, Dispatch
+  countdown, Call # / Priority / MPDS Code, main caller-info fields, then
+  optional extras. It parses
+  labelled French/English dispatch text, including `Label: value`,
+  `Label - value`, and label-on-next-line formats. `CALL #`, `PRIORITY`, and
+  `MPDS CODE` fill the new fields; `ADDRESS`, `CHIEF COMPLAINT`, `STATUS`, and
+  `TIME RECEIVED` fill Adresse, Probleme, Mise a jour, and Heure; `PATIENT`,
+  `DETAILS`, and `UNITS ASSIGNED` combine into Information with headings.
+  Legacy `Intervention prioritaire code` / `Code` labels are ignored. Matching
+  fields overwrite immediately in draft state, optional extras are ignored, and
+  trainees only see changes after the normal Save → Send flow.
+- The admin dashboard includes a third `Patient Information` tab with two
+  square SAMPLE and OPQRST checklist panels. Each letter has a compact
+  left-aligned toggle button plus a text input. An auto-sort textarea parses
+  `Letter: value` lines into those text inputs, with repeated `S` and `P`
+  labels filling SAMPLE first and OPQRST second. Green letter selection remains
+  manual only. Text and selections stay local to the admin page session, survive
+  tab switching while the page remains mounted, and do not use Save/Send or
+  update the trainee monitor.
+- Admin vitals are ordered FC → SpO2 → BP sys/dia → EtCO2. The ECG graph/rhythm
+  control sits to the right of FC. SpO2 and EtCO2 do not render right-side graph
+  controls; their left-side vital On/Off toggles stage both numeric active state
+  and graph connection state.
+- ECG rhythm selection stays compact by default, showing the current rhythm and a
+  `Rhythm Options` button. Opening the picker shows category buttons for `NSR`,
+  `Cardiac Arrest`, `Heart Block`, `Bundle Branch Block`, and `MI`, then shows
+  only the selected category's options underneath using the same button style as
+  SpO2 and EtCO2. Current options are `NSR` under NSR and
+  VF/VT/Asystole/Torsades under Cardiac Arrest; Heart Block, Bundle Branch Block,
+  and MI show empty placeholders until rhythms are added.
+- ECG, SpO2, and EtCO2 graphs start/reset as spaced dashed disconnected traces.
+  The graph connection state uses the same Off/On toggle treatment as numeric
+  vitals instead of duplicate `Off` option buttons. Switching a graph On selects
+  its default connected waveform/rhythm, and connected waveform/rhythm choices
+  still use the same Save → Send flow as other monitor fields.
+- Admin SpO2 and EtCO2 graph controls are built into the left-side vital toggles:
+  On stages `normal`, Off stages `off`, and both continue through the normal
+  Save → Send draft workflow. ECG graph controls do not display a visible
+  `dirty` badge after local changes, and can still show `pending` after Save.
+- Typing a SpO2 or EtCO2 numeric value also stages that vital active and sets
+  its waveform to `normal`, including typed `0`; HR and BP numeric edits do not
+  change waveform fields.
+- Monitor SpO2 numeric vital values include a small yellow outlined vertical
+  pulse-fill icon beside the number. The fill samples the selected SpO2 pleth
+  waveform shape using the same pulse timing as the SpO2 graph, and is hidden
+  when SpO2 is disconnected or displaying `SpO2 OFF`.
+- Monitor secondary waveform rows follow confirmed waveform state after
+  Save → Send while normal monitor mode shows only one secondary graph slot at
+  a time. The CO2 soft key switches that slot between SpO2 and EtCO2. If the
+  selected secondary channel is Off while the other is On, no secondary row is
+  shown; if both are Off, the selected channel shows a disconnected trace.
+  Bottom-panel-hidden expanded mode shows both EtCO2 and SpO2 rows, with Off
+  rows disconnected.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
   vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
-  countdown, milestone logs, and monitor vitals.
+  countdown, milestone logs, and monitor vitals. On the Patient Information tab,
+  Reset clears only the local SAMPLE/OPQRST checklist selections.
 - Gate state is persisted (store version 7; countdown stored as an absolute
-  end-timestamp, with a per-dispatch run id) so a mid-drill refresh resumes and
-  repeated reset/re-arm scenarios do not reuse the previous Go to Monitor state.
-  `?dev=1` bypasses the gate.
-- New: `useCountdown` hook, `formatEstTime` util, store dispatch slice; caller-event
-  state moved from `useMonitorController` into the store; controller gained an
-  `initialPoweredOn` option.
+  end-timestamp, response timer stored as an absolute start timestamp, and a
+  per-dispatch run id) so a mid-drill refresh resumes and repeated reset/re-arm
+  scenarios do not reuse the previous Go to Monitor state. `?dev=1` bypasses the
+  gate.
+- New: `useCountdown` and `useElapsedTimer` hooks, `formatEstTime` util, store
+  dispatch slice; caller-event state moved from `useMonitorController` into the
+  store; controller gained an `initialPoweredOn` option.
 
 ---
 

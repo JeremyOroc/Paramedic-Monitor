@@ -138,6 +138,54 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.hr).toBe(160)
   })
 
+  it('SpO2 and EtCO2 numeric edits stage their matching graph connection state', () => {
+    useMonitorStore.getState().setDraft('spo2', 98)
+    useMonitorStore.getState().setDraft('etco2', 35)
+
+    let s = useMonitorStore.getState()
+    expect(s.draft.spo2).toBe(98)
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draft.etco2).toBe(35)
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.saved.spo2_waveform).toBe('off')
+    expect(s.confirmed.etco2_waveform).toBe('off')
+
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    s = useMonitorStore.getState()
+    expect(s.confirmed.spo2).toBe(98)
+    expect(s.confirmed.spo2_waveform).toBe('normal')
+    expect(s.confirmed.etco2).toBe(35)
+    expect(s.confirmed.etco2_waveform).toBe('normal')
+  })
+
+  it('typed zero still stages SpO2 and EtCO2 graphs as connected', () => {
+    useMonitorStore.getState().setDraft('spo2', 0)
+    useMonitorStore.getState().setDraft('etco2', 0)
+
+    const s = useMonitorStore.getState()
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.etco2_waveform).toBe('normal')
+  })
+
+  it('HR and BP numeric edits do not change SpO2 or EtCO2 graph state', () => {
+    useMonitorStore.getState().setDraft('hr', 80)
+    useMonitorStore.getState().setDraft('bp_sys', 120)
+    useMonitorStore.getState().setDraft('bp_dia', 80)
+
+    const s = useMonitorStore.getState()
+    expect(s.draftVitalActive.hr).toBe(true)
+    expect(s.draftVitalActive.bp_sys).toBe(true)
+    expect(s.draftVitalActive.bp_dia).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('off')
+    expect(s.draft.etco2_waveform).toBe('off')
+  })
+
   it('can turn a stored zero vital on and off independently', () => {
     useMonitorStore.getState().setDraft('hr', 0)
     expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
@@ -271,6 +319,47 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('obstructed')
   })
 
+  it('SpO2 and EtCO2 active toggles stage matching graph connection state', () => {
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    useMonitorStore.getState().setDraftVitalActive('etco2', true)
+
+    let s = useMonitorStore.getState()
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.saved.spo2_waveform).toBe('off')
+    expect(s.confirmed.etco2_waveform).toBe('off')
+
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    s = useMonitorStore.getState()
+    expect(s.confirmedVitalActive.spo2).toBe(true)
+    expect(s.confirmed.spo2_waveform).toBe('normal')
+    expect(s.confirmedVitalActive.etco2).toBe(true)
+    expect(s.confirmed.etco2_waveform).toBe('normal')
+
+    useMonitorStore.getState().setDraftVitalActive('spo2', false)
+    useMonitorStore.getState().setDraftVitalActive('etco2', false)
+    s = useMonitorStore.getState()
+    expect(s.draftVitalActive.spo2).toBe(false)
+    expect(s.draft.spo2_waveform).toBe('off')
+    expect(s.draftVitalActive.etco2).toBe(false)
+    expect(s.draft.etco2_waveform).toBe('off')
+  })
+
+  it('unrelated vital active toggles do not change SpO2 or EtCO2 graph state', () => {
+    useMonitorStore.getState().setDraft('spo2_waveform', 'weak')
+    useMonitorStore.getState().setDraft('etco2_waveform', 'obstructed')
+    useMonitorStore.getState().setDraftVitalActive('hr', true)
+    useMonitorStore.getState().setDraftVitalActive('bp_sys', true)
+    useMonitorStore.getState().setDraftVitalActive('bp_dia', true)
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.spo2_waveform).toBe('weak')
+    expect(s.draft.etco2_waveform).toBe('obstructed')
+  })
+
   it('off channel modes flow through save → send without activating vital alarms', () => {
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
 
@@ -326,6 +415,7 @@ describe('dispatch gate', () => {
   it('starts disarmed with empty caller events', () => {
     const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
+    expect(dispatch.startedAt).toBeNull()
     expect(dispatch.countdownEndsAt).toBeNull()
     expect(dispatch.callerEvents).toEqual([])
     expect(dispatchMinutes).toBe(0)
@@ -341,6 +431,7 @@ describe('dispatch gate', () => {
     const { dispatch } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(true)
     expect(dispatch.runId).not.toBe('')
+    expect(dispatch.startedAt).toBe(1_000_000)
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + (5 * 60 + 30) * 1000)
   })
 
@@ -370,12 +461,14 @@ describe('dispatch gate', () => {
     useMonitorStore.getState().send()
     const firstEnd = useMonitorStore.getState().dispatch.countdownEndsAt
     const firstRunId = useMonitorStore.getState().dispatch.runId
+    const firstStart = useMonitorStore.getState().dispatch.startedAt
 
     useMonitorStore.getState().setDispatchMinutes(99)
     useMonitorStore.getState().send()
 
     expect(useMonitorStore.getState().dispatch.countdownEndsAt).toBe(firstEnd)
     expect(useMonitorStore.getState().dispatch.runId).toBe(firstRunId)
+    expect(useMonitorStore.getState().dispatch.startedAt).toBe(firstStart)
   })
 
   it('acknowledge/arrive/transport log once and append EST entries', () => {
@@ -407,6 +500,7 @@ describe('dispatch gate', () => {
     const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
     expect(dispatch.runId).toBe('')
+    expect(dispatch.startedAt).toBeNull()
     expect(dispatch.countdownEndsAt).toBeNull()
     expect(dispatch.acknowledgedAt).toBeNull()
     expect(dispatch.callerEvents).toEqual([])
@@ -488,6 +582,7 @@ describe('persist migration', () => {
     expect(s.dispatch).toEqual({
       runId: '',
       armed: false,
+      startedAt: null,
       countdownEndsAt: null,
       acknowledgedAt: null,
       arrivedAt: null,
@@ -512,13 +607,17 @@ describe('persist migration', () => {
             transportedAt: null,
             callerEvents: [],
           },
+          dispatchMinutes: 5,
+          dispatchSeconds: 0,
         },
       }),
     )
 
     await useMonitorStore.persist.rehydrate()
 
-    expect(useMonitorStore.getState().dispatch.runId).toBe('legacy-1234567')
+    const dispatch = useMonitorStore.getState().dispatch
+    expect(dispatch.runId).toBe('legacy-1234567')
+    expect(dispatch.startedAt).toBe(1_234_567 - 5 * 60_000)
   })
 })
 

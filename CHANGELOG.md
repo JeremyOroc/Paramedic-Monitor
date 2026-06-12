@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-06-12] [instructor] — Add vitals auto-sort paste box
+
+- Added an admin Vitals auto-sort textarea for FC/HR, SpO2/saturation, BP/TA, and EtCO2/CO2 labelled lines.
+- BP labels now parse any slash-separated systolic/diastolic numbers, with separate BP sys/dia labels also supported.
+- Auto-sort updates draft vitals only, preserving Save → Send and SpO2/EtCO2 graph staging.
+
+## [2026-06-12] [instructor] — Add Patient Information auto-sort notes
+
+- Added page-only SAMPLE/OPQRST text inputs beside each letter on the Patient Information tab.
+- Added an auto-sort textarea for `Letter: value` patient notes, routing repeated S/P labels to SAMPLE first and OPQRST second.
+- Kept green letter highlighting manual-only and reset scoped to the Patient Information tab.
+
+## [2026-06-12] [instructor] — Clean up caller info priority layout
+
+- Removed the legacy `Intervention prioritaire code` caller-info field from current data, admin UI, parser support, and display lists.
+- Reordered admin Caller Info so Dispatch countdown appears before Call / Priority / MPDS.
+- Assignment-style caller info now keeps the large Priority badge without showing a duplicate Priority row in the details list.
+
+## [2026-06-12] [instructor] — Connect SpO2 and EtCO2 graphs from typed numbers
+
+- Typing a SpO2 or EtCO2 value in admin now stages the matching graph waveform as `normal`.
+- Save → Send now carries typed SpO2/EtCO2 numbers and graph connection state to the monitor together.
+- Added coverage for typed zero values, unrelated vital edits, and the single secondary graph slot behavior.
+
+## [2026-06-12] [monitor] — Restore CO2 secondary graph switching
+
+- Normal monitor mode now shows only one secondary graph slot at a time.
+- The CO2 soft key switches the secondary slot between SpO2 and EtCO2.
+- Expanded waveform mode still shows both secondary rows when the bottom panel is hidden.
+
 ## [2026-06-11] [monitor] — Suppress BP alarms during NIBP reading
 
 - BP/PNI alarm audio contribution and red/white visual styling are now
@@ -34,6 +64,119 @@
   instead of the session timer.
 - Added regression coverage for BP commit/cancel/off behavior, EtCO2 loading,
   reset behavior, and real-time event stamps.
+
+## [2026-06-11] [monitor] — Show active SpO2 and EtCO2 graph rows
+
+- Monitor waveform rows now follow confirmed SpO2 and EtCO2 waveform state after Save → Send.
+- Active SpO2 and EtCO2 channels render live graph rows together while Off channels are hidden.
+- Added coverage for graph rows appearing and disappearing from admin vital toggle state.
+
+## [2026-06-11] [instructor] — Extend caller info dispatch auto-sort
+
+- Added Call #, Priority, and MPDS Code fields to caller info draft/saved/confirmed data.
+- Updated auto-sort to parse the dispatch label format in English and French.
+- Displayed the new call identifiers on admin Caller Info and trainee caller-info views after Save → Send.
+
+## [2026-06-11] [instructor] — Add caller info auto-sort paste box
+
+- Added an admin Caller Info paste box that parses labelled lines into the existing draft fields.
+- Supports French and English aliases for priority code, address, problem, information, update, and time, including label-on-next-line and dash-separated formats.
+- Preserved Save → Send behavior; auto-sort updates drafts only until the instructor saves and sends.
+
+## [2026-06-11] [instructor] — Compact patient information checklist buttons
+
+- Changed SAMPLE and OPQRST letter buttons from large two-row grids to compact vertical columns.
+- Kept the existing page-only green toggle behavior and independent checklist selections.
+- Added coverage for the compact left-aligned checklist layout.
+
+## [2026-06-11] [instructor] — Add admin patient information checklist
+
+- Added a third admin tab, `Patient Information`, beside Monitor and Caller Info.
+- Added page-only SAMPLE and OPQRST checklist panels with independent green letter toggles.
+- Kept selections local to the admin page session and added focused page/component coverage.
+
+## [2026-06-11] [monitor] — Add SpO2 pulse fill icon
+
+- Added a yellow outlined pulse-fill bar beside numeric SpO2 values in the monitor vital box.
+- The fill now samples the selected SpO2 pleth waveform shape while using the same pulse timing as the SpO2 graph.
+- Added focused coverage for the pulse bar timing and SpO2 active/off rendering states.
+
+## [2026-06-11] [instructor] — Clear zeroed admin vitals on focus
+
+- Admin vital number inputs now clear a visible `0` when focused so typed values do not keep a leading zero.
+- The focus clear is visual only; untouched fields restore `0` on blur and do not become dirty until typed.
+- Added coverage for FC, SpO2, BP sys, BP dia, and EtCO2 input behavior.
+
+## [2026-06-11] [instructor] — Verify SpO2/EtCO2 graph Save-Send flow
+
+- Added admin-page coverage proving SpO2 and EtCO2 vital toggles turn their graphs on after Save → Send.
+- Added coverage for turning those same graph states back off after a second Save → Send.
+
+## [2026-06-11] [instructor] — Move SpO2/EtCO2 graph toggles into vitals
+
+- Removed the right-side admin SpO2 and EtCO2 graph controls from the Vitals panel.
+- Wired the left-side SpO2 and EtCO2 vital toggles to stage their matching graph waveform as `normal` or `off`.
+- Preserved the Save → Send pipeline and kept ECG as the only right-side graph/rhythm control.
+
+## [2026-06-11] [instructor] — Remove extra admin waveform choices
+
+- Removed `Weak` from the admin SpO2 waveform selector.
+- Removed `Hypo` and `Obstr.` from the admin EtCO2 waveform selector.
+- Removed the visible `Normal` buttons so SpO2 and EtCO2 graph controls are toggle-only.
+- Hid visible `dirty` badges for ECG, SpO2, and EtCO2 graph controls while preserving draft Save/Send behavior.
+- Updated selector tests and project tracking for the reduced admin options.
+
+## [2026-06-08] [instructor] — Add categorized ECG rhythm picker
+
+- Replaced always-visible ECG rhythm buttons with a compact `Rhythm Options`
+  picker in the ECG admin row.
+- The opened picker shows rhythm category buttons first, then shows only the
+  selected category's rhythm options underneath in the same style as the SpO2
+  and EtCO2 option buttons.
+- Added NSR and Cardiac Arrest rhythm options, with muted empty-category
+  placeholders when Heart Block, Bundle Branch Block, or MI is selected.
+
+## [2026-06-08] [instructor] — Sleeken admin vital number inputs
+
+- Restyled admin vital number inputs as inset console fields with right-aligned
+  tabular values and embedded unit labels.
+- Tightened the number fields into compact value slots with subtle underline
+  state instead of large rectangular input bars.
+- Narrowed the admin number slots further so the rows leave more room for the
+  paired graph controls.
+- Dropped the monitor SpO2 value font slightly, with a smaller disconnected
+  `SpO2 OFF` state so it fits the right-side vital box more comfortably.
+- Removed browser number spinners from the admin vital fields while preserving
+  the existing input, Off/On, Save, and Send behavior.
+
+## [2026-06-08] [instructor] — Align graph controls with admin vitals
+
+- Moved ECG, SpO2, and EtCO2 graph controls into the admin vitals panel so each
+  graph control sits beside its matching vital row.
+- Reused the same Off/On toggle component for numeric vitals and graph channel
+  connection state, removing duplicate graph-level `Off` option buttons.
+- Widened the admin console container so the paired rows stay readable on
+  iPad-width instructor screens.
+
+## [2026-06-08] [instructor] — Reorder admin vitals panel
+
+- Reordered the admin vitals controls to FC → SpO2 → BP sys/dia → EtCO2.
+- Kept the monitor-side vitals strip order unchanged.
+- Updated the admin vitals controls test and project docs for the new panel order.
+
+## [2026-06-08] [monitor] — Split response timer from ETA countdown
+
+- Added a dispatch start timestamp and `useElapsedTimer` so the assignment
+  dashboard Response Timer counts up from dispatch Send.
+- Kept ETA tied to the existing countdown end timestamp so it counts down toward
+  scene arrival instead of mirroring the response timer.
+- Added hook, store, and caller-info modal tests for the split timer behavior.
+
+## [2026-06-11] [setup] — Add local portable Node start helper
+
+- Installed dependencies using a project-local portable Node.js runtime because system `npm` was unavailable.
+- Added `start-local.ps1` so the app can be started locally with the portable runtime.
+- Ignored portable Node, npm cache, downloaded zip, and dev-server logs.
 
 ## [2026-06-08] [monitor] — Require Go to Monitor after every dispatch
 

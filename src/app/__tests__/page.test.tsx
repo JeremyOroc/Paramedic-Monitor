@@ -82,30 +82,40 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
 
 vi.mock('@/components/monitor/WaveformPanel', () => ({
   WaveformPanel: ({
+    secondaryChannel,
     showAllSecondaryChannels,
     rhythm,
     spo2Waveform,
     etco2Waveform,
-    secondaryChannel,
-    etco2Loading,
   }: {
+    secondaryChannel?: 'spo2' | 'etco2'
     showAllSecondaryChannels?: boolean
     rhythm?: string
     spo2Waveform?: string
     etco2Waveform?: string
-    secondaryChannel?: string
-    etco2Loading?: boolean
-  }) => (
-    <div>
-      Waveform panel
-      <span>{secondaryChannel === 'etco2' ? 'showing-etco2' : 'showing-spo2'}</span>
-      <span>{rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}</span>
-      <span>{spo2Waveform !== 'off' ? 'live-spo2' : 'disconnected-spo2'}</span>
-      <span>{etco2Waveform !== 'off' ? 'live-etco2' : 'disconnected-etco2'}</span>
-      {etco2Loading && <span>etco2-loading</span>}
-      {showAllSecondaryChannels && <span>expanded-waveforms</span>}
-    </div>
-  ),
+  }) => {
+    const selected = secondaryChannel ?? 'spo2'
+    const selectedWaveform = selected === 'etco2' ? etco2Waveform : spo2Waveform
+    const bothSecondaryOff = spo2Waveform === 'off' && etco2Waveform === 'off'
+
+    return (
+      <div>
+        Waveform panel
+        <span>{rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}</span>
+        {showAllSecondaryChannels ? (
+          <>
+            <span>{etco2Waveform !== 'off' ? 'live-etco2' : 'disconnected-etco2'}</span>
+            <span>{spo2Waveform !== 'off' ? 'live-spo2' : 'disconnected-spo2'}</span>
+            <span>expanded-waveforms</span>
+          </>
+        ) : selectedWaveform !== 'off' ? (
+          <span>{selected === 'etco2' ? 'live-etco2' : 'live-spo2'}</span>
+        ) : bothSecondaryOff ? (
+          <span>{selected === 'etco2' ? 'disconnected-etco2' : 'disconnected-spo2'}</span>
+        ) : null}
+      </div>
+    )
+  },
 }))
 
 describe('MonitorPage', () => {
@@ -320,7 +330,8 @@ describe('MonitorPage', () => {
     expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
     expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
     expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
-    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
   })
 
   it('holds sent BP values until a full NIBP reading completes', () => {
@@ -357,6 +368,33 @@ describe('MonitorPage', () => {
     vi.useRealTimers()
   })
 
+  it('shows typed SpO2 number and selected SpO2 graph after save and send', () => {
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('hr', 150)
+      useMonitorStore.getState().setDraft('bp_sys', 110)
+      useMonitorStore.getState().setDraft('bp_dia', 70)
+      useMonitorStore.getState().setDraft('spo2', 97)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('150')).toBeInTheDocument()
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByText('80')).toBeInTheDocument()
+    expect(screen.queryByText('110')).not.toBeInTheDocument()
+    expect(screen.queryByText('70')).not.toBeInTheDocument()
+    expect(screen.getByText('97')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
+    expect(screen.getByText('live-spo2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+  })
+
   it('shows both BP numbers after a completed partial-active NIBP reading', () => {
     vi.useFakeTimers()
     act(() => {
@@ -383,6 +421,26 @@ describe('MonitorPage', () => {
       bp_dia: true,
     })
     vi.useRealTimers()
+  })
+
+  it('keeps typed EtCO2 graph hidden until the CO2 button selects EtCO2', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setDraft('etco2', 35)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('35')).toBeInTheDocument()
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+
+    expect(screen.getByText('live-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
   })
 
   it('keeps old BP when the NIBP reading is cancelled', () => {
@@ -599,10 +657,10 @@ describe('MonitorPage', () => {
     )
   })
 
-  it('can show only selected live graph channels after non-off options are saved and sent', () => {
+  it('shows selected SpO2 graph after the SpO2 vital toggle is saved and sent', () => {
     act(() => {
       useMonitorStore.getState().setDraft('rhythm', 'nsr')
-      useMonitorStore.getState().setDraft('spo2_waveform', 'normal')
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -611,7 +669,52 @@ describe('MonitorPage', () => {
 
     expect(screen.getByText('live-ecg')).toBeInTheDocument()
     expect(screen.getByText('live-spo2')).toBeInTheDocument()
-    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+  })
+
+  it('uses the CO2 soft key to switch the single secondary graph slot to EtCO2', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setDraft('spo2', 97)
+      useMonitorStore.getState().setDraft('etco2', 35)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('live-spo2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+
+    expect(screen.getByText('live-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+  })
+
+  it('hides live secondary graphs after their vital toggles are turned off and sent', () => {
+    act(() => {
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
+      useMonitorStore.getState().setDraftVitalActive('etco2', true)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('live-spo2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+
+    act(() => {
+      useMonitorStore.getState().setDraftVitalActive('spo2', false)
+      useMonitorStore.getState().setDraftVitalActive('etco2', false)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+    expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
   })
 
   it('shows EtCO2 loading on first toggle and only marks it loaded after 8 seconds', () => {
@@ -715,6 +818,8 @@ describe('MonitorPage', () => {
 
     expect(screen.queryByText('APPL ELECT.')).not.toBeInTheDocument()
     expect(screen.getByText('expanded-waveforms')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+    expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Toggle bottom status panel' })).toHaveClass(
       'bg-[var(--color-selection-blue)]',
       'text-white',

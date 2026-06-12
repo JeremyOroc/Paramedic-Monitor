@@ -3,6 +3,19 @@ import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { VitalInput } from '../VitalInput'
 import { useMonitorStore } from '@/store/monitorStore'
+import type { NumericVitalField } from '@/types/vitals'
+
+const VITAL_FIELDS: Array<{
+  field: NumericVitalField
+  label: string
+  nonZero: number
+}> = [
+  { field: 'hr', label: 'FC', nonZero: 80 },
+  { field: 'spo2', label: 'SpO2', nonZero: 98 },
+  { field: 'bp_sys', label: 'BP sys', nonZero: 120 },
+  { field: 'bp_dia', label: 'BP dia', nonZero: 80 },
+  { field: 'etco2', label: 'EtCO2', nonZero: 35 },
+]
 
 describe('VitalInput', () => {
   beforeEach(() => {
@@ -18,6 +31,19 @@ describe('VitalInput', () => {
     )
   })
 
+  it('renders the number field as a compact right-aligned console slot with embedded unit text', () => {
+    render(<VitalInput field="hr" label="FC" unit="bpm" />)
+
+    const input = screen.getByLabelText('FC')
+    const shell = screen.getByTestId('vital-input-shell-hr')
+
+    expect(input).toHaveClass('text-right')
+    expect(shell).toHaveClass('w-24')
+    expect(shell).toHaveClass('bg-transparent')
+    expect(shell).toContainElement(input)
+    expect(shell).toContainElement(screen.getByText('bpm'))
+  })
+
   it('typing updates draft, turns the vital On, and marks it dirty', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" unit="bpm" />)
@@ -31,6 +57,36 @@ describe('VitalInput', () => {
       'aria-pressed',
       'true',
     )
+  })
+
+  it('typing SpO2 connects the SpO2 graph in draft state', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="spo2" label="SpO2" unit="%" />)
+    const input = screen.getByLabelText('SpO2') as HTMLInputElement
+
+    await user.click(input)
+    await user.type(input, '98')
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.spo2).toBe(98)
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draft.etco2_waveform).toBe('off')
+  })
+
+  it('typing EtCO2 connects the EtCO2 graph in draft state', async () => {
+    const user = userEvent.setup()
+    render(<VitalInput field="etco2" label="EtCO2" unit="mmHg" />)
+    const input = screen.getByLabelText('EtCO2') as HTMLInputElement
+
+    await user.click(input)
+    await user.type(input, '35')
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.etco2).toBe(35)
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.draft.spo2_waveform).toBe('off')
   })
 
   it('shows pending status after save', async () => {
@@ -65,6 +121,79 @@ describe('VitalInput', () => {
     expect(input.value).toBe('2')
     expect(useMonitorStore.getState().draft.hr).toBe(2)
   })
+
+  it.each(VITAL_FIELDS)(
+    'clears a zero-valued $label field on focus without marking it dirty',
+    async ({ field, label }) => {
+      const user = userEvent.setup()
+      render(<VitalInput field={field} label={label} />)
+      const input = screen.getByLabelText(label) as HTMLInputElement
+
+      expect(input.value).toBe('0')
+      await user.click(input)
+
+      expect(input.value).toBe('')
+      expect(useMonitorStore.getState().draft[field]).toBe(0)
+      expect(screen.getByTestId(`status-${field}`)).toHaveAttribute(
+        'data-status',
+        'clean',
+      )
+    },
+  )
+
+  it.each(VITAL_FIELDS)(
+    'restores the visible zero on blur when $label is focused but untouched',
+    async ({ field, label }) => {
+      const user = userEvent.setup()
+      render(<VitalInput field={field} label={label} />)
+      const input = screen.getByLabelText(label) as HTMLInputElement
+
+      await user.click(input)
+      expect(input.value).toBe('')
+      await user.tab()
+
+      expect(input.value).toBe('0')
+      expect(useMonitorStore.getState().draft[field]).toBe(0)
+    },
+  )
+
+  it.each(VITAL_FIELDS)(
+    'types into a cleared $label field without keeping the leading zero',
+    async ({ field, label, nonZero }) => {
+      const user = userEvent.setup()
+      render(<VitalInput field={field} label={label} />)
+      const input = screen.getByLabelText(label) as HTMLInputElement
+
+      await user.click(input)
+      await user.type(input, String(nonZero))
+
+      expect(input.value).toBe(String(nonZero))
+      expect(useMonitorStore.getState().draft[field]).toBe(nonZero)
+      expect(screen.getByTestId(`status-${field}`)).toHaveAttribute(
+        'data-status',
+        'dirty',
+      )
+    },
+  )
+
+  it.each(VITAL_FIELDS)(
+    'does not clear a non-zero $label value on focus',
+    async ({ field, label, nonZero }) => {
+      const user = userEvent.setup()
+      act(() => {
+        useMonitorStore.getState().setDraft(field, nonZero)
+        useMonitorStore.getState().save()
+        useMonitorStore.getState().send()
+      })
+      render(<VitalInput field={field} label={label} />)
+      const input = screen.getByLabelText(label) as HTMLInputElement
+
+      await user.click(input)
+
+      expect(input.value).toBe(String(nonZero))
+      expect(useMonitorStore.getState().draft[field]).toBe(nonZero)
+    },
+  )
 
   it('resyncs from the store on reset', async () => {
     const user = userEvent.setup()

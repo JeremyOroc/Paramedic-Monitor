@@ -150,6 +150,7 @@ function normalizeVitalActive(
 export type DispatchState = {
   runId: string
   armed: boolean
+  startedAt: number | null // absolute ms epoch; response timer counts up from here
   countdownEndsAt: number | null // absolute ms epoch; survives refresh
   acknowledgedAt: string | null // EST HH:MM:SS
   arrivedAt: string | null
@@ -160,6 +161,7 @@ export type DispatchState = {
 export const DEFAULT_DISPATCH: DispatchState = {
   runId: '',
   armed: false,
+  startedAt: null,
   countdownEndsAt: null,
   acknowledgedAt: null,
   arrivedAt: null,
@@ -173,15 +175,22 @@ const CALLER_EVENT_LABELS = {
   transport: 'Transport',
 } as const
 
-function normalizeDispatch(dispatch: Partial<DispatchState> | undefined): DispatchState {
+function normalizeDispatch(
+  dispatch: Partial<DispatchState> | undefined,
+  fallbackDurationMs = 0,
+): DispatchState {
   const runId = typeof dispatch?.runId === 'string' ? dispatch.runId : ''
   const armed = dispatch?.armed === true
+  const startedAt = typeof dispatch?.startedAt === 'number' ? dispatch.startedAt : null
   const countdownEndsAt =
     typeof dispatch?.countdownEndsAt === 'number' ? dispatch.countdownEndsAt : null
+  const legacyStartedAt =
+    countdownEndsAt !== null ? countdownEndsAt - fallbackDurationMs : Date.now()
 
   return {
     runId: runId || (armed ? `legacy-${countdownEndsAt ?? 'active'}` : ''),
     armed,
+    startedAt: startedAt ?? (armed ? legacyStartedAt : null),
     countdownEndsAt,
     acknowledgedAt: typeof dispatch?.acknowledgedAt === 'string' ? dispatch.acknowledgedAt : null,
     arrivedAt: typeof dispatch?.arrivedAt === 'string' ? dispatch.arrivedAt : null,
@@ -254,11 +263,14 @@ export const useMonitorStore = create<MonitorState>()(
       acceptedBpActive: inactiveBpActive,
       setDraft: (field, value) =>
         set((s) => {
+          const draft: Vitals = { ...s.draft, [field]: value }
+          if (field === 'spo2') draft.spo2_waveform = 'normal'
+          if (field === 'etco2') draft.etco2_waveform = 'normal'
           const draftVitalActive = isNumericVitalField(field)
             ? { ...s.draftVitalActive, [field]: true }
             : s.draftVitalActive
           return {
-            draft: { ...s.draft, [field]: value },
+            draft,
             draftVitalActive,
             draftVitalsActive: anyVitalActive(draftVitalActive),
           }
@@ -266,7 +278,11 @@ export const useMonitorStore = create<MonitorState>()(
       setDraftVitalActive: (field, active) =>
         set((s) => {
           const draftVitalActive = { ...s.draftVitalActive, [field]: active }
+          const draft = { ...s.draft }
+          if (field === 'spo2') draft.spo2_waveform = active ? 'normal' : 'off'
+          if (field === 'etco2') draft.etco2_waveform = active ? 'normal' : 'off'
           return {
+            draft,
             draftVitalActive,
             draftVitalsActive: anyVitalActive(draftVitalActive),
           }
@@ -352,6 +368,8 @@ export const useMonitorStore = create<MonitorState>()(
             bp_dia: DEFAULT_VITALS.bp_dia,
             etco2: DEFAULT_VITALS.etco2,
             spo2: DEFAULT_VITALS.spo2,
+            etco2_waveform: 'normal',
+            spo2_waveform: 'normal',
           },
           draftVitalActive: activeVitals,
           draftVitalsActive: true,
@@ -375,13 +393,15 @@ export const useMonitorStore = create<MonitorState>()(
           // only push updated caller-info content and never re-arm or restart it.
           if (s.dispatch.armed) return base
           const durationMs = (s.dispatchMinutes * 60 + s.dispatchSeconds) * 1000
+          const startedAt = Date.now()
           return {
             ...base,
             dispatch: {
               ...s.dispatch,
               runId: nanoid(),
               armed: true,
-              countdownEndsAt: Date.now() + durationMs,
+              startedAt,
+              countdownEndsAt: startedAt + durationMs,
             },
           }
         }),
@@ -432,6 +452,14 @@ export const useMonitorStore = create<MonitorState>()(
           persistedState?.confirmedVitalsActive,
         )
         const confirmed = normalizeVitals(persistedState?.confirmed)
+        const dispatchMinutes =
+          typeof persistedState?.dispatchMinutes === 'number'
+            ? persistedState.dispatchMinutes
+            : 0
+        const dispatchSeconds =
+          typeof persistedState?.dispatchSeconds === 'number'
+            ? persistedState.dispatchSeconds
+            : 0
 
         return {
           ...current,
@@ -452,15 +480,12 @@ export const useMonitorStore = create<MonitorState>()(
             ...DEFAULT_PATIENT_INFO,
             ...persistedState?.patientInfo,
           },
-          dispatch: normalizeDispatch(persistedState?.dispatch),
-          dispatchMinutes:
-            typeof persistedState?.dispatchMinutes === 'number'
-              ? persistedState.dispatchMinutes
-              : 0,
-          dispatchSeconds:
-            typeof persistedState?.dispatchSeconds === 'number'
-              ? persistedState.dispatchSeconds
-              : 0,
+          dispatch: normalizeDispatch(
+            persistedState?.dispatch,
+            (dispatchMinutes * 60 + dispatchSeconds) * 1000,
+          ),
+          dispatchMinutes,
+          dispatchSeconds,
           monitorResetVersion:
             typeof persistedState?.monitorResetVersion === 'number'
               ? persistedState.monitorResetVersion

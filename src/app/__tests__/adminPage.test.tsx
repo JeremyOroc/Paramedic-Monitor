@@ -16,10 +16,14 @@ describe('AdminPage', () => {
     render(<AdminPage />)
 
     expect(screen.getByRole('button', { name: 'Monitor' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Patient Information' })).toBeInTheDocument()
     expect(screen.getByText('Vitals')).toBeInTheDocument()
-    expect(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Off' })).toBeInTheDocument()
-    expect(within(screen.getByRole('heading', { name: 'SpO2' }).closest('section')!).getByRole('button', { name: 'Off' })).toBeInTheDocument()
-    expect(within(screen.getByRole('heading', { name: 'EtCO2' }).closest('section')!).getByRole('button', { name: 'Off' })).toBeInTheDocument()
+    expect(within(screen.getByTestId('admin-graph-row-ecg')).getByRole('button', { name: 'ECG off' })).toBeInTheDocument()
+    expect(screen.queryByTestId('admin-graph-row-spo2')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-graph-row-etco2')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'SpO2 off' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'EtCO2 off' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Adresse')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Caller Info' }))
@@ -27,6 +31,124 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'Caller Info' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByLabelText('Adresse')).toBeInTheDocument()
     expect(screen.queryByText('Vitals')).toBeNull()
+  })
+
+  it('shows Patient Information with independent SAMPLE and OPQRST letter toggles', async () => {
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+
+    expect(screen.getByRole('button', { name: 'Patient Information' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    const sample = screen.getByRole('region', { name: 'Sample' })
+    const opqrst = screen.getByRole('region', { name: 'OPQRST' })
+
+    expect(screen.getByLabelText('Auto-sort patient information')).toBeInTheDocument()
+    for (const letter of ['S', 'A', 'M', 'P', 'L', 'E']) {
+      expect(within(sample).getByRole('button', { name: letter })).toBeInTheDocument()
+      expect(within(sample).getByLabelText(`Sample ${letter} information`)).toBeInTheDocument()
+    }
+    for (const letter of ['O', 'P', 'Q', 'R', 'S', 'T']) {
+      expect(within(opqrst).getByRole('button', { name: letter })).toBeInTheDocument()
+      expect(within(opqrst).getByLabelText(`OPQRST ${letter} information`)).toBeInTheDocument()
+    }
+
+    const sampleS = within(sample).getByRole('button', { name: 'S' })
+    const opqrstS = within(opqrst).getByRole('button', { name: 'S' })
+    await user.click(sampleS)
+
+    expect(sampleS).toHaveAttribute('aria-pressed', 'true')
+    expect(sampleS).toHaveClass('bg-ecg-green')
+    expect(opqrstS).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(sampleS)
+    expect(sampleS).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('keeps Patient Information selections and text while switching admin tabs', async () => {
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    const sampleS = within(screen.getByRole('region', { name: 'Sample' })).getByRole(
+      'button',
+      { name: 'S' },
+    )
+    await user.click(sampleS)
+    await user.type(screen.getByLabelText('Sample S information'), 'Chest pain')
+    await user.type(screen.getByLabelText('OPQRST O information'), '20 minutes')
+
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+
+    expect(
+      within(screen.getByRole('region', { name: 'Sample' })).getByRole('button', {
+        name: 'S',
+      }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
+    expect(screen.getByLabelText('OPQRST O information')).toHaveValue('20 minutes')
+  })
+
+  it('uses the Patient Information tab Reset to clear only local checklist selections and text', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 180)
+      useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
+    })
+
+    render(<AdminPage />)
+    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    const sampleS = within(screen.getByRole('region', { name: 'Sample' })).getByRole(
+      'button',
+      { name: 'S' },
+    )
+    await user.click(sampleS)
+    await user.type(screen.getByLabelText('Sample S information'), 'Chest pain')
+    await user.type(
+      screen.getByLabelText('Auto-sort patient information'),
+      'O: 20 minutes',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
+
+    expect(sampleS).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByLabelText('Auto-sort patient information')).toHaveValue('')
+    expect(screen.getByLabelText('Sample S information')).toHaveValue('')
+    expect(screen.getByLabelText('OPQRST O information')).toHaveValue('')
+    expect(useMonitorStore.getState().draft.hr).toBe(180)
+    expect(useMonitorStore.getState().callerInfoDraft.address).toBe('123 Rue Principale')
+  })
+
+  it('auto-sorts Patient Information text without changing green selections', async () => {
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    await user.type(
+      screen.getByLabelText('Auto-sort patient information'),
+      [
+        'S: Chest pain',
+        'P: Asthma',
+        'O: 20 minutes',
+        'P: Worse breathing',
+        'S: 8/10',
+      ].join('\n'),
+    )
+
+    expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
+    expect(screen.getByLabelText('Sample P information')).toHaveValue('Asthma')
+    expect(screen.getByLabelText('OPQRST O information')).toHaveValue('20 minutes')
+    expect(screen.getByLabelText('OPQRST P information')).toHaveValue('Worse breathing')
+    expect(screen.getByLabelText('OPQRST S information')).toHaveValue('8/10')
+    expect(
+      within(screen.getByRole('region', { name: 'Sample' })).getByRole('button', {
+        name: 'S',
+      }),
+    ).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('uses the Monitor tab Reset to clear only monitor vitals', async () => {
@@ -73,19 +195,55 @@ describe('AdminPage', () => {
     expect(s.dispatch.armed).toBe(false)
   })
 
-  it('lets the admin stage connected graph options independently from vitals', async () => {
+  it('stages SpO2 and EtCO2 graph state through the left vital toggles', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'NSR' }))
-    await user.click(within(screen.getByRole('heading', { name: 'SpO2' }).closest('section')!).getByRole('button', { name: 'Normal' }))
+    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Cardiac Arrest' }))
+    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'VF' }))
+    await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
+    await user.click(screen.getByRole('button', { name: 'EtCO2 off' }))
 
-    expect(useMonitorStore.getState().draft.rhythm).toBe('nsr')
+    expect(useMonitorStore.getState().draft.rhythm).toBe('vf')
     expect(useMonitorStore.getState().draft.spo2_waveform).toBe('normal')
-    expect(useMonitorStore.getState().draft.etco2_waveform).toBe('off')
-    expect(useMonitorStore.getState().draftVitalsActive).toBe(false)
-    expect(screen.getByTestId('status-rhythm')).toHaveTextContent('dirty')
-    expect(screen.getByTestId('status-spo2_waveform')).toHaveTextContent('dirty')
-    expect(screen.getByTestId('status-etco2_waveform')).toHaveTextContent('—')
+    expect(useMonitorStore.getState().draft.etco2_waveform).toBe('normal')
+    expect(useMonitorStore.getState().draftVitalActive.spo2).toBe(true)
+    expect(useMonitorStore.getState().draftVitalActive.etco2).toBe(true)
+    expect(useMonitorStore.getState().draftVitalsActive).toBe(true)
+    expect(screen.getByTestId('status-rhythm')).toHaveTextContent('-')
+    expect(screen.getByTestId('status-spo2')).toHaveAttribute('data-status', 'dirty')
+    expect(screen.getByTestId('status-etco2')).toHaveAttribute('data-status', 'dirty')
+  })
+
+  it('sends SpO2 and EtCO2 graph on/off state from the left vital toggles', async () => {
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
+    await user.click(screen.getByRole('button', { name: 'EtCO2 off' }))
+    expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('off')
+    expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('off')
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(useMonitorStore.getState().confirmedVitalActive.spo2).toBe(true)
+    expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('normal')
+    expect(useMonitorStore.getState().confirmedVitalActive.etco2).toBe(true)
+    expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('normal')
+
+    await user.click(screen.getByRole('button', { name: 'SpO2 on' }))
+    await user.click(screen.getByRole('button', { name: 'EtCO2 on' }))
+    expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('normal')
+    expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('normal')
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(useMonitorStore.getState().confirmedVitalActive.spo2).toBe(false)
+    expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('off')
+    expect(useMonitorStore.getState().confirmedVitalActive.etco2).toBe(false)
+    expect(useMonitorStore.getState().confirmed.etco2_waveform).toBe('off')
   })
 })

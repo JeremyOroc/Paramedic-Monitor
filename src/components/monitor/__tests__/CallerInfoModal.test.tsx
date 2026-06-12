@@ -34,7 +34,9 @@ describe('CallerInfoModal', () => {
     renderModal({
       info: {
         ...DEFAULT_CALLER_INFO,
-        interventionPriorityCode: 'Code 3',
+        callNumber: 'C-2026-15',
+        priority: 'P1',
+        mpdsCode: '06D02',
         address: '123 Rue Principale',
         problem: 'Douleur thoracique',
         time: '14:45',
@@ -42,10 +44,30 @@ describe('CallerInfoModal', () => {
     })
 
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
-    expect(screen.getAllByText('Code 3').length).toBeGreaterThan(0)
+    expect(screen.getByText('C-2026-15')).toBeInTheDocument()
+    expect(screen.getAllByText('P1').length).toBeGreaterThan(0)
+    expect(screen.getByText('06D02')).toBeInTheDocument()
     expect(screen.getAllByText('123 Rue Principale').length).toBeGreaterThan(0)
     expect(screen.getByText('Douleur thoracique')).toBeInTheDocument()
     expect(screen.getAllByText('14:45').length).toBeGreaterThan(0)
+  })
+
+  it('uses the assignment priority badge without a duplicate Priority detail row', () => {
+    renderModal({
+      info: {
+        ...DEFAULT_CALLER_INFO,
+        callNumber: 'C-2026-15',
+        priority: 'P1',
+        mpdsCode: '06D02',
+      },
+    })
+
+    expect(screen.getByText('Call Assignment')).toBeInTheDocument()
+    expect(screen.getByText('P1')).toBeInTheDocument()
+    expect(screen.getByText('Lights & Sirens')).toBeInTheDocument()
+    expect(screen.queryByTestId('assignment-info-priority')).toBeNull()
+    expect(screen.getByTestId('assignment-info-callNumber')).toHaveTextContent('C-2026-15')
+    expect(screen.getByTestId('assignment-info-mpdsCode')).toHaveTextContent('06D02')
   })
 
   it('renders the assignment dashboard variant by default', () => {
@@ -186,12 +208,13 @@ describe('CallerInfoModal', () => {
   })
 
   it('shows the dispatch countdown only when showCountdown is set', () => {
-    const { rerender } = renderModal()
+    const { rerender } = renderModal({ variant: 'classic' })
     expect(screen.queryByLabelText('Dispatch countdown')).toBeNull()
 
     rerender(
       <CallerInfoModal
         open
+        variant="classic"
         info={DEFAULT_CALLER_INFO}
         onCallerEvent={() => {}}
         buttonState={ALL_ENABLED}
@@ -201,6 +224,17 @@ describe('CallerInfoModal', () => {
     )
 
     expect(screen.getByLabelText('Dispatch countdown')).toHaveTextContent('04:59')
+  })
+
+  it('shows response timer separately from the ETA countdown in assignment view', () => {
+    renderModal({
+      showCountdown: true,
+      countdownFormatted: '04:59',
+      responseFormatted: '01:12',
+    })
+
+    expect(screen.getByLabelText('Response timer')).toHaveTextContent('01:12')
+    expect(screen.getByLabelText('ETA')).toHaveTextContent('04:59')
   })
 
   it('can fill the full monitor screen for the locked dispatch touchscreen', () => {

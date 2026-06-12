@@ -13,7 +13,53 @@
 ---
 
 ## Completed
+- [x] **Local developer setup helper — COMPLETE:**
+  - [x] Dependencies installed with a project-local portable Node.js runtime because system `npm` was unavailable
+  - [x] Added `start-local.ps1` for launching the Next.js dev server with the portable runtime
+  - [x] Ignored local portable runtime/cache/log artifacts in `.gitignore`
+- [x] **Admin waveform option cleanup — COMPLETE:**
+  - [x] Removed `Weak` from the admin SpO2 waveform selector
+  - [x] Removed `Hypo` and `Obstr.` from the admin EtCO2 waveform selector
+  - [x] Removed the visible `Normal` buttons so SpO2 and EtCO2 graph controls are toggle-only
+  - [x] Hid visible `dirty` badges for ECG, SpO2, and EtCO2 graph controls while preserving draft Save/Send behavior
+  - [x] Removed the right-side SpO2 and EtCO2 graph rows and moved graph on/off staging into the left vital toggles
+  - [x] Added regression coverage for SpO2/EtCO2 graph On and Off behavior after Save → Send
+  - [x] Updated selector coverage so the removed admin options stay hidden
 - [x] Requirements gathering (Phases 1–2 of project planning)
+- [x] **Admin vital zero-focus input polish — COMPLETE:**
+  - [x] FC, SpO2, BP sys, BP dia, and EtCO2 inputs clear a visible `0` on focus
+  - [x] Focus-only clearing does not dirty the vital; blur restores untouched zero values
+  - [x] Non-zero values remain visible on focus and typed values still strip leading zeroes
+- [x] **Admin vitals auto-sort paste box — COMPLETE:**
+  - [x] Added an admin-only auto-sort textarea above FC, SpO2, BP, and EtCO2 inputs
+  - [x] Labelled French/English vital lines update only matching draft values
+  - [x] Combined BP values parse any systolic/diastolic numbers around `/`, with separate BP sys/dia labels also supported
+  - [x] SpO2 and EtCO2 auto-sorted values reuse draft updates so matching graph connections stage as `normal`
+- [x] **SpO2 monitor pulse fill icon — COMPLETE:**
+  - [x] Numeric SpO2 values render a small yellow outlined fill bar beside the number
+  - [x] Fill animation samples the selected SpO2 pleth waveform shape and timing
+  - [x] SpO2 OFF/disconnected state does not render the pulse icon
+- [x] **Monitor SpO2/EtCO2 graph visibility — COMPLETE:**
+  - [x] Normal monitor mode shows one secondary graph slot at a time
+  - [x] The CO2 soft key switches the secondary graph slot between SpO2 and EtCO2
+  - [x] Typing SpO2 or EtCO2 numbers in admin stages the matching graph connection for Save → Send
+  - [x] Bottom-panel-hidden expanded mode shows both SpO2 and EtCO2 rows, with Off rows disconnected
+- [x] **Admin patient information checklist — COMPLETE:**
+  - [x] Added a third admin tab named Patient Information
+  - [x] Added side-by-side Sample and OPQRST square checklist panels
+  - [x] Letter buttons toggle an ECG-green selected state independently
+  - [x] Letter buttons now render as compact left-aligned vertical columns
+  - [x] Each letter has a page-only text input beside it for SAMPLE/OPQRST notes
+  - [x] Added an auto-sort textarea that fills `Letter: value` notes, routing repeated S/P labels to SAMPLE first and OPQRST second
+  - [x] Checklist and text state is page-only, survives tab switching during the session, and does not use Save/Send
+- [x] **Caller info auto-sort paste box — COMPLETE:**
+  - [x] Added an admin-only auto-sort textarea above the Caller Info fields
+  - [x] Labelled French/English lines fill the six main caller-info draft fields, including label-on-next-line and dash-separated formats
+  - [x] Added Call #, Priority, and MPDS Code fields that appear on admin and trainee caller-info views after Save → Send
+  - [x] Dispatch-format labels map into their matching fields, with patient/details/units combined into Information
+  - [x] Removed the legacy Intervention prioritaire code field and reordered Caller Info so Dispatch countdown appears before Call / Priority / MPDS
+  - [x] Assignment caller-info screen keeps the large Priority badge without a duplicate Priority details row
+  - [x] Matching fields overwrite immediately while preserving the existing Save → Send workflow
 - [x] Zoll X Series UI reference documented (`screenshots/SCREENSHOTS_SUMMARY.md`)
 - [x] Architecture designed (layers, component tree, state, realtime, ECG strategy)
 - [x] `PLAN.md` — full development plan with 11 phases
@@ -70,9 +116,10 @@
   - [x] TypeScript clean; dev server serves at `localhost:3000`
 - [x] **Dispatch lock + countdown startup gate — COMPLETE:**
   - [x] Monitor boots locked-off for normal users; admin caller-info Send arms a lock + ETA countdown on first send (minutes + seconds fields), later Sends only update content; admin Reset = full reset to locked-off
-  - [x] Unlock = Acknowledge → countdown 0 → Arrival; Transport enabled only after power-on; Ack/Arrival/Transport record EST wall-clock time, merged into the event log
-  - [x] Gate state persisted (store version 7, absolute countdown end-timestamp) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
-  - [x] New `useCountdown` hook + `formatEstTime` util; caller-event state moved from controller to store; `initialPoweredOn` controller option; tests across store/hook/util/modal/controller + page flow tests run with `?dev=1`
+  - [x] Unlock = Acknowledge → countdown 0 → Arrival → Go to Monitor; Transport enabled only after power-on; Ack/Arrival/Transport record EST wall-clock time, merged into the event log
+  - [x] Assignment dashboard timers now split correctly: Response Timer counts up from dispatch Send, while ETA counts down to the configured scene-arrival countdown
+  - [x] Gate state persisted (store version 7, absolute response start timestamp, absolute countdown end-timestamp, per-dispatch run id) so refresh resumes; `?dev=1` bypasses the gate; pre-dispatch standby screen, inert blocked power button
+  - [x] New `useCountdown` + `useElapsedTimer` hooks and `formatEstTime` util; caller-event state moved from controller to store; `initialPoweredOn` controller option; tests across store/hook/util/modal/controller + page flow tests run with `?dev=1`
 - [x] **Dispatch locked/off hardware silence — COMPLETE:**
   - [x] While powered off or dispatch-locked, hardware controls are inert and do not play button audio; only the dispatch touchscreen buttons remain interactive on the locked caller-info screen
   - [x] Locked caller-info now fills the monitor screen as a touchscreen; both locked caller-info and the in-monitor Call Info view use a distinct dispatch-tablet/iPad visual treatment so they do not look like native monitor UI
@@ -84,9 +131,15 @@
   - [x] Full-page caller info keeps an iPad-oriented 4:3 frame and mimics the reference assignment dashboard layout; map/location area is reserved for later
 - [x] **Disconnected startup vitals/graphs — COMPLETE:**
   - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`
+  - [x] Admin vitals panel rows ordered FC → SpO2 → BP sys/dia → EtCO2
   - [x] Admin vital rows expose a right-side Off/On toggle; clicking anywhere in the toggle rectangle flips that specific vital on/off
+  - [x] Admin vital number fields use narrow, right-aligned console slots with unit labels embedded inside the field
+  - [x] Monitor SpO2 uses a slightly smaller value font, with a smaller `SpO2 OFF` disconnected display for fit
+  - [x] Admin graph controls now sit beside their matching vital rows: ECG beside FC, SpO2 beside SpO2, and EtCO2 beside EtCO2
+  - [x] ECG, SpO2, and EtCO2 graph connection state reuses the same Off/On toggle treatment as numeric vitals
+  - [x] ECG rhythm selection uses a compact `Rhythm Options` picker with category buttons first and only the selected category's rhythm options shown underneath
   - [x] Vital alarms stay inactive for Off startup/reset vitals until each specific vital is turned On through Save → Send; numeric `0` is treated as a real alarmable value when On
-  - [x] ECG, SpO2, and EtCO2 graph channels start as spaced dashed disconnected traces via their `Off` selector options; choosing a non-Off option makes that graph live after Save → Send
+  - [x] ECG, SpO2, and EtCO2 graph channels start as spaced dashed disconnected traces; switching the graph toggle On makes that graph live after Save → Send
 - [x] **Context-aware admin reset — COMPLETE:**
   - [x] Monitor tab Reset clears only monitor vitals/rhythm/waveform state back to the disconnected blank startup state
   - [x] Caller Info tab Reset remains the full drill reset, clearing caller info, dispatch gate/countdown, logs, and vitals
@@ -175,7 +228,7 @@
   - [x] While the reprint is up only Back works (`captureLock` extended with `printPreviewOpen`); Back dismisses it; sidebar PRINT label highlights while open
   - [x] Tests: `printFlow` (inert with no capture, reprint + Back dismiss + lock-to-Back, forgotten after power cycle), `DeviceShell` printer key fires `onPrint`
 - [x] **Caller info on ANALYZE — COMPLETE:**
-  - [x] Admin dashboard includes a separate Caller Info tab with fields: Intervention prioritaire code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button capped at three optional title/input rows
+  - [x] Admin dashboard includes a separate Caller Info tab with fields: Dispatch countdown, Call #, Priority, MPDS Code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button capped at three optional title/input rows
   - [x] Caller info uses draft/saved/confirmed state and the existing Save → Send workflow
   - [x] Monitor shows the sent caller info when the bottom physical ANALYZE button is clicked
   - [x] Left-side menu ANALYSE soft key (and matching physical left soft key) opens caller info modal only; it does not start the defib analyze sequence
