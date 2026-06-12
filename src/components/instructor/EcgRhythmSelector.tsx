@@ -117,7 +117,7 @@ export function EcgRhythmSelector() {
             className={cn(
               'text-xs uppercase tracking-wider',
               displayStatus === 'clean' && 'text-neutral-500',
-              displayStatus === 'dirty' && 'text-cyan-bp',
+              status === 'dirty' && 'text-cyan-bp',
               displayStatus === 'pending' && 'text-pending-amber',
             )}
             data-testid="status-rhythm"
