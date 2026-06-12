@@ -1,11 +1,19 @@
 'use client'
 
+import type {
+  PatientInformationChecklist,
+  PatientInformationTextState,
+} from '@/lib/patientInformationAutoSort'
 import { cn } from '@/lib/utils'
 
-export type PatientInfoChecklist = 'sample' | 'opqrst'
+export type PatientInfoChecklist = PatientInformationChecklist
 
 type PatientInformationPanelProps = {
   selected: Record<PatientInfoChecklist, ReadonlySet<string>>
+  autoSortText: string
+  values: PatientInformationTextState
+  onAutoSortChange: (value: string) => void
+  onTextChange: (checklist: PatientInfoChecklist, letter: string, value: string) => void
   onToggle: (checklist: PatientInfoChecklist, letter: string) => void
 }
 
@@ -18,49 +26,78 @@ const CHECKLISTS: ReadonlyArray<{
   { id: 'opqrst', title: 'OPQRST', letters: ['O', 'P', 'Q', 'R', 'S', 'T'] },
 ]
 
-export function PatientInformationPanel({ selected, onToggle }: PatientInformationPanelProps) {
+export function PatientInformationPanel({
+  selected,
+  autoSortText,
+  values,
+  onAutoSortChange,
+  onTextChange,
+  onToggle,
+}: PatientInformationPanelProps) {
   return (
-    <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-      {CHECKLISTS.map(({ id, title, letters }) => (
-        <section
-          key={id}
-          aria-label={title}
-          className={cn(
-            'flex aspect-square min-h-[18rem] flex-col gap-4',
-            'border border-neutral-800 bg-neutral-950 p-4',
-          )}
-        >
-          <div className="flex items-center justify-between gap-3 border-b border-neutral-800 pb-3">
-            <h2 className="text-sm uppercase tracking-wider text-neutral-400">{title}</h2>
-            <span className="text-xs uppercase tracking-wider text-neutral-600">Checklist</span>
-          </div>
-          <div
-            data-testid={`patient-info-letter-column-${id}`}
-            className="flex flex-1 flex-col items-start gap-2"
+    <section className="grid gap-4">
+      <label className="grid gap-1 border border-neutral-800 bg-neutral-950 p-4">
+        <span className="text-xs uppercase tracking-wider text-neutral-400">
+          Auto-sort patient information
+        </span>
+        <textarea
+          value={autoSortText}
+          onChange={(event) => onAutoSortChange(event.target.value)}
+          aria-label="Auto-sort patient information"
+          rows={5}
+          placeholder="S:&#10;A:&#10;M:&#10;P:&#10;L:&#10;E:&#10;O:&#10;P:&#10;Q:&#10;R:&#10;S:&#10;T:"
+          className="min-h-28 resize-y border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+        />
+      </label>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {CHECKLISTS.map(({ id, title, letters }) => (
+          <section
+            key={id}
+            aria-label={title}
+            className={cn(
+              'flex aspect-square min-h-[24rem] flex-col gap-4',
+              'border border-neutral-800 bg-neutral-950 p-4',
+            )}
           >
-            {letters.map((letter) => {
-              const active = selected[id].has(letter)
-              return (
-                <button
-                  key={letter}
-                  type="button"
-                  onClick={() => onToggle(id, letter)}
-                  aria-pressed={active}
-                  className={cn(
-                    'flex h-12 w-12 items-center justify-center border font-mono text-2xl font-bold',
-                    'transition-[background-color,border-color,color] duration-150',
-                    active
-                      ? 'border-ecg-green bg-ecg-green text-black'
-                      : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800',
-                  )}
-                >
-                  {letter}
-                </button>
-              )
-            })}
-          </div>
-        </section>
-      ))}
+            <div className="flex items-center justify-between gap-3 border-b border-neutral-800 pb-3">
+              <h2 className="text-sm uppercase tracking-wider text-neutral-400">{title}</h2>
+              <span className="text-xs uppercase tracking-wider text-neutral-600">Checklist</span>
+            </div>
+            <div
+              data-testid={`patient-info-letter-column-${id}`}
+              className="flex flex-1 flex-col items-start gap-2"
+            >
+              {letters.map((letter) => {
+                const active = selected[id].has(letter)
+                return (
+                  <div key={letter} className="grid w-full grid-cols-[3rem_minmax(0,1fr)] gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onToggle(id, letter)}
+                      aria-pressed={active}
+                      className={cn(
+                        'flex h-12 w-12 items-center justify-center border font-mono text-2xl font-bold',
+                        'transition-[background-color,border-color,color] duration-150',
+                        active
+                          ? 'border-ecg-green bg-ecg-green text-black'
+                          : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800',
+                      )}
+                    >
+                      {letter}
+                    </button>
+                    <input
+                      value={values[id][letter]}
+                      onChange={(event) => onTextChange(id, letter, event.target.value)}
+                      aria-label={`${title} ${letter} information`}
+                      className="min-w-0 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
     </section>
   )
 }

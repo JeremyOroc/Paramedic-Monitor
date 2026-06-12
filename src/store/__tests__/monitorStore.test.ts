@@ -138,6 +138,54 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.hr).toBe(160)
   })
 
+  it('SpO2 and EtCO2 numeric edits stage their matching graph connection state', () => {
+    useMonitorStore.getState().setDraft('spo2', 98)
+    useMonitorStore.getState().setDraft('etco2', 35)
+
+    let s = useMonitorStore.getState()
+    expect(s.draft.spo2).toBe(98)
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draft.etco2).toBe(35)
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.saved.spo2_waveform).toBe('off')
+    expect(s.confirmed.etco2_waveform).toBe('off')
+
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    s = useMonitorStore.getState()
+    expect(s.confirmed.spo2).toBe(98)
+    expect(s.confirmed.spo2_waveform).toBe('normal')
+    expect(s.confirmed.etco2).toBe(35)
+    expect(s.confirmed.etco2_waveform).toBe('normal')
+  })
+
+  it('typed zero still stages SpO2 and EtCO2 graphs as connected', () => {
+    useMonitorStore.getState().setDraft('spo2', 0)
+    useMonitorStore.getState().setDraft('etco2', 0)
+
+    const s = useMonitorStore.getState()
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.etco2_waveform).toBe('normal')
+  })
+
+  it('HR and BP numeric edits do not change SpO2 or EtCO2 graph state', () => {
+    useMonitorStore.getState().setDraft('hr', 80)
+    useMonitorStore.getState().setDraft('bp_sys', 120)
+    useMonitorStore.getState().setDraft('bp_dia', 80)
+
+    const s = useMonitorStore.getState()
+    expect(s.draftVitalActive.hr).toBe(true)
+    expect(s.draftVitalActive.bp_sys).toBe(true)
+    expect(s.draftVitalActive.bp_dia).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('off')
+    expect(s.draft.etco2_waveform).toBe('off')
+  })
+
   it('can turn a stored zero vital on and off independently', () => {
     useMonitorStore.getState().setDraft('hr', 0)
     expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)

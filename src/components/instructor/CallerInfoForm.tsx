@@ -10,12 +10,17 @@ import { cn } from '@/lib/utils'
 import { useMonitorStore } from '@/store/monitorStore'
 
 const PRIMARY_FIELDS = [
-  { field: 'interventionPriorityCode', label: 'Intervention prioritaire code', multiline: false },
   { field: 'address', label: 'Adresse', multiline: false },
   { field: 'problem', label: 'Probleme', multiline: true },
   { field: 'information', label: 'Information', multiline: true },
   { field: 'update', label: 'Mise a jour', multiline: true },
   { field: 'time', label: 'Heure', multiline: false },
+] as const
+
+const DISPATCH_FIELDS = [
+  { field: 'callNumber', label: 'Call #' },
+  { field: 'priority', label: 'Priority' },
+  { field: 'mpdsCode', label: 'MPDS Code' },
 ] as const
 
 const EXTRA_FIELDS = [
@@ -77,7 +82,7 @@ export function CallerInfoForm() {
             onChange={handleAutoSortChange}
             aria-label="Auto-sort caller info"
             rows={5}
-            placeholder="Adresse:&#10;Probleme:&#10;Information:&#10;Mise a jour:&#10;Heure:"
+            placeholder="CALL #:&#10;PRIORITY:&#10;MPDS CODE:&#10;ADDRESS:&#10;PATIENT:&#10;CHIEF COMPLAINT:&#10;DETAILS:&#10;STATUS:&#10;UNITS ASSIGNED:&#10;TIME RECEIVED:"
             className="min-h-28 resize-y border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
           />
         </label>
@@ -115,6 +120,26 @@ export function CallerInfoForm() {
               ? 'Dispatch already armed — further Sends only update caller info.'
               : 'The first Send arms the dispatch and starts this countdown on the monitor.'}
           </span>
+        </div>
+        <div className="grid gap-2 border border-neutral-800 bg-neutral-900/40 p-3">
+          <span className="text-xs uppercase tracking-wider text-neutral-400">
+            Call / Priority / MPDS
+          </span>
+          <div className="grid gap-3 md:grid-cols-3">
+            {DISPATCH_FIELDS.map(({ field, label }) => (
+              <label key={field} className="grid gap-1">
+                <span className="text-xs uppercase tracking-wider text-neutral-400">
+                  {label}
+                </span>
+                <input
+                  value={callerInfoDraft[field]}
+                  onChange={(e) => setCallerInfoDraft(field, e.target.value)}
+                  aria-label={label}
+                  className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                />
+              </label>
+            ))}
+          </div>
         </div>
         {PRIMARY_FIELDS.map(({ field, label, multiline }) => (
           <label key={field} className="grid gap-1">

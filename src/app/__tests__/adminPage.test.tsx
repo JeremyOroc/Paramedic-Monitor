@@ -46,11 +46,14 @@ describe('AdminPage', () => {
     const sample = screen.getByRole('region', { name: 'Sample' })
     const opqrst = screen.getByRole('region', { name: 'OPQRST' })
 
+    expect(screen.getByLabelText('Auto-sort patient information')).toBeInTheDocument()
     for (const letter of ['S', 'A', 'M', 'P', 'L', 'E']) {
       expect(within(sample).getByRole('button', { name: letter })).toBeInTheDocument()
+      expect(within(sample).getByLabelText(`Sample ${letter} information`)).toBeInTheDocument()
     }
     for (const letter of ['O', 'P', 'Q', 'R', 'S', 'T']) {
       expect(within(opqrst).getByRole('button', { name: letter })).toBeInTheDocument()
+      expect(within(opqrst).getByLabelText(`OPQRST ${letter} information`)).toBeInTheDocument()
     }
 
     const sampleS = within(sample).getByRole('button', { name: 'S' })
@@ -65,7 +68,7 @@ describe('AdminPage', () => {
     expect(sampleS).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('keeps Patient Information selections while switching admin tabs', async () => {
+  it('keeps Patient Information selections and text while switching admin tabs', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
@@ -75,6 +78,8 @@ describe('AdminPage', () => {
       { name: 'S' },
     )
     await user.click(sampleS)
+    await user.type(screen.getByLabelText('Sample S information'), 'Chest pain')
+    await user.type(screen.getByLabelText('OPQRST O information'), '20 minutes')
 
     await user.click(screen.getByRole('button', { name: 'Monitor' }))
     await user.click(screen.getByRole('button', { name: 'Patient Information' }))
@@ -84,9 +89,11 @@ describe('AdminPage', () => {
         name: 'S',
       }),
     ).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
+    expect(screen.getByLabelText('OPQRST O information')).toHaveValue('20 minutes')
   })
 
-  it('uses the Patient Information tab Reset to clear only local checklist selections', async () => {
+  it('uses the Patient Information tab Reset to clear only local checklist selections and text', async () => {
     const user = userEvent.setup()
     act(() => {
       useMonitorStore.getState().setDraft('hr', 180)
@@ -100,12 +107,48 @@ describe('AdminPage', () => {
       { name: 'S' },
     )
     await user.click(sampleS)
+    await user.type(screen.getByLabelText('Sample S information'), 'Chest pain')
+    await user.type(
+      screen.getByLabelText('Auto-sort patient information'),
+      'O: 20 minutes',
+    )
 
     await user.click(screen.getByRole('button', { name: 'Reset' }))
 
     expect(sampleS).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByLabelText('Auto-sort patient information')).toHaveValue('')
+    expect(screen.getByLabelText('Sample S information')).toHaveValue('')
+    expect(screen.getByLabelText('OPQRST O information')).toHaveValue('')
     expect(useMonitorStore.getState().draft.hr).toBe(180)
     expect(useMonitorStore.getState().callerInfoDraft.address).toBe('123 Rue Principale')
+  })
+
+  it('auto-sorts Patient Information text without changing green selections', async () => {
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    await user.type(
+      screen.getByLabelText('Auto-sort patient information'),
+      [
+        'S: Chest pain',
+        'P: Asthma',
+        'O: 20 minutes',
+        'P: Worse breathing',
+        'S: 8/10',
+      ].join('\n'),
+    )
+
+    expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
+    expect(screen.getByLabelText('Sample P information')).toHaveValue('Asthma')
+    expect(screen.getByLabelText('OPQRST O information')).toHaveValue('20 minutes')
+    expect(screen.getByLabelText('OPQRST P information')).toHaveValue('Worse breathing')
+    expect(screen.getByLabelText('OPQRST S information')).toHaveValue('8/10')
+    expect(
+      within(screen.getByRole('region', { name: 'Sample' })).getByRole('button', {
+        name: 'S',
+      }),
+    ).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('uses the Monitor tab Reset to clear only monitor vitals', async () => {

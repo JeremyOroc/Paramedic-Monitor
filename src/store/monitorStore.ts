@@ -223,11 +223,14 @@ export const useMonitorStore = create<MonitorState>()(
       dispatchSeconds: 0,
       setDraft: (field, value) =>
         set((s) => {
+          const draft: Vitals = { ...s.draft, [field]: value }
+          if (field === 'spo2') draft.spo2_waveform = 'normal'
+          if (field === 'etco2') draft.etco2_waveform = 'normal'
           const draftVitalActive = isNumericVitalField(field)
             ? { ...s.draftVitalActive, [field]: true }
             : s.draftVitalActive
           return {
-            draft: { ...s.draft, [field]: value },
+            draft,
             draftVitalActive,
             draftVitalsActive: anyVitalActive(draftVitalActive),
           }

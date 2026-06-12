@@ -71,10 +71,20 @@ const ASSIGNMENT_FIELD_META: Partial<Record<CallerInfoField, {
   icon: AssignmentIconName
   colorClassName: string
 }>> = {
-  interventionPriorityCode: {
+  callNumber: {
+    label: 'Call #',
+    icon: 'note',
+    colorClassName: 'text-dispatch-blue',
+  },
+  priority: {
     label: 'Priority',
     icon: 'bell',
     colorClassName: 'text-dispatch-red',
+  },
+  mpdsCode: {
+    label: 'MPDS Code',
+    icon: 'medical',
+    colorClassName: 'text-dispatch-yellow',
   },
   address: {
     label: 'Address',
@@ -315,7 +325,8 @@ function AssignmentCallerInfoContent({
   onEnterMonitor,
   canEnterMonitor = false,
 }: CallerInfoContentProps) {
-  const priority = info.interventionPriorityCode.trim() || 'Priority Pending'
+  const priority = info.priority.trim() || 'Priority Pending'
+  const assignmentDisplayFields = displayFields.filter(({ field }) => field !== 'priority')
   const location = info.address.trim() || '-'
   const receivedTime = info.time.trim() || '--:--'
 
@@ -375,7 +386,7 @@ function AssignmentCallerInfoContent({
           </div>
           {hasInfo ? (
             <ul className="grid gap-1">
-              {displayFields.map(({ field, label, labelField }) => {
+              {assignmentDisplayFields.map(({ field, label, labelField }) => {
                 const meta = ASSIGNMENT_FIELD_META[field]
                 const resolvedLabel =
                   labelField && info[labelField].trim() !== ''

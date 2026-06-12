@@ -5,6 +5,42 @@
 
 ---
 
+## [2026-06-12] [instructor] — Add Patient Information auto-sort notes
+
+- Added page-only SAMPLE/OPQRST text inputs beside each letter on the Patient Information tab.
+- Added an auto-sort textarea for `Letter: value` patient notes, routing repeated S/P labels to SAMPLE first and OPQRST second.
+- Kept green letter highlighting manual-only and reset scoped to the Patient Information tab.
+
+## [2026-06-12] [instructor] — Clean up caller info priority layout
+
+- Removed the legacy `Intervention prioritaire code` caller-info field from current data, admin UI, parser support, and display lists.
+- Reordered admin Caller Info so Dispatch countdown appears before Call / Priority / MPDS.
+- Assignment-style caller info now keeps the large Priority badge without showing a duplicate Priority row in the details list.
+
+## [2026-06-12] [instructor] — Connect SpO2 and EtCO2 graphs from typed numbers
+
+- Typing a SpO2 or EtCO2 value in admin now stages the matching graph waveform as `normal`.
+- Save → Send now carries typed SpO2/EtCO2 numbers and graph connection state to the monitor together.
+- Added coverage for typed zero values, unrelated vital edits, and the single secondary graph slot behavior.
+
+## [2026-06-12] [monitor] — Restore CO2 secondary graph switching
+
+- Normal monitor mode now shows only one secondary graph slot at a time.
+- The CO2 soft key switches the secondary slot between SpO2 and EtCO2.
+- Expanded waveform mode still shows both secondary rows when the bottom panel is hidden.
+
+## [2026-06-11] [monitor] — Show active SpO2 and EtCO2 graph rows
+
+- Monitor waveform rows now follow confirmed SpO2 and EtCO2 waveform state after Save → Send.
+- Active SpO2 and EtCO2 channels render live graph rows together while Off channels are hidden.
+- Added coverage for graph rows appearing and disappearing from admin vital toggle state.
+
+## [2026-06-11] [instructor] — Extend caller info dispatch auto-sort
+
+- Added Call #, Priority, and MPDS Code fields to caller info draft/saved/confirmed data.
+- Updated auto-sort to parse the dispatch label format in English and French.
+- Displayed the new call identifiers on admin Caller Info and trainee caller-info views after Save → Send.
+
 ## [2026-06-11] [instructor] — Add caller info auto-sort paste box
 
 - Added an admin Caller Info paste box that parses labelled lines into the existing draft fields.

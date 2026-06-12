@@ -34,7 +34,9 @@ describe('CallerInfoModal', () => {
     renderModal({
       info: {
         ...DEFAULT_CALLER_INFO,
-        interventionPriorityCode: 'Code 3',
+        callNumber: 'C-2026-15',
+        priority: 'P1',
+        mpdsCode: '06D02',
         address: '123 Rue Principale',
         problem: 'Douleur thoracique',
         time: '14:45',
@@ -42,10 +44,30 @@ describe('CallerInfoModal', () => {
     })
 
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
-    expect(screen.getAllByText('Code 3').length).toBeGreaterThan(0)
+    expect(screen.getByText('C-2026-15')).toBeInTheDocument()
+    expect(screen.getAllByText('P1').length).toBeGreaterThan(0)
+    expect(screen.getByText('06D02')).toBeInTheDocument()
     expect(screen.getAllByText('123 Rue Principale').length).toBeGreaterThan(0)
     expect(screen.getByText('Douleur thoracique')).toBeInTheDocument()
     expect(screen.getAllByText('14:45').length).toBeGreaterThan(0)
+  })
+
+  it('uses the assignment priority badge without a duplicate Priority detail row', () => {
+    renderModal({
+      info: {
+        ...DEFAULT_CALLER_INFO,
+        callNumber: 'C-2026-15',
+        priority: 'P1',
+        mpdsCode: '06D02',
+      },
+    })
+
+    expect(screen.getByText('Call Assignment')).toBeInTheDocument()
+    expect(screen.getByText('P1')).toBeInTheDocument()
+    expect(screen.getByText('Lights & Sirens')).toBeInTheDocument()
+    expect(screen.queryByTestId('assignment-info-priority')).toBeNull()
+    expect(screen.getByTestId('assignment-info-callNumber')).toHaveTextContent('C-2026-15')
+    expect(screen.getByTestId('assignment-info-mpdsCode')).toHaveTextContent('06D02')
   })
 
   it('renders the assignment dashboard variant by default', () => {

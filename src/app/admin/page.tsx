@@ -11,6 +11,11 @@ import {
 } from '@/components/instructor/PatientInformationPanel'
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
+import {
+  EMPTY_PATIENT_INFORMATION_TEXT,
+  parsePatientInformationAutoSort,
+  type PatientInformationTextState,
+} from '@/lib/patientInformationAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
@@ -30,14 +35,23 @@ export default function AdminPage() {
   const [patientSelections, setPatientSelections] = useState<PatientInformationSelections>(
     EMPTY_PATIENT_INFORMATION_SELECTIONS,
   )
+  const [patientAutoSortText, setPatientAutoSortText] = useState('')
+  const [patientText, setPatientText] = useState<PatientInformationTextState>(
+    EMPTY_PATIENT_INFORMATION_TEXT,
+  )
   const reset = useMonitorStore((s) => s.reset)
   const resetMonitorVitals = useMonitorStore((s) => s.resetMonitorVitals)
+  const resetPatientInformation = () => {
+    setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
+    setPatientAutoSortText('')
+    setPatientText(EMPTY_PATIENT_INFORMATION_TEXT())
+  }
   const handleReset =
     tab === 'monitor'
       ? resetMonitorVitals
       : tab === 'caller'
         ? reset
-        : () => setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
+        : resetPatientInformation
 
   const togglePatientSelection = (checklist: PatientInfoChecklist, letter: string) => {
     setPatientSelections((current) => {
@@ -52,6 +66,25 @@ export default function AdminPage() {
         [checklist]: nextChecklist,
       }
     })
+  }
+
+  const handlePatientTextChange = (
+    checklist: PatientInfoChecklist,
+    letter: string,
+    value: string,
+  ) => {
+    setPatientText((current) => ({
+      ...current,
+      [checklist]: {
+        ...current[checklist],
+        [letter]: value,
+      },
+    }))
+  }
+
+  const handlePatientAutoSortChange = (value: string) => {
+    setPatientAutoSortText(value)
+    setPatientText(parsePatientInformationAutoSort(value))
   }
 
   return (
@@ -102,6 +135,10 @@ export default function AdminPage() {
       ) : tab === 'patient' ? (
         <PatientInformationPanel
           selected={patientSelections}
+          autoSortText={patientAutoSortText}
+          values={patientText}
+          onAutoSortChange={handlePatientAutoSortChange}
+          onTextChange={handlePatientTextChange}
           onToggle={togglePatientSelection}
         />
       ) : (

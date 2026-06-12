@@ -1,5 +1,7 @@
 export type CallerInfo = {
-  interventionPriorityCode: string
+  callNumber: string
+  priority: string
+  mpdsCode: string
   address: string
   problem: string
   information: string
@@ -16,7 +18,9 @@ export type CallerInfo = {
 export type CallerInfoField = keyof CallerInfo
 
 export const DEFAULT_CALLER_INFO: CallerInfo = {
-  interventionPriorityCode: '',
+  callNumber: '',
+  priority: '',
+  mpdsCode: '',
   address: '',
   problem: '',
   information: '',
@@ -35,7 +39,9 @@ export const CALLER_INFO_FIELDS: ReadonlyArray<{
   label: string
   multiline?: boolean
 }> = [
-  { field: 'interventionPriorityCode', label: 'Intervention prioritaire code' },
+  { field: 'callNumber', label: 'Call #' },
+  { field: 'priority', label: 'Priority' },
+  { field: 'mpdsCode', label: 'MPDS Code' },
   { field: 'address', label: 'Adresse' },
   { field: 'problem', label: 'Probleme', multiline: true },
   { field: 'information', label: 'Information', multiline: true },
@@ -54,7 +60,9 @@ export const CALLER_INFO_DISPLAY_FIELDS: ReadonlyArray<{
   label: string
   labelField?: CallerInfoField
 }> = [
-  { field: 'interventionPriorityCode', label: 'Intervention prioritaire code' },
+  { field: 'callNumber', label: 'Call #' },
+  { field: 'priority', label: 'Priority' },
+  { field: 'mpdsCode', label: 'MPDS Code' },
   { field: 'address', label: 'Adresse' },
   { field: 'problem', label: 'Probleme' },
   { field: 'information', label: 'Information' },
@@ -66,10 +74,17 @@ export const CALLER_INFO_DISPLAY_FIELDS: ReadonlyArray<{
 ]
 
 export function normalizeCallerInfo(info: Partial<CallerInfo> | null | undefined): CallerInfo {
-  return {
-    ...DEFAULT_CALLER_INFO,
-    ...(info ?? {}),
+  const normalized = { ...DEFAULT_CALLER_INFO }
+  if (!info) return normalized
+
+  for (const field of Object.keys(DEFAULT_CALLER_INFO) as CallerInfoField[]) {
+    const value = info[field]
+    if (typeof value === 'string') {
+      normalized[field] = value
+    }
   }
+
+  return normalized
 }
 
 export function hasCallerInfo(info: CallerInfo): boolean {
