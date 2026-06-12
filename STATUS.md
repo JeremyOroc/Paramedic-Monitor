@@ -30,6 +30,11 @@
   - [x] FC, SpO2, BP sys, BP dia, and EtCO2 inputs clear a visible `0` on focus
   - [x] Focus-only clearing does not dirty the vital; blur restores untouched zero values
   - [x] Non-zero values remain visible on focus and typed values still strip leading zeroes
+- [x] **Admin vitals auto-sort paste box — COMPLETE:**
+  - [x] Added an admin-only auto-sort textarea above FC, SpO2, BP, and EtCO2 inputs
+  - [x] Labelled French/English vital lines update only matching draft values
+  - [x] Combined BP values parse any systolic/diastolic numbers around `/`, with separate BP sys/dia labels also supported
+  - [x] SpO2 and EtCO2 auto-sorted values reuse draft updates so matching graph connections stage as `normal`
 - [x] **SpO2 monitor pulse fill icon — COMPLETE:**
   - [x] Numeric SpO2 values render a small yellow outlined fill bar beside the number
   - [x] Fill animation samples the selected SpO2 pleth waveform shape and timing

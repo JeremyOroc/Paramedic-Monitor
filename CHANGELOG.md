@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-06-12] [instructor] — Add vitals auto-sort paste box
+
+- Added an admin Vitals auto-sort textarea for FC/HR, SpO2/saturation, BP/TA, and EtCO2/CO2 labelled lines.
+- BP labels now parse any slash-separated systolic/diastolic numbers, with separate BP sys/dia labels also supported.
+- Auto-sort updates draft vitals only, preserving Save → Send and SpO2/EtCO2 graph staging.
+
 ## [2026-06-12] [instructor] — Add Patient Information auto-sort notes
 
 - Added page-only SAMPLE/OPQRST text inputs beside each letter on the Patient Information tab.

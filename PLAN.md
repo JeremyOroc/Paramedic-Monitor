@@ -427,6 +427,10 @@ button is inert until a drill gate is satisfied.
 - Admin vital number inputs clear a visible `0` on focus for FC, SpO2, BP sys,
   BP dia, and EtCO2. This is visual only until typing; blur restores untouched
   zeroes, and non-zero values stay visible on focus.
+- The admin Vitals panel includes an auto-sort textarea for labelled FC/HR,
+  SpO2/saturation, BP/TA, and EtCO2/CO2 text. It updates only matched draft
+  vitals, supports combined BP values like `BP: 186/102` or `BP: 95/60`
+  plus separate systolic/diastolic labels, and keeps Save → Send unchanged.
 - The admin Caller Info tab is ordered as auto-sort paste box, Dispatch
   countdown, Call # / Priority / MPDS Code, main caller-info fields, then
   optional extras. It parses
