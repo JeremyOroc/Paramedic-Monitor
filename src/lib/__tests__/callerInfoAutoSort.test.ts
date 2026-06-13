@@ -27,11 +27,68 @@ describe('parseCallerInfoAutoSort', () => {
       problem: 'Difficulty breathing',
       information: [
         'PATIENT: Jean Tremblay',
-        'DETAILS: Sitting upright',
+        'Sitting upright',
         'UNITS ASSIGNED: Medic 421',
       ].join('\n'),
       update: 'Police on scene',
       time: '14:35',
+    })
+  })
+
+  it('parses dispatch labels whose values are on following lines', () => {
+    expect(
+      parseCallerInfoAutoSort(
+        [
+          'CALL #: 2026-0612-1712',
+          'PRIORITY: P1 / DELTA',
+          'MPDS CODE: 26-D-1',
+          'ADDRESS:',
+          '4480 Boulevard Saint-Jean, Dollard-des-Ormeaux, QC',
+          'CHIEF COMPLAINT:',
+          'Male, 67 years old, fever and difficulty breathing',
+          'DETAILS:',
+          'Fever for 3 days',
+          'Increasing shortness of breath',
+          'STATUS:',
+          '10-100 Unstable',
+          'UNITS ASSIGNED:',
+          '2231',
+          '2232',
+          'PR-451',
+          'TIME RECEIVED:',
+          '17:12',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      callNumber: '2026-0612-1712',
+      priority: 'P1 / DELTA',
+      mpdsCode: '26-D-1',
+      address: '4480 Boulevard Saint-Jean, Dollard-des-Ormeaux, QC',
+      problem: 'Male, 67 years old, fever and difficulty breathing',
+      information: [
+        'Fever for 3 days\nIncreasing shortness of breath',
+        'UNITS ASSIGNED: 2231\n2232\nPR-451',
+      ].join('\n'),
+      update: '10-100 Unstable',
+      time: '17:12',
+    })
+  })
+
+  it('keeps time received to the time value when later scenario sections follow', () => {
+    expect(
+      parseCallerInfoAutoSort(
+        [
+          'TIME RECEIVED:',
+          '17:12',
+          '',
+          '### Patient Presentation',
+          '',
+          'Age/Sex: 67-year-old male',
+          'Appearance: confused and short of breath',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      time: '17:12',
     })
   })
 
@@ -57,11 +114,17 @@ describe('parseCallerInfoAutoSort', () => {
       address: '456 Avenue Centrale',
       problem: 'Chute',
       information: [
-        'DETAILS: Douleur a la hanche',
+        'Douleur a la hanche',
         'UNITES ASSIGNEES: Medic 2',
       ].join('\n'),
       update: 'Pompiers sur place',
       time: '16:10',
+    })
+  })
+
+  it('parses Addresse as an address alias', () => {
+    expect(parseCallerInfoAutoSort('Addresse: 4480 Boulevard Saint-Jean')).toEqual({
+      address: '4480 Boulevard Saint-Jean',
     })
   })
 

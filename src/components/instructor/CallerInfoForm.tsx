@@ -2,10 +2,6 @@
 
 import { useState, type ChangeEvent } from 'react'
 
-import {
-  CALLER_INFO_AUTO_SORT_FIELDS,
-  parseCallerInfoAutoSort,
-} from '@/lib/callerInfoAutoSort'
 import { cn } from '@/lib/utils'
 import { useMonitorStore } from '@/store/monitorStore'
 
@@ -31,6 +27,11 @@ const EXTRA_FIELDS = [
 
 type CallerInfoDraft = ReturnType<typeof useMonitorStore.getState>['callerInfoDraft']
 
+type CallerInfoFormProps = {
+  autoSortText: string
+  onAutoSortChange: (value: string) => void
+}
+
 function getInitialExtraCount(callerInfoDraft: CallerInfoDraft) {
   return EXTRA_FIELDS.reduce((count, { labelField, valueField }, index) => {
     const hasValue =
@@ -40,7 +41,7 @@ function getInitialExtraCount(callerInfoDraft: CallerInfoDraft) {
   }, 0)
 }
 
-export function CallerInfoForm() {
+export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFormProps) {
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
@@ -48,22 +49,12 @@ export function CallerInfoForm() {
   const setDispatchMinutes = useMonitorStore((s) => s.setDispatchMinutes)
   const setDispatchSeconds = useMonitorStore((s) => s.setDispatchSeconds)
   const dispatchArmed = useMonitorStore((s) => s.dispatch.armed)
-  const [autoSortText, setAutoSortText] = useState('')
   const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
   const visibleExtraFields = EXTRA_FIELDS.slice(0, extraCount)
   const extraLimitReached = extraCount >= EXTRA_FIELDS.length
 
   const handleAutoSortChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
-    const nextText = event.target.value
-    setAutoSortText(nextText)
-    const parsed = parseCallerInfoAutoSort(nextText)
-
-    for (const field of CALLER_INFO_AUTO_SORT_FIELDS) {
-      const value = parsed[field]
-      if (value !== undefined) {
-        setCallerInfoDraft(field, value)
-      }
-    }
+    onAutoSortChange(event.target.value)
   }
 
   return (
@@ -75,12 +66,12 @@ export function CallerInfoForm() {
       <div className="grid gap-3">
         <label className="grid gap-1">
           <span className="text-xs uppercase tracking-wider text-neutral-400">
-            Auto-sort caller info
+            Auto-sort scenario
           </span>
           <textarea
             value={autoSortText}
             onChange={handleAutoSortChange}
-            aria-label="Auto-sort caller info"
+            aria-label="Auto-sort scenario"
             rows={5}
             placeholder="CALL #:&#10;PRIORITY:&#10;MPDS CODE:&#10;ADDRESS:&#10;PATIENT:&#10;CHIEF COMPLAINT:&#10;DETAILS:&#10;STATUS:&#10;UNITS ASSIGNED:&#10;TIME RECEIVED:"
             className="min-h-28 resize-y border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"

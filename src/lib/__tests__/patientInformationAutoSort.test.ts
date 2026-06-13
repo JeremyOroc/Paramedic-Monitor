@@ -85,6 +85,60 @@ describe('parsePatientInformationAutoSort', () => {
     })
   })
 
+  it('strips parenthesized medication descriptions from inline SAMPLE M values', () => {
+    expect(
+      parsePatientInformationAutoSort(
+        [
+          'M: Metformin (helps lower blood glucose levels in patients with type 2 diabetes)',
+          'A: Penicillin (rash)',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      ...EMPTY_PATIENT_INFORMATION_TEXT(),
+      sample: {
+        S: '',
+        A: 'Penicillin (rash)',
+        M: 'Metformin',
+        P: '',
+        L: '',
+        E: '',
+      },
+    })
+  })
+
+  it('collects medication lines under SAMPLE M and joins medication names with commas', () => {
+    expect(
+      parsePatientInformationAutoSort(
+        [
+          'M:',
+          'Metformin (helps lower blood glucose levels in patients with type 2 diabetes)',
+          '* Amlodipine (lowers blood pressure by relaxing blood vessels)',
+          '- Atorvastatin (lowers cholesterol and reduces cardiovascular risk)',
+          'P: Hypertension',
+          'O: 20 minutes ago',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      ...EMPTY_PATIENT_INFORMATION_TEXT(),
+      sample: {
+        S: '',
+        A: '',
+        M: 'Metformin, Amlodipine, Atorvastatin',
+        P: 'Hypertension',
+        L: '',
+        E: '',
+      },
+      opqrst: {
+        O: '20 minutes ago',
+        P: '',
+        Q: '',
+        R: '',
+        S: '',
+        T: '',
+      },
+    })
+  })
+
   it('ignores unknown labels and extra repeated S/P labels', () => {
     expect(
       parsePatientInformationAutoSort(

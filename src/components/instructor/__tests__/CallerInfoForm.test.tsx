@@ -3,8 +3,27 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
+import {
+  CALLER_INFO_AUTO_SORT_FIELDS,
+  parseCallerInfoAutoSort,
+} from '@/lib/callerInfoAutoSort'
 
 import { CallerInfoForm } from '../CallerInfoForm'
+
+function renderCallerInfoForm() {
+  const handleAutoSortChange = (value: string) => {
+    const parsed = parseCallerInfoAutoSort(value)
+
+    for (const field of CALLER_INFO_AUTO_SORT_FIELDS) {
+      const parsedValue = parsed[field]
+      if (parsedValue !== undefined) {
+        useMonitorStore.getState().setCallerInfoDraft(field, parsedValue)
+      }
+    }
+  }
+
+  return render(<CallerInfoForm autoSortText="" onAutoSortChange={handleAutoSortChange} />)
+}
 
 describe('CallerInfoForm', () => {
   beforeEach(() => {
@@ -12,10 +31,10 @@ describe('CallerInfoForm', () => {
   })
 
   it('renders all caller info fields', () => {
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
     expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Auto-sort caller info')).toBeInTheDocument()
+    expect(screen.getByLabelText('Auto-sort scenario')).toBeInTheDocument()
     expect(screen.getByText('Call / Priority / MPDS')).toBeInTheDocument()
     expect(screen.getByLabelText('Call #')).toBeInTheDocument()
     expect(screen.getByLabelText('Priority')).toBeInTheDocument()
@@ -31,7 +50,7 @@ describe('CallerInfoForm', () => {
   })
 
   it('renders dispatch countdown before Call / Priority / MPDS', () => {
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
     const formText = screen.getByRole('heading', { name: 'Caller Info' })
       .closest('section')?.textContent ?? ''
@@ -44,7 +63,7 @@ describe('CallerInfoForm', () => {
 
   it('updates caller info draft values', async () => {
     const user = userEvent.setup()
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
     await user.type(screen.getByLabelText('Adresse'), '123 Rue Principale')
     await user.type(screen.getByLabelText('Probleme'), 'Douleur thoracique')
@@ -54,9 +73,9 @@ describe('CallerInfoForm', () => {
   })
 
   it('auto-sorts labelled paste text into the main caller info draft fields', () => {
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
-    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
           'Adresse: 123 Rue Principale',
@@ -77,9 +96,9 @@ describe('CallerInfoForm', () => {
   })
 
   it('auto-sorts dispatch labels into call, priority and MPDS fields', () => {
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
-    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
           'CALL #: C-2026-15',
@@ -105,7 +124,7 @@ describe('CallerInfoForm', () => {
     expect(draft.information).toBe(
       [
         'PATIENT: Jean Tremblay',
-        'DETAILS: Sitting upright',
+        'Sitting upright',
         'UNITS ASSIGNED: Medic 421',
       ].join('\n'),
     )
@@ -113,13 +132,64 @@ describe('CallerInfoForm', () => {
     expect(draft.time).toBe('14:35')
   })
 
+  it('auto-sorts dispatch labels with address values on following lines', () => {
+    renderCallerInfoForm()
+
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
+      target: {
+        value: [
+          'CALL #: 2026-0612-1712',
+          'PRIORITY: P1 / DELTA',
+          'MPDS CODE: 26-D-1',
+          'ADDRESS:',
+          '4480 Boulevard Saint-Jean, Dollard-des-Ormeaux, QC',
+          'CHIEF COMPLAINT:',
+          'Male, 67 years old, fever and difficulty breathing',
+          'STATUS:',
+          '10-100 Unstable',
+          'TIME RECEIVED:',
+          '17:12',
+        ].join('\n'),
+      },
+    })
+
+    const draft = useMonitorStore.getState().callerInfoDraft
+    expect(draft.callNumber).toBe('2026-0612-1712')
+    expect(draft.priority).toBe('P1 / DELTA')
+    expect(draft.mpdsCode).toBe('26-D-1')
+    expect(draft.address).toBe('4480 Boulevard Saint-Jean, Dollard-des-Ormeaux, QC')
+    expect(draft.problem).toBe('Male, 67 years old, fever and difficulty breathing')
+    expect(draft.update).toBe('10-100 Unstable')
+    expect(draft.time).toBe('17:12')
+  })
+
+  it('auto-sorts only the time value from Time Received before later sections', () => {
+    renderCallerInfoForm()
+
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
+      target: {
+        value: [
+          'TIME RECEIVED:',
+          '17:12',
+          '',
+          '### Patient Presentation',
+          '',
+          'Age/Sex: 67-year-old male',
+          'Appearance: confused and short of breath',
+        ].join('\n'),
+      },
+    })
+
+    expect(useMonitorStore.getState().callerInfoDraft.time).toBe('17:12')
+  })
+
   it('auto-sort leaves draft fields unchanged when their labels are missing', () => {
     useMonitorStore.getState().setCallerInfoDraft('callNumber', 'Existing call')
     useMonitorStore.getState().setCallerInfoDraft('priority', 'Existing priority')
     useMonitorStore.getState().setCallerInfoDraft('address', 'Existing address')
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
-    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
           'MPDS CODE: 31D03',
@@ -137,9 +207,9 @@ describe('CallerInfoForm', () => {
   })
 
   it('auto-sorts pasted labels whose values are on following lines', () => {
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
-    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
           'Adresse',
@@ -161,9 +231,9 @@ describe('CallerInfoForm', () => {
   it('auto-sort overwrites matching fields without creating extra rows', () => {
     useMonitorStore.getState().setCallerInfoDraft('address', 'Old address')
     useMonitorStore.getState().setCallerInfoDraft('problem', 'Old problem')
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
-    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
           'Address: 456 Avenue Centrale',
@@ -182,9 +252,9 @@ describe('CallerInfoForm', () => {
   })
 
   it('auto-sort updates draft only before Save', () => {
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
-    fireEvent.change(screen.getByLabelText('Auto-sort caller info'), {
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: { value: 'Adresse: 123 Rue Principale' },
     })
 
@@ -196,7 +266,7 @@ describe('CallerInfoForm', () => {
 
   it('lets the instructor name the extra caller info rows', async () => {
     const user = userEvent.setup()
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
     await user.click(screen.getByRole('button', { name: 'Add extra' }))
     await user.type(screen.getByLabelText('Extra 1 title'), 'Acces')
@@ -211,7 +281,7 @@ describe('CallerInfoForm', () => {
 
   it('adds extra rows one at a time and caps at three', async () => {
     const user = userEvent.setup()
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
     const addExtra = screen.getByRole('button', { name: 'Add extra' })
 
@@ -233,7 +303,7 @@ describe('CallerInfoForm', () => {
   it('reopens saved extra rows when caller info already has values', () => {
     useMonitorStore.getState().setCallerInfoDraft('extra2Label', 'Code porte')
 
-    render(<CallerInfoForm />)
+    renderCallerInfoForm()
 
     expect(screen.getByLabelText('Extra 1 title')).toBeInTheDocument()
     expect(screen.getByLabelText('Extra 2 title')).toBeInTheDocument()

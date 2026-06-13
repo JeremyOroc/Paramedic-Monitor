@@ -16,6 +16,7 @@ export const CALLER_INFO_AUTO_SORT_FIELDS: ReadonlyArray<CallerInfoField> = [
 type LabelTarget = {
   field: CallerInfoField
   heading?: string
+  append?: boolean
 }
 
 const LABEL_TO_TARGET: Readonly<Record<string, LabelTarget>> = {
@@ -28,12 +29,13 @@ const LABEL_TO_TARGET: Readonly<Record<string, LabelTarget>> = {
   mpdscode: { field: 'mpdsCode' },
   codempds: { field: 'mpdsCode' },
   adresse: { field: 'address' },
+  addresse: { field: 'address' },
   address: { field: 'address' },
   chiefcomplaint: { field: 'problem' },
   plainteprincipale: { field: 'problem' },
   probleme: { field: 'problem' },
   problem: { field: 'problem' },
-  details: { field: 'information', heading: 'DETAILS' },
+  details: { field: 'information', append: true },
   information: { field: 'information' },
   info: { field: 'information' },
   patient: { field: 'information', heading: 'PATIENT' },
@@ -63,16 +65,34 @@ function detectLabelOnly(line: string): LabelTarget | undefined {
 }
 
 function detectInlineLabel(line: string) {
-  const match = /^(.+?)\s*[:\-]\s*(.*)$/.exec(line)
+  const match = /^(.+?)\s*([:\-])\s*(.*)$/.exec(line)
   if (!match) return null
   if (!/[a-zA-Z]/.test(match[1].normalize('NFD').replace(/[\u0300-\u036f]/g, ''))) return null
 
   const target = LABEL_TO_TARGET[normalizeLabel(match[1])]
+  if (!target && match[2] === '-') return null
 
   return {
     target,
-    value: match[2].trim(),
+    value: match[3].trim(),
   }
+}
+
+function isSectionBoundary(line: string) {
+  if (/^#{1,6}\s+/.test(line) || /^-{3,}$/.test(line)) return true
+
+  return [
+    'patientpresentation',
+    'vitalsorigin',
+    'originvitals',
+    'sample',
+    'opqrst',
+    'patientfindings',
+    'patientfindingsorganizedbybodyarea',
+    'serialvitals',
+    'treated',
+    'untreated',
+  ].includes(normalizeLabel(line))
 }
 
 export function parseCallerInfoAutoSort(text: string): ParsedCallerInfo {
@@ -90,12 +110,24 @@ export function parseCallerInfoAutoSort(text: string): ParsedCallerInfo {
         .join('\n')
       return
     }
+    if (currentTarget.append) {
+      parsed[currentTarget.field] = [parsed[currentTarget.field], value]
+        .filter((part): part is string => part !== undefined && part !== '')
+        .join('\n')
+      return
+    }
     parsed[currentTarget.field] = value
   }
 
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim()
     if (line === '') continue
+    if (isSectionBoundary(line)) {
+      commitCurrentField()
+      currentTarget = null
+      currentValueLines = []
+      continue
+    }
 
     const inlineLabel = detectInlineLabel(line)
     if (inlineLabel) {
@@ -115,6 +147,12 @@ export function parseCallerInfoAutoSort(text: string): ParsedCallerInfo {
     }
 
     if (currentTarget) {
+      if (currentTarget.field === 'time' && currentValueLines.length > 0) {
+        commitCurrentField()
+        currentTarget = null
+        currentValueLines = []
+        continue
+      }
       currentValueLines.push(line)
     }
   }

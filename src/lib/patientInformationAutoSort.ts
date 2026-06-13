@@ -40,20 +40,56 @@ function getTargetForLetter(
   return null
 }
 
+function parseMedicationName(line: string) {
+  return line
+    .trim()
+    .replace(/^(?:[-*\u2022]|\d+[.)])\s*/, '')
+    .replace(/\s*\([^)]*\).*$/, '')
+    .trim()
+}
+
 export function parsePatientInformationAutoSort(text: string): PatientInformationTextState {
   const parsed = EMPTY_PATIENT_INFORMATION_TEXT()
   const repeatedCounts = { S: 0, P: 0 }
+  let collectingSampleMedications = false
+  let sampleMedications: string[] = []
+
+  const commitSampleMedications = () => {
+    parsed.sample.M = sampleMedications.join(', ')
+    collectingSampleMedications = false
+    sampleMedications = []
+  }
 
   for (const rawLine of text.split(/\r?\n/)) {
     const match = /^\s*([A-Za-z])\s*:\s*(.*)\s*$/.exec(rawLine)
-    if (!match) continue
+    if (!match) {
+      if (collectingSampleMedications) {
+        const medication = parseMedicationName(rawLine)
+        if (medication) sampleMedications.push(medication)
+        parsed.sample.M = sampleMedications.join(', ')
+      }
+      continue
+    }
 
     const letter = match[1].toUpperCase()
     const target = getTargetForLetter(letter, repeatedCounts)
     if (!target) continue
 
+    if (collectingSampleMedications) commitSampleMedications()
+
+    if (target.checklist === 'sample' && target.letter === 'M') {
+      collectingSampleMedications = true
+      sampleMedications = []
+      const inlineMedication = parseMedicationName(match[2])
+      if (inlineMedication) sampleMedications.push(inlineMedication)
+      parsed.sample.M = sampleMedications.join(', ')
+      continue
+    }
+
     parsed[target.checklist][target.letter] = match[2].trim()
   }
+
+  if (collectingSampleMedications) commitSampleMedications()
 
   return parsed
 }
