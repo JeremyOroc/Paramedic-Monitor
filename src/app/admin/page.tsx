@@ -9,18 +9,37 @@ import {
   PatientInformationPanel,
   type PatientInfoChecklist,
 } from '@/components/instructor/PatientInformationPanel'
+import {
+  PatientPhysicalPanel,
+  type PatientPhysicalSelection,
+} from '@/components/instructor/PatientPhysicalPanel'
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
+import {
+  CALLER_INFO_AUTO_SORT_FIELDS,
+  parseCallerInfoAutoSort,
+} from '@/lib/callerInfoAutoSort'
 import {
   EMPTY_PATIENT_INFORMATION_TEXT,
   parsePatientInformationAutoSort,
   type PatientInformationTextState,
 } from '@/lib/patientInformationAutoSort'
+import {
+  parsePatientPhysicalAutoSort,
+  type PatientPhysicalFindings,
+} from '@/lib/patientPhysicalAutoSort'
+import { parseVitalsAutoSort } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
+import type { NumericVitalField } from '@/types/vitals'
 
-type AdminTab = 'monitor' | 'caller' | 'patient'
+type AdminTab = 'monitor' | 'caller' | 'patient' | 'physical'
+type PatientPhysicalIconGroupId =
+  | 'respiratory'
+  | 'pulse'
+  | 'skin-extremities'
+  | 'scene-environment'
 
 type PatientInformationSelections = Record<PatientInfoChecklist, Set<string>>
 
@@ -29,29 +48,58 @@ const EMPTY_PATIENT_INFORMATION_SELECTIONS = (): PatientInformationSelections =>
   opqrst: new Set<string>(),
 })
 
+const AUTO_SORT_VITAL_FIELDS: ReadonlyArray<NumericVitalField> = [
+  'hr',
+  'spo2',
+  'bp_sys',
+  'bp_dia',
+  'etco2',
+]
+
 export default function AdminPage() {
   useStoreHydration()
   const [tab, setTab] = useState<AdminTab>('monitor')
   const [patientSelections, setPatientSelections] = useState<PatientInformationSelections>(
     EMPTY_PATIENT_INFORMATION_SELECTIONS,
   )
-  const [patientAutoSortText, setPatientAutoSortText] = useState('')
+  const [universalAutoSortText, setUniversalAutoSortText] = useState('')
   const [patientText, setPatientText] = useState<PatientInformationTextState>(
     EMPTY_PATIENT_INFORMATION_TEXT,
   )
+  const [patientPhysicalSelections, setPatientPhysicalSelections] = useState<
+    Set<PatientPhysicalSelection>
+  >(new Set<PatientPhysicalSelection>())
+  const [patientPhysicalFindings, setPatientPhysicalFindings] =
+    useState<PatientPhysicalFindings>({})
+  const [patientPhysicalActiveIconGroup, setPatientPhysicalActiveIconGroup] =
+    useState<PatientPhysicalIconGroupId | null>(null)
   const reset = useMonitorStore((s) => s.reset)
   const resetMonitorVitals = useMonitorStore((s) => s.resetMonitorVitals)
+  const setDraft = useMonitorStore((s) => s.setDraft)
+  const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const resetPatientInformation = () => {
     setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
-    setPatientAutoSortText('')
     setPatientText(EMPTY_PATIENT_INFORMATION_TEXT())
+  }
+  const resetPatientPhysical = () => {
+    setPatientPhysicalSelections(new Set<PatientPhysicalSelection>())
+    setPatientPhysicalFindings({})
+    setPatientPhysicalActiveIconGroup(null)
+  }
+  const resetUniversalAutoSort = () => {
+    reset()
+    setUniversalAutoSortText('')
+    resetPatientInformation()
+    resetPatientPhysical()
   }
   const handleReset =
     tab === 'monitor'
       ? resetMonitorVitals
       : tab === 'caller'
-        ? reset
-        : resetPatientInformation
+        ? resetUniversalAutoSort
+        : tab === 'patient'
+          ? resetPatientInformation
+          : resetPatientPhysical
 
   const togglePatientSelection = (checklist: PatientInfoChecklist, letter: string) => {
     setPatientSelections((current) => {
@@ -82,14 +130,56 @@ export default function AdminPage() {
     }))
   }
 
-  const handlePatientAutoSortChange = (value: string) => {
-    setPatientAutoSortText(value)
+  const togglePatientPhysicalSelection = (selection: PatientPhysicalSelection) => {
+    setPatientPhysicalSelections((current) => {
+      const next = new Set(current)
+      if (next.has(selection)) {
+        next.delete(selection)
+      } else {
+        next.add(selection)
+      }
+      return next
+    })
+  }
+
+  const applyParsedVitals = (parsed: ReturnType<typeof parseVitalsAutoSort>) => {
+    for (const field of AUTO_SORT_VITAL_FIELDS) {
+      const value = parsed[field]
+      if (value !== undefined) {
+        setDraft(field, value)
+      }
+    }
+  }
+
+  const handleUniversalAutoSortChange = (value: string) => {
+    setUniversalAutoSortText(value)
+
+    const callerInfo = parseCallerInfoAutoSort(value)
+    for (const field of CALLER_INFO_AUTO_SORT_FIELDS) {
+      const parsedValue = callerInfo[field]
+      if (parsedValue !== undefined) {
+        setCallerInfoDraft(field, parsedValue)
+      }
+    }
+
+    applyParsedVitals(parseVitalsAutoSort(value))
     setPatientText(parsePatientInformationAutoSort(value))
+    setPatientPhysicalFindings(parsePatientPhysicalAutoSort(value))
+  }
+
+  const handlePatientPhysicalIconGroupClick = (selection: PatientPhysicalIconGroupId) => {
+    setPatientPhysicalSelections((current) => {
+      if (current.has(selection)) return current
+      const next = new Set(current)
+      next.add(selection)
+      return next
+    })
+    setPatientPhysicalActiveIconGroup((current) => (current === selection ? null : selection))
   }
 
   return (
     <InstructorLayout>
-      <div className="grid grid-cols-3 border border-neutral-800 bg-neutral-950 p-1">
+      <div className="grid grid-cols-2 border border-neutral-800 bg-neutral-950 p-1 md:grid-cols-4">
         <button
           type="button"
           onClick={() => setTab('monitor')}
@@ -129,20 +219,42 @@ export default function AdminPage() {
         >
           Patient Information
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('physical')}
+          aria-pressed={tab === 'physical'}
+          className={cn(
+            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            tab === 'physical'
+              ? 'bg-cyan-bp text-black'
+              : 'text-neutral-400 hover:bg-neutral-900',
+          )}
+        >
+          Patient Physical
+        </button>
       </div>
       {tab === 'monitor' ? (
-        <VitalsControls />
+        <VitalsControls autoSortText={universalAutoSortText} />
       ) : tab === 'patient' ? (
         <PatientInformationPanel
           selected={patientSelections}
-          autoSortText={patientAutoSortText}
           values={patientText}
-          onAutoSortChange={handlePatientAutoSortChange}
           onTextChange={handlePatientTextChange}
           onToggle={togglePatientSelection}
         />
+      ) : tab === 'physical' ? (
+        <PatientPhysicalPanel
+          selected={patientPhysicalSelections}
+          findings={patientPhysicalFindings}
+          activeIconGroup={patientPhysicalActiveIconGroup}
+          onToggle={togglePatientPhysicalSelection}
+          onIconGroupClick={handlePatientPhysicalIconGroupClick}
+        />
       ) : (
-        <CallerInfoForm />
+        <CallerInfoForm
+          autoSortText={universalAutoSortText}
+          onAutoSortChange={handleUniversalAutoSortChange}
+        />
       )}
       <div className="flex items-center gap-3">
         <SaveButton />

@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import {
   EMPTY_PATIENT_INFORMATION_TEXT,
-  parsePatientInformationAutoSort,
   type PatientInformationTextState,
 } from '@/lib/patientInformationAutoSort'
 import {
@@ -20,26 +19,20 @@ const emptySelected: Record<PatientInfoChecklist, ReadonlySet<string>> = {
 
 function renderPanel({
   selected = emptySelected,
+  initialValues = EMPTY_PATIENT_INFORMATION_TEXT(),
   onToggle = vi.fn(),
 }: {
   selected?: Record<PatientInfoChecklist, ReadonlySet<string>>
+  initialValues?: PatientInformationTextState
   onToggle?: (checklist: PatientInfoChecklist, letter: string) => void
 } = {}) {
   function PanelHarness() {
-    const [autoSortText, setAutoSortText] = useState('')
-    const [values, setValues] = useState<PatientInformationTextState>(
-      EMPTY_PATIENT_INFORMATION_TEXT,
-    )
+    const [values, setValues] = useState<PatientInformationTextState>(initialValues)
 
     return (
       <PatientInformationPanel
         selected={selected}
-        autoSortText={autoSortText}
         values={values}
-        onAutoSortChange={(value) => {
-          setAutoSortText(value)
-          setValues(parsePatientInformationAutoSort(value))
-        }}
         onTextChange={(checklist, letter, value) =>
           setValues((current) => ({
             ...current,
@@ -58,13 +51,18 @@ function renderPanel({
 }
 
 describe('PatientInformationPanel', () => {
-  it('renders Sample and OPQRST checklist sections', () => {
+  function expectRowsToBeGreaterThanOne(element: HTMLElement) {
+    expect(element.tagName).toBe('TEXTAREA')
+    expect(Number(element.getAttribute('rows'))).toBeGreaterThan(1)
+  }
+
+  it('renders Sample and OPQRST checklist sections without a local auto-sort textarea', () => {
     renderPanel()
 
     const sample = screen.getByRole('region', { name: 'Sample' })
     const opqrst = screen.getByRole('region', { name: 'OPQRST' })
 
-    expect(screen.getByLabelText('Auto-sort patient information')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Auto-sort patient information')).toBeNull()
     for (const letter of ['S', 'A', 'M', 'P', 'L', 'E']) {
       expect(within(sample).getByRole('button', { name: letter })).toBeInTheDocument()
       expect(
@@ -77,6 +75,18 @@ describe('PatientInformationPanel', () => {
         within(opqrst).getByLabelText(`OPQRST ${letter} information`),
       ).toBeInTheDocument()
     }
+  })
+
+  it('renders SAMPLE and OPQRST information fields as compact one-row textareas', () => {
+    renderPanel()
+
+    const sampleField = screen.getByLabelText('Sample S information')
+    const opqrstField = screen.getByLabelText('OPQRST O information')
+
+    expect(sampleField.tagName).toBe('TEXTAREA')
+    expect(sampleField).toHaveAttribute('rows', '1')
+    expect(opqrstField.tagName).toBe('TEXTAREA')
+    expect(opqrstField).toHaveAttribute('rows', '1')
   })
 
   it('renders each checklist as a compact left-aligned vertical column', () => {
@@ -107,21 +117,44 @@ describe('PatientInformationPanel', () => {
     expect(screen.getByLabelText('OPQRST S information')).toHaveValue('')
   })
 
-  it('auto-sorts SAMPLE and OPQRST letter text without selecting green letters', async () => {
-    const user = userEvent.setup()
+  it('auto-grows a manually typed long SAMPLE field', () => {
     renderPanel()
 
-    await user.type(
-      screen.getByLabelText('Auto-sort patient information'),
-      [
-        'S: Chest pain',
-        'A: Aspirin',
-        'P: Asthma',
-        'O: 20 minutes',
-        'P: Worse breathing',
-        'S: 8/10',
-      ].join('\n'),
+    const sampleField = screen.getByLabelText('Sample S information')
+    fireEvent.change(sampleField, {
+      target: {
+        value:
+          'Chest pain that started suddenly while walking upstairs and continues despite resting',
+      },
+    })
+
+    expect(sampleField).toHaveValue(
+      'Chest pain that started suddenly while walking upstairs and continues despite resting',
     )
+    expectRowsToBeGreaterThanOne(sampleField)
+  })
+
+  it('renders auto-sorted text passed from admin state without selecting green letters', () => {
+    renderPanel({
+      initialValues: {
+        sample: {
+          S: 'Chest pain',
+          A: 'Aspirin',
+          M: '',
+          P: 'Asthma',
+          L: '',
+          E: '',
+        },
+        opqrst: {
+          O: '20 minutes',
+          P: 'Worse breathing',
+          Q: '',
+          R: '',
+          S: '8/10',
+          T: '',
+        },
+      },
+    })
 
     expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
     expect(screen.getByLabelText('Sample A information')).toHaveValue('Aspirin')
@@ -134,6 +167,24 @@ describe('PatientInformationPanel', () => {
         name: 'S',
       }),
     ).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('auto-grows long values passed from admin state', () => {
+    renderPanel({
+      initialValues: {
+        sample: {
+          ...EMPTY_PATIENT_INFORMATION_TEXT().sample,
+          S: 'Severe crushing chest pain radiating into the left arm and jaw with nausea',
+        },
+        opqrst: {
+          ...EMPTY_PATIENT_INFORMATION_TEXT().opqrst,
+          O: 'Gradual onset after exertion while walking uphill for several minutes',
+        },
+      },
+    })
+
+    expectRowsToBeGreaterThanOne(screen.getByLabelText('Sample S information'))
+    expectRowsToBeGreaterThanOne(screen.getByLabelText('OPQRST O information'))
   })
 
   it('calls onToggle with the checklist and letter when clicked', async () => {

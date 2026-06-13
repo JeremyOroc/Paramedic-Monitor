@@ -74,7 +74,7 @@ export function EcgRhythmSelector() {
     ECG_RHYTHM_CATEGORIES[0]
 
   return (
-    <section className="flex h-full flex-col gap-3 border border-neutral-800 bg-neutral-950 p-3">
+    <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm uppercase tracking-wider text-neutral-400">ECG</h2>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">

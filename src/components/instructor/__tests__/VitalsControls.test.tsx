@@ -7,22 +7,49 @@ import { DEFAULT_VITALS } from '@/types/vitals'
 
 import { VitalsControls } from '../VitalsControls'
 
+const TIMED_VITALS_SAMPLE = [
+  'Treated (+5 min)',
+  'Pulse: 106 bpm, Regular, Moderate',
+  'SpO2: 98% on O2',
+  'BP: 112/70 mmHg',
+  'Respirations: 22 breaths/min, Regular, Unlabored',
+  'Temp: 36.3C',
+  'EtCO2: 36 mmHg',
+  'Update: Bleeding controlled with dressing, mentation unchanged.',
+  '',
+  'Treated (+10 min)',
+  'Pulse: 100 bpm, Regular, Moderate',
+  'SpO2: 99% on O2',
+  'BP: 118/74 mmHg',
+  'Respirations: 20 breaths/min, Regular, Unlabored',
+  'Temp: 36.4C',
+  'EtCO2: 38 mmHg',
+  '',
+  'Untreated (+15 min)',
+  'Pulse: 136 bpm, Regular, Thready',
+  'SpO2: 92% on room air',
+  'BP: 76/46 mmHg',
+  'Respirations: 30 breaths/min, Irregular, Weak respiratory effort',
+  'Temp: 36.0C',
+  'EtCO2: 26 mmHg',
+].join('\n')
+
 describe('VitalsControls', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
   })
 
-  it('renders a Normal button at the top of the vitals panel', () => {
-    render(<VitalsControls />)
+  it('renders a Normal button without a local auto-sort textarea', () => {
+    render(<VitalsControls autoSortText="" />)
 
     const heading = screen.getByRole('heading', { name: 'Vitals' })
     const normal = screen.getByRole('button', { name: 'Set vitals to normal' })
     expect(heading.compareDocumentPosition(normal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByLabelText('Auto-sort vitals')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Auto-sort vitals')).toBeNull()
   })
 
   it('orders admin vitals as FC, SpO2, BP, EtCO2', () => {
-    render(<VitalsControls />)
+    render(<VitalsControls autoSortText="" />)
 
     const fc = screen.getByLabelText('FC')
     const spo2 = screen.getByLabelText('SpO2')
@@ -37,24 +64,68 @@ describe('VitalsControls', () => {
   })
 
   it('keeps ECG beside FC and removes SpO2/EtCO2 right-side graph controls', () => {
-    render(<VitalsControls />)
+    render(<VitalsControls autoSortText="" />)
 
+    const vitalsColumn = screen.getByTestId('admin-vitals-column')
+    const ecgColumn = screen.getByTestId('admin-ecg-column')
     const fcRow = screen.getByTestId('admin-vital-row-fc')
     const ecgRow = screen.getByTestId('admin-graph-row-ecg')
     const spo2Row = screen.getByTestId('admin-vital-row-spo2')
+    const bpSysRow = screen.getByTestId('admin-vital-row-bp-sys')
+    const bpDiaRow = screen.getByTestId('admin-vital-row-bp-dia')
     const etco2Row = screen.getByTestId('admin-vital-row-etco2')
 
+    expect(vitalsColumn).toHaveClass('flex', 'flex-col', 'gap-3')
+    expect(ecgColumn).toHaveClass('self-start')
+    expect(vitalsColumn).toContainElement(fcRow)
+    expect(vitalsColumn).toContainElement(spo2Row)
+    expect(vitalsColumn).toContainElement(bpSysRow)
+    expect(vitalsColumn).toContainElement(bpDiaRow)
+    expect(vitalsColumn).toContainElement(etco2Row)
+    expect(ecgColumn).toContainElement(ecgRow)
     expect(within(fcRow).getByLabelText('FC')).toBeInTheDocument()
     expect(within(ecgRow).getByRole('heading', { name: 'ECG' })).toBeInTheDocument()
+    expect(within(ecgRow).getByRole('heading', { name: 'ECG' }).closest('section')).not.toHaveClass(
+      'h-full',
+    )
     expect(within(spo2Row).getByLabelText('SpO2')).toBeInTheDocument()
     expect(within(etco2Row).getByLabelText('EtCO2')).toBeInTheDocument()
     expect(screen.queryByTestId('admin-graph-row-spo2')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-graph-row-etco2')).not.toBeInTheDocument()
   })
 
+  it('renders timed vitals buttons under the ECG control', () => {
+    render(<VitalsControls autoSortText="" />)
+
+    const timedVitals = screen.getByLabelText('Timed vitals')
+    expect(timedVitals).toHaveClass(
+      'relative',
+      'z-10',
+      'grid',
+      'grid-cols-3',
+      'grid-rows-2',
+    )
+
+    for (const name of ['T1', 'T2', 'T3', 'U1', 'U2', 'U3']) {
+      expect(within(timedVitals).getByRole('button', { name })).toHaveClass(
+        'relative',
+        'z-10',
+        'w-full',
+        'h-[3.75rem]',
+        'min-h-[3.75rem]',
+        'cursor-pointer',
+        'appearance-none',
+        'pointer-events-auto',
+        'px-3',
+        'py-3',
+        'text-sm',
+      )
+    }
+  })
+
   it('keeps ECG as the only right-side graph control', async () => {
     const user = userEvent.setup()
-    render(<VitalsControls />)
+    render(<VitalsControls autoSortText="" />)
 
     await user.click(
       within(screen.getByTestId('admin-graph-row-ecg')).getByRole('button', {
@@ -67,7 +138,7 @@ describe('VitalsControls', () => {
 
   it('uses left-side SpO2 and EtCO2 toggles to stage graph connection state', async () => {
     const user = userEvent.setup()
-    render(<VitalsControls />)
+    render(<VitalsControls autoSortText="" />)
 
     await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
     await user.click(screen.getByRole('button', { name: 'EtCO2 off' }))
@@ -86,89 +157,51 @@ describe('VitalsControls', () => {
     expect(useMonitorStore.getState().draft.etco2_waveform).toBe('off')
   })
 
-  it('auto-sorts labelled vitals into draft values and activates them', async () => {
+  it('stages T1 timed vitals from the shared auto-sort text', async () => {
     const user = userEvent.setup()
-    render(<VitalsControls />)
+    render(<VitalsControls autoSortText={TIMED_VITALS_SAMPLE} />)
 
-    await user.type(
-      screen.getByLabelText('Auto-sort vitals'),
-      [
-        'FC: 120',
-        'SpO2: 96',
-        'BP: 186/102',
-        'EtCO2: 35',
-      ].join('\n'),
-    )
+    await user.click(screen.getByRole('button', { name: 'T1' }))
 
     const state = useMonitorStore.getState()
-    expect(state.draft.hr).toBe(120)
-    expect(state.draft.spo2).toBe(96)
-    expect(state.draft.bp_sys).toBe(186)
-    expect(state.draft.bp_dia).toBe(102)
-    expect(state.draft.etco2).toBe(35)
-    expect(state.draftVitalActive).toMatchObject({
-      hr: true,
-      spo2: true,
-      bp_sys: true,
-      bp_dia: true,
-      etco2: true,
-    })
+    expect(state.draft.hr).toBe(106)
+    expect(state.draft.spo2).toBe(98)
+    expect(state.draft.bp_sys).toBe(112)
+    expect(state.draft.bp_dia).toBe(70)
+    expect(state.draft.etco2).toBe(36)
   })
 
-  it('auto-sort leaves missing labels unchanged', async () => {
+  it('stages U3 timed vitals and graph connections from the shared auto-sort text', async () => {
+    const user = userEvent.setup()
+    render(<VitalsControls autoSortText={TIMED_VITALS_SAMPLE} />)
+
+    await user.click(screen.getByRole('button', { name: 'U3' }))
+
+    const state = useMonitorStore.getState()
+    expect(state.draft.hr).toBe(136)
+    expect(state.draft.spo2).toBe(92)
+    expect(state.draft.bp_sys).toBe(76)
+    expect(state.draft.bp_dia).toBe(46)
+    expect(state.draft.etco2).toBe(26)
+    expect(state.draft.spo2_waveform).toBe('normal')
+    expect(state.draft.etco2_waveform).toBe('normal')
+  })
+
+  it('leaves existing draft values unchanged when a timed section is missing', async () => {
     const user = userEvent.setup()
     useMonitorStore.getState().setDraft('hr', 80)
-    useMonitorStore.getState().setDraft('bp_sys', 120)
-    useMonitorStore.getState().setDraft('bp_dia', 80)
-    render(<VitalsControls />)
+    useMonitorStore.getState().setDraft('spo2', 95)
+    render(<VitalsControls autoSortText={TIMED_VITALS_SAMPLE} />)
+    const beforeClick = { ...useMonitorStore.getState().draft }
 
-    await user.type(screen.getByLabelText('Auto-sort vitals'), 'SpO2: 93')
-
-    const state = useMonitorStore.getState()
-    expect(state.draft.hr).toBe(80)
-    expect(state.draft.bp_sys).toBe(120)
-    expect(state.draft.bp_dia).toBe(80)
-    expect(state.draft.spo2).toBe(93)
-  })
-
-  it('auto-sorted SpO2 and EtCO2 values stage matching graph connection state', async () => {
-    const user = userEvent.setup()
-    render(<VitalsControls />)
-
-    await user.type(
-      screen.getByLabelText('Auto-sort vitals'),
-      [
-        'Saturation: 90',
-        'CO2: 28',
-      ].join('\n'),
-    )
+    await user.click(screen.getByRole('button', { name: 'T3' }))
 
     const state = useMonitorStore.getState()
-    expect(state.draft.spo2).toBe(90)
-    expect(state.draft.spo2_waveform).toBe('normal')
-    expect(state.draftVitalActive.spo2).toBe(true)
-    expect(state.draft.etco2).toBe(28)
-    expect(state.draft.etco2_waveform).toBe('normal')
-    expect(state.draftVitalActive.etco2).toBe(true)
-  })
-
-  it('auto-sort supports separate BP systolic and diastolic labels', async () => {
-    const user = userEvent.setup()
-    render(<VitalsControls />)
-
-    await user.type(
-      screen.getByLabelText('Auto-sort vitals'),
-      [
-        'BP sys: 140',
-        'BP dia: 90',
-      ].join('\n'),
-    )
-
-    const state = useMonitorStore.getState()
-    expect(state.draft.bp_sys).toBe(140)
-    expect(state.draft.bp_dia).toBe(90)
-    expect(state.draftVitalActive.bp_sys).toBe(true)
-    expect(state.draftVitalActive.bp_dia).toBe(true)
+    expect(state.draft.hr).toBe(beforeClick.hr)
+    expect(state.draft.spo2).toBe(beforeClick.spo2)
+    expect(state.draft.bp_sys).toBe(beforeClick.bp_sys)
+    expect(state.draft.bp_dia).toBe(beforeClick.bp_dia)
+    expect(state.draft.etco2).toBe(beforeClick.etco2)
   })
 
   it('resets draft vital numbers to normal defaults without sending them', async () => {
@@ -181,7 +214,7 @@ describe('VitalsControls', () => {
     useMonitorStore.getState().send()
     useMonitorStore.getState().setDraft('hr', 185)
 
-    render(<VitalsControls />)
+    render(<VitalsControls autoSortText="" />)
     await user.click(screen.getByRole('button', { name: 'Set vitals to normal' }))
 
     const state = useMonitorStore.getState()

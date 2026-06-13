@@ -10,9 +10,7 @@ export type PatientInfoChecklist = PatientInformationChecklist
 
 type PatientInformationPanelProps = {
   selected: Record<PatientInfoChecklist, ReadonlySet<string>>
-  autoSortText: string
   values: PatientInformationTextState
-  onAutoSortChange: (value: string) => void
   onTextChange: (checklist: PatientInfoChecklist, letter: string, value: string) => void
   onToggle: (checklist: PatientInfoChecklist, letter: string) => void
 }
@@ -26,29 +24,24 @@ const CHECKLISTS: ReadonlyArray<{
   { id: 'opqrst', title: 'OPQRST', letters: ['O', 'P', 'Q', 'R', 'S', 'T'] },
 ]
 
+const TEXTAREA_CHARS_PER_ROW = 38
+
+function getPatientInformationRows(value: string) {
+  if (!value) return 1
+
+  return value.split(/\r?\n/).reduce((rows, line) => {
+    return rows + Math.max(1, Math.ceil(line.length / TEXTAREA_CHARS_PER_ROW))
+  }, 0)
+}
+
 export function PatientInformationPanel({
   selected,
-  autoSortText,
   values,
-  onAutoSortChange,
   onTextChange,
   onToggle,
 }: PatientInformationPanelProps) {
   return (
     <section className="grid gap-4">
-      <label className="grid gap-1 border border-neutral-800 bg-neutral-950 p-4">
-        <span className="text-xs uppercase tracking-wider text-neutral-400">
-          Auto-sort patient information
-        </span>
-        <textarea
-          value={autoSortText}
-          onChange={(event) => onAutoSortChange(event.target.value)}
-          aria-label="Auto-sort patient information"
-          rows={5}
-          placeholder="S:&#10;A:&#10;M:&#10;P:&#10;L:&#10;E:&#10;O:&#10;P:&#10;Q:&#10;R:&#10;S:&#10;T:"
-          className="min-h-28 resize-y border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
-        />
-      </label>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {CHECKLISTS.map(({ id, title, letters }) => (
           <section
@@ -85,11 +78,12 @@ export function PatientInformationPanel({
                     >
                       {letter}
                     </button>
-                    <input
+                    <textarea
                       value={values[id][letter]}
                       onChange={(event) => onTextChange(id, letter, event.target.value)}
                       aria-label={`${title} ${letter} information`}
-                      className="min-w-0 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                      rows={getPatientInformationRows(values[id][letter])}
+                      className="min-h-12 min-w-0 resize-none overflow-hidden border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm leading-5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
                     />
                   </div>
                 )

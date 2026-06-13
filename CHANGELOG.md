@@ -5,10 +5,195 @@
 
 ---
 
+## [2026-06-12] [instructor] - Align admin vitals beside ECG
+
+- Refactored the admin Vitals panel into a left numeric-vitals column and a right ECG/timed-buttons column.
+- Kept FC, SpO2, BP sys, BP dia, and EtCO2 aligned together while ECG stays beside the top of the vitals column.
+
+## [2026-06-12] [instructor] - Shrink admin ECG selector rectangle
+
+- Removed full-height stretching from the admin ECG selector so it stays compact beside FC.
+- Kept the timed vitals buttons below ECG with their full-cell click targets unchanged.
+
+## [2026-06-12] [instructor] - Fix timed vitals hitboxes
+
+- Refactored T1/T2/T3 and U1/U2/U3 into an explicit two-row timed vitals grid.
+- Made each timed vitals button a full-cell pointer target so the whole rectangle is clickable.
+
+## [2026-06-12] [instructor] - Unify admin auto-sort on Caller Info
+
+- Replaced separate Vitals, Patient Information, and Patient Physical auto-sort textareas with one Caller Info scenario auto-sort box.
+- Universal scenario paste now fills caller-info drafts, origin vitals drafts, SAMPLE/OPQRST text, and Patient Physical findings.
+- Kept timed vitals buttons in Monitor while reading Treated/Untreated sections from the shared Caller Info scenario text.
+
+## [2026-06-12] [instructor] - Fix Patient Physical back and thoracic autosort
+
+- Added Back / Spine, spine, lumbar, cervical spine, thoracic spine, posterior torso, and dorsal headings for Rear back.
+- Added thoracic, thoracic area, anterior chest, and rib cage headings for Front chest.
+- Added regression coverage so back/spine and thoracic sections stop previous leg findings instead of being appended to them.
+
+## [2026-06-12] [instructor] - Add Patient Physical scene environment icon
+
+- Added a Scene/Environment icon to the Patient Physical left rail using the supplied clapperboard image.
+- Extended Patient Physical auto-sort so Scene / Environment sections fill one icon-only slider note.
+- Kept Scene/Environment findings separate from body-map region markers.
+
+## [2026-06-12] [instructor] - Add Patient Physical skin extremities icon
+
+- Added a Skin/Extremities icon to the Patient Physical left rail using the supplied hand image.
+- Reordered the icon rail to Pulse, Respiratory, then Skin/Extremities.
+- Extended Patient Physical auto-sort so Skin / Extremities sections fill one icon-only slider note without marking body limbs.
+
+## [2026-06-12] [instructor] - Stretch timed vitals click targets
+
+- Made each timed vitals button fill a fixed-height grid cell so the whole outlined rectangle is clickable.
+- Added coverage for the timed vitals grid stretch sizing.
+
+## [2026-06-12] [instructor] - Make timed vitals buttons fully clickable
+
+- Updated T1/T2/T3 and U1/U2/U3 buttons to fill their full rectangle with block-style click targets.
+- Added coverage for full-width/full-height timed vitals button sizing.
+
+## [2026-06-12] [instructor] - Enlarge timed vitals buttons
+
+- Increased T1/T2/T3 and U1/U2/U3 button hit targets in the admin Vitals panel.
+- Added coverage so timed vitals buttons keep the larger clickable sizing.
+
+## [2026-06-12] [instructor] - Add timed vitals buttons
+
+- Added T1/T2/T3 and U1/U2/U3 buttons under the admin ECG control.
+- Timed buttons parse matching Treated/Untreated sections from Auto-sort vitals and stage draft vitals only.
+
+## [2026-06-12] [instructor] - Parse pulse summary in vitals autosort
+
+- Added `Pulse` and `Pulse rate` as Vitals auto-sort aliases for FC/HR.
+- Summary text like `Pulse: 136 bpm, Regular, Weak` now fills only the numeric FC/HR value.
+
+## [2026-06-12] [instructor] - Parse Patient Physical pulse respiratory summaries
+
+- Added Patient Physical auto-sort support for comma-separated `Pulse:` and `Respirations:` summaries.
+- Mapped the first, second, and third values into rate, rhythm, and strength for the icon sliders.
+
+## [2026-06-12] [instructor] - Refine Patient Physical icon sliders
+
+- Replaced separate respiratory/pulse Rate, Rhythm, and Strength toggles with one toggleable icon per category.
+- Kept auto-sort extracting Rate/Rhythm/Strength internally while showing combined icon sliders with amber missing-field notes.
+
+## [2026-06-12] [instructor] - Add Patient Physical pulse and respiratory icons
+
+- Added left-side lung and pulse icon cards to Patient Physical with Rate, Rhythm, and Strength targets.
+- Extended Patient Physical auto-sort to fill respiratory and pulse icon findings from explicit labels and clear broad-section lines.
+- Added amber review markers, green confirmation, and inline finding popovers for icon targets.
+
+## [2026-06-12] [instructor] - Order Patient Physical selections by click
+
+- Updated the Patient Physical Selected panel to follow the order body parts are clicked.
+- Added coverage for click-order rendering.
+
+## [2026-06-12] [instructor] - Add Patient Physical head face neck autosort
+
+- Added Patient Physical auto-sort support for `Head / Face / Neck` sections.
+- Mapped head/face/neck findings to the front head and front neck review markers.
+
+## [2026-06-12] [instructor] - Refine Patient Physical selected findings
+
+- Kept auto-sorted Patient Physical findings out of the Selected panel until the body part is clicked green.
+- Fixed the Patient Physical body map container so long selected findings do not stretch the outline or overlays.
+
+## [2026-06-12] [instructor] — Add Patient Physical neck regions
+
+- Added selectable Front neck and Rear neck regions to the Patient Physical body map.
+- Covered the neck regions in Patient Physical render and toggle tests.
+
+## [2026-06-12] [instructor] — Raise Patient Physical upper-leg overlays
+
+- Moved front and rear upper-leg selection zones higher again.
+- Left lower-leg and foot selection zones unchanged.
+
+## [2026-06-12] [instructor] — Raise Patient Physical leg overlays
+
+- Moved upper-leg and lower-leg selection zones higher on both front and rear outlines.
+- Kept foot selections unchanged.
+
+## [2026-06-12] [instructor] — Refine Patient Physical upper placement
+
+- Moved chest, abdomen, and pelvic trunk selection zones moderately higher.
+- Re-shaped upper arm, lower arm, and hand selections into shorter higher capsules on both outlines.
+
+## [2026-06-12] [instructor] — Replace Patient Physical outline image
+
+- Replaced the Patient Physical body map with the newer supplied front/rear outline image.
+- Converted the new image background to transparent.
+- Rebuilt selection overlays as tighter inside-body zones for the new image proportions.
+
+## [2026-06-12] [instructor] — Reposition Patient Physical torso zones
+
+- Moved Front chest higher on the body outline.
+- Moved Front abdomen higher and changed Front/Rear trunk to smaller pelvic-section selections.
+
+## [2026-06-12] [instructor] — Add Patient Physical trunk regions
+
+- Tightened the Front chest selection to the upper chest area.
+- Added independent overlapping Front trunk and Rear trunk selections.
+- Added coverage for trunk selections staying independent from chest, abdomen, and rear back.
+
+## [2026-06-12] [instructor] — Align Patient Physical arm overlays
+
+- Tightened shoulder, upper-arm, lower-arm, and hand overlays to match the visible body outline.
+- Added coverage to prevent arm and hand selection zones from drifting into lower-body areas.
+
+## [2026-06-12] [instructor] — Split Patient Physical limbs by side
+
+- Removed the white body-map background by converting the supplied outline image to transparent.
+- Split shoulders, arms, hands, legs, and feet into anatomical patient left/right selections on both outlines.
+- Kept head, chest, abdomen, and rear back as single selectable regions.
+
+## [2026-06-12] [instructor] — Add Patient Physical body map
+
+- Added a Patient Physical admin tab with the supplied front/rear body outline image.
+- Added selectable body-region overlays with ECG-green selected highlighting.
+- Kept body-map selections local to the admin page with tab-scoped Reset behavior.
+
+## [2026-06-12] [instructor] — Remove Details prefix from caller info
+
+- Caller Info auto-sort still fills Information from `DETAILS`.
+- `DETAILS:` is no longer included in the Information text.
+
+## [2026-06-12] [instructor] — Keep Time Received focused
+
+- Caller Info auto-sort now stops Time Received after the actual time value.
+- Later scenario sections such as Patient Presentation are no longer appended to Heure.
+
+## [2026-06-12] [instructor] — Support Addresse caller-info alias
+
+- Caller Info auto-sort now recognizes `Addresse` as an address label.
+- Added coverage for dispatch `ADDRESS:` labels whose values appear on the following line.
+
+## [2026-06-12] [instructor] — Auto-grow Patient Information notes
+
+- SAMPLE and OPQRST letter note fields now use auto-growing textareas.
+- Short notes stay compact while longer manual or auto-sorted notes grow taller for visibility.
+- Added coverage for compact rows, manual long text, and auto-sorted long text.
+
+## [2026-06-12] [instructor] — Clean SAMPLE medication auto-sort
+
+- SAMPLE M auto-sort now collects medication lines after `M:`.
+- Parenthesized medication descriptions are stripped from SAMPLE M only.
+- Multiple medications are stored in the existing M text box as a comma-separated list.
+
+## [2026-06-12] [instructor] — Keep first origin vitals in auto-sort
+
+- Vitals auto-sort now parses only the origin vitals section when one is present.
+- Without an origin heading, repeated vitals keep the first valid value per field instead of overwriting with later serial vitals.
+- Added parser and admin VitalsControls coverage for origin-safe and first-value behavior.
+
 ## [2026-06-12] [instructor] — Add vitals auto-sort paste box
 
 - Added an admin Vitals auto-sort textarea for FC/HR, SpO2/saturation, BP/TA, and EtCO2/CO2 labelled lines.
 - BP labels now parse any slash-separated systolic/diastolic numbers, with separate BP sys/dia labels also supported.
+- Vitals auto-sort accepts unit/notes formats like `HR: 124 bpm`, `SpO₂: 92% on room air`, and `EtCO₂: 48 mmHg`.
+- Large scenario pastes now parse only the origin vitals section and ignore later serial vitals.
+- Repeated vitals now keep the first valid value per field so treated/untreated vitals do not overwrite origin values.
 - Auto-sort updates draft vitals only, preserving Save → Send and SpO2/EtCO2 graph staging.
 
 ## [2026-06-12] [instructor] — Add Patient Information auto-sort notes
@@ -1003,3 +1188,8 @@
 - [state] Extended analyzer sequence timers to exactly 2.5s (ECG) + 2.5s (Clear) + 4.0s (Result).
 - [ui] Maintained shock count visibility unconditionally during all analysis phases. 
 - [audio] Added `playSystemAudio` to sequentially playback `stand_clear`, `shock_not_advised`, and `perform_cpr` MP3s synchronously with analysis transitions.
+## [2026-06-12] [instructor] - Add Patient Physical auto-sort markers
+
+- Added an admin-only Patient Physical auto-sort textarea for physical assessment section pastes.
+- Mapped chest/respiratory, abdomen, pelvis, and front-side extremity sections into amber review markers with finding text.
+- Kept green Patient Physical selection as manual confirmation and reset clearing local findings.

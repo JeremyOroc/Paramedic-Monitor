@@ -31,9 +31,19 @@
   - [x] Focus-only clearing does not dirty the vital; blur restores untouched zero values
   - [x] Non-zero values remain visible on focus and typed values still strip leading zeroes
 - [x] **Admin vitals auto-sort paste box — COMPLETE:**
-  - [x] Added an admin-only auto-sort textarea above FC, SpO2, BP, and EtCO2 inputs
+  - [x] Moved Vitals auto-sort input into the single Caller Info scenario auto-sort box
   - [x] Labelled French/English vital lines update only matching draft values
   - [x] Combined BP values parse any systolic/diastolic numbers around `/`, with separate BP sys/dia labels also supported
+  - [x] Unit/notes formats such as `HR: 124 bpm`, `SpO₂: 92% on room air`, and `EtCO₂: 48 mmHg` are accepted
+  - [x] Pulse summary lines such as `Pulse: 136 bpm, Regular, Weak` fill only FC/HR with the first number
+  - [x] T1/T2/T3 and U1/U2/U3 buttons stage timed Treated/Untreated vitals from the Caller Info scenario auto-sort text without Save/Send
+  - [x] Timed vitals buttons use larger click targets for easier admin use
+  - [x] Timed vitals buttons fill fixed-height grid cells so the entire outlined rectangle is clickable
+  - [x] Timed vitals buttons use an explicit two-row grid with full-cell pointer targets
+  - [x] ECG selector beside FC stays compact instead of stretching to the timed vitals button height
+  - [x] FC, SpO2, BP sys, BP dia, and EtCO2 align in one left Vitals column beside the right ECG/timed-buttons column
+  - [x] Large scenario pastes parse only the origin vitals section when present and ignore later serial vitals
+  - [x] Repeated vitals keep the first valid value per field so treated/untreated vitals do not overwrite origin values
   - [x] SpO2 and EtCO2 auto-sorted values reuse draft updates so matching graph connections stage as `normal`
 - [x] **SpO2 monitor pulse fill icon — COMPLETE:**
   - [x] Numeric SpO2 values render a small yellow outlined fill bar beside the number
@@ -49,14 +59,37 @@
   - [x] Added side-by-side Sample and OPQRST square checklist panels
   - [x] Letter buttons toggle an ECG-green selected state independently
   - [x] Letter buttons now render as compact left-aligned vertical columns
-  - [x] Each letter has a page-only text input beside it for SAMPLE/OPQRST notes
-  - [x] Added an auto-sort textarea that fills `Letter: value` notes, routing repeated S/P labels to SAMPLE first and OPQRST second
+  - [x] Each letter has a page-only auto-growing textarea beside it for SAMPLE/OPQRST notes
+  - [x] Single Caller Info scenario auto-sort fills `Letter: value` notes, routing repeated S/P labels to SAMPLE first and OPQRST second
+  - [x] SAMPLE M auto-sort collects medication lines, strips parenthesized descriptions, and stores medication names as a comma-separated list
   - [x] Checklist and text state is page-only, survives tab switching during the session, and does not use Save/Send
+- [x] **Admin patient physical body map — COMPLETE:**
+  - [x] Added a Patient Physical admin tab with the newer supplied front/rear body outline image on a transparent/dark background
+  - [x] Added tight inside-body selectable head, upper chest, abdomen, rear back, and front/rear pelvic trunk regions
+  - [x] Added front and rear neck selections between the head and shoulder areas
+  - [x] Split shoulders, arms, hands, legs, and feet into anatomical patient left/right regions on both body outlines
+  - [x] Rebuilt overlay coordinates so selected regions stay inside the newer body outlines
+  - [x] Moved chest, abdomen, pelvic trunk, arm/hand, and upper/lower leg zones higher with tighter inside-body selections
+  - [x] Raised upper-leg overlays again on both outlines while leaving lower-leg and foot placements stable
+  - [x] Single Caller Info scenario auto-sort fills Patient Physical findings with amber review markers, click-to-show selected-panel text, and click-to-confirm green behavior
+  - [x] Added Head / Face / Neck auto-sort support for front head and front neck findings
+  - [x] Added Back / Spine and Thoracic auto-sort aliases so those sections no longer attach to previous leg findings
+  - [x] Fixed Patient Physical map sizing so long Selected-panel findings do not stretch the body outline or overlays
+  - [x] Selected Patient Physical entries display in the order body parts are clicked
+  - [x] Refined respiratory and pulse Patient Physical icons so each icon is the only toggle and opens a combined slider with missing-field notes
+  - [x] Patient Physical auto-sort parses comma-separated Pulse and Respirations summaries into rate, rhythm, and strength
+  - [x] Added a Skin/Extremities icon after Pulse and Respiratory that auto-sorts skin findings into one icon-only slider note
+  - [x] Added a Scene/Environment icon after Skin/Extremities that auto-sorts scene findings into one icon-only slider note
+  - [x] Selected body regions highlight ECG green and stay page-only without Save/Send or monitor effects
+  - [x] Patient Physical Reset clears only the local body-map selections
 - [x] **Caller info auto-sort paste box — COMPLETE:**
-  - [x] Added an admin-only auto-sort textarea above the Caller Info fields
+  - [x] Added a single admin-only scenario auto-sort textarea above the Caller Info fields
+  - [x] Unified scenario auto-sort updates Caller Info, origin Vitals, Patient Information, and Patient Physical state from one paste
   - [x] Labelled French/English lines fill the six main caller-info draft fields, including label-on-next-line and dash-separated formats
   - [x] Added Call #, Priority, and MPDS Code fields that appear on admin and trainee caller-info views after Save → Send
-  - [x] Dispatch-format labels map into their matching fields, with patient/details/units combined into Information
+  - [x] Dispatch-format labels map into their matching fields, with patient/details/units combined into Information and DETAILS appended without a heading prefix
+  - [x] Address labels support `ADDRESS`, `Adresse`, and `Addresse`, including values on the following line
+  - [x] Time Received keeps only the time value and stops before later scenario sections like Patient Presentation
   - [x] Removed the legacy Intervention prioritaire code field and reordered Caller Info so Dispatch countdown appears before Call / Priority / MPDS
   - [x] Assignment caller-info screen keeps the large Priority badge without a duplicate Priority details row
   - [x] Matching fields overwrite immediately while preserving the existing Save → Send workflow

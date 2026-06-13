@@ -434,33 +434,92 @@ button is inert until a drill gate is satisfied.
 - Admin vital number inputs clear a visible `0` on focus for FC, SpO2, BP sys,
   BP dia, and EtCO2. This is visual only until typing; blur restores untouched
   zeroes, and non-zero values stay visible on focus.
-- The admin Vitals panel includes an auto-sort textarea for labelled FC/HR,
+- The admin Caller Info tab owns the single universal auto-sort scenario box.
+  Pasting there runs all supported parsers at once: caller info, origin vitals,
+  SAMPLE/OPQRST patient information, and Patient Physical findings. The Vitals,
+  Patient Information, and Patient Physical tabs do not show their own
+  auto-sort textareas; their manual controls remain editable.
+- Vitals auto-sort parsing is driven by the Caller Info scenario box for labelled FC/HR,
   SpO2/saturation, BP/TA, and EtCO2/CO2 text. It updates only matched draft
-  vitals, supports combined BP values like `BP: 186/102` or `BP: 95/60`
-  plus separate systolic/diastolic labels, and keeps Save → Send unchanged.
-- The admin Caller Info tab is ordered as auto-sort paste box, Dispatch
+  vitals. If a large scenario paste contains a `Vitals (Origin)`,
+  `Vitals Origin`, or `Origin Vitals` section, only that origin section is
+  parsed and later serial vitals are ignored. Without an origin heading, the
+  first valid value for each vital wins so later treated/untreated vitals do
+  not overwrite origin values. It supports combined BP values like
+  `BP: 186/102` or `BP: 95/60` plus separate systolic/diastolic labels, accepts
+  units/notes such as `HR: 124 bpm`, `SpO₂: 92% on room air`, and
+  `EtCO₂: 48 mmHg`, and keeps Save → Send unchanged.
+- The admin Caller Info tab is ordered as universal auto-sort scenario box, Dispatch
   countdown, Call # / Priority / MPDS Code, main caller-info fields, then
   optional extras. It parses
   labelled French/English dispatch text, including `Label: value`,
   `Label - value`, and label-on-next-line formats. `CALL #`, `PRIORITY`, and
-  `MPDS CODE` fill the new fields; `ADDRESS`, `CHIEF COMPLAINT`, `STATUS`, and
-  `TIME RECEIVED` fill Adresse, Probleme, Mise a jour, and Heure; `PATIENT`,
-  `DETAILS`, and `UNITS ASSIGNED` combine into Information with headings.
+  `MPDS CODE` fill the new fields; `ADDRESS` / `Adresse` / `Addresse`,
+  `CHIEF COMPLAINT`, `STATUS`, and `TIME RECEIVED` fill Adresse, Probleme,
+  Mise a jour, and Heure; `PATIENT`, `DETAILS`, and `UNITS ASSIGNED` combine
+  into Information, but `DETAILS` appends its text without a `DETAILS:` prefix.
+  `TIME RECEIVED` stores only the time value and stops before later scenario
+  sections such as Patient Presentation.
   Legacy `Intervention prioritaire code` / `Code` labels are ignored. Matching
   fields overwrite immediately in draft state, optional extras are ignored, and
   trainees only see changes after the normal Save → Send flow.
-- The admin dashboard includes a third `Patient Information` tab with two
+- The admin dashboard includes a `Patient Information` tab with two
   square SAMPLE and OPQRST checklist panels. Each letter has a compact
-  left-aligned toggle button plus a text input. An auto-sort textarea parses
-  `Letter: value` lines into those text inputs, with repeated `S` and `P`
-  labels filling SAMPLE first and OPQRST second. Green letter selection remains
-  manual only. Text and selections stay local to the admin page session, survive
-  tab switching while the page remains mounted, and do not use Save/Send or
-  update the trainee monitor.
+  left-aligned toggle button plus an auto-growing textarea. The universal
+  Caller Info scenario auto-sort parses `Letter: value` lines into those
+  textareas, with repeated `S` and `P` labels filling SAMPLE first and OPQRST
+  second. SAMPLE `M` can also
+  collect medication lines following `M:`, strip parenthesized descriptions,
+  and store medication names as a comma-separated list. Longer SAMPLE/OPQRST
+  notes automatically grow taller for visibility while short notes stay compact.
+  Green letter selection remains manual only. Text and selections stay local to
+  the admin page session, survive tab switching while the page remains mounted,
+  and do not use Save/Send or update the trainee monitor.
+- The admin dashboard includes a `Patient Physical` tab with the newer supplied
+  front and rear body-outline image on a transparent/dark background. Tight
+  inside-body selectable regions cover the head, neck, upper chest, abdomen,
+  rear back, and front/rear pelvic trunk regions. Shoulders, upper/lower arms,
+  hands, upper/lower legs, and feet are selectable independently by anatomical
+  patient left/right on both body outlines, with upper-leg overlays tuned higher
+  to match the newer outline. Selected regions are highlighted ECG green, stay
+  within the body outlines, stay local to the admin page session, and do not use
+  Save/Send or update the trainee monitor.
+- Patient Physical auto-sort is also driven by the universal Caller Info
+  scenario box. Recognized physical assessment sections such as head/face/neck,
+  chest/respiratory, thoracic/front chest, back/spine/rear back, abdomen,
+  pelvis, and left/right upper/lower extremities create amber `!` review
+  markers on the fixed-size body map. Finding text appears in the Selected
+  panel only after the marked region is clicked and confirmed ECG-green. Broad
+  extremity sections map to front-outline limb regions only, and later
+  back/spine or thoracic headings stop extremity collection instead of being
+  appended to leg findings. Confirmed findings in the Selected panel follow the
+  order the instructor clicked body parts.
+- The `Patient Physical` tab includes a left-side icon rail ordered Pulse,
+  Respiratory, Skin/Extremities, then Scene/Environment. Auto-sort still
+  extracts Rate, Rhythm, and Strength internally from explicit
+  respiratory/pulse labels and clearly classifiable broad Respiratory/Pulse
+  section lines. Skin/Extremities and Scene/Environment sections collect their
+  lines into one icon-only note and do not mark body-map regions. Each icon card
+  is the only toggle: auto-sort places an amber `!` on the whole icon when any
+  matching finding exists, clicking the icon turns it ECG-green and opens a
+  combined slider, and clicking it again closes the slider while keeping the
+  icon confirmed. Pulse/Respiratory sliders list missing Rate/Rhythm/Strength
+  fields in amber. Comma-separated summaries such as `Pulse: 136 bpm, Regular,
+  Weak` and `Respirations: 30 breaths/min, Regular, Labored` fill rate, rhythm,
+  and strength in order.
 - Admin vitals are ordered FC → SpO2 → BP sys/dia → EtCO2. The ECG graph/rhythm
-  control sits to the right of FC. SpO2 and EtCO2 do not render right-side graph
-  controls; their left-side vital On/Off toggles stage both numeric active state
-  and graph connection state.
+  control sits in a separate right column beside the numeric vitals column. FC,
+  SpO2, BP sys, BP dia, and EtCO2 remain vertically aligned together. SpO2 and
+  EtCO2 do not render right-side graph controls; their left-side vital On/Off
+  toggles stage both numeric active state and graph connection state.
+  Vitals auto-sort treats `Pulse` / `Pulse rate` as FC/HR labels and stores only
+  the first number from summary text such as `Pulse: 136 bpm, Regular, Weak`.
+  The ECG-side admin column includes `T1`/`T2`/`T3` and `U1`/`U2`/`U3` timed
+  vitals buttons that parse matching Treated/Untreated `(+5/+10/+15 min)`
+  sections from the Caller Info scenario text and stage only draft vitals. These
+  buttons use an explicit two-row, three-column grid and fill their entire
+  outlined grid-cell rectangles for easier clicking. The ECG selector itself
+  stays compact beside FC and does not stretch to the timed vitals button height.
 - ECG rhythm selection stays compact by default, showing the current rhythm and a
   `Rhythm Options` button. Opening the picker shows category buttons for `NSR`,
   `Cardiac Arrest`, `Heart Block`, `Bundle Branch Block`, and `MI`, then shows
@@ -495,7 +554,8 @@ button is inert until a drill gate is satisfied.
   vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
   countdown, milestone logs, and monitor vitals. On the Patient Information tab,
-  Reset clears only the local SAMPLE/OPQRST checklist selections.
+  Reset clears only the local SAMPLE/OPQRST checklist selections. On the Patient
+  Physical tab, Reset clears only local body-map selections.
 - Gate state is persisted (store version 7; countdown stored as an absolute
   end-timestamp, response timer stored as an absolute start timestamp, and a
   per-dispatch run id) so a mid-drill refresh resumes and repeated reset/re-arm
