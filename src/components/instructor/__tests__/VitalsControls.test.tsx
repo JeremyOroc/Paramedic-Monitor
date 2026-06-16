@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
@@ -155,6 +155,46 @@ describe('VitalsControls', () => {
     expect(useMonitorStore.getState().draft.spo2_waveform).toBe('off')
     expect(useMonitorStore.getState().draftVitalActive.etco2).toBe(false)
     expect(useMonitorStore.getState().draft.etco2_waveform).toBe('off')
+  })
+
+  it('shows the EtCO2 calibration indicator as neutral until calibration completes', () => {
+    render(<VitalsControls autoSortText="" />)
+
+    const indicator = screen.getByTestId('admin-etco2-calibration-indicator')
+    expect(indicator).toHaveAttribute('data-calibrated', 'false')
+    expect(indicator).toHaveClass('border-neutral-700', 'text-neutral-600')
+
+    act(() => {
+      useMonitorStore.getState().startEtco2Calibration()
+      useMonitorStore.getState().completeEtco2Calibration()
+    })
+
+    expect(indicator).toHaveAttribute('data-calibrated', 'true')
+    expect(indicator).toHaveClass('border-purple-etco2', 'text-purple-etco2')
+
+    act(() => useMonitorStore.getState().resetMonitorVitals())
+
+    expect(indicator).toHaveAttribute('data-calibrated', 'false')
+  })
+
+  it('toggles the CPR override immediately from the ECG column', async () => {
+    const user = userEvent.setup()
+    render(<VitalsControls autoSortText="" />)
+
+    const cpr = screen.getByRole('button', { name: 'CPR' })
+    expect(cpr).toHaveAttribute('aria-pressed', 'false')
+    expect(useMonitorStore.getState().cprOverrideActive).toBe(false)
+
+    await user.click(cpr)
+
+    expect(cpr).toHaveAttribute('aria-pressed', 'true')
+    expect(cpr).toHaveClass('border-ecg-green')
+    expect(useMonitorStore.getState().cprOverrideActive).toBe(true)
+
+    await user.click(cpr)
+
+    expect(cpr).toHaveAttribute('aria-pressed', 'false')
+    expect(useMonitorStore.getState().cprOverrideActive).toBe(false)
   })
 
   it('stages T1 timed vitals from the shared auto-sort text', async () => {

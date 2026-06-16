@@ -48,6 +48,7 @@ function LiveSecondaryCanvas({
       return {
         color: isEtco2 ? COLORS.purpleEtCO2 : COLORS.yellowSpO2,
         sweepMs: isEtco2 ? ETCO2_SWEEP_MS : SPO2_SWEEP_MS,
+        synchronizeSweep: !isEtco2,
         amplitude: isEtco2 ? 0.95 : 0.85,
         fillStyle: isEtco2 ? 'area' : 'line',
         ampJitter: isEtco2 ? 0.05 : 0.07,
@@ -112,7 +113,8 @@ export function SecondaryChannel({
           data-testid="etco2-loading-trace"
           className="absolute inset-0 overflow-hidden bg-black"
         >
-          <div className="etco2-loading-line absolute left-0 top-1/2 h-[2px] w-full origin-left bg-purple-etco2 opacity-50" />
+          <div className="absolute left-0 top-1/2 h-px w-full bg-purple-etco2/25" />
+          <div className="etco2-calibration-progress absolute left-0 top-1/2 w-full origin-left bg-purple-etco2" />
         </div>
       ) : connected ? (
         <LiveSecondaryCanvas

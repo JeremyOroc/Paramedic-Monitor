@@ -84,17 +84,33 @@ body {
   animation: vital-alarm-flash 1.9s ease-in-out infinite;
 }
 
-.etco2-loading-line {
-  animation: etco2-loading-line 8s linear forwards;
-  transform: scaleX(0);
+.etco2-calibration-progress {
+  animation: etco2-calibration-progress 10s linear forwards;
+  left: 0%;
+  height: 4px;
+  opacity: 0.75;
+  transform: translateY(-50%);
+  width: 34%;
 }
 
-@keyframes etco2-loading-line {
+@keyframes etco2-calibration-progress {
   from {
-    transform: scaleX(0);
+    left: 0%;
+    height: 4px;
+    opacity: 0.75;
+    width: 34%;
+  }
+  50% {
+    left: 0%;
+    height: 2px;
+    opacity: 0.65;
+    width: 16%;
   }
   to {
-    transform: scaleX(1);
+    left: 0%;
+    height: 1px;
+    opacity: 0.55;
+    width: 5%;
   }
 }
 

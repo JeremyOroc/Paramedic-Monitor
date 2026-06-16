@@ -65,6 +65,7 @@ const activeVitals: VitalActiveState = {
 
 type BpDisplay = Pick<Vitals, 'bp_sys' | 'bp_dia'>
 type BpActiveState = Pick<VitalActiveState, 'bp_sys' | 'bp_dia'>
+export type Etco2CalibrationStatus = 'idle' | 'calibrating' | 'calibrated'
 
 const initialBpDisplay: BpDisplay = {
   bp_sys: initial.bp_sys,
@@ -83,6 +84,8 @@ const VALID_RHYTHMS: ReadonlySet<Rhythm> = new Set([
   'vt',
   'torsades',
   'asystole',
+  'anterior-mi',
+  'inferior-mi',
 ])
 
 function normalizeRhythm(value: unknown): Rhythm {
@@ -217,6 +220,8 @@ export type MonitorState = {
   dispatchMinutes: number
   dispatchSeconds: number
   monitorResetVersion: number
+  etco2CalibrationStatus: Etco2CalibrationStatus
+  cprOverrideActive: boolean
   acceptedBp: BpDisplay
   acceptedBpActive: BpActiveState
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
@@ -229,6 +234,10 @@ export type MonitorState = {
   acknowledgeCall: (estTime: string) => void
   arriveCall: (estTime: string) => void
   transportCall: (estTime: string) => void
+  startEtco2Calibration: () => void
+  cancelEtco2Calibration: () => void
+  completeEtco2Calibration: () => void
+  setCprOverrideActive: (active: boolean) => void
   acceptBpReading: (bp: BpDisplay, active: BpActiveState) => void
   resetMonitorVitals: () => void
   resetVitalsToNormal: () => void
@@ -259,6 +268,8 @@ export const useMonitorStore = create<MonitorState>()(
       dispatchMinutes: 0,
       dispatchSeconds: 0,
       monitorResetVersion: 0,
+      etco2CalibrationStatus: 'idle',
+      cprOverrideActive: false,
       acceptedBp: initialBpDisplay,
       acceptedBpActive: inactiveBpActive,
       setDraft: (field, value) =>
@@ -339,6 +350,26 @@ export const useMonitorStore = create<MonitorState>()(
             },
           }
         }),
+      startEtco2Calibration: () =>
+        set((s) =>
+          s.etco2CalibrationStatus === 'calibrated'
+            ? s
+            : { etco2CalibrationStatus: 'calibrating' },
+        ),
+      cancelEtco2Calibration: () =>
+        set((s) =>
+          s.etco2CalibrationStatus === 'calibrating'
+            ? { etco2CalibrationStatus: 'idle' }
+            : s,
+        ),
+      completeEtco2Calibration: () =>
+        set((s) =>
+          s.etco2CalibrationStatus === 'calibrating'
+            ? { etco2CalibrationStatus: 'calibrated' }
+            : s,
+        ),
+      setCprOverrideActive: (active) =>
+        set({ cprOverrideActive: active }),
       acceptBpReading: (bp, active) =>
         set({
           acceptedBp: { bp_sys: bp.bp_sys, bp_dia: bp.bp_dia },
@@ -356,6 +387,8 @@ export const useMonitorStore = create<MonitorState>()(
           savedVitalActive: inactiveVitals,
           confirmedVitalActive: inactiveVitals,
           monitorResetVersion: s.monitorResetVersion + 1,
+          etco2CalibrationStatus: 'idle',
+          cprOverrideActive: false,
           acceptedBp: initialBpDisplay,
           acceptedBpActive: inactiveBpActive,
         })),
@@ -424,6 +457,8 @@ export const useMonitorStore = create<MonitorState>()(
           dispatchMinutes: 0,
           dispatchSeconds: 0,
           monitorResetVersion: s.monitorResetVersion + 1,
+          etco2CalibrationStatus: 'idle',
+          cprOverrideActive: false,
           acceptedBp: initialBpDisplay,
           acceptedBpActive: inactiveBpActive,
         })),
@@ -490,6 +525,12 @@ export const useMonitorStore = create<MonitorState>()(
             typeof persistedState?.monitorResetVersion === 'number'
               ? persistedState.monitorResetVersion
               : 0,
+          etco2CalibrationStatus:
+            persistedState?.etco2CalibrationStatus === 'calibrating' ||
+            persistedState?.etco2CalibrationStatus === 'calibrated'
+              ? persistedState.etco2CalibrationStatus
+              : 'idle',
+          cprOverrideActive: persistedState?.cprOverrideActive === true,
           acceptedBp: normalizeBpDisplay(persistedState?.acceptedBp, confirmed),
           acceptedBpActive: normalizeBpActive(
             persistedState?.acceptedBpActive,

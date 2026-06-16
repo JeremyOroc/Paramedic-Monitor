@@ -19,6 +19,7 @@ type WaveformPanelProps = {
   showAllSecondaryChannels?: boolean
   selected?: MonitorSelection
   etco2Loading?: boolean
+  cprOverride?: boolean
 }
 
 export function WaveformPanel({
@@ -33,15 +34,19 @@ export function WaveformPanel({
   showAllSecondaryChannels = false,
   selected,
   etco2Loading = false,
+  cprOverride = false,
 }: WaveformPanelProps) {
-  const ecgConnected = rhythm !== 'off'
+  const ecgConnected = cprOverride || rhythm !== 'off'
   const spo2Connected = spo2Waveform !== 'off'
   const etco2Connected = etco2Waveform !== 'off'
   const selectedSecondaryConnected =
     secondaryChannel === 'etco2' ? etco2Connected : spo2Connected
   const bothSecondaryOff = !spo2Connected && !etco2Connected
+  const selectedEtco2Loading = secondaryChannel === 'etco2' && etco2Loading
   const normalSecondaryChannel =
-    selectedSecondaryConnected || bothSecondaryOff ? secondaryChannel : null
+    selectedEtco2Loading || selectedSecondaryConnected || bothSecondaryOff
+      ? secondaryChannel
+      : null
   const ecgLabel = (
     <div className="absolute top-1 left-2 z-10 flex items-center gap-16 text-xs font-mono font-bold text-ecg-green">
       <span className={cn('px-1 py-0.5', selected === 'padsLabel' && 'bg-[var(--color-selection-blue)] text-white')}>
@@ -62,6 +67,7 @@ export function WaveformPanel({
             rhythm={rhythm}
             hr={hr}
             connected={ecgConnected}
+            cprOverride={cprOverride}
             className="h-full w-full"
           />
         </div>
@@ -114,6 +120,7 @@ export function WaveformPanel({
           rhythm={rhythm}
           hr={hr}
           connected={ecgConnected}
+          cprOverride={cprOverride}
           className="h-full w-full"
         />
         {showApplyElectrodes && (
@@ -134,6 +141,7 @@ export function WaveformPanel({
             selectedLabel={selected === `${normalSecondaryChannel}Label`}
             selectedScale={selected === `${normalSecondaryChannel}Scale`}
             connected={selectedSecondaryConnected}
+            loading={normalSecondaryChannel === 'etco2' && etco2Loading}
           />
         </div>
       )}

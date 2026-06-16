@@ -34,6 +34,8 @@ export function LeadCell({ label, rhythm, hr, className }: LeadCellProps) {
 
   return (
     <div
+      data-testid={`lead-cell-${label}`}
+      data-rhythm={rhythm}
       className={cn(
         'relative border border-neutral-800 bg-black overflow-hidden',
         className,

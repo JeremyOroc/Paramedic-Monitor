@@ -51,6 +51,8 @@ describe('monitorStore', () => {
     expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
+    expect(s.etco2CalibrationStatus).toBe('idle')
+    expect(s.cprOverrideActive).toBe(false)
   })
 
   it('setDraft updates only draft', () => {
@@ -268,9 +270,59 @@ describe('monitorStore', () => {
     expect(s.confirmedVitalActive).toEqual(inactiveVitalState)
     expect(s.acceptedBp).toEqual({ bp_sys: 0, bp_dia: 0 })
     expect(s.acceptedBpActive).toEqual({ bp_sys: false, bp_dia: false })
+    expect(s.etco2CalibrationStatus).toBe('idle')
+    expect(s.cprOverrideActive).toBe(false)
     expect(s.monitorResetVersion).toBe(resetVersion + 1)
     expect(s.callerInfoConfirmed.address).toBe('123 Rue Principale')
     expect(s.dispatch.armed).toBe(true)
+  })
+
+  it('tracks EtCO2 calibration status and resets it with monitor reset', () => {
+    expect(useMonitorStore.getState().etco2CalibrationStatus).toBe('idle')
+
+    useMonitorStore.getState().startEtco2Calibration()
+    expect(useMonitorStore.getState().etco2CalibrationStatus).toBe('calibrating')
+
+    useMonitorStore.getState().completeEtco2Calibration()
+    expect(useMonitorStore.getState().etco2CalibrationStatus).toBe('calibrated')
+
+    useMonitorStore.getState().resetMonitorVitals()
+    expect(useMonitorStore.getState().etco2CalibrationStatus).toBe('idle')
+  })
+
+  it('cancels EtCO2 calibration without marking it calibrated', () => {
+    useMonitorStore.getState().startEtco2Calibration()
+    useMonitorStore.getState().cancelEtco2Calibration()
+
+    expect(useMonitorStore.getState().etco2CalibrationStatus).toBe('idle')
+  })
+
+  it('turning EtCO2 off does not clear completed calibration', () => {
+    useMonitorStore.getState().startEtco2Calibration()
+    useMonitorStore.getState().completeEtco2Calibration()
+
+    useMonitorStore.getState().setDraftVitalActive('etco2', false)
+
+    expect(useMonitorStore.getState().draftVitalActive.etco2).toBe(false)
+    expect(useMonitorStore.getState().draft.etco2_waveform).toBe('off')
+    expect(useMonitorStore.getState().etco2CalibrationStatus).toBe('calibrated')
+  })
+
+  it('tracks CPR override independently from saved vitals and clears it on reset', () => {
+    useMonitorStore.getState().setDraft('hr', 80)
+    useMonitorStore.getState().setDraft('rhythm', 'nsr')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    useMonitorStore.getState().setCprOverrideActive(true)
+
+    expect(useMonitorStore.getState().cprOverrideActive).toBe(true)
+    expect(useMonitorStore.getState().confirmed.hr).toBe(80)
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('nsr')
+
+    useMonitorStore.getState().resetMonitorVitals()
+
+    expect(useMonitorStore.getState().cprOverrideActive).toBe(false)
   })
 
   it('keeps accepted BP unchanged on send until a completed reading commits it', () => {
@@ -301,6 +353,22 @@ describe('monitorStore', () => {
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('vf')
+  })
+
+  it('Anterior MI flows through the same draft save send pipeline', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'anterior-mi')
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('anterior-mi')
+  })
+
+  it('Inferior MI flows through the same draft save send pipeline', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'inferior-mi')
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('inferior-mi')
   })
 
   it('spo2_waveform defaults to off and flows through save → send', () => {
@@ -564,6 +632,50 @@ describe('persist migration', () => {
     expect(s.draft.rhythm).toBe(DEFAULT_VITALS.rhythm)
     expect(s.saved.rhythm).toBe(DEFAULT_VITALS.rhythm)
     expect(s.confirmed.rhythm).toBe(DEFAULT_VITALS.rhythm)
+  })
+
+  it('preserves Anterior MI rhythms in persisted vitals', async () => {
+    const def = defaultsAsVitals()
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        state: {
+          draft: { ...def, rhythm: 'anterior-mi' },
+          saved: { ...def, rhythm: 'anterior-mi' },
+          confirmed: { ...def, rhythm: 'anterior-mi' },
+        },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.rhythm).toBe('anterior-mi')
+    expect(s.saved.rhythm).toBe('anterior-mi')
+    expect(s.confirmed.rhythm).toBe('anterior-mi')
+  })
+
+  it('preserves Inferior MI rhythms in persisted vitals', async () => {
+    const def = defaultsAsVitals()
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 3,
+        state: {
+          draft: { ...def, rhythm: 'inferior-mi' },
+          saved: { ...def, rhythm: 'inferior-mi' },
+          confirmed: { ...def, rhythm: 'inferior-mi' },
+        },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.rhythm).toBe('inferior-mi')
+    expect(s.saved.rhythm).toBe('inferior-mi')
+    expect(s.confirmed.rhythm).toBe('inferior-mi')
   })
 
   it('seeds a default dispatch slice for a payload without one', async () => {

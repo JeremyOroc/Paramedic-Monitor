@@ -43,7 +43,10 @@ const ECG_RHYTHM_CATEGORIES: ReadonlyArray<RhythmCategory> = [
   },
   {
     label: 'MI',
-    options: [],
+    options: [
+      { value: 'anterior-mi', label: 'Anterior MI' },
+      { value: 'inferior-mi', label: 'Inferior MI' },
+    ],
   },
 ]
 
@@ -54,6 +57,8 @@ const RHYTHM_LABELS: Record<Rhythm, string> = {
   vt: 'VT',
   torsades: 'Torsades',
   asystole: 'Asystole',
+  'anterior-mi': 'Anterior MI',
+  'inferior-mi': 'Inferior MI',
 }
 
 export function EcgRhythmSelector() {

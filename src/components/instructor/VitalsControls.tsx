@@ -27,6 +27,10 @@ type VitalsControlsProps = {
 export function VitalsControls({ autoSortText }: VitalsControlsProps) {
   const resetVitalsToNormal = useMonitorStore((s) => s.resetVitalsToNormal)
   const setDraft = useMonitorStore((s) => s.setDraft)
+  const etco2CalibrationStatus = useMonitorStore((s) => s.etco2CalibrationStatus)
+  const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
+  const setCprOverrideActive = useMonitorStore((s) => s.setCprOverrideActive)
+  const etco2Calibrated = etco2CalibrationStatus === 'calibrated'
 
   const applyParsedVitals = (parsed: ReturnType<typeof parseTimedVitalsAutoSort>) => {
     for (const field of AUTO_SORT_FIELDS) {
@@ -75,12 +79,41 @@ export function VitalsControls({ autoSortText }: VitalsControlsProps) {
           <div className="flex items-center" data-testid="admin-vital-row-etco2">
             <VitalInput field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
           </div>
+          <div
+            role="status"
+            aria-label="EtCO2 calibration status"
+            data-testid="admin-etco2-calibration-indicator"
+            data-calibrated={etco2Calibrated}
+            className={[
+              'ml-[5.75rem] flex h-9 w-24 items-center justify-center border px-2',
+              'font-mono text-xs font-bold uppercase tracking-wider transition-colors',
+              etco2Calibrated
+                ? 'border-purple-etco2 bg-purple-etco2/15 text-purple-etco2 shadow-[0_0_16px_-6px_var(--color-purple-etco2)]'
+                : 'border-neutral-700 bg-neutral-950 text-neutral-600',
+            ].join(' ')}
+          >
+            EtCO2
+          </div>
         </div>
 
         <div className="self-start" data-testid="admin-ecg-column">
           <div data-testid="admin-graph-row-ecg">
             <EcgRhythmSelector />
           </div>
+          <button
+            type="button"
+            aria-pressed={cprOverrideActive}
+            onClick={() => setCprOverrideActive(!cprOverrideActive)}
+            className={[
+              'mt-3 flex h-11 w-full items-center justify-center border px-3',
+              'font-mono text-sm font-bold uppercase tracking-wider transition-colors',
+              cprOverrideActive
+                ? 'border-ecg-green bg-ecg-green/15 text-ecg-green shadow-[0_0_18px_-8px_var(--color-ecg-green)]'
+                : 'border-neutral-600 bg-neutral-900 text-neutral-300 hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green',
+            ].join(' ')}
+          >
+            CPR
+          </button>
           <div
             className="relative z-10 mt-3 grid grid-cols-3 grid-rows-2 gap-2"
             aria-label="Timed vitals"

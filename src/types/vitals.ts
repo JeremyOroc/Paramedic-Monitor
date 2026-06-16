@@ -1,4 +1,12 @@
-export type Rhythm = 'off' | 'nsr' | 'vf' | 'vt' | 'torsades' | 'asystole'
+export type Rhythm =
+  | 'off'
+  | 'nsr'
+  | 'vf'
+  | 'vt'
+  | 'torsades'
+  | 'asystole'
+  | 'anterior-mi'
+  | 'inferior-mi'
 
 export type Spo2Waveform = 'normal' | 'weak' | 'off'
 

@@ -80,6 +80,83 @@ type NsrGains = {
   tGain?: number
 }
 
+type AnteriorMiGains = NsrGains & {
+  stElevation?: number
+  stSlope?: number
+  qWidth?: number
+  sWidth?: number
+  polarity?: 1 | -1
+}
+
+type InferiorMiGains = NsrGains & {
+  stElevation?: number
+  stSlope?: number
+  qWidth?: number
+  sWidth?: number
+  polarity?: 1 | -1
+}
+
+const ANTERIOR_MI_MONITOR_MORPHOLOGY: AnteriorMiGains = {
+  pGain: 0.65,
+  qGain: 0.9,
+  rGain: 0.34,
+  sGain: 2.05,
+  tGain: 0.95,
+  stElevation: 0.095,
+  stSlope: 0.012,
+  sWidth: 0.034,
+}
+
+const INFERIOR_MI_MONITOR_MORPHOLOGY: InferiorMiGains = {
+  pGain: 0.95,
+  qGain: 0.9,
+  rGain: 1.45,
+  sGain: 0.58,
+  tGain: 2.25,
+  stElevation: 0.340,
+  stSlope: 0.050,
+}
+
+type ControlPoint = readonly [number, number]
+
+const ANTERIOR_MI_MONITOR_POINTS: ReadonlyArray<ControlPoint> = [
+  [0.000, 0.000],
+  [0.120, 0.000],
+  [0.175, 0.000],
+  [0.205, 0.045],
+  [0.235, 0.000],
+  [0.318, 0.000],
+  [0.342, -0.030],
+  [0.362, 0.220],
+  [0.388, -0.500],
+  [0.430, -0.070],
+  [0.470, 0.040],
+  [0.545, 0.200],
+  [0.610, 0.260],
+  [0.690, 0.110],
+  [0.775, 0.000],
+  [1.000, 0.000],
+]
+
+const INFERIOR_MI_MONITOR_POINTS: ReadonlyArray<ControlPoint> = [
+  [0.000, 0.000],
+  [0.120, 0.000],
+  [0.175, 0.000],
+  [0.205, 0.080],
+  [0.238, 0.000],
+  [0.318, 0.000],
+  [0.345, -0.045],
+  [0.370, 0.760],
+  [0.392, -0.080],
+  [0.430, 0.130],
+  [0.490, 0.300],
+  [0.565, 0.550],
+  [0.630, 0.330],
+  [0.700, 0.030],
+  [0.760, 0.000],
+  [1.000, 0.000],
+]
+
 function triangle(t: number, start: number, peak: number, end: number): number {
   if (t < start || t > end) return 0
   if (t <= peak) return (t - start) / (peak - start)
@@ -91,6 +168,30 @@ type Range = readonly [number, number]
 function between(rand: () => number, range: Range): number {
   const [min, max] = range
   return min + rand() * (max - min)
+}
+
+function interpolateSmooth(points: ReadonlyArray<ControlPoint>, phase: number): number {
+  for (let i = 1; i < points.length; i++) {
+    const [prevT, prevV] = points[i - 1]
+    const [nextT, nextV] = points[i]
+    if (phase <= nextT) {
+      const span = nextT - prevT
+      const t = span <= 0 ? 1 : (phase - prevT) / span
+      return prevV + (nextV - prevV) * smoothstep(t)
+    }
+  }
+  return points[points.length - 1][1]
+}
+
+function synthReferenceStrip(points: ReadonlyArray<ControlPoint>): Float32Array {
+  const out = new Float32Array(SAMPLES)
+  for (let i = 0; i < SAMPLES; i++) {
+    const phase = i / SAMPLES
+    out[i] =
+      interpolateSmooth(points, phase) +
+      0.0025 * Math.sin(phase * Math.PI * 2 * 1.35 - 0.4)
+  }
+  return out
 }
 
 function synthAsystole(): Float32Array {
@@ -139,6 +240,82 @@ function synthNSR(g: NsrGains = {}): Float32Array {
     const baseline = Math.sin(phase * Math.PI * 2.1) * 0.003
     out[i] = p + q + r + s + st + t + baseline
   }
+  return out
+}
+
+function synthAnteriorMI(g: AnteriorMiGains = {}): Float32Array {
+  const pGain = g.pGain ?? 0.8
+  const qGain = g.qGain ?? 1
+  const rGain = g.rGain ?? 0.65
+  const sGain = g.sGain ?? 1
+  const tGain = g.tGain ?? 1.3
+  const stElevation = g.stElevation ?? 0.12
+  const stSlope = g.stSlope ?? 0.025
+  const qWidth = g.qWidth ?? 0.012
+  const sWidth = g.sWidth ?? 0.03
+  const polarity = g.polarity ?? 1
+  const out = new Float32Array(SAMPLES)
+  const pCenter = SAMPLES * 0.20
+  const qCenter = SAMPLES * 0.335
+  const tCenter = SAMPLES * 0.61
+
+  for (let i = 0; i < SAMPLES; i++) {
+    const phase = i / SAMPLES
+    const p = 0.05 * pGain * gaussian(i, pCenter, SAMPLES * 0.022)
+    const q = -0.075 * qGain * gaussian(i, qCenter, SAMPLES * qWidth)
+    const r = 0.50 * rGain * triangle(phase, 0.348, 0.368, 0.390)
+    const s = -0.19 * sGain * gaussian(i, SAMPLES * 0.41, SAMPLES * sWidth)
+    const stWindow =
+      phase > 0.430 && phase < 0.565
+        ? stElevation + stSlope * ((phase - 0.430) / 0.135)
+        : 0
+    const t = 0.25 * tGain * gaussian(i, tCenter, SAMPLES * 0.060)
+    const terminal =
+      phase > 0.675 && phase < 0.760
+        ? 0.030 * tGain * Math.sin(((phase - 0.675) / 0.085) * Math.PI)
+        : 0
+    const baseline = Math.sin(phase * Math.PI * 2.05) * 0.003
+    out[i] = polarity * (p + q + r + s + stWindow + t + terminal + baseline)
+  }
+
+  return out
+}
+
+function synthInferiorMI(g: InferiorMiGains = {}): Float32Array {
+  const pGain = g.pGain ?? 0.85
+  const qGain = g.qGain ?? 0.85
+  const rGain = g.rGain ?? 0.95
+  const sGain = g.sGain ?? 0.9
+  const tGain = g.tGain ?? 1.35
+  const stElevation = g.stElevation ?? 0.14
+  const stSlope = g.stSlope ?? 0.025
+  const qWidth = g.qWidth ?? 0.012
+  const sWidth = g.sWidth ?? 0.025
+  const polarity = g.polarity ?? 1
+  const out = new Float32Array(SAMPLES)
+  const pCenter = SAMPLES * 0.20
+  const qCenter = SAMPLES * 0.336
+  const tCenter = SAMPLES * 0.600
+
+  for (let i = 0; i < SAMPLES; i++) {
+    const phase = i / SAMPLES
+    const p = 0.060 * pGain * gaussian(i, pCenter, SAMPLES * 0.022)
+    const q = -0.055 * qGain * gaussian(i, qCenter, SAMPLES * qWidth)
+    const r = 0.56 * rGain * triangle(phase, 0.350, 0.369, 0.394)
+    const s = -0.090 * sGain * gaussian(i, SAMPLES * 0.412, SAMPLES * sWidth)
+    const stWindow =
+      phase > 0.430 && phase < 0.565
+        ? stElevation + stSlope * ((phase - 0.430) / 0.135)
+        : 0
+    const t = 0.230 * tGain * gaussian(i, tCenter, SAMPLES * 0.055)
+    const terminal =
+      phase > 0.665 && phase < 0.750
+        ? 0.018 * tGain * Math.sin(((phase - 0.665) / 0.085) * Math.PI)
+        : 0
+    const baseline = Math.sin(phase * Math.PI * 2.05) * 0.003
+    out[i] = polarity * (p + q + r + s + stWindow + t + terminal + baseline)
+  }
+
   return out
 }
 
@@ -363,6 +540,8 @@ export const ECG_RHYTHMS: Record<Rhythm, WaveformDef> = {
   vt:       { data: synthVT(1),      cycleMs: VT_TUNING.cycleMs },
   torsades: { data: synthTorsades(), cycleMs: TORSADES_TUNING.cycleMs },
   asystole: { data: synthAsystole(), cycleMs: ASYSTOLE_TUNING.cycleMs },
+  'anterior-mi': { data: synthReferenceStrip(ANTERIOR_MI_MONITOR_POINTS), cycleMs: null },
+  'inferior-mi': { data: synthReferenceStrip(INFERIOR_MI_MONITOR_POINTS), cycleMs: null },
 }
 
 export function getEcgRhythm(rhythm: Rhythm): WaveformDef {
@@ -408,9 +587,51 @@ export const LEAD_MORPHOLOGY: Record<LeadName, LeadMorphology> = {
   V6:  { pGain: 0.7, qGain: 0.5, rGain: 1.20, sGain: 0.2, tGain: 0.8, inverted: false },
 }
 
+const ANTERIOR_MI_LEAD_MORPHOLOGY: Record<LeadName, AnteriorMiGains> = {
+  I:   { pGain: 0.75, qGain: 0.8, rGain: 0.55, sGain: 0.45, tGain: 0.90, stElevation: 0.050 },
+  II:  { pGain: 0.90, qGain: 0.9, rGain: 0.42, sGain: 1.20, tGain: 0.85, stElevation: 0.045 },
+  III: { pGain: 0.55, qGain: 0.8, rGain: 0.28, sGain: 1.65, tGain: 0.35, stElevation: 0.020 },
+  aVR: { pGain: 0.55, qGain: 0.9, rGain: 0.40, sGain: 0.80, tGain: 0.80, stElevation: 0.070, polarity: -1 },
+  aVL: { pGain: 0.50, qGain: 0.7, rGain: 0.58, sGain: 0.45, tGain: 0.75, stElevation: 0.055 },
+  aVF: { pGain: 0.55, qGain: 0.8, rGain: 0.35, sGain: 1.25, tGain: 0.45, stElevation: 0.025 },
+  V1:  { pGain: 0.40, qGain: 0.7, rGain: 0.22, sGain: 1.90, tGain: 0.85, stElevation: 0.110 },
+  V2:  { pGain: 0.45, qGain: 0.9, rGain: 0.32, sGain: 2.10, tGain: 2.10, stElevation: 0.300, stSlope: 0.040 },
+  V3:  { pGain: 0.50, qGain: 1.0, rGain: 0.38, sGain: 2.05, tGain: 2.35, stElevation: 0.350, stSlope: 0.045 },
+  V4:  { pGain: 0.60, qGain: 0.9, rGain: 0.70, sGain: 1.55, tGain: 2.15, stElevation: 0.300, stSlope: 0.040 },
+  V5:  { pGain: 0.65, qGain: 0.8, rGain: 0.90, sGain: 0.90, tGain: 1.50, stElevation: 0.160, stSlope: 0.030 },
+  V6:  { pGain: 0.65, qGain: 0.7, rGain: 0.85, sGain: 0.55, tGain: 1.15, stElevation: 0.085, stSlope: 0.020 },
+}
+
+const INFERIOR_MI_LEAD_MORPHOLOGY: Record<LeadName, InferiorMiGains> = {
+  I:   { pGain: 0.75, qGain: 0.7, rGain: 0.70, sGain: 0.75, tGain: 0.65, stElevation: 0.010, stSlope: 0.000 },
+  II:  { pGain: 1.00, qGain: 0.9, rGain: 1.25, sGain: 0.70, tGain: 1.85, stElevation: 0.290, stSlope: 0.040 },
+  III: { pGain: 0.85, qGain: 0.9, rGain: 1.15, sGain: 0.75, tGain: 1.95, stElevation: 0.330, stSlope: 0.045 },
+  aVR: { pGain: 0.55, qGain: 0.8, rGain: 0.50, sGain: 0.75, tGain: 1.00, stElevation: 0.075, polarity: -1 },
+  aVL: { pGain: 0.50, qGain: 0.8, rGain: 0.80, sGain: 0.70, tGain: 1.15, stElevation: 0.095, polarity: -1 },
+  aVF: { pGain: 0.90, qGain: 0.9, rGain: 1.20, sGain: 0.70, tGain: 1.90, stElevation: 0.310, stSlope: 0.040 },
+  V1:  { pGain: 0.40, qGain: 0.7, rGain: 0.25, sGain: 1.80, tGain: 0.70, stElevation: 0.035 },
+  V2:  { pGain: 0.45, qGain: 0.7, rGain: 0.38, sGain: 1.60, tGain: 0.70, stElevation: 0.035 },
+  V3:  { pGain: 0.55, qGain: 0.7, rGain: 0.80, sGain: 1.10, tGain: 0.75, stElevation: 0.020 },
+  V4:  { pGain: 0.65, qGain: 0.7, rGain: 1.45, sGain: 0.65, tGain: 0.75, stElevation: 0.045 },
+  V5:  { pGain: 0.70, qGain: 0.7, rGain: 1.25, sGain: 0.45, tGain: 0.70, stElevation: 0.030 },
+  V6:  { pGain: 0.70, qGain: 0.7, rGain: 1.05, sGain: 0.35, tGain: 0.70, stElevation: 0.025 },
+}
+
 export function getLeadWaveform(rhythm: Rhythm, lead: LeadName): WaveformDef {
   const m = LEAD_MORPHOLOGY[lead]
   const base = ECG_RHYTHMS[rhythm]
+  if (rhythm === 'anterior-mi') {
+    return {
+      data: synthAnteriorMI(ANTERIOR_MI_LEAD_MORPHOLOGY[lead]),
+      cycleMs: base.cycleMs,
+    }
+  }
+  if (rhythm === 'inferior-mi') {
+    return {
+      data: synthInferiorMI(INFERIOR_MI_LEAD_MORPHOLOGY[lead]),
+      cycleMs: base.cycleMs,
+    }
+  }
   if (rhythm === 'nsr') {
     const data = synthNSR({
       pGain: m.pGain,

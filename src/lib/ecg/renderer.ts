@@ -9,6 +9,8 @@ export type RendererOptions = {
   getSignalKey?: () => string
   /** Time in ms for the trace to sweep across the full canvas. Defaults to 4000ms (~Zoll ECG paper speed). */
   sweepMs?: number
+  /** Aligns the erase/update sweep to wall-clock time so separate canvases share the same x position. */
+  synchronizeSweep?: boolean
   amplitude?: number
   lineWidth?: number
   fillStyle?: 'line' | 'area'
@@ -27,6 +29,7 @@ export function startRenderer(opts: RendererOptions): () => void {
     getCycleMs,
     getSignalKey,
     sweepMs = 4000,
+    synchronizeSweep = false,
     amplitude = 0.85,
     lineWidth = 2,
     fillStyle = 'line',
@@ -95,6 +98,10 @@ export function startRenderer(opts: RendererOptions): () => void {
     return halfH - v * halfH * amplitude * ampMul
   }
 
+  const sweepDuration = () => Math.max(500, sweepMs)
+  const synchronizedX = (now: number): number =>
+    ((now % sweepDuration()) / sweepDuration()) * cssWidth
+
   const drawSegment = (
     fromX: number,
     fromY: number,
@@ -148,15 +155,22 @@ export function startRenderer(opts: RendererOptions): () => void {
 
     const cycleMs = Math.max(60, getCycleMs() * cycleMul)
     const dPhase = dt / cycleMs
-    const xSpeed = cssWidth / Math.max(500, sweepMs)
-    const dx = dt * xSpeed
 
     const nextPhase = phase + dPhase
-    let nextX = prevX + dx
-    let wrapped = false
-    if (nextX >= cssWidth) {
-      nextX = nextX - cssWidth
-      wrapped = true
+    let nextX: number
+    let wrapped: boolean
+    if (synchronizeSweep) {
+      nextX = synchronizedX(now)
+      wrapped = nextX < prevX
+    } else {
+      const xSpeed = cssWidth / sweepDuration()
+      const dx = dt * xSpeed
+      nextX = prevX + dx
+      wrapped = false
+      if (nextX >= cssWidth) {
+        nextX = nextX - cssWidth
+        wrapped = true
+      }
     }
 
     const eraseWidth = Math.max(6, cssWidth * 0.03)
@@ -190,6 +204,7 @@ export function startRenderer(opts: RendererOptions): () => void {
 
   rafId = requestAnimationFrame((t) => {
     lastT = t
+    if (synchronizeSweep) prevX = synchronizedX(t)
     tick(t)
   })
 

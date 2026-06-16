@@ -221,7 +221,7 @@ paramedic-monitor/
    - Header/subbar reference controls include a combined date/time selectable region, patient-mode selectable region, beacon icon, selectable battery icon, a small minus rectangle beneath date/time, and a larger empty rectangle beside it.
    - The minus toggle hides or restores the bottom status/defib/CPR panel. When hidden, the main waveform area expands to show ECG, EtCO2, and SpO2 rows while the right vitals column stays unchanged.
    - Graph title metadata displays `SpO2 1x` and, when EtCO2 is visible, `EtCO2 0 to 60 mmHg`; this text does not change the internal EtCO2 renderer scale.
-   - The first EtCO2 toggle after monitor reset shows an 8-second half-opacity purple flat loading line before normal EtCO2 rendering; toggling away before completion restarts loading, while completed loads are skipped until the next monitor reset.
+   - The first EtCO2 toggle after monitor reset starts a 10-second calibration gate with a purple progress trace that moves left-to-right while shrinking from large to small. EtCO2 number and graph stay hidden until calibration completes; toggling away before completion restarts calibration, while completed calibrations are skipped until the next monitor reset. The admin Vitals panel shows a compact pink EtCO2 indicator when calibration is complete.
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
 11. Color reference: `#000000` bg, `#00ff41` ECG green, `#00ffff` cyan BP, `#cc44ff` purple EtCO2, `#ffff00` yellow SpO2
 12. `MonitorPage` render composition is kept separate from interaction state. Local monitor UI state
@@ -232,7 +232,7 @@ paramedic-monitor/
 **Testing:**
 - Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
 - Jumpscare removal tests cover former off-state rolls, boot-screen clips, alarm-ack Easter eggs, and battery-triggered overlays staying inactive while legitimate simulator cues remain available.
-- BP/EtCO2 tests cover staged BP commit/cancel/off behavior, BP alarm gating, EtCO2 loading/restart/reset behavior, and real-time event-log stamps for medications/analyze rows.
+- BP/EtCO2 tests cover staged BP commit/cancel/off behavior, BP alarm gating, EtCO2 calibration gating/restart/reset behavior, admin calibration indication, and real-time event-log stamps for medications/analyze rows.
 - Settled PNI tests cover single-number counting, stacked sys/dia settled output, and partial-active BP display after completion.
 - BP alarm-suppression tests cover active NIBP suppression, cancel restore, completion restore, and HR/SpO2 alarms staying active during BP reading.
 - Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
@@ -524,9 +524,17 @@ button is inert until a drill gate is satisfied.
   `Rhythm Options` button. Opening the picker shows category buttons for `NSR`,
   `Cardiac Arrest`, `Heart Block`, `Bundle Branch Block`, and `MI`, then shows
   only the selected category's options underneath using the same button style as
-  SpO2 and EtCO2. Current options are `NSR` under NSR and
-  VF/VT/Asystole/Torsades under Cardiac Arrest; Heart Block, Bundle Branch Block,
-  and MI show empty placeholders until rhythms are added.
+  SpO2 and EtCO2. Current options are `NSR` under NSR,
+  VF/VT/Asystole/Torsades under Cardiac Arrest, and `Anterior MI` / `Inferior MI`
+  under MI; Heart Block and Bundle Branch Block show empty placeholders until
+  rhythms are added.
+- `Anterior MI` and `Inferior MI` are canvas-rendered rhythms. The main monitor
+  ECG and live 12-lead grid use generated MI morphology, while completed MI
+  12-lead captures use the matching `/images/anterior-mi-strip.jpg` or
+  `/images/inferior-mi-strip.jpeg`; other rhythm captures continue using the
+  default printout image. The live Anterior MI monitor strip uses a clean
+  small-R/deeper-S reference template with a broad rounded T wave, while
+  Inferior MI uses a clean tall Lead II-style ST/T elevation reference template.
 - ECG, SpO2, and EtCO2 graphs start/reset as spaced dashed disconnected traces.
   The graph connection state uses the same Off/On toggle treatment as numeric
   vitals instead of duplicate `Off` option buttons. Switching a graph On selects
@@ -550,6 +558,14 @@ button is inert until a drill gate is satisfied.
   shown; if both are Off, the selected channel shows a disconnected trace.
   Bottom-panel-hidden expanded mode shows both EtCO2 and SpO2 rows, with Off
   rows disconnected.
+- ECG and SpO2 canvas waveform erase/update sweep lines share the same
+  wall-clock phase so their black refresh bands stay aligned; EtCO2 keeps its
+  slower independent capnography sweep.
+- The admin Vitals ECG column includes a CPR override toggle. When active, it
+  immediately overrides the monitor FC display to 120 and replaces the ECG graph
+  with `/videos/compression-cpr.mov`; turning it off restores the normal saved
+  FC and ECG rhythm without changing the underlying draft/saved/confirmed
+  vitals.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
   vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
