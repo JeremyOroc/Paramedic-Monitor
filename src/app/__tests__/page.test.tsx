@@ -87,12 +87,16 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     rhythm,
     spo2Waveform,
     etco2Waveform,
+    etco2Loading,
+    cprOverride,
   }: {
     secondaryChannel?: 'spo2' | 'etco2'
     showAllSecondaryChannels?: boolean
     rhythm?: string
     spo2Waveform?: string
     etco2Waveform?: string
+    etco2Loading?: boolean
+    cprOverride?: boolean
   }) => {
     const selected = secondaryChannel ?? 'spo2'
     const selectedWaveform = selected === 'etco2' ? etco2Waveform : spo2Waveform
@@ -101,13 +105,24 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     return (
       <div>
         Waveform panel
-        <span>{rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}</span>
+        <span>
+          {cprOverride ? 'cpr-ecg-video' : rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}
+        </span>
+        {selected === 'etco2' && <span>showing-etco2</span>}
         {showAllSecondaryChannels ? (
           <>
-            <span>{etco2Waveform !== 'off' ? 'live-etco2' : 'disconnected-etco2'}</span>
+            <span>
+              {etco2Loading
+                ? 'etco2-loading'
+                : etco2Waveform !== 'off'
+                  ? 'live-etco2'
+                  : 'disconnected-etco2'}
+            </span>
             <span>{spo2Waveform !== 'off' ? 'live-spo2' : 'disconnected-spo2'}</span>
             <span>expanded-waveforms</span>
           </>
+        ) : selected === 'etco2' && etco2Loading ? (
+          <span>etco2-loading</span>
         ) : selectedWaveform !== 'off' ? (
           <span>{selected === 'etco2' ? 'live-etco2' : 'live-spo2'}</span>
         ) : bothSecondaryOff ? (
@@ -395,6 +410,32 @@ describe('MonitorPage', () => {
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
   })
 
+  it('temporarily overrides FC and ECG graph while admin CPR override is active', () => {
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 82)
+      useMonitorStore.getState().setDraft('rhythm', 'nsr')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText('82')).toBeInTheDocument()
+    expect(screen.getByText('live-ecg')).toBeInTheDocument()
+
+    act(() => useMonitorStore.getState().setCprOverrideActive(true))
+
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByText('cpr-ecg-video')).toBeInTheDocument()
+    expect(screen.queryByText('82')).not.toBeInTheDocument()
+
+    act(() => useMonitorStore.getState().setCprOverrideActive(false))
+
+    expect(screen.getByText('82')).toBeInTheDocument()
+    expect(screen.getByText('live-ecg')).toBeInTheDocument()
+    expect(screen.queryByText('cpr-ecg-video')).not.toBeInTheDocument()
+  })
+
   it('shows both BP numbers after a completed partial-active NIBP reading', () => {
     vi.useFakeTimers()
     act(() => {
@@ -423,8 +464,8 @@ describe('MonitorPage', () => {
     vi.useRealTimers()
   })
 
-  it('keeps typed EtCO2 graph hidden until the CO2 button selects EtCO2', async () => {
-    const user = userEvent.setup()
+  it('keeps typed EtCO2 hidden until CO2 calibration completes', () => {
+    vi.useFakeTimers()
     act(() => {
       useMonitorStore.getState().setDraft('etco2', 35)
       useMonitorStore.getState().save()
@@ -433,14 +474,22 @@ describe('MonitorPage', () => {
 
     render(<MonitorPage />)
 
-    expect(screen.getByText('35')).toBeInTheDocument()
+    expect(screen.queryByText('35')).not.toBeInTheDocument()
     expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
 
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+    expect(screen.queryByText('35')).not.toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(10000) })
+
+    expect(screen.getByText('35')).toBeInTheDocument()
     expect(screen.getByText('live-etco2')).toBeInTheDocument()
     expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+    vi.useRealTimers()
   })
 
   it('keeps old BP when the NIBP reading is cancelled', () => {
@@ -672,8 +721,8 @@ describe('MonitorPage', () => {
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
   })
 
-  it('uses the CO2 soft key to switch the single secondary graph slot to EtCO2', async () => {
-    const user = userEvent.setup()
+  it('uses the CO2 soft key to calibrate and switch the single secondary graph slot to EtCO2', () => {
+    vi.useFakeTimers()
     act(() => {
       useMonitorStore.getState().setDraft('spo2', 97)
       useMonitorStore.getState().setDraft('etco2', 35)
@@ -686,10 +735,16 @@ describe('MonitorPage', () => {
     expect(screen.getByText('live-spo2')).toBeInTheDocument()
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(10000) })
 
     expect(screen.getByText('live-etco2')).toBeInTheDocument()
     expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
+    vi.useRealTimers()
   })
 
   it('hides live secondary graphs after their vital toggles are turned off and sent', () => {
@@ -717,7 +772,7 @@ describe('MonitorPage', () => {
     expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
   })
 
-  it('shows EtCO2 loading on first toggle and only marks it loaded after 8 seconds', () => {
+  it('shows EtCO2 loading on first toggle and only marks it loaded after 10 seconds', () => {
     vi.useFakeTimers()
     render(<MonitorPage />)
 
@@ -725,7 +780,7 @@ describe('MonitorPage', () => {
     expect(screen.getByText('showing-etco2')).toBeInTheDocument()
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
 
-    act(() => { vi.advanceTimersByTime(7999) })
+    act(() => { vi.advanceTimersByTime(9999) })
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(1) })
@@ -748,7 +803,7 @@ describe('MonitorPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
-    act(() => { vi.advanceTimersByTime(7999) })
+    act(() => { vi.advanceTimersByTime(9999) })
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
     vi.useRealTimers()
   })
@@ -758,7 +813,7 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
-    act(() => { vi.advanceTimersByTime(8000) })
+    act(() => { vi.advanceTimersByTime(10000) })
     fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
     expect(screen.queryByText('etco2-loading')).not.toBeInTheDocument()
 

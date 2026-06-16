@@ -26,6 +26,10 @@ describe('AdminPage', () => {
     expect(screen.queryByTestId('admin-graph-row-etco2')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'SpO2 off' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'EtCO2 off' })).toBeInTheDocument()
+    expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
+      'data-calibrated',
+      'false',
+    )
     expect(screen.queryByLabelText('Adresse')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Caller Info' }))
@@ -268,9 +272,9 @@ describe('AdminPage', () => {
     render(<AdminPage />)
 
     await user.click(screen.getByRole('button', { name: 'Caller Info' }))
-    await user.type(
-      screen.getByLabelText('Auto-sort scenario'),
-      [
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
+      target: {
+        value: [
         'Chest / Respiratory',
         'Left anterior chest tenderness',
         'Respiratory Rate: 24 breaths/min',
@@ -281,8 +285,9 @@ describe('AdminPage', () => {
         'Scene / Environment',
         'Witnessed fall',
         'Approximately 12 wooden stairs',
-      ].join('\n'),
-    )
+        ].join('\n'),
+      },
+    })
     await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
     await user.click(screen.getByRole('button', { name: 'Front patient left upper arm' }))
     await user.click(screen.getByRole('button', { name: 'Rear back' }))
@@ -401,9 +406,15 @@ describe('AdminPage', () => {
       useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
+      useMonitorStore.getState().startEtco2Calibration()
+      useMonitorStore.getState().completeEtco2Calibration()
     })
 
     render(<AdminPage />)
+    expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
+      'data-calibrated',
+      'true',
+    )
 
     await user.click(screen.getByRole('button', { name: 'Reset' }))
 
@@ -413,6 +424,11 @@ describe('AdminPage', () => {
     expect(s.confirmed.rhythm).toBe('off')
     expect(s.confirmed.spo2_waveform).toBe('off')
     expect(s.confirmed.etco2_waveform).toBe('off')
+    expect(s.etco2CalibrationStatus).toBe('idle')
+    expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
+      'data-calibrated',
+      'false',
+    )
     expect(s.callerInfoConfirmed.address).toBe('123 Rue Principale')
     expect(s.dispatch.armed).toBe(true)
   })
@@ -436,6 +452,10 @@ describe('AdminPage', () => {
     })
     expect(useMonitorStore.getState().draft.hr).toBe(180)
     expect(useMonitorStore.getState().callerInfoDraft.address).toBe('123 Rue Principale')
+    act(() => {
+      useMonitorStore.getState().startEtco2Calibration()
+      useMonitorStore.getState().completeEtco2Calibration()
+    })
 
     await user.click(screen.getByRole('button', { name: 'Reset' }))
 
@@ -444,6 +464,7 @@ describe('AdminPage', () => {
     expect(s.confirmed.rhythm).toBe('off')
     expect(s.callerInfoConfirmed.address).toBe('')
     expect(s.dispatch.armed).toBe(false)
+    expect(s.etco2CalibrationStatus).toBe('idle')
     expect(screen.getByLabelText('Auto-sort scenario')).toHaveValue('')
 
     await user.click(screen.getByRole('button', { name: 'Patient Information' }))

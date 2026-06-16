@@ -55,6 +55,52 @@ describe('MonitorPage — 12-lead capture flow', () => {
     expect(screen.getByText('aVR')).toBeInTheDocument()
   })
 
+  it('uses the Anterior MI strip when Anterior MI is captured', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'anterior-mi')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    enterTwelveLead()
+    clickButton('Capture 12-lead')
+
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+
+    expect(screen.getByTestId('twelve-lead-printout')).toHaveAttribute(
+      'data-captured-rhythm',
+      'anterior-mi',
+    )
+    expect(
+      screen
+        .getByRole('img', { name: '12-lead ECG capture' })
+        .getAttribute('src'),
+    ).toContain('anterior-mi-strip.jpg')
+  })
+
+  it('uses the Inferior MI strip when Inferior MI is captured', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'inferior-mi')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    enterTwelveLead()
+    clickButton('Capture 12-lead')
+
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+
+    expect(screen.getByTestId('twelve-lead-printout')).toHaveAttribute(
+      'data-captured-rhythm',
+      'inferior-mi',
+    )
+    expect(
+      screen
+        .getByRole('img', { name: '12-lead ECG capture' })
+        .getAttribute('src'),
+    ).toContain('inferior-mi-strip.jpeg')
+  })
+
   it('cancels the acquisition when Back is pressed mid-fill', () => {
     enterTwelveLead()
 

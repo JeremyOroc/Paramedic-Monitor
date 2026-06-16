@@ -5,6 +5,52 @@
 
 ---
 
+## [2026-06-14] [instructor] - Add CPR ECG override
+
+- Added an admin CPR toggle that immediately overrides the monitor ECG graph and FC display.
+- CPR override shows the supplied compression video and displays FC 120 while preserving the saved rhythm and HR underneath.
+- Turning CPR off restores the previous monitor FC and ECG graph.
+
+## [2026-06-14] [monitor] - Sync ECG and SpO2 sweep lines
+
+- Synchronized ECG and SpO2 canvas erase/update sweep positions to the same wall-clock phase.
+- Left EtCO2 on its slower independent capnography sweep.
+
+## [2026-06-14] [monitor] - Extend EtCO2 calibration timing
+
+- Extended EtCO2 calibration from 8 seconds to 10 seconds.
+- Updated the monitor calibration animation and regression tests for the longer timing.
+- Adjusted the EtCO2 calibration trace so the moving segment shrinks from large to small.
+
+## [2026-06-14] [monitor] - Gate EtCO2 display behind calibration
+
+- Moved EtCO2 calibration status into shared monitor state.
+- Hid EtCO2 number and live graph until the monitor CO2 soft key completes the 8-second calibration.
+- Added a pink admin EtCO2 calibration-ready indicator and updated the calibration progress trace.
+
+## [2026-06-14] [instructor] - Round Anterior MI T wave
+
+- Rounded and widened the live Anterior MI ECG T wave after the deep S deflection.
+- Added waveform coverage for the broader T crest and gradual return to baseline.
+
+## [2026-06-14] [instructor] - Retune MI live ECG accuracy
+
+- Rebuilt the live Anterior MI monitor ECG as a clean small-R, deeper-S reference-strip template.
+- Rebuilt the live Inferior MI monitor ECG as a clean tall Lead II-style ST/T elevation reference-strip template.
+- Added waveform tests that guard the distinct Anterior vs Inferior live ECG profiles.
+
+## [2026-06-14] [instructor] - Add Inferior MI rhythm
+
+- Added `Inferior MI` under the admin ECG `MI` rhythm category beside Anterior MI.
+- Added canvas-generated Inferior MI ECG and 12-lead morphology, with inferior leads most affected.
+- Added the supplied Inferior MI strip image for completed Inferior MI 12-lead captures.
+
+## [2026-06-14] [instructor] - Add Anterior MI rhythm
+
+- Added `Anterior MI` under the admin ECG `MI` rhythm category.
+- Added canvas-generated Anterior MI ECG and 12-lead morphology, with anterior leads most affected.
+- Added the supplied Anterior MI strip image for completed Anterior MI 12-lead captures.
+
 ## [2026-06-12] [instructor] - Align admin vitals beside ECG
 
 - Refactored the admin Vitals panel into a left numeric-vitals column and a right ECG/timed-buttons column.

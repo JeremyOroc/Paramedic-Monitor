@@ -89,6 +89,12 @@ describe('specialized selector wrappers', () => {
     expect(screen.queryByRole('button', { name: 'VF' })).not.toBeInTheDocument()
     expect(screen.queryByText('No rhythms yet')).not.toBeInTheDocument()
 
+    await user.click(screen.getByRole('button', { name: 'MI' }))
+
+    expect(screen.getByRole('button', { name: 'Anterior MI' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Inferior MI' })).toBeInTheDocument()
+    expect(screen.queryByText('No rhythms yet')).not.toBeInTheDocument()
+
     await user.click(screen.getByRole('button', { name: 'Cardiac Arrest' }))
 
     expect(screen.getByRole('button', { name: 'VF' })).toBeInTheDocument()
@@ -114,6 +120,32 @@ describe('specialized selector wrappers', () => {
     expect(useMonitorStore.getState().draft.rhythm).toBe('torsades')
     expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
     expect(screen.getByTestId('status-rhythm')).toHaveTextContent('-')
+  })
+
+  it('EcgRhythmSelector selects Anterior MI from the MI category', async () => {
+    const user = userEvent.setup()
+    render(<EcgRhythmSelector />)
+
+    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'MI' }))
+    await user.click(screen.getByRole('button', { name: 'Anterior MI' }))
+
+    expect(useMonitorStore.getState().draft.rhythm).toBe('anterior-mi')
+    expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
+    expect(screen.getByText('Anterior MI')).toBeInTheDocument()
+  })
+
+  it('EcgRhythmSelector selects Inferior MI from the MI category', async () => {
+    const user = userEvent.setup()
+    render(<EcgRhythmSelector />)
+
+    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'MI' }))
+    await user.click(screen.getByRole('button', { name: 'Inferior MI' }))
+
+    expect(useMonitorStore.getState().draft.rhythm).toBe('inferior-mi')
+    expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
+    expect(screen.getByText('Inferior MI')).toBeInTheDocument()
   })
 
   it('Spo2WaveformSelector renders as a toggle-only graph control', () => {

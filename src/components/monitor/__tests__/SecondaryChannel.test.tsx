@@ -36,6 +36,8 @@ describe('SecondaryChannel', () => {
     render(<SecondaryChannel {...baseProps} channel="etco2" connected={false} loading />)
 
     expect(screen.getByTestId('etco2-loading-trace')).toBeInTheDocument()
+    expect(screen.getByTestId('etco2-loading-trace').querySelector('.etco2-calibration-progress'))
+      .toBeInTheDocument()
     expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
   })
 

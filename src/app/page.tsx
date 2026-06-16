@@ -51,19 +51,17 @@ function MonitorPage() {
   const setPatientSex = useMonitorStore((s) => s.setPatientSex)
   const dispatchState = useMonitorStore((s) => s.dispatch)
   const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
+  const etco2CalibrationStatus = useMonitorStore((s) => s.etco2CalibrationStatus)
+  const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
   const acknowledgeCall = useMonitorStore((s) => s.acknowledgeCall)
   const arriveCall = useMonitorStore((s) => s.arriveCall)
   const transportCall = useMonitorStore((s) => s.transportCall)
-  const [etco2LoadState, setEtco2LoadState] = useState({
-    resetVersion: monitorResetVersion,
-    loading: false,
-    loaded: false,
-  })
+  const startEtco2Calibration = useMonitorStore((s) => s.startEtco2Calibration)
+  const cancelEtco2Calibration = useMonitorStore((s) => s.cancelEtco2Calibration)
+  const completeEtco2Calibration = useMonitorStore((s) => s.completeEtco2Calibration)
   const etco2LoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const etco2Loading =
-    etco2LoadState.resetVersion === monitorResetVersion && etco2LoadState.loading
-  const etco2Loaded =
-    etco2LoadState.resetVersion === monitorResetVersion && etco2LoadState.loaded
+  const etco2Loading = etco2CalibrationStatus === 'calibrating'
+  const etco2Loaded = etco2CalibrationStatus === 'calibrated'
 
   const searchParams = useSearchParams()
   const devBypass = searchParams.get('dev') === '1'
@@ -130,22 +128,25 @@ function MonitorPage() {
 
   const cancelEtco2Loading = useCallback(() => {
     clearEtco2LoadTimer()
-    setEtco2LoadState((state) => ({ ...state, loading: false }))
-  }, [clearEtco2LoadTimer])
+    cancelEtco2Calibration()
+  }, [cancelEtco2Calibration, clearEtco2LoadTimer])
 
   const startEtco2Loading = useCallback(() => {
     const resetVersion = monitorResetVersion
     clearEtco2LoadTimer()
-    setEtco2LoadState({ resetVersion, loading: true, loaded: false })
+    startEtco2Calibration()
     etco2LoadTimerRef.current = setTimeout(() => {
       etco2LoadTimerRef.current = null
-      setEtco2LoadState((state) =>
-        state.resetVersion === resetVersion
-          ? { resetVersion, loading: false, loaded: true }
-          : state,
-      )
-    }, 8000)
-  }, [clearEtco2LoadTimer, monitorResetVersion])
+      if (useMonitorStore.getState().monitorResetVersion === resetVersion) {
+        completeEtco2Calibration()
+      }
+    }, 10000)
+  }, [
+    clearEtco2LoadTimer,
+    completeEtco2Calibration,
+    monitorResetVersion,
+    startEtco2Calibration,
+  ])
 
   useEffect(() => {
     return clearEtco2LoadTimer
@@ -178,11 +179,13 @@ function MonitorPage() {
   })
   const alarmVitals = {
     ...confirmed,
+    hr: cprOverrideActive ? 120 : confirmed.hr,
     bp_sys: acceptedBp.bp_sys,
     bp_dia: acceptedBp.bp_dia,
   }
   const alarmActive = {
     ...confirmedVitalActive,
+    hr: cprOverrideActive ? true : confirmedVitalActive.hr,
     bp_sys: acceptedBpActive.bp_sys,
     bp_dia: acceptedBpActive.bp_dia,
   }
@@ -228,6 +231,9 @@ function MonitorPage() {
     confirmedVitalActive.bp_sys ||
     confirmedVitalActive.bp_dia
   const acceptedBpDisplayActive = acceptedBpActive.bp_sys || acceptedBpActive.bp_dia
+  const etco2DisplayActive = confirmedVitalActive.etco2 && etco2Loaded
+  const displayedHr = cprOverrideActive ? 120 : confirmed.hr
+  const displayedHrActive = cprOverrideActive || confirmedVitalActive.hr
 
   useDefibAudio(defib.state, controller.isMuted)
 
@@ -283,7 +289,7 @@ function MonitorPage() {
             <WaveformPanel
               secondaryChannel={controller.secondary}
               rhythm={confirmed.rhythm}
-              hr={confirmed.hr}
+              hr={displayedHr}
               spo2={confirmed.spo2}
               etco2={confirmed.etco2}
               spo2Waveform={confirmed.spo2_waveform}
@@ -292,6 +298,7 @@ function MonitorPage() {
               showAllSecondaryChannels={!controller.bottomStatusVisible}
               selected={controller.activeSelectedControl}
               etco2Loading={etco2Loading}
+              cprOverride={cprOverrideActive}
             />
           )
         }
@@ -300,10 +307,10 @@ function MonitorPage() {
             ? null
             : (
                 <VitalsStrip
-                  hr={confirmedVitalActive.hr ? confirmed.hr : ''}
+                  hr={displayedHrActive ? displayedHr : ''}
                   bpSys={acceptedBpDisplayActive ? acceptedBp.bp_sys : ''}
                   bpDia={acceptedBpDisplayActive ? acceptedBp.bp_dia : ''}
-                  etco2={confirmedVitalActive.etco2 ? confirmed.etco2 : ''}
+                  etco2={etco2DisplayActive ? confirmed.etco2 : ''}
                   spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
                   spo2Waveform={confirmed.spo2_waveform}
                   spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}

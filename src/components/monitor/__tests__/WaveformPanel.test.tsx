@@ -27,6 +27,35 @@ describe('WaveformPanel', () => {
     expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
   })
 
+  it('uses the CPR ECG video override even when the normal ECG rhythm is off', () => {
+    render(<WaveformPanel {...baseProps} rhythm="off" cprOverride />)
+
+    expect(screen.getByTestId('cpr-ecg-video')).toHaveAttribute(
+      'src',
+      '/videos/compression-cpr.mov',
+    )
+    expect(screen.queryByTestId('live-ecg-canvas')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
+  })
+
+  it('renders Anterior MI as a live ECG rhythm', () => {
+    render(<WaveformPanel {...baseProps} rhythm="anterior-mi" />)
+
+    expect(screen.getByTestId('live-ecg-canvas')).toHaveAttribute(
+      'data-rhythm',
+      'anterior-mi',
+    )
+  })
+
+  it('renders Inferior MI as a live ECG rhythm', () => {
+    render(<WaveformPanel {...baseProps} rhythm="inferior-mi" />)
+
+    expect(screen.getByTestId('live-ecg-canvas')).toHaveAttribute(
+      'data-rhythm',
+      'inferior-mi',
+    )
+  })
+
   it('shows selected EtCO2 in normal mode when EtCO2 is on', () => {
     render(
       <WaveformPanel
@@ -53,6 +82,21 @@ describe('WaveformPanel', () => {
     expect(screen.queryByText('SpO2')).not.toBeInTheDocument()
     expect(screen.queryByText('EtCO2')).not.toBeInTheDocument()
     expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
+  })
+
+  it('shows EtCO2 calibration in normal mode even before the channel is connected', () => {
+    render(
+      <WaveformPanel
+        {...baseProps}
+        secondaryChannel="etco2"
+        etco2Waveform="off"
+        etco2Loading
+      />,
+    )
+
+    expect(screen.getByText('EtCO2')).toBeInTheDocument()
+    expect(screen.getByTestId('etco2-loading-trace')).toBeInTheDocument()
+    expect(screen.queryByText('SpO2')).not.toBeInTheDocument()
   })
 
   it('shows selected disconnected trace in normal mode when both secondary channels are off', () => {

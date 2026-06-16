@@ -53,7 +53,14 @@
   - [x] Normal monitor mode shows one secondary graph slot at a time
   - [x] The CO2 soft key switches the secondary graph slot between SpO2 and EtCO2
   - [x] Typing SpO2 or EtCO2 numbers in admin stages the matching graph connection for Save → Send
+  - [x] ECG and SpO2 graph erase/update sweep lines are synchronized to the same wall-clock phase
+  - [x] EtCO2 number and graph stay hidden until the monitor CO2 soft key completes the 10-second calibration
+  - [x] Admin Vitals shows a pink EtCO2 indicator when calibration is complete
   - [x] Bottom-panel-hidden expanded mode shows both SpO2 and EtCO2 rows, with Off rows disconnected
+- [x] **Admin CPR ECG override — COMPLETE:**
+  - [x] Admin Vitals includes a CPR toggle in the ECG column
+  - [x] CPR override immediately displays FC 120 and replaces the ECG graph with the supplied compression video
+  - [x] Turning CPR off restores the previously saved/sent FC and ECG rhythm graph
 - [x] **Admin patient information checklist — COMPLETE:**
   - [x] Added a third admin tab named Patient Information
   - [x] Added side-by-side Sample and OPQRST square checklist panels
@@ -110,7 +117,7 @@
 - [x] **Gated BP readings + EtCO2 loading — COMPLETE:**
   - [x] Admin-sent BP/PNI changes remain pending until the outer-shell BP reading completes; cancellation keeps the old accepted BP
   - [x] BP alarms and BP Off now follow the accepted BP reading state instead of changing immediately on Send
-  - [x] First ETCO2 toggle after monitor reset shows an 8-second purple loading line; incomplete loads restart and completed loads are not repeated until reset
+  - [x] First ETCO2 toggle after monitor reset runs a 10-second purple calibration trace that shrinks from large to small; incomplete calibrations restart and completed calibrations are not repeated until reset
   - [x] Medication/analyze event-log rows use real Eastern HH:MM:SS time instead of the session timer
 - [x] **Jumpscare playback removal — COMPLETE:**
   - [x] Commented out FNAF/its_me/Golden Freddy/Chica jumpscare video and audio pathways in monitor shell, boot screen, page overlay, and controller trigger
@@ -171,6 +178,10 @@
   - [x] Admin graph controls now sit beside their matching vital rows: ECG beside FC, SpO2 beside SpO2, and EtCO2 beside EtCO2
   - [x] ECG, SpO2, and EtCO2 graph connection state reuses the same Off/On toggle treatment as numeric vitals
   - [x] ECG rhythm selection uses a compact `Rhythm Options` picker with category buttons first and only the selected category's rhythm options shown underneath
+  - [x] Added `Anterior MI` and `Inferior MI` under the admin ECG `MI` category with canvas-rendered monitor and 12-lead morphology
+  - [x] Rebuilt the live Anterior MI and Inferior MI ECG monitor strips with clean reference-strip templates to better match the supplied reference videos
+  - [x] Rounded and widened the live Anterior MI ECG T wave to better match the supplied example
+  - [x] Completed Anterior MI and Inferior MI 12-lead captures show their supplied strip images while other rhythms keep the default printout
   - [x] Vital alarms stay inactive for Off startup/reset vitals until each specific vital is turned On through Save → Send; numeric `0` is treated as a real alarmable value when On
   - [x] ECG, SpO2, and EtCO2 graph channels start as spaced dashed disconnected traces; switching the graph toggle On makes that graph live after Save → Send
 - [x] **Context-aware admin reset — COMPLETE:**

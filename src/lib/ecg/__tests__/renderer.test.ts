@@ -180,4 +180,45 @@ describe('startRenderer', () => {
 
     stop()
   })
+
+  it('can synchronize erase sweep x positions across separate renderers', () => {
+    const ctxA = fakeCtx()
+    const ctxB = fakeCtx()
+    const canvasA = makeCanvas()
+    const canvasB = makeCanvas()
+    vi.mocked(canvasA.getContext).mockReturnValue(ctxA)
+    vi.mocked(canvasB.getContext).mockReturnValue(ctxB)
+
+    const commonOptions = {
+      color: '#00ff41',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 800,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+    }
+    const stopA = startRenderer({ canvas: canvasA, ...commonOptions })
+    const stopB = startRenderer({ canvas: canvasB, ...commonOptions })
+
+    const startA = rafCalls.shift()
+    const startB = rafCalls.shift()
+    startA?.(1000)
+    startB?.(2500)
+
+    const tickA = rafCalls.shift()
+    const tickB = rafCalls.shift()
+    tickA?.(3000)
+    tickB?.(3000)
+
+    const fillA = ctxA.fillRect as unknown as ReturnType<typeof vi.fn>
+    const fillB = ctxB.fillRect as unknown as ReturnType<typeof vi.fn>
+    const eraseA = fillA.mock.calls.at(-1)
+    const eraseB = fillB.mock.calls.at(-1)
+
+    expect(eraseA?.[0]).toBe(eraseB?.[0])
+
+    stopA()
+    stopB()
+  })
 })

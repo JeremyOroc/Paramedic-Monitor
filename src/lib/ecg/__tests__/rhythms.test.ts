@@ -11,6 +11,7 @@ import {
   VT_TUNING,
   getEcgRhythm,
   getEtco2Waveform,
+  getLeadWaveform,
   getSpo2Waveform,
   spo2AmplitudeFactor,
   type WaveformDef,
@@ -120,6 +121,30 @@ function waveformDistance(a: Float32Array, b: Float32Array): number {
   return distance
 }
 
+function segmentMean(data: Float32Array, startPhase: number, endPhase: number): number {
+  const start = Math.floor(data.length * startPhase)
+  const end = Math.floor(data.length * endPhase)
+  let sum = 0
+  for (let i = start; i < end; i++) sum += data[i]
+  return sum / Math.max(1, end - start)
+}
+
+function segmentPeak(data: Float32Array, startPhase: number, endPhase: number): number {
+  const start = Math.floor(data.length * startPhase)
+  const end = Math.floor(data.length * endPhase)
+  let max = -Infinity
+  for (let i = start; i < end; i++) max = Math.max(max, data[i])
+  return max
+}
+
+function segmentTrough(data: Float32Array, startPhase: number, endPhase: number): number {
+  const start = Math.floor(data.length * startPhase)
+  const end = Math.floor(data.length * endPhase)
+  let min = Infinity
+  for (let i = start; i < end; i++) min = Math.min(min, data[i])
+  return min
+}
+
 function expectTorsadesStylePattern(def: WaveformDef): void {
   const data = def.data
   const beatRate = (TORSADES_TUNING.beatCount * 60000) / TORSADES_TUNING.cycleMs
@@ -179,6 +204,76 @@ describe('ECG_RHYTHMS', () => {
     const data = ECG_RHYTHMS.nsr.data
     expect(peakOf(data)).toBeGreaterThan(0.45)
     expect(troughOf(data)).toBeGreaterThan(-0.12)
+  })
+
+  it('Anterior MI exists as an HR-driven rhythm distinct from NSR', () => {
+    const def = ECG_RHYTHMS['anterior-mi']
+    assertNormalized(def, 'anterior-mi')
+    expect(def.cycleMs).toBeNull()
+    expect(waveformDistance(def.data, ECG_RHYTHMS.nsr.data)).toBeGreaterThan(20)
+    expect(troughOf(def.data)).toBeLessThan(troughOf(ECG_RHYTHMS.nsr.data) - 0.25)
+    expect(peakOf(def.data)).toBeLessThan(peakOf(ECG_RHYTHMS.nsr.data) * 0.5)
+    expect(segmentPeak(def.data, 0.34, 0.38)).toBeGreaterThan(0.18)
+    expect(segmentTrough(def.data, 0.38, 0.43)).toBeLessThan(-0.38)
+    expect(segmentMean(def.data, 0.43, 0.62)).toBeGreaterThan(
+      segmentMean(ECG_RHYTHMS.nsr.data, 0.43, 0.62) + 0.05,
+    )
+    expect(segmentMean(def.data, 0.54, 0.70)).toBeGreaterThan(0.17)
+    expect(segmentMean(def.data, 0.70, 0.78)).toBeGreaterThan(0.03)
+    expect(Math.abs(segmentMean(def.data, 0.76, 0.96))).toBeLessThan(0.01)
+  })
+
+  it('Anterior MI 12-lead morphology is strongest in anterior leads', () => {
+    const v3 = getLeadWaveform('anterior-mi', 'V3').data
+    const v4 = getLeadWaveform('anterior-mi', 'V4').data
+    const iii = getLeadWaveform('anterior-mi', 'III').data
+    const nsrV3 = getLeadWaveform('nsr', 'V3').data
+
+    const anteriorElevation = (segmentMean(v3, 0.43, 0.66) + segmentMean(v4, 0.43, 0.66)) / 2
+    const inferiorElevation = segmentMean(iii, 0.43, 0.66)
+
+    expect(anteriorElevation).toBeGreaterThan(inferiorElevation + 0.25)
+    expect(segmentMean(v3, 0.43, 0.66)).toBeGreaterThan(
+      segmentMean(nsrV3, 0.43, 0.66) + 0.28,
+    )
+  })
+
+  it('Inferior MI exists as an HR-driven rhythm distinct from NSR', () => {
+    const def = ECG_RHYTHMS['inferior-mi']
+    assertNormalized(def, 'inferior-mi')
+    expect(def.cycleMs).toBeNull()
+    expect(waveformDistance(def.data, ECG_RHYTHMS.nsr.data)).toBeGreaterThan(25)
+    expect(peakOf(def.data)).toBeGreaterThan(peakOf(ECG_RHYTHMS.nsr.data) + 0.12)
+    expect(segmentPeak(def.data, 0.34, 0.39)).toBeGreaterThan(0.70)
+    expect(segmentTrough(def.data, 0.39, 0.43)).toBeGreaterThan(-0.12)
+    expect(segmentMean(def.data, 0.56, 0.68)).toBeGreaterThan(
+      segmentMean(ECG_RHYTHMS.nsr.data, 0.56, 0.68) + 0.25,
+    )
+    expect(segmentMean(def.data, 0.43, 0.62)).toBeGreaterThan(
+      segmentMean(ECG_RHYTHMS.nsr.data, 0.43, 0.62) + 0.10,
+    )
+    expect(Math.abs(segmentMean(def.data, 0.76, 0.96))).toBeLessThan(0.01)
+  })
+
+  it('Inferior MI 12-lead morphology is strongest in inferior leads', () => {
+    const ii = getLeadWaveform('inferior-mi', 'II').data
+    const iii = getLeadWaveform('inferior-mi', 'III').data
+    const avf = getLeadWaveform('inferior-mi', 'aVF').data
+    const v3 = getLeadWaveform('inferior-mi', 'V3').data
+    const nsrII = getLeadWaveform('nsr', 'II').data
+
+    const inferiorElevation =
+      (
+        segmentMean(ii, 0.43, 0.66) +
+        segmentMean(iii, 0.43, 0.66) +
+        segmentMean(avf, 0.43, 0.66)
+      ) / 3
+    const anteriorElevation = segmentMean(v3, 0.43, 0.66)
+
+    expect(inferiorElevation).toBeGreaterThan(anteriorElevation + 0.25)
+    expect(segmentMean(ii, 0.43, 0.66)).toBeGreaterThan(
+      segmentMean(nsrII, 0.43, 0.66) + 0.25,
+    )
   })
 
   it('asystole is a near-flat pads baseline with tiny slopes and waves', () => {
