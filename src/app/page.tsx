@@ -46,6 +46,7 @@ function MonitorPage() {
   const acceptedBpActive = useMonitorStore((s) => s.acceptedBpActive)
   const acceptBpReading = useMonitorStore((s) => s.acceptBpReading)
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
+  const dispatchRouteConfirmed = useMonitorStore((s) => s.dispatchRouteConfirmed)
   const patientInfo = useMonitorStore((s) => s.patientInfo)
   const setPatientAge = useMonitorStore((s) => s.setPatientAge)
   const setPatientSex = useMonitorStore((s) => s.setPatientSex)
@@ -401,6 +402,7 @@ function MonitorPage() {
         canEnterMonitor={gateSatisfied}
         onEnterMonitor={enterCurrentDispatch}
         onBack={gateSatisfied ? enterCurrentDispatch : undefined}
+        route={dispatchRouteConfirmed}
       />
     )
   }
@@ -489,6 +491,7 @@ function MonitorPage() {
         onEnterMonitor={controller.onBack}
         responseFormatted={responseTimer.formatted}
         countdownFormatted={countdown.formatted}
+        route={dispatchRouteConfirmed}
       />
     </div>
   )

@@ -6,7 +6,9 @@ import {
   type CallerInfo,
   type CallerInfoField,
 } from '@/types/callerInfo'
+import { DispatchRouteMap } from '@/components/monitor/DispatchRouteMap'
 import { cn } from '@/lib/utils'
+import type { DispatchRoute } from '@/types/dispatchRoute'
 
 export type CallerEventKey = 'acknowledge' | 'arrival' | 'transport'
 export type CallerInfoVariant = 'classic' | 'assignment'
@@ -32,6 +34,7 @@ type CallerInfoModalProps = {
   onEnterMonitor?: () => void
   /** Whether the "Go to Monitor" action is currently allowed (gate satisfied). */
   canEnterMonitor?: boolean
+  route?: DispatchRoute
 }
 
 const CALLER_EVENT_BUTTONS: {
@@ -141,6 +144,7 @@ export function CallerInfoModal({
   onBack,
   onEnterMonitor,
   canEnterMonitor = false,
+  route,
 }: CallerInfoModalProps) {
   if (!open) return null
 
@@ -200,6 +204,7 @@ export function CallerInfoModal({
               onCallerEvent={onCallerEvent}
               onEnterMonitor={onEnterMonitor}
               canEnterMonitor={canEnterMonitor}
+              route={route}
             />
           ) : (
             <AssignmentCallerInfoContent
@@ -213,6 +218,7 @@ export function CallerInfoModal({
               onCallerEvent={onCallerEvent}
               onEnterMonitor={onEnterMonitor}
               canEnterMonitor={canEnterMonitor}
+              route={route}
             />
           )}
         </div>
@@ -234,6 +240,7 @@ type CallerInfoContentProps = {
   onCallerEvent: (key: CallerEventKey) => void
   onEnterMonitor?: () => void
   canEnterMonitor?: boolean
+  route?: DispatchRoute
 }
 
 function ClassicCallerInfoContent({
@@ -324,6 +331,7 @@ function AssignmentCallerInfoContent({
   onCallerEvent,
   onEnterMonitor,
   canEnterMonitor = false,
+  route,
 }: CallerInfoContentProps) {
   const priority = info.priority.trim() || 'Priority Pending'
   const assignmentDisplayFields = displayFields.filter(({ field }) => field !== 'priority')
@@ -434,28 +442,36 @@ function AssignmentCallerInfoContent({
           <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-dispatch-blue">
             Location
           </p>
-          <div className="flex h-[58%] min-h-[140px] flex-col justify-between rounded-md border border-neutral-700 bg-dispatch-panel-soft p-4">
-            <div className="flex items-start gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/30 text-dispatch-red">
-                <AssignmentIcon name="location" />
-              </span>
-              <div>
-                <p className="text-sm font-black text-neutral-100">{location}</p>
-                <p className="mt-1 text-xs font-bold text-neutral-400">Map view can be added later</p>
+          <div className="h-[58%] min-h-[140px]">
+            {route ? (
+              <DispatchRouteMap route={route} />
+            ) : (
+              <div className="flex h-full min-h-0 flex-col justify-between rounded-md border border-neutral-700 bg-dispatch-panel-soft p-4">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/30 text-dispatch-red">
+                    <AssignmentIcon name="location" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-black text-neutral-100">{location}</p>
+                    <p className="mt-1 text-xs font-bold text-neutral-400">Awaiting route</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 border-t border-neutral-700 pt-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-dispatch-blue">
+                      Distance
+                    </p>
+                    <p className="text-sm font-black text-white">-- km</p>
+                  </div>
+                  <div className="border-l border-neutral-700 pl-4">
+                    <p className="text-[10px] font-black uppercase text-dispatch-blue">ETA</p>
+                    <p aria-label="ETA" className="font-mono text-sm font-black text-white">
+                      {showCountdown ? countdownFormatted : '00:00'}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 border-t border-neutral-700 pt-3">
-              <div>
-                <p className="text-[10px] font-black uppercase text-dispatch-blue">Distance</p>
-                <p className="text-sm font-black text-white">-- km</p>
-              </div>
-              <div className="border-l border-neutral-700 pl-4">
-                <p className="text-[10px] font-black uppercase text-dispatch-blue">ETA</p>
-                <p aria-label="ETA" className="font-mono text-sm font-black text-white">
-                  {showCountdown ? countdownFormatted : '00:00'}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
           <div className="mt-3 rounded-md border border-neutral-700 bg-black/25 p-4">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-dispatch-blue">
