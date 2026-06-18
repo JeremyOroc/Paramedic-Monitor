@@ -11,6 +11,10 @@ import {
 import { DEFAULT_VITALS } from '@/types/vitals'
 import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
 import { DEFAULT_PATIENT_INFO } from '@/types/patientInfo'
+import {
+  DEFAULT_DISPATCH_ROUTE,
+  JOHN_ABBOTT_ADDRESS,
+} from '@/types/dispatchRoute'
 
 const defaultsAsVitals = () => ({
   hr: 0,
@@ -51,6 +55,10 @@ describe('monitorStore', () => {
     expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
+    expect(s.dispatchRouteDraft.originAddress).toBe(JOHN_ABBOTT_ADDRESS)
+    expect(s.dispatchRouteDraft).toEqual(DEFAULT_DISPATCH_ROUTE)
+    expect(s.dispatchRouteSaved).toEqual(DEFAULT_DISPATCH_ROUTE)
+    expect(s.dispatchRouteConfirmed).toEqual(DEFAULT_DISPATCH_ROUTE)
     expect(s.etco2CalibrationStatus).toBe('idle')
     expect(s.cprOverrideActive).toBe(false)
   })
@@ -100,6 +108,9 @@ describe('monitorStore', () => {
     expect(s.callerInfoDraft).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoSaved).toEqual(DEFAULT_CALLER_INFO)
     expect(s.callerInfoConfirmed).toEqual(DEFAULT_CALLER_INFO)
+    expect(s.dispatchRouteDraft).toEqual(DEFAULT_DISPATCH_ROUTE)
+    expect(s.dispatchRouteSaved).toEqual(DEFAULT_DISPATCH_ROUTE)
+    expect(s.dispatchRouteConfirmed).toEqual(DEFAULT_DISPATCH_ROUTE)
   })
 
   it('caller info flows through the same draft → save → send pipeline', () => {
@@ -120,6 +131,64 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().callerInfoConfirmed.extra1Label).toBe('Acces')
     expect(useMonitorStore.getState().callerInfoConfirmed.extra1).toBe('Porte cote nord')
     expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
+  })
+
+  it('dispatch route flows through save and send with a send-time startedAt', () => {
+    const now = Date.parse('2026-06-18T14:00:00Z')
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(now)
+    const readyRoute = {
+      ...DEFAULT_DISPATCH_ROUTE,
+      destinationAddress: '200 Sainte-Anne Street, Sainte-Anne-de-Bellevue, QC',
+      destination: { lat: 45.403, lng: -73.951 },
+      distanceMeters: 3200,
+      durationSeconds: 480,
+      geometry: [
+        { lat: 45.4068, lng: -73.9412 },
+        { lat: 45.403, lng: -73.951 },
+      ],
+      status: 'ready' as const,
+    }
+
+    useMonitorStore.getState().setDispatchRouteDraft(readyRoute)
+    expect(useMonitorStore.getState().dispatchRouteSaved.status).toBe('idle')
+
+    useMonitorStore.getState().save()
+    expect(useMonitorStore.getState().dispatchRouteSaved).toEqual(readyRoute)
+    expect(useMonitorStore.getState().dispatchRouteConfirmed.status).toBe('idle')
+
+    useMonitorStore.getState().send()
+    const confirmedRoute = useMonitorStore.getState().dispatchRouteConfirmed
+    expect(confirmedRoute.destinationAddress).toBe(readyRoute.destinationAddress)
+    expect(confirmedRoute.startedAt).toBe(now)
+    expect(confirmedRoute.durationSeconds).toBe(0)
+    nowSpy.mockRestore()
+  })
+
+  it('uses the dispatch countdown duration for confirmed route movement', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    const readyRoute = {
+      ...DEFAULT_DISPATCH_ROUTE,
+      destinationAddress: '200 Sainte-Anne Street, Sainte-Anne-de-Bellevue, QC',
+      destination: { lat: 45.403, lng: -73.951 },
+      distanceMeters: 3200,
+      durationSeconds: 480,
+      geometry: [
+        { lat: 45.4068, lng: -73.9412 },
+        { lat: 45.403, lng: -73.951 },
+      ],
+      status: 'ready' as const,
+    }
+
+    useMonitorStore.getState().setDispatchMinutes(3)
+    useMonitorStore.getState().setDispatchSeconds(15)
+    useMonitorStore.getState().setDispatchRouteDraft(readyRoute)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    const { dispatch, dispatchRouteConfirmed } = useMonitorStore.getState()
+    expect(dispatchRouteConfirmed.durationSeconds).toBe(195)
+    expect(dispatchRouteConfirmed.startedAt).toBe(1_000_000)
+    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 195_000)
   })
 
   it('numeric vitals stay inactive until a vitals edit is saved and sent', () => {

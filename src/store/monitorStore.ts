@@ -23,6 +23,11 @@ import {
   type PatientInfo,
   type PatientSex,
 } from '@/types/patientInfo'
+import {
+  DEFAULT_DISPATCH_ROUTE,
+  normalizeDispatchRoute,
+  type DispatchRoute,
+} from '@/types/dispatchRoute'
 import type { EventLogEntry } from '@/components/monitor/EventLogModal'
 
 export type Vitals = {
@@ -215,6 +220,9 @@ export type MonitorState = {
   callerInfoDraft: CallerInfo
   callerInfoSaved: CallerInfo
   callerInfoConfirmed: CallerInfo
+  dispatchRouteDraft: DispatchRoute
+  dispatchRouteSaved: DispatchRoute
+  dispatchRouteConfirmed: DispatchRoute
   patientInfo: PatientInfo
   dispatch: DispatchState
   dispatchMinutes: number
@@ -227,6 +235,7 @@ export type MonitorState = {
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
   setDraftVitalActive: (field: NumericVitalField, active: boolean) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
+  setDispatchRouteDraft: (route: DispatchRoute) => void
   setPatientAge: (age: number) => void
   setPatientSex: (sex: PatientSex) => void
   setDispatchMinutes: (minutes: number) => void
@@ -263,6 +272,9 @@ export const useMonitorStore = create<MonitorState>()(
       callerInfoDraft: DEFAULT_CALLER_INFO,
       callerInfoSaved: DEFAULT_CALLER_INFO,
       callerInfoConfirmed: DEFAULT_CALLER_INFO,
+      dispatchRouteDraft: DEFAULT_DISPATCH_ROUTE,
+      dispatchRouteSaved: DEFAULT_DISPATCH_ROUTE,
+      dispatchRouteConfirmed: DEFAULT_DISPATCH_ROUTE,
       patientInfo: DEFAULT_PATIENT_INFO,
       dispatch: DEFAULT_DISPATCH,
       dispatchMinutes: 0,
@@ -300,6 +312,8 @@ export const useMonitorStore = create<MonitorState>()(
         }),
       setCallerInfoDraft: (field, value) =>
         set((s) => ({ callerInfoDraft: { ...s.callerInfoDraft, [field]: value } })),
+      setDispatchRouteDraft: (route) =>
+        set({ dispatchRouteDraft: normalizeDispatchRoute(route) }),
       setPatientAge: (age) =>
         set((s) => ({ patientInfo: { ...s.patientInfo, age: clampAge(age) } })),
       setPatientSex: (sex) =>
@@ -413,20 +427,44 @@ export const useMonitorStore = create<MonitorState>()(
           savedVitalActive: { ...s.draftVitalActive },
           savedVitalsActive: anyVitalActive(s.draftVitalActive),
           callerInfoSaved: { ...s.callerInfoDraft },
+          dispatchRouteSaved: { ...s.dispatchRouteDraft },
         })),
       send: () =>
         set((s) => {
+          const startedAt = Date.now()
+          const currentDispatchDurationMs =
+            s.dispatch.startedAt === null
+              ? 0
+              : (s.dispatch.countdownEndsAt ?? s.dispatch.startedAt) - s.dispatch.startedAt
+          const dispatchDurationSeconds =
+            s.dispatch.armed
+              ? Math.max(0, Math.round(currentDispatchDurationMs / 1000))
+              : s.dispatchMinutes * 60 + s.dispatchSeconds
+          const routeStartedAt = s.dispatch.armed
+            ? s.dispatch.startedAt
+            : startedAt
+          const dispatchRouteConfirmed: DispatchRoute = {
+            ...s.dispatchRouteSaved,
+            startedAt:
+              s.dispatchRouteSaved.status === 'ready'
+                ? routeStartedAt
+                : s.dispatchRouteSaved.startedAt,
+            durationSeconds:
+              s.dispatchRouteSaved.status === 'ready'
+                ? dispatchDurationSeconds
+                : s.dispatchRouteSaved.durationSeconds,
+          }
           const base = {
             confirmed: { ...s.saved },
             confirmedVitalActive: { ...s.savedVitalActive },
             confirmedVitalsActive: anyVitalActive(s.savedVitalActive),
             callerInfoConfirmed: { ...s.callerInfoSaved },
+            dispatchRouteConfirmed,
           }
           // The first Send arms the dispatch gate: lock + countdown. Later Sends
           // only push updated caller-info content and never re-arm or restart it.
           if (s.dispatch.armed) return base
           const durationMs = (s.dispatchMinutes * 60 + s.dispatchSeconds) * 1000
-          const startedAt = Date.now()
           return {
             ...base,
             dispatch: {
@@ -452,6 +490,9 @@ export const useMonitorStore = create<MonitorState>()(
           callerInfoDraft: DEFAULT_CALLER_INFO,
           callerInfoSaved: DEFAULT_CALLER_INFO,
           callerInfoConfirmed: DEFAULT_CALLER_INFO,
+          dispatchRouteDraft: DEFAULT_DISPATCH_ROUTE,
+          dispatchRouteSaved: DEFAULT_DISPATCH_ROUTE,
+          dispatchRouteConfirmed: DEFAULT_DISPATCH_ROUTE,
           patientInfo: DEFAULT_PATIENT_INFO,
           dispatch: DEFAULT_DISPATCH,
           dispatchMinutes: 0,
@@ -465,7 +506,7 @@ export const useMonitorStore = create<MonitorState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 7,
+      version: 8,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist
@@ -511,6 +552,11 @@ export const useMonitorStore = create<MonitorState>()(
           callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
           callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
           callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),
+          dispatchRouteDraft: normalizeDispatchRoute(persistedState?.dispatchRouteDraft),
+          dispatchRouteSaved: normalizeDispatchRoute(persistedState?.dispatchRouteSaved),
+          dispatchRouteConfirmed: normalizeDispatchRoute(
+            persistedState?.dispatchRouteConfirmed,
+          ),
           patientInfo: {
             ...DEFAULT_PATIENT_INFO,
             ...persistedState?.patientInfo,

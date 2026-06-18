@@ -1,4 +1,5 @@
 import { CALLER_INFO_FIELDS, type CallerInfo } from '@/types/callerInfo'
+import type { DispatchRoute, LatLng } from '@/types/dispatchRoute'
 import type { NumericVitalField, VitalActiveState } from '@/types/vitals'
 
 import type { Vitals } from './monitorStore'
@@ -92,4 +93,28 @@ export function hasCallerInfoDirty(draft: CallerInfo, saved: CallerInfo): boolea
 
 export function hasCallerInfoPending(saved: CallerInfo, confirmed: CallerInfo): boolean {
   return CALLER_INFO_FIELDS.some(({ field }) => saved[field] !== confirmed[field])
+}
+
+function sameLatLng(a: LatLng | null, b: LatLng | null): boolean {
+  if (a === null || b === null) return a === b
+  return a.lat === b.lat && a.lng === b.lng
+}
+
+function sameGeometry(a: LatLng[], b: LatLng[]): boolean {
+  return a.length === b.length &&
+    a.every((point, index) => point.lat === b[index].lat && point.lng === b[index].lng)
+}
+
+export function hasDispatchRouteChanged(a: DispatchRoute, b: DispatchRoute): boolean {
+  return (
+    a.originAddress !== b.originAddress ||
+    a.destinationAddress !== b.destinationAddress ||
+    !sameLatLng(a.origin, b.origin) ||
+    !sameLatLng(a.destination, b.destination) ||
+    a.distanceMeters !== b.distanceMeters ||
+    a.durationSeconds !== b.durationSeconds ||
+    a.status !== b.status ||
+    a.error !== b.error ||
+    !sameGeometry(a.geometry, b.geometry)
+  )
 }
