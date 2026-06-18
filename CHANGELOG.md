@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-06-18] [dispatch] - Add iPad route map
+
+- Added Geoapify-backed address autocomplete to the admin Caller Info address fields, with John Abbott College as the default response origin.
+- Added persisted dispatch route state through the existing draft -> saved -> confirmed workflow, stamping route movement at Send time.
+- Replaced the assignment iPad location placeholder with a Leaflet/OpenStreetMap route map, OSRM driving route, distance/ETA readouts, and real-time unit marker movement.
+- Updated route movement to use the admin dispatch countdown duration; a zero countdown places the unit at the destination immediately.
+- Added route helper, store, admin form, and caller-info modal coverage; full test suite passes under the bundled Node runtime.
+
 ## [2026-06-14] [instructor] - Add CPR ECG override
 
 - Added an admin CPR toggle that immediately overrides the monitor ECG graph and FC display.

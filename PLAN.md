@@ -415,7 +415,24 @@ button is inert until a drill gate is satisfied.
   by dispatch assignment screens; the previous tablet layout remains available
   with `?callerInfoVariant=classic`. The full-page tablet keeps an iPad-oriented
   4:3 ratio, uses the reference-style blue/green/orange/red/purple/yellow icon
-  palette, and reserves the right-side map/location area for a future map.
+  palette.
+- Admin Caller Info includes a Response route section. Start defaults to
+  `John Abbott College, 21275 Lakeshore Road, Sainte-Anne-de-Bellevue, QC H9X 3L9`
+  and remains editable. Destination is the existing caller `Adresse` field.
+  Geoapify autocomplete/geocoding powers address suggestions when
+  `NEXT_PUBLIC_GEOAPIFY_API_KEY` is present; the input remains manually editable
+  without a key.
+- The assignment-style caller-info iPad replaces the old map placeholder with a
+  Leaflet/OpenStreetMap panel. OSRM provides driving geometry and distance.
+  The route movement duration comes from the admin dispatch countdown timer, not
+  OSRM ETA. On Send, the confirmed route receives a `startedAt` timestamp and
+  the countdown duration so the unit marker moves in real time and resumes
+  correctly after refresh or when CALL INFO is reopened later. If the admin
+  countdown is `0`, the unit marker is shown at the destination immediately.
+- Testing: route math helpers cover distance/duration formatting, progress, and
+  point interpolation; store tests cover default John Abbott origin plus route
+  Save -> Send timestamping; Caller Info form/modal tests cover route controls
+  and map rendering; full Vitest run passes under the bundled Node runtime.
 - The Acknowledge/Arrival/Transport action row must remain visible on the caller
   info tablet even when buttons are disabled. Completed caller action buttons
   gray out after they are clicked/logged.

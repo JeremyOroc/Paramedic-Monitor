@@ -168,7 +168,8 @@
   - [x] Completed caller action buttons gray out after they are clicked/logged
   - [x] Caller info now renders outside the Zoll shell: pre-Arrival it owns the full page, after Arrival the Zoll appears powered off, and in-monitor CALL INFO opens a full-page iPad surface with Back
   - [x] Arrival now only enables Go to Monitor; every dispatch run, including after admin Reset, must be entered explicitly before the Zoll appears
-  - [x] Full-page caller info keeps an iPad-oriented 4:3 frame and mimics the reference assignment dashboard layout; map/location area is reserved for later
+  - [x] Full-page caller info keeps an iPad-oriented 4:3 frame and mimics the reference assignment dashboard layout
+  - [x] Assignment iPad location area now shows a route map: admin Caller Info has Geoapify address autocomplete, John Abbott College as default start, OSRM route lookup, countdown-driven route progress, and a real-time moving unit marker
 - [x] **Disconnected startup vitals/graphs — COMPLETE:**
   - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`
   - [x] Admin vitals panel rows ordered FC → SpO2 → BP sys/dia → EtCO2
