@@ -35,6 +35,7 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
   const leafletRef = useRef<typeof Leaflet | null>(null)
   const routeLayerRef = useRef<Leaflet.Polyline | null>(null)
   const markerLayerRef = useRef<Leaflet.LayerGroup | null>(null)
+  const fittedRouteKeyRef = useRef('')
   const [ready, setReady] = useState(false)
   const [now, setNow] = useState(() => Date.now())
 
@@ -46,13 +47,13 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
       leafletRef.current = L
       if (!mapRef.current) {
         const map = L.map(containerRef.current, {
-          zoomControl: false,
+          zoomControl: true,
           attributionControl: true,
-          dragging: false,
-          scrollWheelZoom: false,
-          doubleClickZoom: false,
-          boxZoom: false,
-          keyboard: false,
+          dragging: true,
+          scrollWheelZoom: true,
+          doubleClickZoom: true,
+          boxZoom: true,
+          keyboard: true,
         }).setView([45.4068, -73.9412], 12)
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -73,6 +74,7 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
       routeLayerRef.current = null
       markerLayerRef.current = null
       leafletRef.current = null
+      fittedRouteKeyRef.current = ''
     }
   }, [])
 
@@ -99,27 +101,45 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
     const map = mapRef.current
     const markerLayer = markerLayerRef.current
 
-    if (routeLayerRef.current) {
-      routeLayerRef.current.remove()
-      routeLayerRef.current = null
-    }
     markerLayer.clearLayers()
 
     const points = routePoints(route, unitPosition)
     if (points.length === 0) {
-      map.setView([45.4068, -73.9412], 12)
+      if (fittedRouteKeyRef.current !== 'empty') {
+        map.setView([45.4068, -73.9412], 12)
+        fittedRouteKeyRef.current = 'empty'
+      }
       return
     }
 
+    const firstGeometryPoint = route.geometry[0]
+    const lastGeometryPoint = route.geometry.at(-1)
+    const routeKey = [
+      route.origin ? `${route.origin.lat},${route.origin.lng}` : 'none',
+      route.destination ? `${route.destination.lat},${route.destination.lng}` : 'none',
+      route.geometry.length,
+      firstGeometryPoint ? `${firstGeometryPoint.lat},${firstGeometryPoint.lng}` : 'none',
+      lastGeometryPoint ? `${lastGeometryPoint.lat},${lastGeometryPoint.lng}` : 'none',
+    ].join('|')
+
     if (route.geometry.length > 1) {
-      routeLayerRef.current = L.polyline(
-        route.geometry.map((point) => [point.lat, point.lng]),
-        {
-          color: 'var(--color-cyan-bp)',
-          weight: 4,
-          opacity: 0.85,
-        },
-      ).addTo(map)
+      if (fittedRouteKeyRef.current !== routeKey) {
+        if (routeLayerRef.current) {
+          routeLayerRef.current.remove()
+          routeLayerRef.current = null
+        }
+        routeLayerRef.current = L.polyline(
+          route.geometry.map((point) => [point.lat, point.lng]),
+          {
+            color: 'var(--color-cyan-bp)',
+            weight: 4,
+            opacity: 0.85,
+          },
+        ).addTo(map)
+      }
+    } else if (routeLayerRef.current) {
+      routeLayerRef.current.remove()
+      routeLayerRef.current = null
     }
 
     if (route.origin) {
@@ -138,8 +158,11 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
       }).addTo(markerLayer)
     }
 
-    const bounds = L.latLngBounds(points.map((point) => [point.lat, point.lng]))
-    map.fitBounds(bounds, { padding: [18, 18], maxZoom: 15 })
+    if (fittedRouteKeyRef.current !== routeKey) {
+      const bounds = L.latLngBounds(points.map((point) => [point.lat, point.lng]))
+      map.fitBounds(bounds, { padding: [18, 18], maxZoom: 15 })
+      fittedRouteKeyRef.current = routeKey
+    }
     window.setTimeout(() => map.invalidateSize(), 0)
   }, [ready, route, unitPosition])
 

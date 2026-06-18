@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-06-18] [monitor] - Enable iPad map interaction
+
+- Enabled drag, wheel, double-click, box, keyboard, and zoom-control interaction on the caller-info iPad map.
+- Stopped the moving unit marker from refitting the map viewport every second, so user zoom/pan choices are preserved while the route continues updating.
+
 ## [2026-06-18] [instructor] - Fix route countdown resend
 
 - Fixed Send staying disabled when only the dispatch countdown changed after an initial route Send.

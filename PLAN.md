@@ -429,6 +429,10 @@ button is inert until a drill gate is satisfied.
   the countdown duration so the unit marker moves in real time and resumes
   correctly after refresh or when CALL INFO is reopened later. If the admin
   countdown is `0`, the unit marker is shown at the destination immediately.
+  Trainees can interact with the map directly: pan, wheel/pinch/double-click
+  zoom, keyboard zoom, and use the map zoom controls. The map fits the route
+  when the route changes, but the moving unit marker does not continually reset
+  the viewport while the user is inspecting the map.
   Later Sends may update the confirmed route duration from the saved dispatch
   countdown without restarting the original dispatch gate countdown. Countdown
   edits follow the same strict Save -> Send workflow as other admin fields:

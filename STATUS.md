@@ -170,6 +170,7 @@
   - [x] Arrival now only enables Go to Monitor; every dispatch run, including after admin Reset, must be entered explicitly before the Zoll appears
   - [x] Full-page caller info keeps an iPad-oriented 4:3 frame and mimics the reference assignment dashboard layout
   - [x] Assignment iPad location area now shows a route map: admin Caller Info has Geoapify address autocomplete, John Abbott College as default start, OSRM route lookup, countdown-driven route progress, and a real-time moving unit marker
+  - [x] Caller-info iPad map supports user pan/zoom controls and preserves the user's viewport while the moving unit marker updates
   - [x] Dispatch countdown changes after the initial route Send follow strict Save -> Send: editing re-enables Save, Save re-enables Send, and Send updates confirmed route duration without restarting the dispatch gate timer
 - [x] **Disconnected startup vitals/graphs — COMPLETE:**
   - [x] Monitor vital numbers start/reset blank while inactive, with SpO2 rendering `SpO2 OFF`

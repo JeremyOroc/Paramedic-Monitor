@@ -157,3 +157,21 @@ body {
   background: var(--color-monitor-bg);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.leaflet-control-zoom {
+  border: 1px solid var(--color-dispatch-blue) !important;
+  box-shadow: none !important;
+}
+
+.leaflet-control-zoom a {
+  width: 24px !important;
+  height: 24px !important;
+  border-bottom-color: var(--color-dispatch-blue) !important;
+  background: var(--color-dispatch-panel) !important;
+  color: var(--color-cyan-bp) !important;
+  font: 700 16px/24px Arial, Helvetica, sans-serif !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--color-dispatch-panel-soft) !important;
+}
