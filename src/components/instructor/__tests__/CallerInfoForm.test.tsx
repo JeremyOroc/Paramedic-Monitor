@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
+import { JOHN_ABBOTT_ADDRESS } from '@/types/dispatchRoute'
 import {
   CALLER_INFO_AUTO_SORT_FIELDS,
   parseCallerInfoAutoSort,
@@ -58,6 +59,16 @@ describe('CallerInfoForm', () => {
     expect(formText.indexOf('Call / Priority / MPDS')).toBeGreaterThan(-1)
     expect(formText.indexOf('Dispatch countdown')).toBeLessThan(
       formText.indexOf('Call / Priority / MPDS'),
+    )
+  })
+
+  it('renders response route controls with John Abbott as the default start', () => {
+    renderCallerInfoForm()
+
+    expect(screen.getByText('Response route')).toBeInTheDocument()
+    expect(screen.getByLabelText('Start address')).toHaveValue(JOHN_ABBOTT_ADDRESS)
+    expect(useMonitorStore.getState().dispatchRouteDraft.originAddress).toBe(
+      JOHN_ABBOTT_ADDRESS,
     )
   })
 

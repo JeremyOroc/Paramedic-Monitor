@@ -1,9 +1,20 @@
 'use client'
 
-import { useState, type ChangeEvent } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 
+import { AddressAutocomplete } from '@/components/instructor/AddressAutocomplete'
+import {
+  fetchDrivingRoute,
+  geocodeAddress,
+  getGeoapifyApiKey,
+} from '@/lib/dispatchRoute'
 import { cn } from '@/lib/utils'
 import { useMonitorStore } from '@/store/monitorStore'
+import {
+  DEFAULT_DISPATCH_ROUTE,
+  JOHN_ABBOTT_ADDRESS,
+  JOHN_ABBOTT_COORDINATES,
+} from '@/types/dispatchRoute'
 
 const PRIMARY_FIELDS = [
   { field: 'address', label: 'Adresse', multiline: false },
@@ -49,6 +60,8 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
   const setDispatchMinutes = useMonitorStore((s) => s.setDispatchMinutes)
   const setDispatchSeconds = useMonitorStore((s) => s.setDispatchSeconds)
   const dispatchArmed = useMonitorStore((s) => s.dispatch.armed)
+  const dispatchRouteDraft = useMonitorStore((s) => s.dispatchRouteDraft)
+  const setDispatchRouteDraft = useMonitorStore((s) => s.setDispatchRouteDraft)
   const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
   const visibleExtraFields = EXTRA_FIELDS.slice(0, extraCount)
   const extraLimitReached = extraCount >= EXTRA_FIELDS.length
@@ -56,6 +69,94 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
   const handleAutoSortChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
     onAutoSortChange(event.target.value)
   }
+
+  const routeOriginAddress = dispatchRouteDraft.originAddress
+  const routeDestinationAddress = callerInfoDraft.address
+
+  useEffect(() => {
+    const originAddress = routeOriginAddress.trim() || JOHN_ABBOTT_ADDRESS
+    const destinationAddress = routeDestinationAddress.trim()
+
+    if (destinationAddress.length === 0) {
+      setDispatchRouteDraft({
+        ...DEFAULT_DISPATCH_ROUTE,
+        originAddress,
+        origin:
+          originAddress === JOHN_ABBOTT_ADDRESS
+            ? JOHN_ABBOTT_COORDINATES
+            : null,
+      })
+      return
+    }
+
+    if (!getGeoapifyApiKey()) {
+      setDispatchRouteDraft({
+        ...DEFAULT_DISPATCH_ROUTE,
+        originAddress,
+        destinationAddress,
+        status: 'failed',
+        error: 'Geoapify API key missing',
+      })
+      return
+    }
+
+    let cancelled = false
+    const timeout = window.setTimeout(() => {
+      setDispatchRouteDraft({
+        ...DEFAULT_DISPATCH_ROUTE,
+        originAddress,
+        destinationAddress,
+        status: 'loading',
+      })
+
+      async function buildRoute() {
+        const origin =
+          originAddress === JOHN_ABBOTT_ADDRESS
+            ? {
+                formatted: JOHN_ABBOTT_ADDRESS,
+                latLng: JOHN_ABBOTT_COORDINATES,
+              }
+            : await geocodeAddress(originAddress)
+        const destination = await geocodeAddress(destinationAddress)
+
+        if (!origin || !destination) {
+          throw new Error('Address not found')
+        }
+
+        const route = await fetchDrivingRoute(origin.latLng, destination.latLng)
+        if (cancelled) return
+
+        setDispatchRouteDraft({
+          originAddress,
+          destinationAddress,
+          origin: origin.latLng,
+          destination: destination.latLng,
+          distanceMeters: route.distanceMeters,
+          durationSeconds: route.durationSeconds,
+          geometry: route.geometry,
+          startedAt: null,
+          status: 'ready',
+          error: '',
+        })
+      }
+
+      buildRoute().catch((error: unknown) => {
+        if (cancelled) return
+        setDispatchRouteDraft({
+          ...DEFAULT_DISPATCH_ROUTE,
+          originAddress,
+          destinationAddress,
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Route unavailable',
+        })
+      })
+    }, 750)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+    }
+  }, [routeDestinationAddress, routeOriginAddress, setDispatchRouteDraft])
 
   return (
     <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
@@ -112,6 +213,59 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
               : 'The first Send arms the dispatch and starts this countdown on the monitor.'}
           </span>
         </div>
+        <div className="grid gap-3 border border-neutral-800 bg-neutral-900/40 p-3">
+          <span className="text-xs uppercase tracking-wider text-neutral-400">
+            Response route
+          </span>
+          <AddressAutocomplete
+            label="Start address"
+            value={dispatchRouteDraft.originAddress}
+            onChange={(value) =>
+              setDispatchRouteDraft({
+                ...dispatchRouteDraft,
+                originAddress: value,
+                origin: value === JOHN_ABBOTT_ADDRESS ? JOHN_ABBOTT_COORDINATES : null,
+                status: 'idle',
+                error: '',
+              })
+            }
+            onSelect={(suggestion) =>
+              setDispatchRouteDraft({
+                ...dispatchRouteDraft,
+                originAddress: suggestion.formatted,
+                origin: suggestion.latLng,
+                status: 'idle',
+                error: '',
+              })
+            }
+          />
+          <div className="grid grid-cols-3 gap-3 text-xs font-bold uppercase tracking-wider">
+            <span className="text-neutral-500">
+              Route <span className="text-neutral-300">{dispatchRouteDraft.status}</span>
+            </span>
+            <span className="text-neutral-500">
+              Distance{' '}
+              <span className="text-neutral-300">
+                {dispatchRouteDraft.distanceMeters === null
+                  ? '--'
+                  : `${(dispatchRouteDraft.distanceMeters / 1000).toFixed(1)} km`}
+              </span>
+            </span>
+            <span className="text-neutral-500">
+              ETA{' '}
+              <span className="text-neutral-300">
+                {dispatchRouteDraft.durationSeconds === null
+                  ? '--'
+                  : `${Math.ceil(dispatchRouteDraft.durationSeconds / 60)} min`}
+              </span>
+            </span>
+          </div>
+          {dispatchRouteDraft.error !== '' && (
+            <span className="text-xs font-semibold text-pending-amber">
+              {dispatchRouteDraft.error}
+            </span>
+          )}
+        </div>
         <div className="grid gap-2 border border-neutral-800 bg-neutral-900/40 p-3">
           <span className="text-xs uppercase tracking-wider text-neutral-400">
             Call / Priority / MPDS
@@ -133,9 +287,27 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
           </div>
         </div>
         {PRIMARY_FIELDS.map(({ field, label, multiline }) => (
-          <label key={field} className="grid gap-1">
-            <span className="text-xs uppercase tracking-wider text-neutral-400">{label}</span>
-            {multiline ? (
+          field === 'address' ? (
+            <AddressAutocomplete
+              key={field}
+              label={label}
+              value={callerInfoDraft[field]}
+              onChange={(value) => setCallerInfoDraft(field, value)}
+              onSelect={(suggestion) => {
+                setCallerInfoDraft(field, suggestion.formatted)
+                setDispatchRouteDraft({
+                  ...dispatchRouteDraft,
+                  destinationAddress: suggestion.formatted,
+                  destination: suggestion.latLng,
+                  status: 'idle',
+                  error: '',
+                })
+              }}
+            />
+          ) : (
+            <label key={field} className="grid gap-1">
+              <span className="text-xs uppercase tracking-wider text-neutral-400">{label}</span>
+              {multiline ? (
               <textarea
                 value={callerInfoDraft[field]}
                 onChange={(e) => setCallerInfoDraft(field, e.target.value)}
@@ -143,15 +315,16 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
                 rows={3}
                 className="min-h-20 resize-y border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
               />
-            ) : (
+              ) : (
               <input
                 value={callerInfoDraft[field]}
                 onChange={(e) => setCallerInfoDraft(field, e.target.value)}
                 aria-label={label}
                 className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
               />
-            )}
-          </label>
+              )}
+            </label>
+          )
         ))}
         {visibleExtraFields.map(({ labelField, valueField, fallbackLabel }) => (
           <div key={valueField} className="grid gap-2 border-t border-neutral-800 pt-3">
