@@ -70,7 +70,7 @@ describe('SendButton', () => {
     expect(btn).toBeDisabled()
   })
 
-  it('enables after dispatch countdown changes for an already-sent route', async () => {
+  it('requires save before sending a dispatch countdown change', async () => {
     const user = userEvent.setup()
     const readyRoute = {
       ...DEFAULT_DISPATCH_ROUTE,
@@ -98,6 +98,12 @@ describe('SendButton', () => {
 
     act(() => {
       useMonitorStore.getState().setDispatchMinutes(7)
+    })
+
+    expect(btn).toBeDisabled()
+
+    act(() => {
+      useMonitorStore.getState().save()
     })
 
     expect(btn).not.toBeDisabled()

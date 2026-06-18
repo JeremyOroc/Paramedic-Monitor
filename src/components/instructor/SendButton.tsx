@@ -19,19 +19,15 @@ export function SendButton() {
   const callerInfoConfirmed = useMonitorStore((s) => s.callerInfoConfirmed)
   const dispatchRouteSaved = useMonitorStore((s) => s.dispatchRouteSaved)
   const dispatchRouteConfirmed = useMonitorStore((s) => s.dispatchRouteConfirmed)
-  const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
-  const dispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
+  const dispatchSavedSeconds = useMonitorStore((s) => s.dispatchSavedSeconds)
+  const dispatchConfirmedSeconds = useMonitorStore((s) => s.dispatchConfirmedSeconds)
   const send = useMonitorStore((s) => s.send)
   const disabled =
     !hasPending(saved, confirmed) &&
     !hasVitalActivePending(savedVitalActive, confirmedVitalActive) &&
     !hasCallerInfoPending(callerInfoSaved, callerInfoConfirmed) &&
     !hasDispatchRouteChanged(dispatchRouteSaved, dispatchRouteConfirmed) &&
-    !hasDispatchRouteDurationPending(
-      dispatchRouteConfirmed,
-      dispatchMinutes,
-      dispatchSeconds,
-    )
+    !hasDispatchRouteDurationPending(dispatchSavedSeconds, dispatchConfirmedSeconds)
 
   return (
     <button

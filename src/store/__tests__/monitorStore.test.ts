@@ -191,7 +191,7 @@ describe('monitorStore', () => {
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + 195_000)
   })
 
-  it('updates route duration from the current dispatch countdown on later sends', () => {
+  it('updates route duration from the saved dispatch countdown on later sends', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
     const readyRoute = {
       ...DEFAULT_DISPATCH_ROUTE,
@@ -214,11 +214,17 @@ describe('monitorStore', () => {
 
     useMonitorStore.getState().setDispatchMinutes(8)
     useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().dispatchRouteConfirmed.durationSeconds).toBe(300)
+
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
 
     const { dispatch, dispatchRouteConfirmed } = useMonitorStore.getState()
     expect(dispatchRouteConfirmed.durationSeconds).toBe(480)
     expect(dispatchRouteConfirmed.startedAt).toBe(1_000_000)
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + 300_000)
+    expect(useMonitorStore.getState().dispatchSavedSeconds).toBe(480)
+    expect(useMonitorStore.getState().dispatchConfirmedSeconds).toBe(480)
   })
 
   it('numeric vitals stay inactive until a vitals edit is saved and sent', () => {

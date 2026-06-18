@@ -9,6 +9,7 @@
 
 - Fixed Send staying disabled when only the dispatch countdown changed after an initial route Send.
 - Later Sends now update the confirmed route duration from the current dispatch countdown without restarting the dispatch gate timer.
+- Dispatch countdown edits now follow the same strict Save -> Send workflow: editing unlocks Save, Save unlocks Send, and Send locks again until the next saved change.
 
 ## [2026-06-18] [dispatch] - Add iPad route map
 

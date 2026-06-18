@@ -228,6 +228,8 @@ export type MonitorState = {
   dispatch: DispatchState
   dispatchMinutes: number
   dispatchSeconds: number
+  dispatchSavedSeconds: number
+  dispatchConfirmedSeconds: number
   monitorResetVersion: number
   etco2CalibrationStatus: Etco2CalibrationStatus
   cprOverrideActive: boolean
@@ -280,6 +282,8 @@ export const useMonitorStore = create<MonitorState>()(
       dispatch: DEFAULT_DISPATCH,
       dispatchMinutes: 0,
       dispatchSeconds: 0,
+      dispatchSavedSeconds: 0,
+      dispatchConfirmedSeconds: 0,
       monitorResetVersion: 0,
       etco2CalibrationStatus: 'idle',
       cprOverrideActive: false,
@@ -429,14 +433,15 @@ export const useMonitorStore = create<MonitorState>()(
           savedVitalsActive: anyVitalActive(s.draftVitalActive),
           callerInfoSaved: { ...s.callerInfoDraft },
           dispatchRouteSaved: { ...s.dispatchRouteDraft },
+          dispatchSavedSeconds: dispatchCountdownSeconds(
+            s.dispatchMinutes,
+            s.dispatchSeconds,
+          ),
         })),
       send: () =>
         set((s) => {
           const startedAt = Date.now()
-          const dispatchDurationSeconds = dispatchCountdownSeconds(
-            s.dispatchMinutes,
-            s.dispatchSeconds,
-          )
+          const dispatchDurationSeconds = s.dispatchSavedSeconds
           const routeStartedAt = s.dispatch.armed
             ? s.dispatch.startedAt
             : startedAt
@@ -457,6 +462,7 @@ export const useMonitorStore = create<MonitorState>()(
             confirmedVitalsActive: anyVitalActive(s.savedVitalActive),
             callerInfoConfirmed: { ...s.callerInfoSaved },
             dispatchRouteConfirmed,
+            dispatchConfirmedSeconds: s.dispatchSavedSeconds,
           }
           // The first Send arms the dispatch gate: lock + countdown. Later Sends
           // only push updated caller-info content and never re-arm or restart it.
@@ -494,6 +500,8 @@ export const useMonitorStore = create<MonitorState>()(
           dispatch: DEFAULT_DISPATCH,
           dispatchMinutes: 0,
           dispatchSeconds: 0,
+          dispatchSavedSeconds: 0,
+          dispatchConfirmedSeconds: 0,
           monitorResetVersion: s.monitorResetVersion + 1,
           etco2CalibrationStatus: 'idle',
           cprOverrideActive: false,
@@ -533,6 +541,14 @@ export const useMonitorStore = create<MonitorState>()(
           typeof persistedState?.dispatchSeconds === 'number'
             ? persistedState.dispatchSeconds
             : 0
+        const dispatchSavedSeconds =
+          typeof persistedState?.dispatchSavedSeconds === 'number'
+            ? persistedState.dispatchSavedSeconds
+            : dispatchCountdownSeconds(dispatchMinutes, dispatchSeconds)
+        const dispatchConfirmedSeconds =
+          typeof persistedState?.dispatchConfirmedSeconds === 'number'
+            ? persistedState.dispatchConfirmedSeconds
+            : dispatchSavedSeconds
 
         return {
           ...current,
@@ -564,6 +580,8 @@ export const useMonitorStore = create<MonitorState>()(
           ),
           dispatchMinutes,
           dispatchSeconds,
+          dispatchSavedSeconds,
+          dispatchConfirmedSeconds,
           monitorResetVersion:
             typeof persistedState?.monitorResetVersion === 'number'
               ? persistedState.monitorResetVersion

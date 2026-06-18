@@ -124,10 +124,16 @@ export function dispatchCountdownSeconds(minutes: number, seconds: number): numb
 }
 
 export function hasDispatchRouteDurationPending(
-  confirmedRoute: DispatchRoute,
+  savedSeconds: number,
+  confirmedSeconds: number,
+): boolean {
+  return savedSeconds !== confirmedSeconds
+}
+
+export function hasDispatchCountdownDirty(
   minutes: number,
   seconds: number,
+  savedSeconds: number,
 ): boolean {
-  return confirmedRoute.status === 'ready' &&
-    confirmedRoute.durationSeconds !== dispatchCountdownSeconds(minutes, seconds)
+  return dispatchCountdownSeconds(minutes, seconds) !== savedSeconds
 }
