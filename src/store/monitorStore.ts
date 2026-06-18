@@ -28,6 +28,7 @@ import {
   normalizeDispatchRoute,
   type DispatchRoute,
 } from '@/types/dispatchRoute'
+import { dispatchCountdownSeconds } from '@/store/fieldState'
 import type { EventLogEntry } from '@/components/monitor/EventLogModal'
 
 export type Vitals = {
@@ -432,14 +433,10 @@ export const useMonitorStore = create<MonitorState>()(
       send: () =>
         set((s) => {
           const startedAt = Date.now()
-          const currentDispatchDurationMs =
-            s.dispatch.startedAt === null
-              ? 0
-              : (s.dispatch.countdownEndsAt ?? s.dispatch.startedAt) - s.dispatch.startedAt
-          const dispatchDurationSeconds =
-            s.dispatch.armed
-              ? Math.max(0, Math.round(currentDispatchDurationMs / 1000))
-              : s.dispatchMinutes * 60 + s.dispatchSeconds
+          const dispatchDurationSeconds = dispatchCountdownSeconds(
+            s.dispatchMinutes,
+            s.dispatchSeconds,
+          )
           const routeStartedAt = s.dispatch.armed
             ? s.dispatch.startedAt
             : startedAt

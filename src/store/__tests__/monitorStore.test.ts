@@ -191,6 +191,36 @@ describe('monitorStore', () => {
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + 195_000)
   })
 
+  it('updates route duration from the current dispatch countdown on later sends', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    const readyRoute = {
+      ...DEFAULT_DISPATCH_ROUTE,
+      destinationAddress: '200 Sainte-Anne Street, Sainte-Anne-de-Bellevue, QC',
+      destination: { lat: 45.403, lng: -73.951 },
+      distanceMeters: 3200,
+      durationSeconds: 480,
+      geometry: [
+        { lat: 45.4068, lng: -73.9412 },
+        { lat: 45.403, lng: -73.951 },
+      ],
+      status: 'ready' as const,
+    }
+
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().setDispatchRouteDraft(readyRoute)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().dispatchRouteConfirmed.durationSeconds).toBe(300)
+
+    useMonitorStore.getState().setDispatchMinutes(8)
+    useMonitorStore.getState().send()
+
+    const { dispatch, dispatchRouteConfirmed } = useMonitorStore.getState()
+    expect(dispatchRouteConfirmed.durationSeconds).toBe(480)
+    expect(dispatchRouteConfirmed.startedAt).toBe(1_000_000)
+    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 300_000)
+  })
+
   it('numeric vitals stay inactive until a vitals edit is saved and sent', () => {
     expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
 

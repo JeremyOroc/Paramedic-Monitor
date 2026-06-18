@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-06-18] [instructor] - Fix route countdown resend
+
+- Fixed Send staying disabled when only the dispatch countdown changed after an initial route Send.
+- Later Sends now update the confirmed route duration from the current dispatch countdown without restarting the dispatch gate timer.
+
 ## [2026-06-18] [dispatch] - Add iPad route map
 
 - Added Geoapify-backed address autocomplete to the admin Caller Info address fields, with John Abbott College as the default response origin.

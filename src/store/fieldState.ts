@@ -112,9 +112,22 @@ export function hasDispatchRouteChanged(a: DispatchRoute, b: DispatchRoute): boo
     !sameLatLng(a.origin, b.origin) ||
     !sameLatLng(a.destination, b.destination) ||
     a.distanceMeters !== b.distanceMeters ||
-    a.durationSeconds !== b.durationSeconds ||
     a.status !== b.status ||
     a.error !== b.error ||
     !sameGeometry(a.geometry, b.geometry)
   )
+}
+
+export function dispatchCountdownSeconds(minutes: number, seconds: number): number {
+  return Math.max(0, Math.floor(minutes) || 0) * 60 +
+    Math.min(59, Math.max(0, Math.floor(seconds) || 0))
+}
+
+export function hasDispatchRouteDurationPending(
+  confirmedRoute: DispatchRoute,
+  minutes: number,
+  seconds: number,
+): boolean {
+  return confirmedRoute.status === 'ready' &&
+    confirmedRoute.durationSeconds !== dispatchCountdownSeconds(minutes, seconds)
 }

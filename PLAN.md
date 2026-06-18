@@ -429,6 +429,8 @@ button is inert until a drill gate is satisfied.
   the countdown duration so the unit marker moves in real time and resumes
   correctly after refresh or when CALL INFO is reopened later. If the admin
   countdown is `0`, the unit marker is shown at the destination immediately.
+  Later Sends may update the confirmed route duration from the current dispatch
+  countdown without restarting the original dispatch gate countdown.
 - Testing: route math helpers cover distance/duration formatting, progress, and
   point interpolation; store tests cover default John Abbott origin plus route
   Save -> Send timestamping; Caller Info form/modal tests cover route controls
