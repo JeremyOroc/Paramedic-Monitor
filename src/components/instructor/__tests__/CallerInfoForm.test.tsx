@@ -72,6 +72,22 @@ describe('CallerInfoForm', () => {
     )
   })
 
+  it('bases the route ETA preview on the dispatch countdown', () => {
+    useMonitorStore.getState().setDispatchMinutes(2)
+    useMonitorStore.getState().setDispatchSeconds(15)
+    renderCallerInfoForm()
+
+    const routeSection = screen.getByText('Response route').closest('div')
+    expect(routeSection).toHaveTextContent('ETA 3 min')
+  })
+
+  it('shows the route ETA as at scene when no dispatch countdown is set', () => {
+    renderCallerInfoForm()
+
+    const routeSection = screen.getByText('Response route').closest('div')
+    expect(routeSection).toHaveTextContent('ETA At scene')
+  })
+
   it('updates caller info draft values', async () => {
     const user = userEvent.setup()
     renderCallerInfoForm()

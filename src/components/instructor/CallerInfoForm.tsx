@@ -52,6 +52,13 @@ function getInitialExtraCount(callerInfoDraft: CallerInfoDraft) {
   }, 0)
 }
 
+function formatDispatchCountdownPreview(minutes: number, seconds: number): string {
+  const totalSeconds = minutes * 60 + seconds
+  if (totalSeconds <= 0) return 'At scene'
+  const roundedMinutes = Math.ceil(totalSeconds / 60)
+  return `${roundedMinutes} min`
+}
+
 export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFormProps) {
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
@@ -72,6 +79,7 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
 
   const routeOriginAddress = dispatchRouteDraft.originAddress
   const routeDestinationAddress = callerInfoDraft.address
+  const dispatchEtaPreview = formatDispatchCountdownPreview(dispatchMinutes, dispatchSeconds)
 
   useEffect(() => {
     const originAddress = routeOriginAddress.trim() || JOHN_ABBOTT_ADDRESS
@@ -254,9 +262,7 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
             <span className="text-neutral-500">
               ETA{' '}
               <span className="text-neutral-300">
-                {dispatchRouteDraft.durationSeconds === null
-                  ? '--'
-                  : `${Math.ceil(dispatchRouteDraft.durationSeconds / 60)} min`}
+                {dispatchEtaPreview}
               </span>
             </span>
           </div>
