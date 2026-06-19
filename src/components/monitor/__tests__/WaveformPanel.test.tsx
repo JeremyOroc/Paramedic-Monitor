@@ -27,15 +27,26 @@ describe('WaveformPanel', () => {
     expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
   })
 
-  it('uses the CPR ECG video override even when the normal ECG rhythm is off', () => {
+  it('uses the CPR ECG canvas override even when the normal ECG rhythm is off', () => {
     render(<WaveformPanel {...baseProps} rhythm="off" cprOverride />)
 
-    expect(screen.getByTestId('cpr-ecg-video')).toHaveAttribute(
-      'src',
-      '/videos/compression-cpr.mov',
-    )
+    expect(screen.getByTestId('cpr-ecg-canvas')).toBeInTheDocument()
+    expect(screen.queryByTestId('cpr-ecg-video')).not.toBeInTheDocument()
     expect(screen.queryByTestId('live-ecg-canvas')).not.toBeInTheDocument()
     expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
+  })
+
+  it('keeps the same ECG canvas mounted when CPR toggles on and off', () => {
+    const { rerender } = render(<WaveformPanel {...baseProps} />)
+
+    const liveCanvas = screen.getByTestId('live-ecg-canvas')
+
+    rerender(<WaveformPanel {...baseProps} cprOverride />)
+    const cprCanvas = screen.getByTestId('cpr-ecg-canvas')
+    expect(cprCanvas).toBe(liveCanvas)
+
+    rerender(<WaveformPanel {...baseProps} />)
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(liveCanvas)
   })
 
   it('renders Anterior MI as a live ECG rhythm', () => {

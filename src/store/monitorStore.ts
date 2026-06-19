@@ -84,6 +84,10 @@ const VALID_RHYTHMS: ReadonlySet<Rhythm> = new Set([
   'vt',
   'torsades',
   'asystole',
+  'first-degree',
+  'second-degree-type-1',
+  'second-degree-type-2',
+  'third-degree',
   'anterior-mi',
   'inferior-mi',
 ])

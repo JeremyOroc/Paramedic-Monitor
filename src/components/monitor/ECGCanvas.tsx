@@ -1,6 +1,11 @@
 'use client'
 
-import { ECG_RHYTHMS, ECG_SWEEP_MS, getEcgRhythm } from '@/lib/ecg/rhythms'
+import {
+  CPR_COMPRESSION_WAVEFORM,
+  ECG_RHYTHMS,
+  ECG_SWEEP_MS,
+  getEcgRhythm,
+} from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
 import { COLORS, cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
@@ -14,19 +19,27 @@ type ECGCanvasProps = {
   className?: string
 }
 
-function LiveECGCanvas({ rhythm, hr, className }: Omit<ECGCanvasProps, 'connected'>) {
+function LiveECGCanvas({
+  rhythm,
+  hr,
+  cprOverride = false,
+  className,
+}: Omit<ECGCanvasProps, 'connected'>) {
   const canvasRef = useWaveformRenderer(
-    { rhythm, hr },
+    { rhythm, hr, cprOverride },
     (get) => ({
       color: COLORS.ecgGreen,
       sweepMs: ECG_SWEEP_MS,
       synchronizeSweep: true,
       ampJitter: 0.05,
       cycleJitter: 0.03,
-      getWaveform: () => getEcgRhythm(get().rhythm),
-      getSignalKey: () => get().rhythm,
-      getCycleMs: () =>
-        ECG_RHYTHMS[get().rhythm].cycleMs ?? 60000 / Math.max(20, get().hr),
+      getWaveform: () =>
+        get().cprOverride ? CPR_COMPRESSION_WAVEFORM : getEcgRhythm(get().rhythm),
+      getSignalKey: () => (get().cprOverride ? 'cpr-compression' : get().rhythm),
+      getCycleMs: () => {
+        if (get().cprOverride) return CPR_COMPRESSION_WAVEFORM.cycleMs ?? 500
+        return ECG_RHYTHMS[get().rhythm].cycleMs ?? 60000 / Math.max(20, get().hr)
+      },
     }),
     [],
   )
@@ -34,8 +47,9 @@ function LiveECGCanvas({ rhythm, hr, className }: Omit<ECGCanvasProps, 'connecte
   return (
     <canvas
       ref={canvasRef}
-      data-testid="live-ecg-canvas"
+      data-testid={cprOverride ? 'cpr-ecg-canvas' : 'live-ecg-canvas'}
       data-rhythm={rhythm}
+      data-cpr-override={cprOverride ? 'true' : 'false'}
       className={cn('block h-full w-full', className)}
     />
   )
@@ -48,21 +62,7 @@ export function ECGCanvas({
   cprOverride = false,
   className,
 }: ECGCanvasProps) {
-  if (cprOverride) {
-    return (
-      <video
-        data-testid="cpr-ecg-video"
-        src="/videos/compression-cpr.mov"
-        autoPlay
-        loop
-        muted
-        playsInline
-        className={cn('block h-full w-full object-fill', className)}
-      />
-    )
-  }
-
-  if (!connected) {
+  if (!connected && !cprOverride) {
     return (
       <DisconnectedWaveform
         channel="ecg"
@@ -72,5 +72,12 @@ export function ECGCanvas({
     )
   }
 
-  return <LiveECGCanvas rhythm={rhythm} hr={hr} className={className} />
+  return (
+    <LiveECGCanvas
+      rhythm={rhythm}
+      hr={hr}
+      cprOverride={cprOverride}
+      className={className}
+    />
+  )
 }

@@ -371,6 +371,38 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('inferior-mi')
   })
 
+  it('1st Degree flows through the same draft save send pipeline', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'first-degree')
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('first-degree')
+  })
+
+  it('2nd Degree Type 1 flows through the same draft save send pipeline', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'second-degree-type-1')
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('second-degree-type-1')
+  })
+
+  it('2nd Degree Type 2 flows through the same draft save send pipeline', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'second-degree-type-2')
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('second-degree-type-2')
+  })
+
+  it('3rd Degree flows through the same draft save send pipeline', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'third-degree')
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('third-degree')
+  })
+
   it('spo2_waveform defaults to off and flows through save → send', () => {
     expect(useMonitorStore.getState().confirmed.spo2_waveform).toBe('off')
     useMonitorStore.getState().setDraft('spo2_waveform', 'weak')

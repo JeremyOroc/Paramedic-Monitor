@@ -70,6 +70,16 @@ describe('useMonitorController', () => {
     expect(result.current.printPreviewOpen).toBe(false)
   })
 
+  it('resets the selected secondary graph back to SpO2', () => {
+    const { result } = setup()
+
+    act(() => result.current.onToggleEtco2())
+    expect(result.current.secondary).toBe('etco2')
+
+    act(() => result.current.onResetMonitorUi())
+    expect(result.current.secondary).toBe('spo2')
+  })
+
   it('cycles to the bottom status toggle and toggles it on Enter', () => {
     const { result } = setup()
 

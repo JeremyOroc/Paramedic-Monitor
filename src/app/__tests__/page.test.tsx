@@ -106,7 +106,7 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
       <div>
         Waveform panel
         <span>
-          {cprOverride ? 'cpr-ecg-video' : rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}
+          {cprOverride ? 'cpr-ecg-canvas' : rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}
         </span>
         {selected === 'etco2' && <span>showing-etco2</span>}
         {showAllSecondaryChannels ? (
@@ -426,14 +426,14 @@ describe('MonitorPage', () => {
     act(() => useMonitorStore.getState().setCprOverrideActive(true))
 
     expect(screen.getByText('120')).toBeInTheDocument()
-    expect(screen.getByText('cpr-ecg-video')).toBeInTheDocument()
+    expect(screen.getByText('cpr-ecg-canvas')).toBeInTheDocument()
     expect(screen.queryByText('82')).not.toBeInTheDocument()
 
     act(() => useMonitorStore.getState().setCprOverrideActive(false))
 
     expect(screen.getByText('82')).toBeInTheDocument()
     expect(screen.getByText('live-ecg')).toBeInTheDocument()
-    expect(screen.queryByText('cpr-ecg-video')).not.toBeInTheDocument()
+    expect(screen.queryByText('cpr-ecg-canvas')).not.toBeInTheDocument()
   })
 
   it('shows both BP numbers after a completed partial-active NIBP reading', () => {
@@ -819,6 +819,26 @@ describe('MonitorPage', () => {
 
     act(() => useMonitorStore.getState().resetMonitorVitals())
     fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('returns the selected secondary graph to SpO2 after monitor reset', () => {
+    vi.useFakeTimers()
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    act(() => { vi.advanceTimersByTime(10000) })
+    expect(screen.getByText('showing-etco2')).toBeInTheDocument()
+
+    act(() => useMonitorStore.getState().resetMonitorVitals())
+
+    expect(screen.queryByText('showing-etco2')).not.toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+    expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    expect(screen.getByText('showing-etco2')).toBeInTheDocument()
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
     vi.useRealTimers()
   })

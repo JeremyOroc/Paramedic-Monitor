@@ -35,7 +35,12 @@ const ECG_RHYTHM_CATEGORIES: ReadonlyArray<RhythmCategory> = [
   },
   {
     label: 'Heart Block',
-    options: [],
+    options: [
+      { value: 'first-degree', label: '1st Degree' },
+      { value: 'second-degree-type-1', label: '2nd Degree Type 1' },
+      { value: 'second-degree-type-2', label: '2nd Degree Type 2' },
+      { value: 'third-degree', label: '3rd Degree' },
+    ],
   },
   {
     label: 'Bundle Branch Block',
@@ -57,6 +62,10 @@ const RHYTHM_LABELS: Record<Rhythm, string> = {
   vt: 'VT',
   torsades: 'Torsades',
   asystole: 'Asystole',
+  'first-degree': '1st Degree',
+  'second-degree-type-1': '2nd Degree Type 1',
+  'second-degree-type-2': '2nd Degree Type 2',
+  'third-degree': '3rd Degree',
   'anterior-mi': 'Anterior MI',
   'inferior-mi': 'Inferior MI',
 }
@@ -73,6 +82,7 @@ export function EcgRhythmSelector() {
   const connected = current !== 'off'
   const status = fieldStatus('rhythm', draft, saved, confirmed)
   const displayStatus = status === 'dirty' ? 'clean' : status
+  const rhythmButtonLabel = connected ? RHYTHM_LABELS[current] : 'Rhythm Options'
   const optionsId = 'ecg-rhythm-options'
   const selectedCategory =
     ECG_RHYTHM_CATEGORIES.find((category) => category.label === selectedCategoryLabel) ??
@@ -83,12 +93,6 @@ export function EcgRhythmSelector() {
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm uppercase tracking-wider text-neutral-400">ECG</h2>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <span className="min-w-0 truncate border border-neutral-800 bg-neutral-900 px-2 py-1 text-xs uppercase tracking-wider text-neutral-400">
-            Rhythm:{' '}
-            <span className="font-bold text-neutral-100">
-              {RHYTHM_LABELS[current]}
-            </span>
-          </span>
           <button
             type="button"
             onClick={() => {
@@ -109,7 +113,7 @@ export function EcgRhythmSelector() {
                 : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800',
             )}
           >
-            Rhythm Options
+            {rhythmButtonLabel}
           </button>
         </div>
         <div className="flex items-center gap-2">
