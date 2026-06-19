@@ -46,7 +46,10 @@ function readyRoute(): DispatchRoute {
 
 describe('DispatchRouteMap track toggle', () => {
   beforeEach(() => vi.clearAllMocks())
-  afterEach(() => cleanup())
+  afterEach(() => {
+    vi.useRealTimers()
+    cleanup()
+  })
 
   it('defaults to overview and toggles unit tracking on and off', async () => {
     render(<DispatchRouteMap route={readyRoute()} />)
@@ -77,5 +80,32 @@ describe('DispatchRouteMap track toggle', () => {
   it('hides the toggle until a route is ready', () => {
     render(<DispatchRouteMap route={DEFAULT_DISPATCH_ROUTE} />)
     expect(screen.queryByTestId('map-track-toggle')).not.toBeInTheDocument()
+  })
+
+  it('cancels delayed size invalidation when the map unmounts', async () => {
+    const { rerender, unmount } = render(<DispatchRouteMap route={readyRoute()} />)
+
+    await screen.findByTestId('map-track-toggle')
+    leaflet.mapInstance.invalidateSize.mockClear()
+
+    vi.useFakeTimers()
+    rerender(
+      <DispatchRouteMap
+        route={{
+          ...readyRoute(),
+          destinationAddress: '300 Sainte-Anne Street',
+          destination: { lat: 45.402, lng: -73.952 },
+          geometry: [
+            { lat: 45.4068, lng: -73.9412 },
+            { lat: 45.402, lng: -73.952 },
+          ],
+        }}
+      />,
+    )
+    unmount()
+
+    expect(() => vi.runOnlyPendingTimers()).not.toThrow()
+    expect(leaflet.mapInstance.invalidateSize).not.toHaveBeenCalled()
+    expect(leaflet.mapInstance.remove).toHaveBeenCalled()
   })
 })

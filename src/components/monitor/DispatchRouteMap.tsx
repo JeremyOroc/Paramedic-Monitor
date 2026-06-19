@@ -40,6 +40,7 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
   const routeLayerRef = useRef<Leaflet.Polyline | null>(null)
   const markerLayerRef = useRef<Leaflet.LayerGroup | null>(null)
   const fittedRouteKeyRef = useRef('')
+  const invalidateTimerRef = useRef<number | null>(null)
   const [ready, setReady] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   // 'overview' fits the whole route (default); 'follow' tracks the unit up close.
@@ -84,6 +85,10 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
 
     return () => {
       disposed = true
+      if (invalidateTimerRef.current !== null) {
+        window.clearTimeout(invalidateTimerRef.current)
+        invalidateTimerRef.current = null
+      }
       mapRef.current?.remove()
       mapRef.current = null
       routeLayerRef.current = null
@@ -182,7 +187,21 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
       map.fitBounds(bounds, { padding: [18, 18], maxZoom: 15 })
       fittedRouteKeyRef.current = routeKey
     }
-    window.setTimeout(() => map.invalidateSize(), 0)
+    if (invalidateTimerRef.current !== null) {
+      window.clearTimeout(invalidateTimerRef.current)
+    }
+    invalidateTimerRef.current = window.setTimeout(() => {
+      invalidateTimerRef.current = null
+      if (mapRef.current !== map || containerRef.current?.isConnected !== true) return
+      map.invalidateSize()
+    }, 0)
+
+    return () => {
+      if (invalidateTimerRef.current !== null) {
+        window.clearTimeout(invalidateTimerRef.current)
+        invalidateTimerRef.current = null
+      }
+    }
   }, [ready, route, unitPosition, trackMode])
 
   const statusText =

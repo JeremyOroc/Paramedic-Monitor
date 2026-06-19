@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-06-19] [monitor] - Fix dispatch map stale resize crash
+
+- Guarded delayed Leaflet map size invalidation so it does not run after the map unmounts.
+- Added regression coverage for unmounting the dispatch route map before the delayed resize callback fires.
+
 ## [2026-06-19] [instructor] - Clean up ECG rhythm selector display
 
 - Removed the separate `Rhythm:` display pill from the admin ECG selector.

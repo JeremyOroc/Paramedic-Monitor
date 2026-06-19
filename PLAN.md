@@ -6,6 +6,12 @@
 
 ---
 
+## Current Requirement Updates
+
+- Dispatch route map delayed Leaflet size invalidation must be cancelled and guarded so it never runs against an unmounted map/container.
+
+---
+
 ## Dependencies to Install
 
 ```bash

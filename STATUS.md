@@ -58,6 +58,8 @@
   - [x] Admin Vitals shows a pink EtCO2 indicator when calibration is complete
   - [x] Monitor reset returns the selected secondary graph slot to SpO2 after EtCO2 use
   - [x] Bottom-panel-hidden expanded mode shows both SpO2 and EtCO2 rows, with Off rows disconnected
+- [x] **Dispatch map runtime stability — COMPLETE:**
+  - [x] Delayed Leaflet size invalidation is cancelled/guarded so unmounted maps do not crash with `_leaflet_pos` errors
 - [x] **Admin CPR ECG override — COMPLETE:**
   - [x] Admin Vitals includes a CPR toggle in the ECG column
   - [x] CPR override immediately displays FC 120 and replaces the ECG graph with a generated green canvas compression waveform
