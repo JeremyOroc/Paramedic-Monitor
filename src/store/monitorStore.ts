@@ -42,6 +42,9 @@ export type Vitals = {
   etco2_waveform: Etco2Waveform
 }
 
+export type TimedDraftVitals = Partial<Record<NumericVitalField, number>>
+export type InactiveDraftVitals = Partial<Record<NumericVitalField, number>>
+
 const initial: Vitals = {
   hr: 0,
   bp_sys: 0,
@@ -240,6 +243,8 @@ export type MonitorState = {
   acceptedBp: BpDisplay
   acceptedBpActive: BpActiveState
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
+  setTimedDraftVitals: (vitals: TimedDraftVitals) => void
+  setInactiveDraftVitals: (vitals: InactiveDraftVitals) => void
   setDraftVitalActive: (field: NumericVitalField, active: boolean) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
   setDispatchRouteDraft: (route: DispatchRoute) => void
@@ -301,6 +306,35 @@ export const useMonitorStore = create<MonitorState>()(
           const draftVitalActive = isNumericVitalField(field)
             ? { ...s.draftVitalActive, [field]: true }
             : s.draftVitalActive
+          return {
+            draft,
+            draftVitalActive,
+            draftVitalsActive: anyVitalActive(draftVitalActive),
+          }
+        }),
+      setTimedDraftVitals: (vitals) =>
+        set((s) => {
+          const draft: Vitals = { ...s.draft, ...vitals }
+          if (vitals.spo2 !== undefined) {
+            draft.spo2_waveform = s.draftVitalActive.spo2 ? 'normal' : 'off'
+          }
+          if (vitals.etco2 !== undefined) {
+            draft.etco2_waveform = s.draftVitalActive.etco2 ? 'normal' : 'off'
+          }
+          return {
+            draft,
+            draftVitalsActive: anyVitalActive(s.draftVitalActive),
+          }
+        }),
+      setInactiveDraftVitals: (vitals) =>
+        set((s) => {
+          const draft: Vitals = { ...s.draft, ...vitals }
+          const draftVitalActive = { ...s.draftVitalActive }
+          for (const field of Object.keys(vitals) as NumericVitalField[]) {
+            draftVitalActive[field] = false
+          }
+          if (vitals.spo2 !== undefined) draft.spo2_waveform = 'off'
+          if (vitals.etco2 !== undefined) draft.etco2_waveform = 'off'
           return {
             draft,
             draftVitalActive,

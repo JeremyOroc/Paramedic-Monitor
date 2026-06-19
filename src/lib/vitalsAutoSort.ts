@@ -97,7 +97,7 @@ function isSectionBoundary(line: string) {
   ].includes(normalized)
 }
 
-function isTimedVitalsHeading(line: string) {
+export function isTimedVitalsHeading(line: string) {
   return Object.values(TIMED_SLOT_TO_HEADING).includes(normalizeLabel(line))
 }
 
@@ -149,11 +149,18 @@ export function parseTimedVitalsAutoSort(
   text: string,
   slot: TimedVitalsSlot,
 ): ParsedVitalsAutoSort {
+  const sectionText = getTimedVitalsSectionText(text, slot)
+  if (!sectionText) return {}
+
+  return parseVitalsAutoSort(sectionText)
+}
+
+export function getTimedVitalsSectionText(text: string, slot: TimedVitalsSlot): string {
   const lines = text.split(/\r?\n/)
   const targetHeading = TIMED_SLOT_TO_HEADING[slot]
   const sectionStart = lines.findIndex((line) => normalizeLabel(line) === targetHeading)
 
-  if (sectionStart === -1) return {}
+  if (sectionStart === -1) return ''
 
   const sectionLines: string[] = []
   for (const line of lines.slice(sectionStart + 1)) {
@@ -161,5 +168,5 @@ export function parseTimedVitalsAutoSort(
     sectionLines.push(line)
   }
 
-  return parseVitalsAutoSort(sectionLines.join('\n'))
+  return sectionLines.join('\n')
 }

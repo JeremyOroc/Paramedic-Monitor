@@ -1,3 +1,5 @@
+import { getTimedVitalsSectionText, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
+
 export type PatientPhysicalFindings = Record<string, string>
 export type PatientPhysicalIconFindingId =
   | 'respiratory-rate'
@@ -321,4 +323,13 @@ export function parsePatientPhysicalAutoSort(text: string): PatientPhysicalFindi
   commitCurrentSection()
 
   return findings
+}
+
+export function parseTimedPatientPhysicalAutoSort(
+  text: string,
+  slot: TimedVitalsSlot,
+): PatientPhysicalFindings {
+  const sectionText = getTimedVitalsSectionText(text, slot)
+  if (!sectionText) return {}
+  return parsePatientPhysicalAutoSort(sectionText)
 }

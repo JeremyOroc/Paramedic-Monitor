@@ -9,6 +9,11 @@
 ## Current Requirement Updates
 
 - Dispatch route map delayed Leaflet size invalidation must be cancelled and guarded so it never runs against an unmounted map/container.
+- T1/T2/T3/U1/U2/U3 timed vitals must also update Patient Physical Pulse and Respiratory icon findings from the clicked timed section, without auto-confirming the icons.
+- The call assignment screen should show New Assignment and assignment detail labels without decorative icons.
+- Automatic call assignment display should play `/audio/caller_info_alarm.mp4` and gently flash 4 times for each new dispatch run; manual sidebar reopening must stay silent.
+- T1/T2/T3/U1/U2/U3 timed vitals must update draft numbers without turning Off vitals back On; SpO2/EtCO2 graph connections stay tied to their existing On/Off toggle state.
+- Universal Caller Info scenario auto-sort must fill origin vital numbers while forcing those vitals Off until the instructor manually toggles them On.
 
 ---
 

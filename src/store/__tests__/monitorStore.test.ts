@@ -330,6 +330,100 @@ describe('monitorStore', () => {
     expect(s.draft.etco2_waveform).toBe('normal')
   })
 
+  it('timed draft vital updates change numbers without turning inactive vitals on', () => {
+    useMonitorStore.getState().setTimedDraftVitals({
+      hr: 106,
+      spo2: 98,
+      bp_sys: 112,
+      bp_dia: 70,
+      etco2: 36,
+    })
+
+    const s = useMonitorStore.getState()
+    expect(s.draft).toMatchObject({
+      hr: 106,
+      spo2: 98,
+      bp_sys: 112,
+      bp_dia: 70,
+      etco2: 36,
+      spo2_waveform: 'off',
+      etco2_waveform: 'off',
+    })
+    expect(s.draftVitalActive).toEqual(inactiveVitalState)
+    expect(s.draftVitalsActive).toBe(false)
+  })
+
+  it('timed draft vital updates preserve active vitals and connected SpO2/EtCO2 graphs', () => {
+    useMonitorStore.getState().setDraftVitalActive('hr', true)
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    useMonitorStore.getState().setDraftVitalActive('etco2', true)
+
+    useMonitorStore.getState().setTimedDraftVitals({
+      hr: 100,
+      spo2: 99,
+      etco2: 38,
+    })
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.hr).toBe(100)
+    expect(s.draft.spo2).toBe(99)
+    expect(s.draft.etco2).toBe(38)
+    expect(s.draftVitalActive.hr).toBe(true)
+    expect(s.draftVitalActive.spo2).toBe(true)
+    expect(s.draftVitalActive.etco2).toBe(true)
+    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.draftVitalsActive).toBe(true)
+  })
+
+  it('timed draft vital updates keep SpO2 and EtCO2 disconnected after they are turned off', () => {
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    useMonitorStore.getState().setDraftVitalActive('etco2', true)
+    useMonitorStore.getState().setDraftVitalActive('spo2', false)
+    useMonitorStore.getState().setDraftVitalActive('etco2', false)
+
+    useMonitorStore.getState().setTimedDraftVitals({
+      spo2: 92,
+      etco2: 26,
+    })
+
+    const s = useMonitorStore.getState()
+    expect(s.draft.spo2).toBe(92)
+    expect(s.draft.etco2).toBe(26)
+    expect(s.draftVitalActive.spo2).toBe(false)
+    expect(s.draftVitalActive.etco2).toBe(false)
+    expect(s.draft.spo2_waveform).toBe('off')
+    expect(s.draft.etco2_waveform).toBe('off')
+    expect(s.draftVitalsActive).toBe(false)
+  })
+
+  it('inactive draft vital updates fill numbers and force matching vitals off', () => {
+    useMonitorStore.getState().setDraftVitalActive('hr', true)
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    useMonitorStore.getState().setDraftVitalActive('etco2', true)
+
+    useMonitorStore.getState().setInactiveDraftVitals({
+      hr: 54,
+      spo2: 78,
+      bp_sys: 96,
+      bp_dia: 58,
+      etco2: 62,
+    })
+
+    const s = useMonitorStore.getState()
+    expect(s.draft).toMatchObject({
+      hr: 54,
+      spo2: 78,
+      bp_sys: 96,
+      bp_dia: 58,
+      etco2: 62,
+      spo2_waveform: 'off',
+      etco2_waveform: 'off',
+    })
+    expect(s.draftVitalActive).toEqual(inactiveVitalState)
+    expect(s.draftVitalsActive).toBe(false)
+  })
+
   it('HR and BP numeric edits do not change SpO2 or EtCO2 graph state', () => {
     useMonitorStore.getState().setDraft('hr', 80)
     useMonitorStore.getState().setDraft('bp_sys', 120)

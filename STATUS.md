@@ -37,6 +37,7 @@
   - [x] Unit/notes formats such as `HR: 124 bpm`, `SpO₂: 92% on room air`, and `EtCO₂: 48 mmHg` are accepted
   - [x] Pulse summary lines such as `Pulse: 136 bpm, Regular, Weak` fill only FC/HR with the first number
   - [x] T1/T2/T3 and U1/U2/U3 buttons stage timed Treated/Untreated vitals from the Caller Info scenario auto-sort text without Save/Send
+  - [x] Timed vitals buttons update draft numbers without turning Off vitals back On
   - [x] Timed vitals buttons use larger click targets for easier admin use
   - [x] Timed vitals buttons fill fixed-height grid cells so the entire outlined rectangle is clickable
   - [x] Timed vitals buttons use an explicit two-row grid with full-cell pointer targets
@@ -44,7 +45,7 @@
   - [x] FC, SpO2, BP sys, BP dia, and EtCO2 align in one left Vitals column beside the right ECG/timed-buttons column
   - [x] Large scenario pastes parse only the origin vitals section when present and ignore later serial vitals
   - [x] Repeated vitals keep the first valid value per field so treated/untreated vitals do not overwrite origin values
-  - [x] SpO2 and EtCO2 auto-sorted values reuse draft updates so matching graph connections stage as `normal`
+  - [x] Universal scenario auto-sort fills origin vital numbers while keeping those vitals Off until manually toggled On
 - [x] **SpO2 monitor pulse fill icon — COMPLETE:**
   - [x] Numeric SpO2 values render a small yellow outlined fill bar beside the number
   - [x] Fill animation samples the selected SpO2 pleth waveform shape and timing
@@ -60,6 +61,10 @@
   - [x] Bottom-panel-hidden expanded mode shows both SpO2 and EtCO2 rows, with Off rows disconnected
 - [x] **Dispatch map runtime stability — COMPLETE:**
   - [x] Delayed Leaflet size invalidation is cancelled/guarded so unmounted maps do not crash with `_leaflet_pos` errors
+- [x] **Call assignment display cleanup — COMPLETE:**
+  - [x] Removed decorative icons from the New Assignment title and assignment detail rows while preserving labels and values
+  - [x] Automatic call assignment display plays the provided alert sound and shows a 4-pulse gentle flash for each new dispatch run
+  - [x] Manual caller-info reopening from the monitor sidebar does not replay the assignment alert
 - [x] **Admin CPR ECG override — COMPLETE:**
   - [x] Admin Vitals includes a CPR toggle in the ECG column
   - [x] CPR override immediately displays FC 120 and replaces the ECG graph with a generated green canvas compression waveform
@@ -80,6 +85,7 @@
   - [x] Added front and rear neck selections between the head and shoulder areas
   - [x] Split shoulders, arms, hands, legs, and feet into anatomical patient left/right regions on both body outlines
   - [x] Rebuilt overlay coordinates so selected regions stay inside the newer body outlines
+  - [x] T1/T2/T3/U1/U2/U3 timed vitals update Pulse and Respiratory icon findings while preserving manual selections
   - [x] Moved chest, abdomen, pelvic trunk, arm/hand, and upper/lower leg zones higher with tighter inside-body selections
   - [x] Raised upper-leg overlays again on both outlines while leaving lower-leg and foot placements stable
   - [x] Single Caller Info scenario auto-sort fills Patient Physical findings with amber review markers, click-to-show selected-panel text, and click-to-confirm green behavior

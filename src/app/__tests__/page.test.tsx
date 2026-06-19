@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
-import { pauseAlarm, playAlarm } from '@/lib/audio'
+import { pauseAlarm, playAlarm, playCallerInfoAlert } from '@/lib/audio'
 import { useMonitorStore } from '@/store/monitorStore'
 
 import MonitorPage from '../page'
@@ -11,6 +11,7 @@ import MonitorPage from '../page'
 vi.mock('@/lib/audio', () => ({
   pauseAlarm: vi.fn(),
   playAlarm: vi.fn(),
+  playCallerInfoAlert: vi.fn(),
   setAudioMuted: vi.fn(),
   playChargeBeep: vi.fn(),
   pauseChargeBeep: vi.fn(),
@@ -138,6 +139,7 @@ describe('MonitorPage', () => {
     vi.useRealTimers()
     vi.mocked(playAlarm).mockClear()
     vi.mocked(pauseAlarm).mockClear()
+    vi.mocked(playCallerInfoAlert).mockClear()
     useMonitorStore.getState().reset()
     window.history.pushState({}, '', '/?dev=1') // bypass the dispatch lock gate
   })
@@ -177,6 +179,7 @@ describe('MonitorPage', () => {
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
     expect(screen.getAllByText('456 Avenue Centrale').length).toBeGreaterThan(0)
     expect(screen.getByText('Difficultes respiratoires')).toBeInTheDocument()
+    expect(playCallerInfoAlert).not.toHaveBeenCalled()
   })
 
   it('shows caller info as a full-page dispatch tablet before arrival', () => {
@@ -195,6 +198,70 @@ describe('MonitorPage', () => {
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
     expect(screen.getAllByText('456 Avenue Centrale').length).toBeGreaterThan(0)
     expect(screen.queryByRole('button', { name: 'Back to monitor' })).not.toBeInTheDocument()
+  })
+
+  it('plays the assignment alert and flashes only for automatic caller info', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(playCallerInfoAlert).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('caller-info-alert-flash')).toBeInTheDocument()
+  })
+
+  it('does not replay the assignment alert for the same dispatch run', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+    })
+
+    const { rerender } = render(<MonitorPage />)
+    expect(playCallerInfoAlert).toHaveBeenCalledTimes(1)
+
+    rerender(<MonitorPage />)
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('problem', 'Updated assignment detail')
+      store.save()
+      store.send()
+    })
+
+    expect(screen.getByText('Updated assignment detail')).toBeInTheDocument()
+    expect(playCallerInfoAlert).toHaveBeenCalledTimes(1)
+  })
+
+  it('replays the assignment alert for a new dispatch run', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', 'First scenario')
+      store.setDispatchSeconds(5)
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+    expect(playCallerInfoAlert).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', 'Second scenario')
+      store.setDispatchSeconds(10)
+      store.save()
+      store.send()
+    })
+
+    expect(screen.getAllByText('Second scenario').length).toBeGreaterThan(0)
+    expect(playCallerInfoAlert).toHaveBeenCalledTimes(2)
   })
 
   it('stays on the dispatch tablet after arrival until Go to Monitor is tapped', async () => {

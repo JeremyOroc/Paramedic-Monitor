@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-06-19] [instructor] - Keep auto-sorted vitals Off
+
+- Universal Caller Info scenario auto-sort now fills origin vital numbers without activating those vitals.
+- SpO2 and EtCO2 auto-sorted values keep graph waveforms Off until manually toggled On.
+- Manual vital typing and toggles keep their existing activation behavior.
+
+## [2026-06-19] [instructor] - Preserve Off vitals for timed buttons
+
+- T1/T2/T3/U1/U2/U3 now update draft vital numbers without turning inactive vitals On.
+- SpO2 and EtCO2 timed values keep graph connections tied to their existing On/Off toggle state.
+- Manual typing and universal scenario auto-sort keep their current number-entry behavior.
+
+## [2026-06-19] [monitor] - Add caller assignment alert
+
+- Added the provided caller assignment alert sound as `/audio/caller_info_alarm.mp4`.
+- Automatic call assignment display now plays the alert and shows a gentle 4-pulse flash for each new dispatch run.
+- Manual caller-info reopening from the monitor sidebar stays silent.
+
+## [2026-06-19] [monitor] - Remove assignment detail icons
+
+- Removed the decorative New Assignment bell and assignment detail-row icons from the call assignment screen.
+- Kept assignment labels, values, priority badge, route map, and action controls unchanged.
+
+## [2026-06-19] [instructor] - Sync Patient Physical icons from timed vitals
+
+- T1/T2/T3/U1/U2/U3 timed vitals now update Patient Physical Pulse and Respiratory icon findings.
+- Added timed Patient Physical parser and admin coverage for Pulse/Respiratory updates while preserving manual selections.
+
 ## [2026-06-19] [monitor] - Fix dispatch map stale resize crash
 
 - Guarded delayed Leaflet map size invalidation so it does not run after the map unmounts.

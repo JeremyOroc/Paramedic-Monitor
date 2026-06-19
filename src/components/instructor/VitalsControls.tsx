@@ -22,27 +22,29 @@ const TIMED_VITAL_BUTTONS: ReadonlyArray<TimedVitalsSlot> = ['T1', 'T2', 'T3', '
 
 type VitalsControlsProps = {
   autoSortText: string
+  onTimedVitalsClick?: (slot: TimedVitalsSlot) => void
 }
 
-export function VitalsControls({ autoSortText }: VitalsControlsProps) {
+export function VitalsControls({ autoSortText, onTimedVitalsClick }: VitalsControlsProps) {
   const resetVitalsToNormal = useMonitorStore((s) => s.resetVitalsToNormal)
-  const setDraft = useMonitorStore((s) => s.setDraft)
+  const setTimedDraftVitals = useMonitorStore((s) => s.setTimedDraftVitals)
   const etco2CalibrationStatus = useMonitorStore((s) => s.etco2CalibrationStatus)
   const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
   const setCprOverrideActive = useMonitorStore((s) => s.setCprOverrideActive)
   const etco2Calibrated = etco2CalibrationStatus === 'calibrated'
 
   const applyParsedVitals = (parsed: ReturnType<typeof parseTimedVitalsAutoSort>) => {
+    const timedVitals: Partial<Record<NumericVitalField, number>> = {}
     for (const field of AUTO_SORT_FIELDS) {
       const value = parsed[field]
-      if (value !== undefined) {
-        setDraft(field, value)
-      }
+      if (value !== undefined) timedVitals[field] = value
     }
+    setTimedDraftVitals(timedVitals)
   }
 
   const handleTimedVitalsClick = (slot: TimedVitalsSlot) => {
     applyParsedVitals(parseTimedVitalsAutoSort(autoSortText, slot))
+    onTimedVitalsClick?.(slot)
   }
 
   return (

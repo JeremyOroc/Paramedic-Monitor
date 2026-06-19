@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -197,7 +197,7 @@ describe('VitalsControls', () => {
     expect(useMonitorStore.getState().cprOverrideActive).toBe(false)
   })
 
-  it('stages T1 timed vitals from the shared auto-sort text', async () => {
+  it('stages T1 timed vital numbers without turning initially off vitals on', async () => {
     const user = userEvent.setup()
     render(<VitalsControls autoSortText={TIMED_VITALS_SAMPLE} />)
 
@@ -209,9 +209,34 @@ describe('VitalsControls', () => {
     expect(state.draft.bp_sys).toBe(112)
     expect(state.draft.bp_dia).toBe(70)
     expect(state.draft.etco2).toBe(36)
+    expect(state.draftVitalActive).toEqual({
+      hr: false,
+      bp_sys: false,
+      bp_dia: false,
+      etco2: false,
+      spo2: false,
+    })
+    expect(state.draft.spo2_waveform).toBe('off')
+    expect(state.draft.etco2_waveform).toBe('off')
   })
 
-  it('stages U3 timed vitals and graph connections from the shared auto-sort text', async () => {
+  it('notifies the admin page when a timed vitals button is clicked', async () => {
+    const user = userEvent.setup()
+    const onTimedVitalsClick = vi.fn()
+    render(
+      <VitalsControls
+        autoSortText={TIMED_VITALS_SAMPLE}
+        onTimedVitalsClick={onTimedVitalsClick}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'T1' }))
+
+    expect(onTimedVitalsClick).toHaveBeenCalledWith('T1')
+    expect(useMonitorStore.getState().draft.hr).toBe(106)
+  })
+
+  it('stages U3 timed vital numbers without reconnecting inactive graphs', async () => {
     const user = userEvent.setup()
     render(<VitalsControls autoSortText={TIMED_VITALS_SAMPLE} />)
 
@@ -223,8 +248,49 @@ describe('VitalsControls', () => {
     expect(state.draft.bp_sys).toBe(76)
     expect(state.draft.bp_dia).toBe(46)
     expect(state.draft.etco2).toBe(26)
+    expect(state.draftVitalActive.spo2).toBe(false)
+    expect(state.draftVitalActive.etco2).toBe(false)
+    expect(state.draft.spo2_waveform).toBe('off')
+    expect(state.draft.etco2_waveform).toBe('off')
+  })
+
+  it('keeps already-on SpO2 and EtCO2 graphs connected when applying timed vitals', async () => {
+    const user = userEvent.setup()
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    useMonitorStore.getState().setDraftVitalActive('etco2', true)
+    render(<VitalsControls autoSortText={TIMED_VITALS_SAMPLE} />)
+
+    await user.click(screen.getByRole('button', { name: 'T2' }))
+
+    const state = useMonitorStore.getState()
+    expect(state.draft.spo2).toBe(99)
+    expect(state.draft.etco2).toBe(38)
+    expect(state.draftVitalActive.spo2).toBe(true)
+    expect(state.draftVitalActive.etco2).toBe(true)
     expect(state.draft.spo2_waveform).toBe('normal')
     expect(state.draft.etco2_waveform).toBe('normal')
+  })
+
+  it('keeps SpO2 and EtCO2 off when switching timed vitals after they were turned off', async () => {
+    const user = userEvent.setup()
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    useMonitorStore.getState().setDraftVitalActive('etco2', true)
+    render(<VitalsControls autoSortText={TIMED_VITALS_SAMPLE} />)
+
+    await user.click(screen.getByRole('button', { name: 'T1' }))
+    act(() => {
+      useMonitorStore.getState().setDraftVitalActive('spo2', false)
+      useMonitorStore.getState().setDraftVitalActive('etco2', false)
+    })
+    await user.click(screen.getByRole('button', { name: 'T2' }))
+
+    const state = useMonitorStore.getState()
+    expect(state.draft.spo2).toBe(99)
+    expect(state.draft.etco2).toBe(38)
+    expect(state.draftVitalActive.spo2).toBe(false)
+    expect(state.draftVitalActive.etco2).toBe(false)
+    expect(state.draft.spo2_waveform).toBe('off')
+    expect(state.draft.etco2_waveform).toBe('off')
   })
 
   it('leaves existing draft values unchanged when a timed section is missing', async () => {

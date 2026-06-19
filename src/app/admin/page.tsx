@@ -25,10 +25,11 @@ import {
   type PatientInformationTextState,
 } from '@/lib/patientInformationAutoSort'
 import {
+  parseTimedPatientPhysicalAutoSort,
   parsePatientPhysicalAutoSort,
   type PatientPhysicalFindings,
 } from '@/lib/patientPhysicalAutoSort'
-import { parseVitalsAutoSort } from '@/lib/vitalsAutoSort'
+import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
@@ -75,7 +76,7 @@ export default function AdminPage() {
     useState<PatientPhysicalIconGroupId | null>(null)
   const reset = useMonitorStore((s) => s.reset)
   const resetMonitorVitals = useMonitorStore((s) => s.resetMonitorVitals)
-  const setDraft = useMonitorStore((s) => s.setDraft)
+  const setInactiveDraftVitals = useMonitorStore((s) => s.setInactiveDraftVitals)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const resetPatientInformation = () => {
     setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
@@ -143,12 +144,12 @@ export default function AdminPage() {
   }
 
   const applyParsedVitals = (parsed: ReturnType<typeof parseVitalsAutoSort>) => {
+    const inactiveVitals: Partial<Record<NumericVitalField, number>> = {}
     for (const field of AUTO_SORT_VITAL_FIELDS) {
       const value = parsed[field]
-      if (value !== undefined) {
-        setDraft(field, value)
-      }
+      if (value !== undefined) inactiveVitals[field] = value
     }
+    setInactiveDraftVitals(inactiveVitals)
   }
 
   const handleUniversalAutoSortChange = (value: string) => {
@@ -165,6 +166,14 @@ export default function AdminPage() {
     applyParsedVitals(parseVitalsAutoSort(value))
     setPatientText(parsePatientInformationAutoSort(value))
     setPatientPhysicalFindings(parsePatientPhysicalAutoSort(value))
+  }
+
+  const handleTimedVitalsPatientPhysicalUpdate = (slot: TimedVitalsSlot) => {
+    const timedFindings = parseTimedPatientPhysicalAutoSort(universalAutoSortText, slot)
+    setPatientPhysicalFindings((current) => ({
+      ...current,
+      ...timedFindings,
+    }))
   }
 
   const handlePatientPhysicalIconGroupClick = (selection: PatientPhysicalIconGroupId) => {
@@ -234,7 +243,10 @@ export default function AdminPage() {
         </button>
       </div>
       {tab === 'monitor' ? (
-        <VitalsControls autoSortText={universalAutoSortText} />
+        <VitalsControls
+          autoSortText={universalAutoSortText}
+          onTimedVitalsClick={handleTimedVitalsPatientPhysicalUpdate}
+        />
       ) : tab === 'patient' ? (
         <PatientInformationPanel
           selected={patientSelections}

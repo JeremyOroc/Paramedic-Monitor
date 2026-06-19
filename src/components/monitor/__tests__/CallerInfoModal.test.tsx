@@ -81,6 +81,59 @@ describe('CallerInfoModal', () => {
     expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('border-dispatch-bezel')
   })
 
+  it('renders assignment title and detail rows without decorative icons', () => {
+    renderModal({
+      info: {
+        ...DEFAULT_CALLER_INFO,
+        callNumber: 'C-2026-15',
+        priority: 'P1',
+        mpdsCode: '06D02',
+        address: '123 Rue Principale',
+        problem: 'Douleur thoracique',
+        information: 'Caller reports worsening symptoms',
+        update: 'Unit assigned',
+        time: '14:45',
+      },
+    })
+
+    expect(screen.getByTestId('assignment-title').querySelector('svg')).toBeNull()
+    for (const field of [
+      'callNumber',
+      'mpdsCode',
+      'address',
+      'problem',
+      'information',
+      'update',
+      'time',
+    ]) {
+      const row = screen.getByTestId(`assignment-info-${field}`)
+      expect(row).toHaveClass('grid-cols-[1fr]')
+      expect(row).not.toHaveClass('grid-cols-[32px_1fr]')
+      expect(row.querySelector('svg')).toBeNull()
+    }
+  })
+
+  it('renders the caller assignment alert flash overlay only when requested', () => {
+    const { rerender } = renderModal({ alertFlash: true })
+
+    expect(screen.getByTestId('caller-info-alert-flash')).toHaveClass(
+      'caller-info-alert-flash',
+      'pointer-events-none',
+    )
+
+    rerender(
+      <CallerInfoModal
+        open
+        info={DEFAULT_CALLER_INFO}
+        onCallerEvent={() => {}}
+        buttonState={ALL_ENABLED}
+        alertFlash={false}
+      />,
+    )
+
+    expect(screen.queryByTestId('caller-info-alert-flash')).toBeNull()
+  })
+
   it('renders the dispatch route map inside the assignment location panel', () => {
     renderModal({
       route: {
