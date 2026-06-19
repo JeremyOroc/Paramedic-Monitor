@@ -395,7 +395,11 @@ button is inert until a drill gate is satisfied.
 - The admin caller-info **Send** doubles as the dispatch signal. New minutes +
   seconds "Dispatch countdown" fields on the admin caller-info form set the ETA.
   The **first** Send arms the lock + countdown and pushes caller info; later Sends
-  only update content. Admin **Reset** = full reset to locked-off.
+  that keep the same countdown only update content. A later Send carrying a
+  **changed** (saved) countdown re-dispatches: it restarts the gate countdown and
+  the map ETA from that send and clears the trainee's Acknowledge/Arrival so the
+  run must be re-acknowledged (requirement change 2026-06-18). Admin **Reset** =
+  full reset to locked-off.
 - Locked screen shows caller info + a counting-down MM:SS timer. Unlock order:
   Acknowledge (immediate) → countdown 0 → Arrival → **Go to Monitor** → power
   unlocks. Arrival only enables the explicit Go to Monitor action; it never
@@ -433,8 +437,11 @@ button is inert until a drill gate is satisfied.
   zoom, keyboard zoom, and use the map zoom controls. The map fits the route
   when the route changes, but the moving unit marker does not continually reset
   the viewport while the user is inspecting the map.
-  Later Sends may update the confirmed route duration from the saved dispatch
-  countdown without restarting the original dispatch gate countdown. Countdown
+  Later Sends that keep the same countdown update the confirmed route content
+  while the route ETA keeps ticking from its original start. A Send with a
+  changed (saved) countdown re-dispatches instead: the route `startedAt` and the
+  gate countdown both restart from that send on the new duration, and the
+  trainee's Acknowledge/Arrival are cleared. Countdown
   edits follow the same strict Save -> Send workflow as other admin fields:
   changing the value unlocks Save, Save unlocks Send, and Send locks until a new
   value is saved.

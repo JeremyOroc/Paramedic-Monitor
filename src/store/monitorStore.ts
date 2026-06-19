@@ -440,21 +440,22 @@ export const useMonitorStore = create<MonitorState>()(
         })),
       send: () =>
         set((s) => {
-          const startedAt = Date.now()
+          const now = Date.now()
+          // A new dispatch countdown (saved value differs from the one already
+          // confirmed) makes this Send a re-dispatch: the timing restarts and the
+          // trainee must Acknowledge/Arrive again. The first Send is always one.
+          const countdownChanged = s.dispatchSavedSeconds !== s.dispatchConfirmedSeconds
+          const redispatch = !s.dispatch.armed || countdownChanged
+
           const dispatchDurationSeconds = s.dispatchSavedSeconds
-          const routeStartedAt = s.dispatch.armed
-            ? s.dispatch.startedAt
-            : startedAt
+          const routeReady = s.dispatchRouteSaved.status === 'ready'
+          const routeStartedAt = redispatch ? now : s.dispatch.startedAt
           const dispatchRouteConfirmed: DispatchRoute = {
             ...s.dispatchRouteSaved,
-            startedAt:
-              s.dispatchRouteSaved.status === 'ready'
-                ? routeStartedAt
-                : s.dispatchRouteSaved.startedAt,
-            durationSeconds:
-              s.dispatchRouteSaved.status === 'ready'
-                ? dispatchDurationSeconds
-                : s.dispatchRouteSaved.durationSeconds,
+            startedAt: routeReady ? routeStartedAt : s.dispatchRouteSaved.startedAt,
+            durationSeconds: routeReady
+              ? dispatchDurationSeconds
+              : s.dispatchRouteSaved.durationSeconds,
           }
           const base = {
             confirmed: { ...s.saved },
@@ -464,18 +465,27 @@ export const useMonitorStore = create<MonitorState>()(
             dispatchRouteConfirmed,
             dispatchConfirmedSeconds: s.dispatchSavedSeconds,
           }
-          // The first Send arms the dispatch gate: lock + countdown. Later Sends
-          // only push updated caller-info content and never re-arm or restart it.
-          if (s.dispatch.armed) return base
-          const durationMs = (s.dispatchMinutes * 60 + s.dispatchSeconds) * 1000
+          // Later Sends that keep the same countdown only push updated content —
+          // the armed gate, its countdown, and any Acknowledge/Arrival are left
+          // intact and the route ETA keeps ticking from its original start.
+          if (!redispatch) return base
+
+          // First arm reads the not-yet-saved draft countdown; a re-dispatch uses
+          // the saved countdown (the change that triggered the restart), so the
+          // gate and the map ETA stay on the same clock.
+          const durationMs = s.dispatch.armed
+            ? dispatchDurationSeconds * 1000
+            : (s.dispatchMinutes * 60 + s.dispatchSeconds) * 1000
           return {
             ...base,
             dispatch: {
               ...s.dispatch,
               runId: nanoid(),
               armed: true,
-              startedAt,
-              countdownEndsAt: startedAt + durationMs,
+              startedAt: now,
+              countdownEndsAt: now + durationMs,
+              acknowledgedAt: null,
+              arrivedAt: null,
             },
           }
         }),

@@ -222,9 +222,59 @@ describe('monitorStore', () => {
     const { dispatch, dispatchRouteConfirmed } = useMonitorStore.getState()
     expect(dispatchRouteConfirmed.durationSeconds).toBe(480)
     expect(dispatchRouteConfirmed.startedAt).toBe(1_000_000)
-    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 300_000)
+    // The changed countdown re-dispatches, so the gate restarts on the new
+    // duration rather than staying frozen at the first arm.
+    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 480_000)
     expect(useMonitorStore.getState().dispatchSavedSeconds).toBe(480)
     expect(useMonitorStore.getState().dispatchConfirmedSeconds).toBe(480)
+  })
+
+  it('a changed countdown re-dispatches: restarts the gate and clears acknowledge/arrival', () => {
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    const firstRunId = useMonitorStore.getState().dispatch.runId
+    useMonitorStore.getState().acknowledgeCall('14:05:11')
+    expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBe('14:05:11')
+
+    // Instructor saves a new countdown and re-sends from a later wall-clock time.
+    nowSpy.mockReturnValue(1_500_000)
+    useMonitorStore.getState().setDispatchMinutes(8)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    const { dispatch } = useMonitorStore.getState()
+    expect(dispatch.startedAt).toBe(1_500_000)
+    expect(dispatch.countdownEndsAt).toBe(1_500_000 + 480_000)
+    expect(dispatch.acknowledgedAt).toBeNull()
+    expect(dispatch.arrivedAt).toBeNull()
+    expect(dispatch.runId).not.toBe(firstRunId)
+  })
+
+  it('a later send with the same countdown keeps the gate and acknowledge/arrival', () => {
+    const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    const firstRunId = useMonitorStore.getState().dispatch.runId
+    useMonitorStore.getState().acknowledgeCall('14:05:11')
+
+    // Push new caller-info content (a different field) without touching the countdown.
+    nowSpy.mockReturnValue(1_500_000)
+    useMonitorStore.getState().setDispatchRouteDraft({
+      ...DEFAULT_DISPATCH_ROUTE,
+      destinationAddress: '200 Sainte-Anne Street',
+    })
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    const { dispatch } = useMonitorStore.getState()
+    expect(dispatch.startedAt).toBe(1_000_000)
+    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 300_000)
+    expect(dispatch.acknowledgedAt).toBe('14:05:11')
+    expect(dispatch.runId).toBe(firstRunId)
   })
 
   it('numeric vitals stay inactive until a vitals edit is saved and sent', () => {

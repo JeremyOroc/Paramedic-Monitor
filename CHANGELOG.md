@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-06-18] [instructor] - Re-dispatch on changed countdown
+
+- A Send carrying a changed (saved) dispatch countdown now re-dispatches instead
+  of only updating content: the gate countdown and the map ETA both restart from
+  that send on the new duration, and the trainee's Acknowledge/Arrival are
+  cleared so the run must be re-acknowledged.
+- Fixes the map ETA appearing frozen (or jumping straight to "Arrived") after a
+  re-send, which happened because the route `startedAt` stayed pinned to the
+  first arm. A Send that keeps the same countdown still only updates content and
+  leaves the running gate/ETA untouched.
+- Requirement change recorded in `PLAN.md`; store + new resend tests added.
+
 ## [2026-06-18] [monitor] - Enable iPad map interaction
 
 - Enabled drag, wheel, double-click, box, keyboard, and zoom-control interaction on the caller-info iPad map.
