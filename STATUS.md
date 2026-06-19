@@ -171,6 +171,7 @@
   - [x] Full-page caller info keeps an iPad-oriented 4:3 frame and mimics the reference assignment dashboard layout
   - [x] Assignment iPad location area now shows a route map: admin Caller Info has Geoapify address autocomplete, John Abbott College as default start, OSRM route lookup, countdown-driven route progress, and a real-time moving unit marker
   - [x] Caller-info iPad map supports user pan/zoom controls and preserves the user's viewport while the moving unit marker updates
+  - [x] Map has a "Track unit" toggle: default route overview vs. follow mode that keeps the moving unit centered and zoomed in close; toggling back refits the route
   - [x] Dispatch countdown changes after the initial route Send follow strict Save -> Send: editing re-enables Save, Save re-enables Send
   - [x] A Send carrying a changed (saved) countdown re-dispatches: it restarts the gate countdown and the map ETA from that send and clears the trainee's Acknowledge/Arrival; a Send that keeps the same countdown only updates content and leaves the gate/ETA running
 - [x] **Disconnected startup vitals/graphs — COMPLETE:**

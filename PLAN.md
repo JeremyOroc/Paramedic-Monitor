@@ -436,7 +436,10 @@ button is inert until a drill gate is satisfied.
   Trainees can interact with the map directly: pan, wheel/pinch/double-click
   zoom, keyboard zoom, and use the map zoom controls. The map fits the route
   when the route changes, but the moving unit marker does not continually reset
-  the viewport while the user is inspecting the map.
+  the viewport while the user is inspecting the map. A "Track unit" toggle button
+  on the map switches between two camera modes: the default route **overview**,
+  and **follow** mode, which keeps the moving unit centered and zoomed in close.
+  Toggling back to overview refits the whole route.
   Later Sends that keep the same countdown update the confirmed route content
   while the route ETA keeps ticking from its original start. A Send with a
   changed (saved) countdown re-dispatches instead: the route `startedAt` and the

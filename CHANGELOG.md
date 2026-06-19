@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-06-18] [monitor] - Add map unit-tracking toggle
+
+- Added a "Track unit" toggle button to the dispatch route map. Default is the
+  route overview; toggling switches to follow mode, which keeps the moving unit
+  centered and zoomed in close and updates each tick. Toggling back refits the
+  whole route.
+- Added DispatchRouteMap component tests (Leaflet mocked) covering the default
+  overview, the follow-mode camera, the return-to-overview refit, and the toggle
+  staying hidden until a route is ready.
+
 ## [2026-06-18] [instructor] - Re-dispatch on changed countdown
 
 - A Send carrying a changed (saved) dispatch countdown now re-dispatches instead

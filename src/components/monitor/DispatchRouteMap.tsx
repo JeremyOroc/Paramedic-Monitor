@@ -9,11 +9,15 @@ import {
   getPointAlongRoute,
   getRouteProgress,
 } from '@/lib/dispatchRoute'
+import { cn } from '@/lib/utils'
 import type { DispatchRoute, LatLng } from '@/types/dispatchRoute'
 
 type DispatchRouteMapProps = {
   route: DispatchRoute
 }
+
+// Zoom used when the camera follows the moving unit up close.
+const FOLLOW_ZOOM = 16
 
 function markerIcon(L: typeof Leaflet, kind: 'origin' | 'destination' | 'unit') {
   return L.divIcon({
@@ -38,6 +42,17 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
   const fittedRouteKeyRef = useRef('')
   const [ready, setReady] = useState(false)
   const [now, setNow] = useState(() => Date.now())
+  // 'overview' fits the whole route (default); 'follow' tracks the unit up close.
+  const [trackMode, setTrackMode] = useState<'overview' | 'follow'>('overview')
+
+  const toggleTrackMode = () => {
+    setTrackMode((mode) => {
+      const next = mode === 'follow' ? 'overview' : 'follow'
+      // Returning to overview must refit the route even if it has not changed.
+      if (next === 'overview') fittedRouteKeyRef.current = ''
+      return next
+    })
+  }
 
   useEffect(() => {
     let disposed = false
@@ -158,13 +173,17 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
       }).addTo(markerLayer)
     }
 
-    if (fittedRouteKeyRef.current !== routeKey) {
+    if (trackMode === 'follow' && unitPosition) {
+      // Keep the moving unit centered and zoomed in; this overrides any manual
+      // pan/zoom on the next tick, which is the point of tracking mode.
+      map.setView([unitPosition.lat, unitPosition.lng], FOLLOW_ZOOM, { animate: true })
+    } else if (fittedRouteKeyRef.current !== routeKey) {
       const bounds = L.latLngBounds(points.map((point) => [point.lat, point.lng]))
       map.fitBounds(bounds, { padding: [18, 18], maxZoom: 15 })
       fittedRouteKeyRef.current = routeKey
     }
     window.setTimeout(() => map.invalidateSize(), 0)
-  }, [ready, route, unitPosition])
+  }, [ready, route, unitPosition, trackMode])
 
   const statusText =
     route.status === 'loading'
@@ -179,6 +198,24 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
     <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-neutral-700 bg-dispatch-panel-soft">
       <div className="relative min-h-0 flex-1 bg-black">
         <div ref={containerRef} data-testid="dispatch-route-map" className="h-full w-full" />
+        {route.status === 'ready' && (
+          <button
+            type="button"
+            onClick={toggleTrackMode}
+            aria-label="Toggle unit tracking"
+            aria-pressed={trackMode === 'follow'}
+            data-testid="map-track-toggle"
+            className={cn(
+              'absolute right-2 top-2 z-[1000] rounded border px-2 py-1',
+              'font-mono text-[10px] font-black uppercase tracking-[0.12em]',
+              trackMode === 'follow'
+                ? 'border-dispatch-blue bg-dispatch-blue text-black'
+                : 'border-neutral-600 bg-black/70 text-neutral-200 hover:text-white',
+            )}
+          >
+            {trackMode === 'follow' ? 'Tracking' : 'Track unit'}
+          </button>
+        )}
         {route.status !== 'ready' && (
           <div className="absolute inset-0 grid place-items-center bg-black/72 px-4 text-center">
             <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-300">
