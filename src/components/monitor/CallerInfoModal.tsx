@@ -35,6 +35,7 @@ type CallerInfoModalProps = {
   /** Whether the "Go to Monitor" action is currently allowed (gate satisfied). */
   canEnterMonitor?: boolean
   route?: DispatchRoute
+  alertFlash?: boolean
 }
 
 const CALLER_EVENT_BUTTONS: {
@@ -71,62 +72,50 @@ type AssignmentIconName =
 
 const ASSIGNMENT_FIELD_META: Partial<Record<CallerInfoField, {
   label: string
-  icon: AssignmentIconName
   colorClassName: string
 }>> = {
   callNumber: {
     label: 'Call #',
-    icon: 'note',
     colorClassName: 'text-dispatch-blue',
   },
   priority: {
     label: 'Priority',
-    icon: 'bell',
     colorClassName: 'text-dispatch-red',
   },
   mpdsCode: {
     label: 'MPDS Code',
-    icon: 'medical',
     colorClassName: 'text-dispatch-yellow',
   },
   address: {
     label: 'Address',
-    icon: 'location',
     colorClassName: 'text-dispatch-blue',
   },
   problem: {
     label: 'Nature of Call',
-    icon: 'medical',
     colorClassName: 'text-dispatch-yellow',
   },
   time: {
     label: 'Call Received',
-    icon: 'clock',
     colorClassName: 'text-dispatch-green',
   },
   information: {
     label: 'Caller Info',
-    icon: 'caller',
     colorClassName: 'text-dispatch-purple',
   },
   update: {
     label: 'Updates',
-    icon: 'patient',
     colorClassName: 'text-dispatch-blue',
   },
   extra1: {
     label: 'Notes',
-    icon: 'note',
     colorClassName: 'text-dispatch-yellow',
   },
   extra2: {
     label: 'Hazards / Alerts',
-    icon: 'alert',
     colorClassName: 'text-dispatch-red',
   },
   extra3: {
     label: 'Additional Info',
-    icon: 'note',
     colorClassName: 'text-dispatch-orange',
   },
 }
@@ -145,6 +134,7 @@ export function CallerInfoModal({
   onEnterMonitor,
   canEnterMonitor = false,
   route,
+  alertFlash = false,
 }: CallerInfoModalProps) {
   if (!open) return null
 
@@ -219,6 +209,13 @@ export function CallerInfoModal({
               onEnterMonitor={onEnterMonitor}
               canEnterMonitor={canEnterMonitor}
               route={route}
+            />
+          )}
+          {alertFlash && (
+            <div
+              aria-hidden="true"
+              data-testid="caller-info-alert-flash"
+              className="pointer-events-none absolute inset-0 z-40 bg-cyan-bp/20 caller-info-alert-flash"
             />
           )}
         </div>
@@ -358,10 +355,7 @@ function AssignmentCallerInfoContent({
         </div>
       </header>
       <div className="grid shrink-0 grid-cols-[1fr_minmax(190px,0.78fr)] border-b border-neutral-700">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-dispatch-panel-soft text-dispatch-orange">
-            <AssignmentIcon name="bell" />
-          </span>
+        <div className="flex items-center px-4 py-3" data-testid="assignment-title">
           <h2 className="text-xl font-black uppercase leading-none tracking-normal">
             New Assignment
           </h2>
@@ -404,17 +398,8 @@ function AssignmentCallerInfoContent({
                   <li
                     key={field}
                     data-testid={`assignment-info-${field}`}
-                    className="grid min-h-[34px] grid-cols-[32px_1fr] gap-2 border-b border-neutral-800 pb-1 last:border-b-0"
+                    className="grid min-h-[34px] grid-cols-[1fr] border-b border-neutral-800 pb-1 last:border-b-0"
                   >
-                    <span
-                      className={cn(
-                        'mt-0.5 grid h-6 w-6 place-items-center',
-                        meta?.colorClassName ?? 'text-dispatch-blue',
-                      )}
-                      aria-hidden="true"
-                    >
-                      <AssignmentIcon name={meta?.icon ?? 'note'} />
-                    </span>
                     <span className="min-w-0">
                       <span
                         className={cn(

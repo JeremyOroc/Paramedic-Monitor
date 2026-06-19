@@ -1,12 +1,14 @@
 const POOL_SIZE = 5
 const BUTTON_CLICK_SRC = '/audio/button_click.mp3'
 const ALARM_SRC = '/audio/alarm.mp3'
+const CALLER_INFO_ALERT_SRC = '/audio/caller_info_alarm.mp4'
 const CHARGE_BEEP_SRC = '/audio/charge_beep.mp3'
 const SHOCK_READY_SRC = '/audio/shock_ready_beep.mp3'
 
 let _pool: HTMLAudioElement[] = []
 let _poolIndex = 0
 let _alarm: HTMLAudioElement | null = null
+let _callerInfoAlert: HTMLAudioElement | null = null
 let _chargeBeep: HTMLAudioElement | null = null
 let _shockReadyBeep: HTMLAudioElement | null = null
 let _muted = false
@@ -15,6 +17,7 @@ export function setAudioMuted(muted: boolean): void {
   _muted = muted
   if (muted) {
     pauseAlarm()
+    pauseCallerInfoAlert()
     pauseChargeBeep()
     pauseShockReadyBeep()
     stopCprAudioSequence()
@@ -34,6 +37,9 @@ if (typeof window !== 'undefined') {
   _alarm = new Audio(ALARM_SRC)
   _alarm.preload = 'auto'
   _alarm.loop = true
+
+  _callerInfoAlert = new Audio(CALLER_INFO_ALERT_SRC)
+  _callerInfoAlert.preload = 'auto'
 
   _chargeBeep = new Audio(CHARGE_BEEP_SRC)
   _chargeBeep.preload = 'auto'
@@ -84,6 +90,20 @@ export function pauseAlarm(): void {
   if (!_alarm) return
   _alarm.pause()
   _alarm.currentTime = 0
+}
+
+export function playCallerInfoAlert(): void {
+  if (!_callerInfoAlert) return
+  if (_muted) return
+  _callerInfoAlert.pause()
+  _callerInfoAlert.currentTime = 0
+  _callerInfoAlert.play().catch(() => {})
+}
+
+export function pauseCallerInfoAlert(): void {
+  if (!_callerInfoAlert) return
+  _callerInfoAlert.pause()
+  _callerInfoAlert.currentTime = 0
 }
 
 export function playChargeBeep(): void {

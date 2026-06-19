@@ -1,6 +1,35 @@
 import { describe, expect, it } from 'vitest'
 
-import { parsePatientPhysicalAutoSort } from '../patientPhysicalAutoSort'
+import {
+  parsePatientPhysicalAutoSort,
+  parseTimedPatientPhysicalAutoSort,
+} from '../patientPhysicalAutoSort'
+
+const TIMED_PHYSICAL_SAMPLE = [
+  'Treated (+5 min)',
+  'Pulse: 106 bpm, Regular, Moderate',
+  'SpO2: 98% on O2',
+  'BP: 112/70 mmHg',
+  'Respirations: 22 breaths/min, Regular, Unlabored',
+  'Temp: 36.3C',
+  'EtCO2: 36 mmHg',
+  '',
+  'Treated (+10 min)',
+  'Pulse: 100 bpm, Regular, Moderate',
+  'SpO2: 99% on O2',
+  'BP: 118/74 mmHg',
+  'Respirations: 20 breaths/min, Regular, Unlabored',
+  'Temp: 36.4C',
+  'EtCO2: 38 mmHg',
+  '',
+  'Untreated (+15 min)',
+  'Pulse: 136 bpm, Regular, Thready',
+  'SpO2: 92% on room air',
+  'BP: 76/46 mmHg',
+  'Respirations: 30 breaths/min, Irregular, Weak respiratory effort',
+  'Temp: 36.0C',
+  'EtCO2: 26 mmHg',
+].join('\n')
 
 describe('parsePatientPhysicalAutoSort', () => {
   it('parses the provided physical assessment sections into body-region findings', () => {
@@ -317,5 +346,44 @@ describe('parsePatientPhysicalAutoSort', () => {
         ['Respiratory', 'Patient appears uncomfortable', 'Pulse', 'Assessment completed'].join('\n'),
       ),
     ).toEqual({})
+  })
+
+  it('parses T1 pulse and respiratory findings from timed vitals', () => {
+    expect(parseTimedPatientPhysicalAutoSort(TIMED_PHYSICAL_SAMPLE, 'T1')).toEqual({
+      'pulse-rate': '106 bpm',
+      'pulse-rhythm': 'Regular',
+      'pulse-strength': 'Moderate',
+      'respiratory-rate': '22 breaths/min',
+      'respiratory-rhythm': 'Regular',
+      'respiratory-strength': 'Unlabored',
+    })
+  })
+
+  it('parses U3 pulse and respiratory findings from timed vitals', () => {
+    expect(parseTimedPatientPhysicalAutoSort(TIMED_PHYSICAL_SAMPLE, 'U3')).toEqual({
+      'pulse-rate': '136 bpm',
+      'pulse-rhythm': 'Regular',
+      'pulse-strength': 'Thready',
+      'respiratory-rate': '30 breaths/min',
+      'respiratory-rhythm': 'Irregular',
+      'respiratory-strength': 'Weak respiratory effort',
+    })
+  })
+
+  it('returns no Patient Physical findings for a missing timed section', () => {
+    expect(parseTimedPatientPhysicalAutoSort(TIMED_PHYSICAL_SAMPLE, 'T3')).toEqual({})
+  })
+
+  it('updates only present timed Patient Physical icon fields', () => {
+    expect(
+      parseTimedPatientPhysicalAutoSort(
+        ['Treated (+5 min)', 'Pulse: 88 bpm, Irregular, Weak'].join('\n'),
+        'T1',
+      ),
+    ).toEqual({
+      'pulse-rate': '88 bpm',
+      'pulse-rhythm': 'Irregular',
+      'pulse-strength': 'Weak',
+    })
   })
 })

@@ -115,6 +115,15 @@ describe('AdminPage', () => {
     expect(state.draft.bp_sys).toBe(96)
     expect(state.draft.bp_dia).toBe(58)
     expect(state.draft.etco2).toBe(62)
+    expect(state.draftVitalActive).toMatchObject({
+      hr: false,
+      spo2: false,
+      bp_sys: false,
+      bp_dia: false,
+      etco2: false,
+    })
+    expect(state.draft.spo2_waveform).toBe('off')
+    expect(state.draft.etco2_waveform).toBe('off')
     expect(state.callerInfoConfirmed.address).toBe('')
     expect(state.confirmed.hr).toBe(0)
 
@@ -137,6 +146,136 @@ describe('AdminPage', () => {
     )
     expect(screen.getByRole('button', { name: 'Scene/Environment' })).toHaveClass(
       'border-pending-amber',
+    )
+  })
+
+  it('keeps auto-sorted vitals off until manually toggled on and sent', async () => {
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
+      target: {
+        value: [
+          '### Vitals (Origin)',
+          'HR: 54 bpm',
+          'SpO2: 78% on room air',
+          'BP: 96/58 mmHg',
+          'EtCO2: 62 mmHg',
+        ].join('\n'),
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    let state = useMonitorStore.getState()
+    expect(state.confirmed.hr).toBe(54)
+    expect(state.confirmed.spo2).toBe(78)
+    expect(state.confirmed.etco2).toBe(62)
+    expect(state.confirmedVitalsActive).toBe(false)
+    expect(state.confirmedVitalActive.hr).toBe(false)
+    expect(state.confirmedVitalActive.spo2).toBe(false)
+    expect(state.confirmedVitalActive.etco2).toBe(false)
+    expect(state.confirmed.spo2_waveform).toBe('off')
+    expect(state.confirmed.etco2_waveform).toBe('off')
+
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'FC off' }))
+    await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
+    await user.click(screen.getByRole('button', { name: 'EtCO2 off' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    state = useMonitorStore.getState()
+    expect(state.confirmedVitalActive.hr).toBe(true)
+    expect(state.confirmedVitalActive.spo2).toBe(true)
+    expect(state.confirmedVitalActive.etco2).toBe(true)
+    expect(state.confirmed.hr).toBe(54)
+    expect(state.confirmed.spo2).toBe(78)
+    expect(state.confirmed.etco2).toBe(62)
+    expect(state.confirmed.spo2_waveform).toBe('normal')
+    expect(state.confirmed.etco2_waveform).toBe('normal')
+  })
+
+  it('updates Patient Physical pulse and respiratory findings from timed vitals buttons', async () => {
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
+      target: {
+        value: [
+          'Abdomen',
+          'Soft',
+          '',
+          'Treated (+5 min)',
+          'Pulse: 106 bpm, Regular, Moderate',
+          'SpO2: 98% on O2',
+          'BP: 112/70 mmHg',
+          'Respirations: 22 breaths/min, Regular, Unlabored',
+          'EtCO2: 36 mmHg',
+          '',
+          'Untreated (+15 min)',
+          'Pulse: 136 bpm, Regular, Thready',
+          'SpO2: 92% on room air',
+          'BP: 76/46 mmHg',
+          'Respirations: 30 breaths/min, Irregular, Weak respiratory effort',
+          'EtCO2: 26 mmHg',
+        ].join('\n'),
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
+    const abdomen = screen.getByRole('button', { name: 'Front abdomen' })
+    await user.click(abdomen)
+    expect(abdomen).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'T1' }))
+
+    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
+    const pulse = screen.getByRole('button', { name: 'Pulse' })
+    const respiratory = screen.getByRole('button', { name: 'Respiratory' })
+    expect(pulse).toHaveClass('border-pending-amber')
+    expect(respiratory).toHaveClass('border-pending-amber')
+    expect(abdomen).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(pulse)
+    expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
+      'Rate: 106 bpm',
+    )
+    expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
+      'Strength: Moderate',
+    )
+    await user.click(respiratory)
+    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
+      'Rate: 22 breaths/min',
+    )
+    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
+      'Strength: Unlabored',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'U3' }))
+    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
+
+    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
+      'Rate: 30 breaths/min',
+    )
+    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
+      'Strength: Weak respiratory effort',
+    )
+    await user.click(screen.getByRole('button', { name: 'Pulse' }))
+    expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
+      'Rate: 136 bpm',
+    )
+    expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
+      'Strength: Thready',
+    )
+    expect(screen.getByRole('button', { name: 'Front abdomen' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
     )
   })
 

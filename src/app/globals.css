@@ -85,6 +85,19 @@ body {
   animation: vital-alarm-flash 1.9s ease-in-out infinite;
 }
 
+@keyframes caller-info-alert-flash {
+  0%, 100% {
+    opacity: 0;
+  }
+  18%, 32% {
+    opacity: 0.28;
+  }
+}
+
+.caller-info-alert-flash {
+  animation: caller-info-alert-flash 0.58s ease-in-out 4;
+}
+
 .etco2-calibration-progress {
   animation: etco2-calibration-progress 10s linear forwards;
   left: 0%;

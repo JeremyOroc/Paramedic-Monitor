@@ -34,7 +34,9 @@ import { useNibpReading } from '@/hooks/useNibpReading'
 import { formatEstTime } from '@/lib/estTime'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
-import { setAudioMuted } from '@/lib/audio'
+import { playCallerInfoAlert, setAudioMuted } from '@/lib/audio'
+
+const CALLER_INFO_ALERT_FLASH_MS = 2320
 
 function MonitorPage() {
   const { date, time } = useMonitorClock()
@@ -61,6 +63,9 @@ function MonitorPage() {
   const cancelEtco2Calibration = useMonitorStore((s) => s.cancelEtco2Calibration)
   const completeEtco2Calibration = useMonitorStore((s) => s.completeEtco2Calibration)
   const etco2LoadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const callerInfoAlertRunIdRef = useRef<string | null>(null)
+  const callerInfoAlertFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [callerInfoAlertFlash, setCallerInfoAlertFlash] = useState(false)
   const etco2Loading = etco2CalibrationStatus === 'calibrating'
   const etco2Loaded = etco2CalibrationStatus === 'calibrated'
 
@@ -152,6 +157,30 @@ function MonitorPage() {
   useEffect(() => {
     return clearEtco2LoadTimer
   }, [clearEtco2LoadTimer])
+
+  useEffect(() => {
+    return () => {
+      if (callerInfoAlertFlashTimerRef.current) {
+        clearTimeout(callerInfoAlertFlashTimerRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!showDispatchCallerPage || dispatchState.runId === '') return
+    if (callerInfoAlertRunIdRef.current === dispatchState.runId) return
+
+    callerInfoAlertRunIdRef.current = dispatchState.runId
+    playCallerInfoAlert()
+    setCallerInfoAlertFlash(true)
+    if (callerInfoAlertFlashTimerRef.current) {
+      clearTimeout(callerInfoAlertFlashTimerRef.current)
+    }
+    callerInfoAlertFlashTimerRef.current = setTimeout(() => {
+      callerInfoAlertFlashTimerRef.current = null
+      setCallerInfoAlertFlash(false)
+    }, CALLER_INFO_ALERT_FLASH_MS)
+  }, [dispatchState.runId, showDispatchCallerPage])
 
   useEffect(() => {
     clearEtco2LoadTimer()
@@ -408,6 +437,7 @@ function MonitorPage() {
         onEnterMonitor={enterCurrentDispatch}
         onBack={gateSatisfied ? enterCurrentDispatch : undefined}
         route={dispatchRouteConfirmed}
+        alertFlash={callerInfoAlertFlash}
       />
     )
   }
