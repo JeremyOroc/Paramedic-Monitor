@@ -56,10 +56,12 @@
   - [x] ECG and SpO2 graph erase/update sweep lines are synchronized to the same wall-clock phase
   - [x] EtCO2 number and graph stay hidden until the monitor CO2 soft key completes the 10-second calibration
   - [x] Admin Vitals shows a pink EtCO2 indicator when calibration is complete
+  - [x] Monitor reset returns the selected secondary graph slot to SpO2 after EtCO2 use
   - [x] Bottom-panel-hidden expanded mode shows both SpO2 and EtCO2 rows, with Off rows disconnected
 - [x] **Admin CPR ECG override — COMPLETE:**
   - [x] Admin Vitals includes a CPR toggle in the ECG column
-  - [x] CPR override immediately displays FC 120 and replaces the ECG graph with the supplied compression video
+  - [x] CPR override immediately displays FC 120 and replaces the ECG graph with a generated green canvas compression waveform
+  - [x] CPR On/Off switching preserves the existing ECG canvas so old trace history remains behind the black sweep line
   - [x] Turning CPR off restores the previously saved/sent FC and ECG rhythm graph
 - [x] **Admin patient information checklist — COMPLETE:**
   - [x] Added a third admin tab named Patient Information
@@ -182,10 +184,24 @@
   - [x] Monitor SpO2 uses a slightly smaller value font, with a smaller `SpO2 OFF` disconnected display for fit
   - [x] Admin graph controls now sit beside their matching vital rows: ECG beside FC, SpO2 beside SpO2, and EtCO2 beside EtCO2
   - [x] ECG, SpO2, and EtCO2 graph connection state reuses the same Off/On toggle treatment as numeric vitals
-  - [x] ECG rhythm selection uses a compact `Rhythm Options` picker with category buttons first and only the selected category's rhythm options shown underneath
+  - [x] ECG rhythm selection uses a compact picker button that shows the selected rhythm label and removes the extra `Rhythm:` display pill
+  - [x] Replaced the completed `NSR` / regular sinus 12-lead capture strip with the supplied ECG image
+  - [x] Added `1st Degree` under the admin ECG `Heart Block` category with long-PR live ECG and 12-lead morphology
+  - [x] Replaced the completed `1st Degree` 12-lead capture strip with the supplied ECG image
+  - [x] Added `2nd Degree Type 1` under the admin ECG `Heart Block` category with Wenckebach live ECG and 12-lead morphology
+  - [x] Replaced the completed `2nd Degree Type 1` 12-lead capture strip with the supplied ECG image
+  - [x] Added `2nd Degree Type 2` under the admin ECG `Heart Block` category with Mobitz II live ECG and 12-lead morphology
+  - [x] Replaced the completed `2nd Degree Type 2` 12-lead capture strip with the supplied ECG image
+  - [x] Added `3rd Degree` under the admin ECG `Heart Block` category with complete heart block live ECG and 12-lead morphology
+  - [x] Replaced the completed `3rd Degree` 12-lead capture strip with the supplied ECG image and reshaped its live ECG escape complexes
+  - [x] Rebuilt VF with a dedicated irregular fibrillation generator instead of the torsades-style twisting envelope
+  - [x] Completed VF 12-lead captures show the supplied VFib strip image
+  - [x] Rebuilt VT as a monomorphic tachycardia waveform with tall repeated complexes, sloped descent, and rounded troughs
   - [x] Added `Anterior MI` and `Inferior MI` under the admin ECG `MI` category with canvas-rendered monitor and 12-lead morphology
   - [x] Rebuilt the live Anterior MI and Inferior MI ECG monitor strips with clean reference-strip templates to better match the supplied reference videos
   - [x] Rounded and widened the live Anterior MI ECG T wave to better match the supplied example
+  - [x] Moved the live Anterior MI ECG P wave closer to the QRS complex
+  - [x] Moved the live Inferior MI ECG P wave closer to the QRS and reshaped it with a slightly widened QRS, a raised scooped ST segment, plus a rounded slow T-wave ramp and softened peak at about half the QRS height
   - [x] Completed Anterior MI and Inferior MI 12-lead captures show their supplied strip images while other rhythms keep the default printout
   - [x] Vital alarms stay inactive for Off startup/reset vitals until each specific vital is turned On through Save → Send; numeric `0` is treated as a real alarmable value when On
   - [x] ECG, SpO2, and EtCO2 graph channels start as spaced dashed disconnected traces; switching the graph toggle On makes that graph live after Save → Send

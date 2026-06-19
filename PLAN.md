@@ -287,9 +287,10 @@ paramedic-monitor/
 snapshot of the current state. Confirmed behavior:
 - Press Capture → freeze current rhythm/HR → centered "Acquiring 12-Lead" card with a green
   progress bar that fills over **~4s** (`ACQUIRE_MS`).
-- On completion a **static ECG-paper image takes over the entire monitor display**. It uses the
-  supplied 12-lead capture reference asset at `/public/images/twelve-lead-capture.svg` instead of
-  drawing a generated canvas printout.
+- On completion a **static ECG-paper image takes over the entire monitor display**. It uses a
+  rhythm-specific ECG-paper asset when one is available, including regular sinus at
+  `/images/regular-sinus-strip.png`; rhythms without a supplied strip fall back to
+  `/public/images/twelve-lead-capture.svg` instead of drawing a generated canvas printout.
 - **During capture only Back works** — all other physical controls are inert (`captureLock` on
   `DeviceShell`). Back dismisses (result) or cancels (acquiring), returning to the live 12-lead.
 - **Transient** — nothing is persisted; every press is a fresh capture.
@@ -556,21 +557,52 @@ button is inert until a drill gate is satisfied.
   buttons use an explicit two-row, three-column grid and fill their entire
   outlined grid-cell rectangles for easier clicking. The ECG selector itself
   stays compact beside FC and does not stretch to the timed vitals button height.
-- ECG rhythm selection stays compact by default, showing the current rhythm and a
-  `Rhythm Options` button. Opening the picker shows category buttons for `NSR`,
+- ECG rhythm selection stays compact by default with one picker button: it shows
+  `Rhythm Options` while ECG is Off and the selected rhythm label once a rhythm
+  is chosen. Opening the picker shows category buttons for `NSR`,
   `Cardiac Arrest`, `Heart Block`, `Bundle Branch Block`, and `MI`, then shows
   only the selected category's options underneath using the same button style as
   SpO2 and EtCO2. Current options are `NSR` under NSR,
   VF/VT/Asystole/Torsades under Cardiac Arrest, and `Anterior MI` / `Inferior MI`
-  under MI; Heart Block and Bundle Branch Block show empty placeholders until
-  rhythms are added.
+  under MI; Heart Block includes `1st Degree`, `2nd Degree Type 1`,
+  `2nd Degree Type 2`, and `3rd Degree`, and Bundle Branch Block shows an empty
+  placeholder until rhythms are added.
+- `NSR` / regular sinus completed 12-lead captures use the supplied
+  `/images/regular-sinus-strip.png`.
+- `1st Degree` uses a long-PR first-degree AV block rhythm with a visible P wave
+  well before a narrow QRS complex. The live 12-lead grid uses lead-specific
+  long-PR morphology, and completed 12-lead captures use
+  the supplied `/images/first-degree-block-strip.png`.
+- `2nd Degree Type 1` uses a Wenckebach rhythm with progressively lengthening
+  PR intervals, three conducted beats, and a dropped P wave without a QRS before
+  the pause. Completed 12-lead captures use
+  the supplied `/images/second-degree-type-1-strip.png`.
+- `2nd Degree Type 2` uses a Mobitz II rhythm with fixed PR intervals on
+  conducted beats and an intermittent dropped P wave without QRS before the
+  pause. Completed 12-lead captures use the supplied
+  `/images/second-degree-type-2-strip.png`.
+- `3rd Degree` uses a complete heart block rhythm with independent marching P
+  waves and slower, wider ventricular escape QRS complexes, with no stable PR
+  relationship. Completed 12-lead captures use the supplied
+  `/images/third-degree-block-strip.png`.
+- `VF` uses a dedicated reference-style fibrillation generator with irregular
+  midline oscillations, uneven amplitude and spacing, and variant traces from
+  `getEcgRhythm('vf')`; it no longer reuses the torsades twisting envelope.
+  Completed VF 12-lead captures use the supplied `/images/vfib-12-lead-strip.png`
+  image instead of the default printout.
+- `VT` uses a monomorphic tachycardia reference shape with repeated tall
+  complexes, steep upstrokes, sloped descents, and rounded negative troughs.
 - `Anterior MI` and `Inferior MI` are canvas-rendered rhythms. The main monitor
   ECG and live 12-lead grid use generated MI morphology, while completed MI
   12-lead captures use the matching `/images/anterior-mi-strip.jpg` or
   `/images/inferior-mi-strip.jpeg`; other rhythm captures continue using the
-  default printout image. The live Anterior MI monitor strip uses a clean
-  small-R/deeper-S reference template with a broad rounded T wave, while
-  Inferior MI uses a clean tall Lead II-style ST/T elevation reference template.
+default printout image. The live Anterior MI monitor strip uses a clean
+small-R/deeper-S reference template with the P wave placed closer to the QRS
+and a broad rounded T wave, while Inferior MI uses a clean tall Lead II-style
+ST/T elevation reference template with the P wave placed closer to the QRS and
+an explicit elevated ST segment without a post-QRS dip, a slightly widened QRS,
+an R-to-ST transition that drops into a raised scooped ST segment, and a
+rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 - ECG, SpO2, and EtCO2 graphs start/reset as spaced dashed disconnected traces.
   The graph connection state uses the same Off/On toggle treatment as numeric
   vitals instead of duplicate `Off` option buttons. Switching a graph On selects
@@ -593,15 +625,18 @@ button is inert until a drill gate is satisfied.
   selected secondary channel is Off while the other is On, no secondary row is
   shown; if both are Off, the selected channel shows a disconnected trace.
   Bottom-panel-hidden expanded mode shows both EtCO2 and SpO2 rows, with Off
-  rows disconnected.
+  rows disconnected. Monitor reset returns the normal-mode secondary selector
+  to SpO2, even if EtCO2 was selected or calibrated before reset.
 - ECG and SpO2 canvas waveform erase/update sweep lines share the same
   wall-clock phase so their black refresh bands stay aligned; EtCO2 keeps its
   slower independent capnography sweep.
 - The admin Vitals ECG column includes a CPR override toggle. When active, it
   immediately overrides the monitor FC display to 120 and replaces the ECG graph
-  with `/videos/compression-cpr.mov`; turning it off restores the normal saved
-  FC and ECG rhythm without changing the underlying draft/saved/confirmed
-  vitals.
+  with a generated green canvas compression waveform at 120/min; turning it off
+  restores the normal saved FC and ECG rhythm without changing the underlying
+  draft/saved/confirmed vitals. CPR/ECG waveform changes keep the same canvas
+  mounted, so the existing trace remains behind the black sweep line until it is
+  naturally erased.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
   vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,

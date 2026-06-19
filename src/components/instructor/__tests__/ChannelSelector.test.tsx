@@ -69,6 +69,7 @@ describe('specialized selector wrappers', () => {
       'aria-expanded',
       'false',
     )
+    expect(screen.queryByText(/Rhythm:/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'NSR' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Off' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'PEA' })).not.toBeInTheDocument()
@@ -104,7 +105,11 @@ describe('specialized selector wrappers', () => {
 
     await user.click(screen.getByRole('button', { name: 'Heart Block' }))
 
-    expect(screen.getByText('No rhythms yet')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '1st Degree' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2nd Degree Type 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2nd Degree Type 2' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '3rd Degree' })).toBeInTheDocument()
+    expect(screen.queryByText('No rhythms yet')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'VF' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'PEA' })).not.toBeInTheDocument()
   })
@@ -119,6 +124,10 @@ describe('specialized selector wrappers', () => {
 
     expect(useMonitorStore.getState().draft.rhythm).toBe('torsades')
     expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Torsades' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
     expect(screen.getByTestId('status-rhythm')).toHaveTextContent('-')
   })
 
@@ -132,7 +141,10 @@ describe('specialized selector wrappers', () => {
 
     expect(useMonitorStore.getState().draft.rhythm).toBe('anterior-mi')
     expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
-    expect(screen.getByText('Anterior MI')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Anterior MI' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
   })
 
   it('EcgRhythmSelector selects Inferior MI from the MI category', async () => {
@@ -145,7 +157,74 @@ describe('specialized selector wrappers', () => {
 
     expect(useMonitorStore.getState().draft.rhythm).toBe('inferior-mi')
     expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
-    expect(screen.getByText('Inferior MI')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Inferior MI' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+  })
+
+  it('EcgRhythmSelector selects 1st Degree from the Heart Block category', async () => {
+    const user = userEvent.setup()
+    render(<EcgRhythmSelector />)
+
+    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'Heart Block' }))
+    await user.click(screen.getByRole('button', { name: '1st Degree' }))
+
+    expect(useMonitorStore.getState().draft.rhythm).toBe('first-degree')
+    expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '1st Degree' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+  })
+
+  it('EcgRhythmSelector selects 2nd Degree Type 1 from the Heart Block category', async () => {
+    const user = userEvent.setup()
+    render(<EcgRhythmSelector />)
+
+    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'Heart Block' }))
+    await user.click(screen.getByRole('button', { name: '2nd Degree Type 1' }))
+
+    expect(useMonitorStore.getState().draft.rhythm).toBe('second-degree-type-1')
+    expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2nd Degree Type 1' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+  })
+
+  it('EcgRhythmSelector selects 2nd Degree Type 2 from the Heart Block category', async () => {
+    const user = userEvent.setup()
+    render(<EcgRhythmSelector />)
+
+    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'Heart Block' }))
+    await user.click(screen.getByRole('button', { name: '2nd Degree Type 2' }))
+
+    expect(useMonitorStore.getState().draft.rhythm).toBe('second-degree-type-2')
+    expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2nd Degree Type 2' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+  })
+
+  it('EcgRhythmSelector selects 3rd Degree from the Heart Block category', async () => {
+    const user = userEvent.setup()
+    render(<EcgRhythmSelector />)
+
+    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'Heart Block' }))
+    await user.click(screen.getByRole('button', { name: '3rd Degree' }))
+
+    expect(useMonitorStore.getState().draft.rhythm).toBe('third-degree')
+    expect(screen.queryByTestId('ecg-rhythm-options')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '3rd Degree' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
   })
 
   it('Spo2WaveformSelector renders as a toggle-only graph control', () => {

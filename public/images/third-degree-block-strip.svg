@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-label="Third degree heart block 12-lead strip">
+  <defs>
+    <pattern id="smallGrid" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M 8 0 L 0 0 0 8" fill="none" stroke="#f6c4c4" stroke-width="0.7"/>
+    </pattern>
+    <pattern id="bigGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="40" height="40" fill="url(#smallGrid)"/>
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e99696" stroke-width="1.2"/>
+    </pattern>
+    <symbol id="completeBlockGroup" viewBox="0 0 390 72">
+      <path d="M0 38 C16 38 26 38 36 38 C42 32 50 32 56 38 C78 38 92 38 104 38 C108 38 110 33 113 34 C117 53 120 8 126 11 C132 40 138 39 144 38 C154 38 162 31 170 31 C178 31 184 38 192 38 C202 38 212 38 222 38 C228 32 236 32 242 38 C278 38 298 38 318 38 C324 32 332 32 338 38 C358 38 374 38 390 38" fill="none" stroke="#1f2933" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M0 38 C18 38 32 38 46 38 C52 32 60 32 66 38 C104 38 126 38 148 38 C154 32 162 32 168 38 C206 38 224 38 242 38 C246 38 248 33 251 34 C255 53 258 8 264 11 C270 40 276 39 282 38 C292 38 300 31 308 31 C316 31 322 38 330 38 C350 38 370 38 390 38" fill="none" stroke="#1f2933" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity="0"/>
+    </symbol>
+    <symbol id="completeBlockRhythm" viewBox="0 0 560 72">
+      <path d="M0 38 C18 38 30 38 42 38 C48 32 56 32 62 38 C96 38 116 38 136 38 C140 38 142 33 145 34 C149 53 152 8 158 11 C164 40 170 39 176 38 C186 38 194 31 202 31 C210 31 216 38 224 38 C242 38 256 38 270 38 C276 32 284 32 290 38 C330 38 350 38 370 38 C376 32 384 32 390 38 C430 38 450 38 470 38 C474 38 476 33 479 34 C483 53 486 8 492 11 C498 40 504 39 510 38 C522 38 536 38 560 38" fill="none" stroke="#1f2933" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+  <rect width="1200" height="560" fill="#fff8f8"/>
+  <rect width="1200" height="560" fill="url(#bigGrid)"/>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111">
+    <text x="28" y="34">I</text>
+    <text x="328" y="34">aVR</text>
+    <text x="628" y="34">V1</text>
+    <text x="928" y="34">V4</text>
+    <text x="28" y="164">II</text>
+    <text x="328" y="164">aVL</text>
+    <text x="628" y="164">V2</text>
+    <text x="928" y="164">V5</text>
+    <text x="28" y="294">III</text>
+    <text x="328" y="294">aVF</text>
+    <text x="628" y="294">V3</text>
+    <text x="928" y="294">V6</text>
+    <text x="28" y="424">II</text>
+  </g>
+  <g opacity="0.95">
+    <g transform="translate(0 62)"><use href="#completeBlockGroup" x="28"/><use href="#completeBlockGroup" x="430"/><use href="#completeBlockGroup" x="832"/></g>
+    <g transform="translate(0 192) scale(1 1.08)"><use href="#completeBlockGroup" x="28"/><use href="#completeBlockGroup" x="430"/><use href="#completeBlockGroup" x="832"/></g>
+    <g transform="translate(0 322) scale(1 0.82)"><use href="#completeBlockGroup" x="28"/><use href="#completeBlockGroup" x="430"/><use href="#completeBlockGroup" x="832"/></g>
+    <g transform="translate(0 452) scale(1 1.05)"><use href="#completeBlockRhythm" x="28"/><use href="#completeBlockRhythm" x="600"/></g>
+  </g>
+</svg>

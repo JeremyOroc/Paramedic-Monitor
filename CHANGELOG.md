@@ -5,6 +5,135 @@
 
 ---
 
+## [2026-06-19] [instructor] - Clean up ECG rhythm selector display
+
+- Removed the separate `Rhythm:` display pill from the admin ECG selector.
+- The rhythm picker button now shows the selected rhythm label after a rhythm is chosen.
+- Updated ECG selector tests for the compact selected-rhythm button behavior.
+
+## [2026-06-19] [monitor] - Reset secondary graph selector to SpO2
+
+- Monitor reset now returns the visible secondary graph slot to SpO2.
+- EtCO2 calibration timers are cleared on reset, and the CO2 soft key can start calibration again afterward.
+- Added controller and monitor-page coverage for the reset behavior.
+
+## [2026-06-19] [monitor] - Remake CPR compression graph as canvas
+
+- Replaced the CPR override ECG video with a generated green canvas compression waveform.
+- CPR override still displays FC 120 and restores the previous FC/rhythm when turned off.
+- CPR On/Off switching now keeps the ECG canvas mounted so the existing trace stays behind the black sweep line.
+- Added waveform and monitor coverage for the canvas CPR override.
+
+## [2026-06-19] [monitor] - Replace Regular Sinus 12-lead strip image
+
+- Added the supplied regular sinus 12-lead strip image.
+- Updated completed `NSR` captures to use `/images/regular-sinus-strip.png`.
+- Updated printout coverage for the new NSR strip asset.
+
+## [2026-06-19] [monitor] - Replace 3rd Degree strip and refine ECG
+
+- Added the supplied third-degree heart block 12-lead strip image.
+- Updated completed `3rd Degree` captures to use `/images/third-degree-block-strip.png`.
+- Reshaped the live 3rd Degree ECG with slower, wider ventricular escape complexes and independent smaller P waves.
+
+## [2026-06-19] [monitor] - Replace 2nd Degree Type 2 12-lead strip image
+
+- Added the supplied second-degree type 2 heart block 12-lead strip image.
+- Updated completed `2nd Degree Type 2` captures to use `/images/second-degree-type-2-strip.png`.
+- Updated printout and capture-flow coverage for the new strip asset.
+
+## [2026-06-19] [monitor] - Replace 2nd Degree Type 1 12-lead strip image
+
+- Added the supplied second-degree type 1 heart block 12-lead strip image.
+- Updated completed `2nd Degree Type 1` captures to use `/images/second-degree-type-1-strip.png`.
+- Updated printout and capture-flow coverage for the new strip asset.
+
+## [2026-06-19] [monitor] - Replace 1st Degree 12-lead strip image
+
+- Added the supplied first-degree heart block 12-lead strip image.
+- Updated completed `1st Degree` captures to use `/images/first-degree-block-strip.png`.
+- Updated printout and capture-flow coverage for the new strip asset.
+
+## [2026-06-18] [monitor] - Add 3rd Degree heart block rhythm
+
+- Added `3rd Degree` to the admin ECG Heart Block category.
+- Added complete heart block live ECG and 12-lead waveform generation with independent P waves and slower ventricular escape QRS complexes.
+- Added a custom completed 12-lead strip asset for third-degree captures.
+
+## [2026-06-18] [monitor] - Add 2nd Degree Type 2 heart block rhythm
+
+- Added `2nd Degree Type 2` to the admin ECG Heart Block category.
+- Added Mobitz II live ECG and 12-lead waveform generation with fixed PR conducted beats and an intermittent dropped QRS.
+- Added a custom completed 12-lead strip asset for second-degree type 2 captures.
+
+## [2026-06-18] [monitor] - Add 2nd Degree Type 1 heart block rhythm
+
+- Added `2nd Degree Type 1` to the admin ECG Heart Block category.
+- Added Wenckebach live ECG and 12-lead waveform generation with progressive PR prolongation and a dropped QRS.
+- Added a custom completed 12-lead strip asset for second-degree type 1 captures.
+
+## [2026-06-18] [monitor] - Add 1st Degree heart block rhythm
+
+- Added `1st Degree` to the admin ECG Heart Block category.
+- Added long-PR first-degree AV block live ECG and 12-lead waveform generation.
+- Added a custom completed 12-lead strip asset for first-degree heart block captures.
+
+## [2026-06-18] [monitor] - Add VFib 12-lead strip
+
+- Added the supplied VFib 12-lead strip image as a monitor printout asset.
+- Updated completed VF 12-lead captures to show the VFib strip instead of the default printout.
+- Added component and capture-flow coverage for the VF rhythm-specific printout.
+
+## [2026-06-18] [monitor] - Redesign VT ECG waveform
+
+- Rebuilt VT as a monomorphic tachycardia waveform with tall repeated complexes, sloped descent, and rounded negative troughs.
+- Replaced the older plateau/deep-V rhythm tests with coverage for the new VT reference silhouette.
+
+## [2026-06-18] [monitor] - Redesign VF ECG waveform
+
+- Replaced VF's torsades-style source with a dedicated irregular fibrillation generator.
+- Kept torsades unchanged while making VF generate moderate midline variants with uneven amplitude and spacing.
+- Added waveform coverage for VF irregularity, smoothness, normalization, and variant generation.
+
+## [2026-06-18] [monitor] - Shape Inferior MI ST scoop
+
+- Reshaped the live Inferior MI ECG so the R wave drops into a raised scooped ST segment before the T-wave ramp.
+- Added waveform coverage to keep the scooped ST segment elevated while remaining lower than the later T wave.
+
+## [2026-06-18] [monitor] - Smooth Inferior MI R-to-ST transition
+
+- Raised the live Inferior MI post-R transition so it flows directly into the elevated ST segment.
+- Replaced the visible deep S/drop with only a slight downward curve before ST elevation.
+- Tightened waveform coverage so the post-R segment stays elevated.
+
+## [2026-06-18] [monitor] - Clarify Inferior MI ST elevation
+
+- Removed the lower post-QRS dip from the live Inferior MI ECG so the elevated ST segment reads more clearly.
+- Widened the Inferior MI QRS slightly while preserving the rounded T-wave shape.
+- Tightened waveform coverage so the post-QRS segment stays above baseline.
+
+## [2026-06-18] [monitor] - Preserve Inferior MI ST elevation
+
+- Raised the live Inferior MI post-QRS ST segment so the ST elevation remains visibly present before the rounded T wave.
+- Added waveform coverage that requires the Inferior MI ST segment to stay elevated.
+
+## [2026-06-18] [monitor] - Round Inferior MI T wave ramp
+
+- Reshaped the live Inferior MI monitor ECG T wave so the left-side ramp curves upward more smoothly.
+- Softened the T-wave apex so it reads as a rounded triangular peak while staying near half the QRS height.
+- Added waveform coverage for the rounded ramp and broad peak region.
+
+## [2026-06-18] [monitor] - Refine Inferior MI P and T waves
+
+- Shifted the live Inferior MI monitor ECG P wave later so it sits closer to the QRS complex.
+- Reshaped the Inferior MI T wave with a slower ramp-up and a peak near half the QRS height.
+- Added waveform coverage for the later P wave, slow T-wave rise, and T-to-QRS height relationship.
+
+## [2026-06-18] [monitor] - Move Anterior MI P wave closer to QRS
+
+- Shifted the live Anterior MI monitor ECG P wave later in the beat so it sits closer to the QRS complex.
+- Added waveform coverage to keep the earlier segment flat and the P wave near the QRS.
+
 ## [2026-06-18] [monitor] - Add map unit-tracking toggle
 
 - Added a "Track unit" toggle button to the dispatch route map. Default is the

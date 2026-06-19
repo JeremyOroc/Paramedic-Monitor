@@ -101,6 +101,121 @@ describe('MonitorPage — 12-lead capture flow', () => {
     ).toContain('inferior-mi-strip.jpeg')
   })
 
+  it('uses the VFib strip when VF is captured', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'vf')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    enterTwelveLead()
+    clickButton('Capture 12-lead')
+
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+
+    expect(screen.getByTestId('twelve-lead-printout')).toHaveAttribute(
+      'data-captured-rhythm',
+      'vf',
+    )
+    expect(
+      screen
+        .getByRole('img', { name: '12-lead ECG capture' })
+        .getAttribute('src'),
+    ).toContain('vfib-12-lead-strip.png')
+  })
+
+  it('uses the 1st Degree strip when first-degree heart block is captured', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'first-degree')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    enterTwelveLead()
+    clickButton('Capture 12-lead')
+
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+
+    expect(screen.getByTestId('twelve-lead-printout')).toHaveAttribute(
+      'data-captured-rhythm',
+      'first-degree',
+    )
+    expect(
+      screen
+        .getByRole('img', { name: '12-lead ECG capture' })
+        .getAttribute('src'),
+    ).toContain('first-degree-block-strip.png')
+  })
+
+  it('uses the 2nd Degree Type 1 strip when second-degree type 1 is captured', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'second-degree-type-1')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    enterTwelveLead()
+    clickButton('Capture 12-lead')
+
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+
+    expect(screen.getByTestId('twelve-lead-printout')).toHaveAttribute(
+      'data-captured-rhythm',
+      'second-degree-type-1',
+    )
+    expect(
+      screen
+        .getByRole('img', { name: '12-lead ECG capture' })
+        .getAttribute('src'),
+    ).toContain('second-degree-type-1-strip.png')
+  })
+
+  it('uses the 2nd Degree Type 2 strip when second-degree type 2 is captured', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'second-degree-type-2')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    enterTwelveLead()
+    clickButton('Capture 12-lead')
+
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+
+    expect(screen.getByTestId('twelve-lead-printout')).toHaveAttribute(
+      'data-captured-rhythm',
+      'second-degree-type-2',
+    )
+    expect(
+      screen
+        .getByRole('img', { name: '12-lead ECG capture' })
+        .getAttribute('src'),
+    ).toContain('second-degree-type-2-strip.png')
+  })
+
+  it('uses the 3rd Degree strip when complete heart block is captured', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'third-degree')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    enterTwelveLead()
+    clickButton('Capture 12-lead')
+
+    act(() => {
+      vi.advanceTimersByTime(4000)
+    })
+
+    expect(screen.getByTestId('twelve-lead-printout')).toHaveAttribute(
+      'data-captured-rhythm',
+      'third-degree',
+    )
+    expect(
+      screen
+        .getByRole('img', { name: '12-lead ECG capture' })
+        .getAttribute('src'),
+    ).toContain('third-degree-block-strip.png')
+  })
+
   it('cancels the acquisition when Back is pressed mid-fill', () => {
     enterTwelveLead()
 

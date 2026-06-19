@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-label="First degree heart block 12-lead strip">
+  <defs>
+    <pattern id="smallGrid" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M 8 0 L 0 0 0 8" fill="none" stroke="#f6c4c4" stroke-width="0.7"/>
+    </pattern>
+    <pattern id="bigGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="40" height="40" fill="url(#smallGrid)"/>
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e99696" stroke-width="1.2"/>
+    </pattern>
+    <symbol id="longPrBeat" viewBox="0 0 180 70">
+      <path d="M0 38 C14 38 18 38 24 38 C31 31 38 31 45 38 C62 38 80 38 96 38 C100 38 102 34 105 35 C109 52 111 7 116 10 C120 40 126 39 132 38 C142 38 150 31 158 31 C166 31 172 38 180 38" fill="none" stroke="#1f2933" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+  <rect width="1200" height="560" fill="#fff8f8"/>
+  <rect width="1200" height="560" fill="url(#bigGrid)"/>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" fill="#111">
+    <text x="28" y="34">I</text>
+    <text x="328" y="34">aVR</text>
+    <text x="628" y="34">V1</text>
+    <text x="928" y="34">V4</text>
+    <text x="28" y="164">II</text>
+    <text x="328" y="164">aVL</text>
+    <text x="628" y="164">V2</text>
+    <text x="928" y="164">V5</text>
+    <text x="28" y="294">III</text>
+    <text x="328" y="294">aVF</text>
+    <text x="628" y="294">V3</text>
+    <text x="928" y="294">V6</text>
+    <text x="28" y="424">II</text>
+  </g>
+  <g opacity="0.95">
+    <g transform="translate(0 62)"><use href="#longPrBeat" x="28"/><use href="#longPrBeat" x="205"/><use href="#longPrBeat" x="382"/><use href="#longPrBeat" x="559"/><use href="#longPrBeat" x="736"/><use href="#longPrBeat" x="913"/></g>
+    <g transform="translate(0 192) scale(1 1.08)"><use href="#longPrBeat" x="28"/><use href="#longPrBeat" x="205"/><use href="#longPrBeat" x="382"/><use href="#longPrBeat" x="559"/><use href="#longPrBeat" x="736"/><use href="#longPrBeat" x="913"/></g>
+    <g transform="translate(0 322) scale(1 0.82)"><use href="#longPrBeat" x="28"/><use href="#longPrBeat" x="205"/><use href="#longPrBeat" x="382"/><use href="#longPrBeat" x="559"/><use href="#longPrBeat" x="736"/><use href="#longPrBeat" x="913"/></g>
+    <g transform="translate(0 452) scale(1 1.05)"><use href="#longPrBeat" x="28"/><use href="#longPrBeat" x="205"/><use href="#longPrBeat" x="382"/><use href="#longPrBeat" x="559"/><use href="#longPrBeat" x="736"/><use href="#longPrBeat" x="913"/></g>
+  </g>
+</svg>

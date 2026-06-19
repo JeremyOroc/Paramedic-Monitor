@@ -27,4 +27,48 @@ describe('TwelveLeadPage', () => {
       )
     }
   })
+
+  it('renders the 12-lead grid for 1st Degree', () => {
+    render(<TwelveLeadPage rhythm="first-degree" hr={80} />)
+
+    for (const lead of LEADS) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).toHaveAttribute(
+        'data-rhythm',
+        'first-degree',
+      )
+    }
+  })
+
+  it('renders the 12-lead grid for 2nd Degree Type 1', () => {
+    render(<TwelveLeadPage rhythm="second-degree-type-1" hr={80} />)
+
+    for (const lead of LEADS) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).toHaveAttribute(
+        'data-rhythm',
+        'second-degree-type-1',
+      )
+    }
+  })
+
+  it('renders the 12-lead grid for 2nd Degree Type 2', () => {
+    render(<TwelveLeadPage rhythm="second-degree-type-2" hr={80} />)
+
+    for (const lead of LEADS) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).toHaveAttribute(
+        'data-rhythm',
+        'second-degree-type-2',
+      )
+    }
+  })
+
+  it('renders the 12-lead grid for 3rd Degree', () => {
+    render(<TwelveLeadPage rhythm="third-degree" hr={80} />)
+
+    for (const lead of LEADS) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).toHaveAttribute(
+        'data-rhythm',
+        'third-degree',
+      )
+    }
+  })
 })

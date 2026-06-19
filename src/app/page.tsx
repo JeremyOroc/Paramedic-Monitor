@@ -153,6 +153,11 @@ function MonitorPage() {
     return clearEtco2LoadTimer
   }, [clearEtco2LoadTimer])
 
+  useEffect(() => {
+    clearEtco2LoadTimer()
+    controller.onResetMonitorUi()
+  }, [clearEtco2LoadTimer, controller.onResetMonitorUi, monitorResetVersion])
+
   const handleToggleEtco2 = useCallback(() => {
     const willShowEtco2 = controller.secondary !== 'etco2'
     controller.onToggleEtco2()

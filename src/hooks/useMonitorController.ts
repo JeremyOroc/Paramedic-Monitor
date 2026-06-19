@@ -88,6 +88,7 @@ type Action =
   | { type: 'cancelPatientInfoEdit' }
   | { type: 'enterTwelveLead' }
   | { type: 'toggleEtco2' }
+  | { type: 'resetMonitorUi' }
   | { type: 'startCapture'; snapshot: CaptureSnapshot }
   | { type: 'completeCapture'; snapshot: CaptureSnapshot }
   | { type: 'openPrintPreview' }
@@ -287,6 +288,11 @@ function reducer(
       return { ...state, view: '12lead' }
     case 'toggleEtco2':
       return { ...state, secondary: state.secondary === 'spo2' ? 'etco2' : 'spo2' }
+    case 'resetMonitorUi':
+      return {
+        ...state,
+        secondary: 'spo2',
+      }
     case 'startCapture':
       return {
         ...state,
@@ -473,6 +479,10 @@ export function useMonitorController({
     dispatch({ type: 'toggleMute' })
   }, [state.isMuted])
 
+  const onResetMonitorUi = useCallback(() => {
+    dispatch({ type: 'resetMonitorUi' })
+  }, [])
+
   const onPowerOff = useCallback(() => {
     clearCaptureTimer()
     clearFlashTimer()
@@ -495,6 +505,7 @@ export function useMonitorController({
     onMoveDown,
     onTwelveLead: () => dispatch({ type: 'enterTwelveLead' }),
     onToggleEtco2: () => dispatch({ type: 'toggleEtco2' }),
+    onResetMonitorUi,
     onTreatment: () => dispatch({ type: 'enterMedicationMode' }),
     onLeftAnalyse: () => dispatch({ type: 'openCallerInfo' }),
     onCloseCallerInfo: () => dispatch({ type: 'closeCallerInfo' }),
