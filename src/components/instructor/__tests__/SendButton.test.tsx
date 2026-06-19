@@ -3,6 +3,7 @@ import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SendButton } from '../SendButton'
 import { useMonitorStore } from '@/store/monitorStore'
+import { DEFAULT_DISPATCH_ROUTE } from '@/types/dispatchRoute'
 
 describe('SendButton', () => {
   beforeEach(() => {
@@ -66,6 +67,48 @@ describe('SendButton', () => {
     const btn = screen.getByRole('button', { name: 'Send' })
     await user.click(btn)
     expect(useMonitorStore.getState().callerInfoConfirmed.problem).toBe('Chute')
+    expect(btn).toBeDisabled()
+  })
+
+  it('requires save before sending a dispatch countdown change', async () => {
+    const user = userEvent.setup()
+    const readyRoute = {
+      ...DEFAULT_DISPATCH_ROUTE,
+      destinationAddress: '200 Sainte-Anne Street, Sainte-Anne-de-Bellevue, QC',
+      destination: { lat: 45.403, lng: -73.951 },
+      distanceMeters: 3200,
+      durationSeconds: 480,
+      geometry: [
+        { lat: 45.4068, lng: -73.9412 },
+        { lat: 45.403, lng: -73.951 },
+      ],
+      status: 'ready' as const,
+    }
+
+    act(() => {
+      useMonitorStore.getState().setDispatchMinutes(5)
+      useMonitorStore.getState().setDispatchRouteDraft(readyRoute)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<SendButton />)
+    const btn = screen.getByRole('button', { name: 'Send' })
+    expect(btn).toBeDisabled()
+
+    act(() => {
+      useMonitorStore.getState().setDispatchMinutes(7)
+    })
+
+    expect(btn).toBeDisabled()
+
+    act(() => {
+      useMonitorStore.getState().save()
+    })
+
+    expect(btn).not.toBeDisabled()
+    await user.click(btn)
+    expect(useMonitorStore.getState().dispatchRouteConfirmed.durationSeconds).toBe(420)
     expect(btn).toBeDisabled()
   })
 })

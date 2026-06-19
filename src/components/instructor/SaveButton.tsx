@@ -1,7 +1,13 @@
 'use client'
 
 import { useMonitorStore } from '@/store/monitorStore'
-import { hasCallerInfoDirty, hasDirty, hasVitalActiveDirty } from '@/store/fieldState'
+import {
+  hasCallerInfoDirty,
+  hasDirty,
+  hasDispatchCountdownDirty,
+  hasDispatchRouteChanged,
+  hasVitalActiveDirty,
+} from '@/store/fieldState'
 import { cn } from '@/lib/utils'
 
 export function SaveButton() {
@@ -11,11 +17,18 @@ export function SaveButton() {
   const savedVitalActive = useMonitorStore((s) => s.savedVitalActive)
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const callerInfoSaved = useMonitorStore((s) => s.callerInfoSaved)
+  const dispatchRouteDraft = useMonitorStore((s) => s.dispatchRouteDraft)
+  const dispatchRouteSaved = useMonitorStore((s) => s.dispatchRouteSaved)
+  const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
+  const dispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
+  const dispatchSavedSeconds = useMonitorStore((s) => s.dispatchSavedSeconds)
   const save = useMonitorStore((s) => s.save)
   const disabled =
     !hasDirty(draft, saved) &&
     !hasVitalActiveDirty(draftVitalActive, savedVitalActive) &&
-    !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved)
+    !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved) &&
+    !hasDispatchRouteChanged(dispatchRouteDraft, dispatchRouteSaved) &&
+    !hasDispatchCountdownDirty(dispatchMinutes, dispatchSeconds, dispatchSavedSeconds)
 
   return (
     <button
