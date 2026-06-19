@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 
 import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
+import { DEFAULT_DISPATCH_ROUTE } from '@/types/dispatchRoute'
 
 import { CallerInfoModal } from '../CallerInfoModal'
 
@@ -78,6 +79,27 @@ describe('CallerInfoModal', () => {
     expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
     expect(screen.queryByText('CAD')).not.toBeInTheDocument()
     expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('border-dispatch-bezel')
+  })
+
+  it('renders the dispatch route map inside the assignment location panel', () => {
+    renderModal({
+      route: {
+        ...DEFAULT_DISPATCH_ROUTE,
+        destinationAddress: '200 Sainte-Anne Street, Sainte-Anne-de-Bellevue, QC',
+        destination: { lat: 45.403, lng: -73.951 },
+        distanceMeters: 3200,
+        durationSeconds: 480,
+        geometry: [
+          { lat: 45.4068, lng: -73.9412 },
+          { lat: 45.403, lng: -73.951 },
+        ],
+        startedAt: Date.now(),
+        status: 'ready',
+      },
+    })
+
+    expect(screen.getByTestId('dispatch-route-map')).toBeInTheDocument()
+    expect(screen.getByLabelText('Route ETA')).toBeInTheDocument()
   })
 
   it('can render the classic dispatch tablet variant for A/B comparison', () => {

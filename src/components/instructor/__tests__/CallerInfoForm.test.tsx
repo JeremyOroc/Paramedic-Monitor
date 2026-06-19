@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
+import { JOHN_ABBOTT_ADDRESS } from '@/types/dispatchRoute'
 import {
   CALLER_INFO_AUTO_SORT_FIELDS,
   parseCallerInfoAutoSort,
@@ -59,6 +60,32 @@ describe('CallerInfoForm', () => {
     expect(formText.indexOf('Dispatch countdown')).toBeLessThan(
       formText.indexOf('Call / Priority / MPDS'),
     )
+  })
+
+  it('renders response route controls with John Abbott as the default start', () => {
+    renderCallerInfoForm()
+
+    expect(screen.getByText('Response route')).toBeInTheDocument()
+    expect(screen.getByLabelText('Start address')).toHaveValue(JOHN_ABBOTT_ADDRESS)
+    expect(useMonitorStore.getState().dispatchRouteDraft.originAddress).toBe(
+      JOHN_ABBOTT_ADDRESS,
+    )
+  })
+
+  it('bases the route ETA preview on the dispatch countdown', () => {
+    useMonitorStore.getState().setDispatchMinutes(2)
+    useMonitorStore.getState().setDispatchSeconds(15)
+    renderCallerInfoForm()
+
+    const routeSection = screen.getByText('Response route').closest('div')
+    expect(routeSection).toHaveTextContent('ETA 3 min')
+  })
+
+  it('shows the route ETA as at scene when no dispatch countdown is set', () => {
+    renderCallerInfoForm()
+
+    const routeSection = screen.getByText('Response route').closest('div')
+    expect(routeSection).toHaveTextContent('ETA At scene')
   })
 
   it('updates caller info draft values', async () => {

@@ -396,7 +396,11 @@ button is inert until a drill gate is satisfied.
 - The admin caller-info **Send** doubles as the dispatch signal. New minutes +
   seconds "Dispatch countdown" fields on the admin caller-info form set the ETA.
   The **first** Send arms the lock + countdown and pushes caller info; later Sends
-  only update content. Admin **Reset** = full reset to locked-off.
+  that keep the same countdown only update content. A later Send carrying a
+  **changed** (saved) countdown re-dispatches: it restarts the gate countdown and
+  the map ETA from that send and clears the trainee's Acknowledge/Arrival so the
+  run must be re-acknowledged (requirement change 2026-06-18). Admin **Reset** =
+  full reset to locked-off.
 - Locked screen shows caller info + a counting-down MM:SS timer. Unlock order:
   Acknowledge (immediate) → countdown 0 → Arrival → **Go to Monitor** → power
   unlocks. Arrival only enables the explicit Go to Monitor action; it never
@@ -416,7 +420,39 @@ button is inert until a drill gate is satisfied.
   by dispatch assignment screens; the previous tablet layout remains available
   with `?callerInfoVariant=classic`. The full-page tablet keeps an iPad-oriented
   4:3 ratio, uses the reference-style blue/green/orange/red/purple/yellow icon
-  palette, and reserves the right-side map/location area for a future map.
+  palette.
+- Admin Caller Info includes a Response route section. Start defaults to
+  `John Abbott College, 21275 Lakeshore Road, Sainte-Anne-de-Bellevue, QC H9X 3L9`
+  and remains editable. Destination is the existing caller `Adresse` field.
+  Geoapify autocomplete/geocoding powers address suggestions when
+  `NEXT_PUBLIC_GEOAPIFY_API_KEY` is present; the input remains manually editable
+  without a key.
+- The assignment-style caller-info iPad replaces the old map placeholder with a
+  Leaflet/OpenStreetMap panel. OSRM provides driving geometry and distance.
+  The route movement duration comes from the admin dispatch countdown timer, not
+  OSRM ETA. On Send, the confirmed route receives a `startedAt` timestamp and
+  the countdown duration so the unit marker moves in real time and resumes
+  correctly after refresh or when CALL INFO is reopened later. If the admin
+  countdown is `0`, the unit marker is shown at the destination immediately.
+  Trainees can interact with the map directly: pan, wheel/pinch/double-click
+  zoom, keyboard zoom, and use the map zoom controls. The map fits the route
+  when the route changes, but the moving unit marker does not continually reset
+  the viewport while the user is inspecting the map. A "Track unit" toggle button
+  on the map switches between two camera modes: the default route **overview**,
+  and **follow** mode, which keeps the moving unit centered and zoomed in close.
+  Toggling back to overview refits the whole route.
+  Later Sends that keep the same countdown update the confirmed route content
+  while the route ETA keeps ticking from its original start. A Send with a
+  changed (saved) countdown re-dispatches instead: the route `startedAt` and the
+  gate countdown both restart from that send on the new duration, and the
+  trainee's Acknowledge/Arrival are cleared. Countdown
+  edits follow the same strict Save -> Send workflow as other admin fields:
+  changing the value unlocks Save, Save unlocks Send, and Send locks until a new
+  value is saved.
+- Testing: route math helpers cover distance/duration formatting, progress, and
+  point interpolation; store tests cover default John Abbott origin plus route
+  Save -> Send timestamping; Caller Info form/modal tests cover route controls
+  and map rendering; full Vitest run passes under the bundled Node runtime.
 - The Acknowledge/Arrival/Transport action row must remain visible on the caller
   info tablet even when buttons are disabled. Completed caller action buttons
   gray out after they are clicked/logged.

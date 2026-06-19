@@ -134,6 +134,47 @@
 - Shifted the live Anterior MI monitor ECG P wave later in the beat so it sits closer to the QRS complex.
 - Added waveform coverage to keep the earlier segment flat and the P wave near the QRS.
 
+## [2026-06-18] [monitor] - Add map unit-tracking toggle
+
+- Added a "Track unit" toggle button to the dispatch route map. Default is the
+  route overview; toggling switches to follow mode, which keeps the moving unit
+  centered and zoomed in close and updates each tick. Toggling back refits the
+  whole route.
+- Added DispatchRouteMap component tests (Leaflet mocked) covering the default
+  overview, the follow-mode camera, the return-to-overview refit, and the toggle
+  staying hidden until a route is ready.
+
+## [2026-06-18] [instructor] - Re-dispatch on changed countdown
+
+- A Send carrying a changed (saved) dispatch countdown now re-dispatches instead
+  of only updating content: the gate countdown and the map ETA both restart from
+  that send on the new duration, and the trainee's Acknowledge/Arrival are
+  cleared so the run must be re-acknowledged.
+- Fixes the map ETA appearing frozen (or jumping straight to "Arrived") after a
+  re-send, which happened because the route `startedAt` stayed pinned to the
+  first arm. A Send that keeps the same countdown still only updates content and
+  leaves the running gate/ETA untouched.
+- Requirement change recorded in `PLAN.md`; store + new resend tests added.
+
+## [2026-06-18] [monitor] - Enable iPad map interaction
+
+- Enabled drag, wheel, double-click, box, keyboard, and zoom-control interaction on the caller-info iPad map.
+- Stopped the moving unit marker from refitting the map viewport every second, so user zoom/pan choices are preserved while the route continues updating.
+
+## [2026-06-18] [instructor] - Fix route countdown resend
+
+- Fixed Send staying disabled when only the dispatch countdown changed after an initial route Send.
+- Later Sends now update the confirmed route duration from the current dispatch countdown without restarting the dispatch gate timer.
+- Dispatch countdown edits now follow the same strict Save -> Send workflow: editing unlocks Save, Save unlocks Send, and Send locks again until the next saved change.
+
+## [2026-06-18] [dispatch] - Add iPad route map
+
+- Added Geoapify-backed address autocomplete to the admin Caller Info address fields, with John Abbott College as the default response origin.
+- Added persisted dispatch route state through the existing draft -> saved -> confirmed workflow, stamping route movement at Send time.
+- Replaced the assignment iPad location placeholder with a Leaflet/OpenStreetMap route map, OSRM driving route, distance/ETA readouts, and real-time unit marker movement.
+- Updated route movement to use the admin dispatch countdown duration; a zero countdown places the unit at the destination immediately.
+- Added route helper, store, admin form, and caller-info modal coverage; full test suite passes under the bundled Node runtime.
+
 ## [2026-06-14] [instructor] - Add CPR ECG override
 
 - Added an admin CPR toggle that immediately overrides the monitor ECG graph and FC display.
