@@ -15,6 +15,7 @@ import {
 } from '@/components/instructor/PatientPhysicalPanel'
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
+import { RoomCodeCopy } from '@/components/session/RoomCodeCopy'
 import {
   CALLER_INFO_AUTO_SORT_FIELDS,
   parseCallerInfoAutoSort,
@@ -268,8 +269,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           <div className="flex flex-wrap items-center gap-3">
             <div>
               <p className="font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp">
-                Room {session.code}
+                Room code
               </p>
+              <RoomCodeCopy code={session.code} className="mt-2" />
               <p className="text-sm text-neutral-300">
                 Status: <span className="font-bold uppercase">{sessionStatus}</span>
               </p>

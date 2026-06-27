@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-06-27] [realtime] - Make session room codes copyable
+
+- Added a reusable room-code copy control with selectable uppercase code text.
+- Wired the copy control into instructor and student waiting-room session views.
+- Added focused coverage for clipboard copy behavior.
+
 ## [2026-06-27] [realtime] - Add secure session room vertical slice
 
 - Replaced the default entry point with a create/join room lobby while preserving `/?dev=1` for the local monitor.

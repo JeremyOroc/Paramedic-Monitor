@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
+import { RoomCodeCopy } from '@/components/session/RoomCodeCopy'
+
 function participantStorageKey(code: string) {
   return `paramedic-monitor.participant.${code.toUpperCase()}`
 }
@@ -57,8 +59,9 @@ export default function WaitingRoomPage() {
     <main className="grid min-h-screen place-items-center bg-black px-6 text-white">
       <section className="w-full max-w-lg border border-neutral-800 bg-neutral-950 p-6 text-center">
         <p className="font-mono text-xs font-bold uppercase tracking-[0.24em] text-cyan-bp">
-          Room {code}
+          Room code
         </p>
+        <RoomCodeCopy code={code} className="mt-3" />
         <h1 className="mt-4 text-3xl font-black">Waiting for instructor</h1>
         <p className="mt-3 text-sm text-neutral-400">
           {nickname ? `${nickname}, you are in the room.` : 'You are in the room.'}

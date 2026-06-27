@@ -13,6 +13,10 @@
 ---
 
 ## Completed
+- [x] **Session room code copy affordance — COMPLETE:**
+  - [x] Instructor and student waiting-room views show a selectable room code with a Copy button
+  - [x] Copy action writes the normalized uppercase room code to the clipboard
+  - [x] Added focused component coverage for room-code copy behavior
 - [x] **Session room vertical slice — COMPLETE:**
   - [x] Default `/` page is now a create/join room lobby, with `/?dev=1` preserving the local monitor
   - [x] Session creation returns a private instructor host link and creates secure hashed host credentials
