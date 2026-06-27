@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
@@ -74,6 +75,7 @@ type ReviewParticipant = {
 }
 
 export default function AdminPage({ session }: SessionAdminProps = {}) {
+  const router = useRouter()
   useStoreHydration()
   const [tab, setTab] = useState<AdminTab>('monitor')
   const [patientSelections, setPatientSelections] = useState<PatientInformationSelections>(
@@ -139,6 +141,21 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     }
     setSessionStatus(data.session.status)
     await refreshReview()
+  }
+
+  const endSession = async () => {
+    if (!session) return
+    const response = await fetch(`/api/session/${session.code}/end`, {
+      method: 'POST',
+      headers: { 'x-session-host-token': session.hostToken },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      setSessionError(data.error ?? 'Unable to end session')
+      return
+    }
+    setSessionStatus(data.session.status)
+    router.replace('/')
   }
 
   const sendSessionState = async () => {
@@ -279,10 +296,18 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             <button
               type="button"
               onClick={startSession}
-              disabled={sessionStatus === 'active'}
+              disabled={sessionStatus === 'active' || sessionStatus === 'ended'}
               className="ml-auto border border-ecg-green bg-ecg-green px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Start / Dispatch
+            </button>
+            <button
+              type="button"
+              onClick={endSession}
+              disabled={sessionStatus === 'ended'}
+              className="border border-alarm-red bg-alarm-red/15 px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              End Room
             </button>
           </div>
           {sessionError && <p className="text-sm font-semibold text-pending-amber">{sessionError}</p>}

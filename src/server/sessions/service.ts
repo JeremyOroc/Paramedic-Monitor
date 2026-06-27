@@ -239,6 +239,20 @@ export async function startSession(code: string, hostToken: string) {
   return data as SessionRecord
 }
 
+export async function endSession(code: string, hostToken: string) {
+  const session = await verifyHost(code, hostToken)
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('sessions')
+    .update({ status: 'ended' })
+    .eq('id', session.id)
+    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .single()
+
+  if (error || !data) throw new SessionError(error?.message ?? 'Unable to end session', 500)
+  return data as SessionRecord
+}
+
 export async function getSessionStatus(code: string) {
   const session = await getSessionByCode(code)
   const supabase = createServiceClient()

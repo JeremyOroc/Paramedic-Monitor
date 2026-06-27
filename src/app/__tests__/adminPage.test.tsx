@@ -1,14 +1,65 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
 
 import AdminPage from '../admin/page'
 
+const routerReplace = vi.hoisted(() => vi.fn())
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: routerReplace,
+    prefetch: vi.fn(),
+    back: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(window.location.search),
+  usePathname: () => window.location.pathname,
+}))
+
 describe('AdminPage', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
+    routerReplace.mockClear()
     useMonitorStore.getState().reset()
+  })
+
+  it('lets a session instructor end an active room', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch')
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            session: { status: 'active' },
+            participants: [],
+            events: [],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ session: { status: 'ended' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'End Room' }))
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/session/ABC123/end', {
+        method: 'POST',
+        headers: { 'x-session-host-token': 'host_token' },
+      }),
+    )
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'))
   })
 
   it('shows monitor controls by default and keeps caller info in its own tab', async () => {

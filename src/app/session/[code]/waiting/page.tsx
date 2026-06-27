@@ -62,13 +62,31 @@ export default function WaitingRoomPage() {
           Room code
         </p>
         <RoomCodeCopy code={code} className="mt-3" />
-        <h1 className="mt-4 text-3xl font-black">Waiting for instructor</h1>
+        <h1 className="mt-4 text-3xl font-black">
+          {status === 'ended' ? 'Room ended' : 'Waiting for instructor'}
+        </h1>
         <p className="mt-3 text-sm text-neutral-400">
-          {nickname ? `${nickname}, you are in the room.` : 'You are in the room.'}
+          {status === 'ended'
+            ? 'This session is no longer accepting students.'
+            : nickname
+              ? `${nickname}, you are in the room.`
+              : 'You are in the room.'}
         </p>
         <div className="mt-6 border border-neutral-800 bg-black px-4 py-3 font-mono text-sm uppercase tracking-wider text-neutral-400">
           Status: {status}
         </div>
+        {status === 'ended' && (
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.removeItem(storageKey)
+              router.replace('/')
+            }}
+            className="mt-5 border border-cyan-bp px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp hover:text-black"
+          >
+            Back to Lobby
+          </button>
+        )}
         {error && <p className="mt-4 text-sm font-semibold text-pending-amber">{error}</p>}
       </section>
     </main>

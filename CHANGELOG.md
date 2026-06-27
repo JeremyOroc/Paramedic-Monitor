@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-06-27] [realtime] - Add instructor end-room control
+
+- Added `POST /api/session/[code]/end` for host-token-protected room ending.
+- Added an End Room button to the instructor session panel.
+- Redirected instructors back to the lobby after a room is ended.
+- Updated the student waiting room to show an ended-room state with a return-to-lobby action.
+
 ## [2026-06-27] [realtime] - Make session room codes copyable
 
 - Added a reusable room-code copy control with selectable uppercase code text.

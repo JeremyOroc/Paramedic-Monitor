@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Instructor end-room control — COMPLETE:**
+  - [x] Added an instructor-only end-room API route that switches the session status to `ended`
+  - [x] Added an End Room control to the session instructor panel
+  - [x] Ending a room redirects the instructor back to the lobby
+  - [x] Waiting-room students see a Room ended state and can return to the lobby
 - [x] **Session room code copy affordance — COMPLETE:**
   - [x] Instructor and student waiting-room views show a selectable room code with a Copy button
   - [x] Copy action writes the normalized uppercase room code to the clipboard
