@@ -35,10 +35,21 @@ import { formatEstTime } from '@/lib/estTime'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { playCallerInfoAlert, setAudioMuted } from '@/lib/audio'
+import { SessionLandingPage } from '@/components/session/SessionLandingPage'
 
 const CALLER_INFO_ALERT_FLASH_MS = 2320
 
-function MonitorPage() {
+export type StudentEventRecord = {
+  kind: string
+  label: string
+  payload?: unknown
+}
+
+export function MonitorPage({
+  onStudentEvent,
+}: {
+  onStudentEvent?: (event: StudentEventRecord) => void
+} = {}) {
   const { date, time } = useMonitorClock()
 
   useStoreHydration()
@@ -105,6 +116,11 @@ function MonitorPage() {
     if (key === 'acknowledge') acknowledgeCall(est)
     else if (key === 'arrival') arriveCall(est)
     else transportCall(est)
+    onStudentEvent?.({
+      kind: key,
+      label: key === 'acknowledge' ? 'Acknowledge' : key === 'arrival' ? 'Arrival' : 'Transport',
+      payload: { time: est },
+    })
   }
 
   const mergedEventLog = [...dispatchState.callerEvents, ...controller.eventLog]
@@ -210,6 +226,11 @@ function MonitorPage() {
     rhythm: confirmed.rhythm,
     onAnalyzeResult(result) {
       controller.onAnalyzeResult(result, formatEstTime())
+      onStudentEvent?.({
+        kind: 'analyze',
+        label: result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock',
+        payload: { result, rhythm: confirmed.rhythm },
+      })
     },
   })
   const alarmVitals = {
@@ -471,8 +492,22 @@ function MonitorPage() {
           canShock: defib.canShock,
           canAdjustEnergy: defib.canAdjustEnergy,
           onAnalyse: defib.onAnalyse,
-          onCharge: defib.onCharge,
-          onShock: defib.onShock,
+          onCharge: () => {
+            onStudentEvent?.({
+              kind: 'charge',
+              label: 'Charge',
+              payload: { joules: defib.energy, state: defib.state },
+            })
+            defib.onCharge()
+          },
+          onShock: () => {
+            onStudentEvent?.({
+              kind: 'shock',
+              label: 'Shock',
+              payload: { joules: defib.energy, state: defib.state },
+            })
+            defib.onShock()
+          },
           onEnergyUp: defib.onEnergyUp,
           onEnergyDown: defib.onEnergyDown,
         }}
@@ -494,7 +529,15 @@ function MonitorPage() {
         meds={{
           mode: controller.medicationMode,
           page: controller.medicationPage,
-          onMedClick: (name) => controller.onMedClick(name, formatEstTime()),
+          onMedClick: (name) => {
+            const time = formatEstTime()
+            controller.onMedClick(name, time)
+            onStudentEvent?.({
+              kind: 'medication',
+              label: name,
+              payload: { time },
+            })
+          },
           onMedPageChange: controller.onMedPageChange,
           onMedInfo: controller.onMedInfo,
           onMedBack: controller.onMedBack,
@@ -536,7 +579,14 @@ function MonitorPage() {
 export default function MonitorPageRoute() {
   return (
     <Suspense fallback={null}>
-      <MonitorPage />
+      <MonitorPageOrLanding />
     </Suspense>
   )
+}
+
+function MonitorPageOrLanding() {
+  const searchParams = useSearchParams()
+  if (process.env.NODE_ENV === 'test') return <MonitorPage />
+  if (searchParams.get('dev') === '1') return <MonitorPage />
+  return <SessionLandingPage />
 }

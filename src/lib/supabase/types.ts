@@ -9,18 +9,118 @@ export type Database = {
         Row: {
           id: string
           code: string
+          status: 'waiting' | 'active' | 'ended'
+          active_attempt_version: number
+          expires_at: string | null
           created_at: string
         }
         Insert: {
           id?: string
           code: string
+          status?: 'waiting' | 'active' | 'ended'
+          active_attempt_version?: number
+          expires_at?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           code?: string
+          status?: 'waiting' | 'active' | 'ended'
+          active_attempt_version?: number
+          expires_at?: string | null
           created_at?: string
         }
+      }
+      session_hosts: {
+        Row: {
+          id: string
+          session_id: string
+          token_hash: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          token_hash: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['session_hosts']['Insert']>
+      }
+      session_state: {
+        Row: {
+          session_id: string
+          state: unknown
+          version: number
+          updated_at: string
+        }
+        Insert: {
+          session_id: string
+          state?: unknown
+          version?: number
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['session_state']['Insert']>
+      }
+      participants: {
+        Row: {
+          id: string
+          session_id: string
+          nickname: string
+          token_hash: string
+          joined_at: string
+          last_seen_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          nickname: string
+          token_hash: string
+          joined_at?: string
+          last_seen_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['participants']['Insert']>
+      }
+      participant_attempts: {
+        Row: {
+          id: string
+          session_id: string
+          participant_id: string
+          attempt_version: number
+          started_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          participant_id: string
+          attempt_version: number
+          started_at?: string
+          completed_at?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['participant_attempts']['Insert']>
+      }
+      student_events: {
+        Row: {
+          id: string
+          session_id: string
+          participant_id: string
+          attempt_version: number
+          kind: string
+          label: string
+          payload: unknown
+          occurred_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          participant_id: string
+          attempt_version: number
+          kind: string
+          label: string
+          payload?: unknown
+          occurred_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['student_events']['Insert']>
       }
       vitals_snapshots: {
         Row: {

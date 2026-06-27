@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-06-27] [realtime] - Add secure session room vertical slice
+
+- Replaced the default entry point with a create/join room lobby while preserving `/?dev=1` for the local monitor.
+- Added private host-token instructor rooms, nickname-based student join, waiting room flow, and Start/Dispatch release.
+- Added session APIs and Supabase migration for shared instructor state plus per-student participants, attempts, and event logs.
+- Wired session instructor Send to push confirmed monitor state and session monitors to record student Acknowledge/Arrival/Transport, meds, Analyze, Charge, and Shock events.
+- Added focused coverage for token hashing/verification and create/join lobby behavior.
+
 ## [2026-06-19] [instructor] - Keep auto-sorted vitals Off
 
 - Universal Caller Info scenario auto-sort now fills origin vital numbers without activating those vitals.

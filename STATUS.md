@@ -13,6 +13,16 @@
 ---
 
 ## Completed
+- [x] **Session room vertical slice — COMPLETE:**
+  - [x] Default `/` page is now a create/join room lobby, with `/?dev=1` preserving the local monitor
+  - [x] Session creation returns a private instructor host link and creates secure hashed host credentials
+  - [x] Student join uses room code + nickname and stores a participant token for refresh resume
+  - [x] Added waiting room route that holds students until instructor Start/Dispatch
+  - [x] Session instructor route wraps the existing admin console and shows room status, waiting students, and live evaluation log
+  - [x] Admin Send can push the latest confirmed monitor state to session shared state
+  - [x] Session monitor route applies shared instructor state and records per-student Acknowledge/Arrival/Transport, meds, Analyze, Charge, and Shock events
+  - [x] Added Supabase migration for session hosts, session state, participants, participant attempts, and student events
+  - [x] Added focused coverage for session token hashing/verification and create/join lobby behavior
 - [x] **Local developer setup helper — COMPLETE:**
   - [x] Dependencies installed with a project-local portable Node.js runtime because system `npm` was unavailable
   - [x] Added `start-local.ps1` for launching the Next.js dev server with the portable runtime
@@ -410,7 +420,7 @@
 
 ## Blocked / Needs Input
 - [ ] **12-lead waveform assets** — User to provide gif/mp4 12-lead waveforms in `/public/waveforms/12lead/<rhythm>/<lead>.gif` for each rhythm × lead (I, II, III, aVR, aVL, aVF, V1–V6). ECG/SpO2/EtCO2 are now canvas-rendered and no longer need assets.
-- [ ] **Supabase credentials** — Deferred. Will be needed once realtime / sessions phase begins. Copy URL + anon key into `.env.local`, run the migration, enable Realtime on `vitals_snapshots`.
+- [ ] **Supabase credentials** — Needed for deployed sessions. Copy URL + anon key + service role key into Vercel/local env, run migrations `001` and `002`, and enable Realtime on session tables if replacing polling with subscriptions.
 - [ ] **Paramedic-supplied waveform videos** — Real ECG/SpO2/EtCO2/12-lead videos for production fidelity (later phase).
 - [ ] **Neonate joule default** — Set to 10J. Confirm with paramedic friend.
 

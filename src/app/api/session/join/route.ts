@@ -1,25 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { isValidSessionCode } from '@/lib/session'
+import { getSessionStatus, joinSession } from '@/server/sessions/service'
+import { jsonError } from '@/server/sessions/http'
 
 export async function GET(request: NextRequest) {
-  // TODO: implement — Phase 2
   const code = request.nextUrl.searchParams.get('code')?.toUpperCase()
 
   if (!code || !isValidSessionCode(code)) {
     return NextResponse.json({ error: 'Invalid session code' }, { status: 400 })
   }
 
-  const supabase = createClient()
-  const { data, error } = await supabase
-    .from('sessions')
-    .select('id, code')
-    .eq('code', code)
-    .single()
-
-  if (error || !data) {
-    return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+  try {
+    const { session } = await getSessionStatus(code)
+    return NextResponse.json({ session })
+  } catch (error) {
+    return jsonError(error)
   }
+}
 
-  return NextResponse.json({ session: data })
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json() as {
+      code?: string
+      nickname?: string
+      participantToken?: string
+    }
+    const result = await joinSession(
+      body.code ?? '',
+      body.nickname ?? '',
+      body.participantToken,
+    )
+    return NextResponse.json(result)
+  } catch (error) {
+    return jsonError(error)
+  }
 }

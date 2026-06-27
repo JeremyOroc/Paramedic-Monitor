@@ -27,13 +27,13 @@ export type { DefibState }
 
 type Options = {
   patientMode: PatientMode
-  rhythm: Rhythm
+  rhythm?: Rhythm
   onAnalyzeResult?: (result: 'shock' | 'no_shock') => void
 }
 
 export function useDefibSequence({
   patientMode,
-  rhythm,
+  rhythm = 'nsr',
   onAnalyzeResult,
 }: Options) {
   const [state, setState] = useState<DefibState>('idle')

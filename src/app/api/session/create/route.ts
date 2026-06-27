@@ -1,19 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { generateSessionCode } from '@/lib/session'
+import { createSession } from '@/server/sessions/service'
+import { jsonError } from '@/server/sessions/http'
 
-export async function POST() {
-  // TODO: implement — Phase 2
-  const supabase = createClient()
-  const code = generateSessionCode()
-
-  const { error } = await supabase
-    .from('sessions')
-    .insert({ code })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+export async function POST(request: Request) {
+  try {
+    const result = await createSession(new URL(request.url).origin)
+    return NextResponse.json(result)
+  } catch (error) {
+    return jsonError(error)
   }
-
-  return NextResponse.json({ code })
 }

@@ -76,6 +76,20 @@ type BpDisplay = Pick<Vitals, 'bp_sys' | 'bp_dia'>
 type BpActiveState = Pick<VitalActiveState, 'bp_sys' | 'bp_dia'>
 export type Etco2CalibrationStatus = 'idle' | 'calibrating' | 'calibrated'
 
+export type SharedMonitorState = {
+  confirmed: Vitals
+  confirmedVitalActive: VitalActiveState
+  callerInfoConfirmed: CallerInfo
+  dispatchRouteConfirmed: DispatchRoute
+  patientInfo: PatientInfo
+  dispatch: DispatchState
+  dispatchConfirmedSeconds: number
+  etco2CalibrationStatus: Etco2CalibrationStatus
+  cprOverrideActive: boolean
+  acceptedBp: BpDisplay
+  acceptedBpActive: BpActiveState
+}
+
 const initialBpDisplay: BpDisplay = {
   bp_sys: initial.bp_sys,
   bp_dia: initial.bp_dia,
@@ -264,6 +278,8 @@ export type MonitorState = {
   resetVitalsToNormal: () => void
   save: () => void
   send: () => void
+  getSharedState: () => SharedMonitorState
+  applySharedState: (shared: Partial<SharedMonitorState>) => void
   reset: () => void
 }
 
@@ -271,7 +287,7 @@ export const STORAGE_KEY = 'paramedic-monitor.v1'
 
 export const useMonitorStore = create<MonitorState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       draft: initial,
       saved: initial,
       confirmed: initial,
@@ -525,6 +541,64 @@ export const useMonitorStore = create<MonitorState>()(
               acknowledgedAt: null,
               arrivedAt: null,
             },
+          }
+        }),
+      getSharedState: (): SharedMonitorState => {
+        const s = get()
+        return {
+          confirmed: { ...s.confirmed },
+          confirmedVitalActive: { ...s.confirmedVitalActive },
+          callerInfoConfirmed: { ...s.callerInfoConfirmed },
+          dispatchRouteConfirmed: { ...s.dispatchRouteConfirmed },
+          patientInfo: { ...s.patientInfo },
+          dispatch: {
+            ...s.dispatch,
+            callerEvents: [...s.dispatch.callerEvents],
+          },
+          dispatchConfirmedSeconds: s.dispatchConfirmedSeconds,
+          etco2CalibrationStatus: s.etco2CalibrationStatus,
+          cprOverrideActive: s.cprOverrideActive,
+          acceptedBp: { ...s.acceptedBp },
+          acceptedBpActive: { ...s.acceptedBpActive },
+        }
+      },
+      applySharedState: (shared) =>
+        set((s) => {
+          const confirmed = normalizeVitals(shared.confirmed)
+          const confirmedVitalActive = normalizeVitalActive(
+            shared.confirmedVitalActive,
+            undefined,
+          )
+          const acceptedBp = normalizeBpDisplay(shared.acceptedBp, confirmed)
+          return {
+            confirmed,
+            confirmedVitalActive,
+            confirmedVitalsActive: anyVitalActive(confirmedVitalActive),
+            callerInfoConfirmed: normalizeCallerInfo(shared.callerInfoConfirmed),
+            dispatchRouteConfirmed: normalizeDispatchRoute(shared.dispatchRouteConfirmed),
+            patientInfo: {
+              ...DEFAULT_PATIENT_INFO,
+              ...shared.patientInfo,
+            },
+            dispatch: normalizeDispatch(
+              shared.dispatch,
+              s.dispatchConfirmedSeconds * 1000,
+            ),
+            dispatchConfirmedSeconds:
+              typeof shared.dispatchConfirmedSeconds === 'number'
+                ? shared.dispatchConfirmedSeconds
+                : s.dispatchConfirmedSeconds,
+            etco2CalibrationStatus:
+              shared.etco2CalibrationStatus === 'calibrating' ||
+              shared.etco2CalibrationStatus === 'calibrated'
+                ? shared.etco2CalibrationStatus
+                : 'idle',
+            cprOverrideActive: shared.cprOverrideActive === true,
+            acceptedBp,
+            acceptedBpActive: normalizeBpActive(
+              shared.acceptedBpActive,
+              confirmedVitalActive,
+            ),
           }
         }),
       reset: () =>

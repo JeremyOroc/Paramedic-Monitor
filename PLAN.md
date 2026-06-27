@@ -8,6 +8,9 @@
 
 ## Current Requirement Updates
 
+- Default entry point is now a Kahoot-style session lobby: instructors create rooms, students join with code + nickname, and `/?dev=1` remains the local monitor shortcut.
+- Session instructor access uses a private host token link; student monitor actions are recorded as per-participant events instead of shared state.
+- Students enter a waiting room until the instructor starts the room; instructor Send pushes the confirmed monitor state to the shared session state.
 - Dispatch route map delayed Leaflet size invalidation must be cancelled and guarded so it never runs against an unmounted map/container.
 - T1/T2/T3/U1/U2/U3 timed vitals must also update Patient Physical Pulse and Respiratory icon findings from the clicked timed section, without auto-confirming the icons.
 - The call assignment screen should show New Assignment and assignment detail labels without decorative icons.
