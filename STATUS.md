@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Live student roster with heartbeat — COMPLETE:**
+  - [x] Student monitor and waiting-room polls send the participant token as a presence heartbeat; the server stamps `last_seen_at` on each poll
+  - [x] Participant lookups (join resume, event auth, heartbeat) go through an indexed `token_hash` equality query instead of scanning all participants (migration `003_participant_token_index.sql`)
+  - [x] Instructor Students panel shows a connected/offline dot per student (8s window) plus per-attempt progress: Ack/Arr/Txp milestones and shock/medication counts
+  - [x] Added `src/lib/sessionRoster.ts` helpers with tests, heartbeat-header hook coverage, and an admin roster rendering test
 - [x] **Instructor New Attempt flow — COMPLETE:**
   - [x] Added host-token-protected `POST /api/session/[code]/attempt` that bumps `active_attempt_version`
   - [x] Instructor panel shows the current attempt number and a New Attempt button while the room is active
@@ -446,7 +451,7 @@
 
 ## Blocked / Needs Input
 - [ ] **12-lead waveform assets** — User to provide gif/mp4 12-lead waveforms in `/public/waveforms/12lead/<rhythm>/<lead>.gif` for each rhythm × lead (I, II, III, aVR, aVL, aVF, V1–V6). ECG/SpO2/EtCO2 are now canvas-rendered and no longer need assets.
-- [ ] **Supabase credentials** — Needed for deployed sessions. Copy URL + anon key + service role key into Vercel/local env, run migrations `001` and `002`, and enable Realtime on session tables if replacing polling with subscriptions.
+- [ ] **Supabase credentials** — Needed for deployed sessions. Copy URL + anon key + service role key into Vercel/local env, run migrations `001` through `003`, and enable Realtime on session tables if replacing polling with subscriptions.
 - [ ] **Paramedic-supplied waveform videos** — Real ECG/SpO2/EtCO2/12-lead videos for production fidelity (later phase).
 - [ ] **Neonate joule default** — Set to 10J. Confirm with paramedic friend.
 

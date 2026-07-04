@@ -31,6 +31,7 @@ import {
   parsePatientPhysicalAutoSort,
   type PatientPhysicalFindings,
 } from '@/lib/patientPhysicalAutoSort'
+import { isConnected, participantProgress } from '@/lib/sessionRoster'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -361,21 +362,47 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="border border-neutral-800 bg-black/40 p-3">
               <h2 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-400">
-                Waiting room
+                Students
               </h2>
               <div className="mt-2 grid gap-2">
                 {participants.length === 0 ? (
                   <p className="text-sm text-neutral-500">No students joined yet.</p>
                 ) : (
-                  participants.map((participant) => (
-                    <div
-                      key={participant.id}
-                      className="flex items-center justify-between border border-neutral-800 px-3 py-2 text-sm"
-                    >
-                      <span className="font-bold text-white">{participant.nickname}</span>
-                      <span className="text-xs uppercase text-neutral-500">Joined</span>
-                    </div>
-                  ))
+                  participants.map((participant) => {
+                    const connected = isConnected(participant.last_seen_at)
+                    const progress = participantProgress(
+                      studentEvents,
+                      participant.id,
+                      attemptVersion,
+                    )
+                    return (
+                      <div
+                        key={participant.id}
+                        className="flex flex-wrap items-center justify-between gap-2 border border-neutral-800 px-3 py-2 text-sm"
+                      >
+                        <span className="flex items-center gap-2 font-bold text-white">
+                          <span
+                            role="status"
+                            aria-label={connected ? 'Connected' : 'Offline'}
+                            className={cn(
+                              'inline-block h-2 w-2 rounded-full',
+                              connected ? 'bg-ecg-green' : 'bg-neutral-600',
+                            )}
+                          />
+                          {participant.nickname}
+                        </span>
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+                          <span className={cn(progress.acknowledged && 'text-ecg-green')}>Ack</span>
+                          {' · '}
+                          <span className={cn(progress.arrived && 'text-ecg-green')}>Arr</span>
+                          {' · '}
+                          <span className={cn(progress.transported && 'text-ecg-green')}>Txp</span>
+                          {' · '}Shk {progress.shocks}
+                          {' · '}Med {progress.medications}
+                        </span>
+                      </div>
+                    )
+                  })
                 )}
               </div>
             </div>

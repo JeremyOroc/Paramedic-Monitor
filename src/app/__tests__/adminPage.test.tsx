@@ -62,6 +62,72 @@ describe('AdminPage', () => {
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'))
   })
 
+  it('shows a live roster with connection dots and per-student progress', async () => {
+    vi.spyOn(window, 'fetch').mockImplementation(async () => {
+      const body = {
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [
+          {
+            id: 'student-1',
+            nickname: 'Alice',
+            joined_at: '2026-07-04T11:00:00.000Z',
+            last_seen_at: new Date().toISOString(),
+          },
+          {
+            id: 'student-2',
+            nickname: 'Bob',
+            joined_at: '2026-07-04T11:00:00.000Z',
+            last_seen_at: '2026-07-04T11:00:05.000Z',
+          },
+        ],
+        events: [
+          {
+            id: 'e1',
+            session_id: 's',
+            participant_id: 'student-1',
+            attempt_version: 1,
+            kind: 'acknowledge',
+            label: 'Acknowledge',
+            payload: {},
+            occurred_at: '2026-07-04T11:01:00.000Z',
+          },
+          {
+            id: 'e2',
+            session_id: 's',
+            participant_id: 'student-1',
+            attempt_version: 1,
+            kind: 'shock',
+            label: 'Shock',
+            payload: {},
+            occurred_at: '2026-07-04T11:02:00.000Z',
+          },
+        ],
+      }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+
+    await waitFor(() => expect(screen.getByText('Students')).toBeInTheDocument())
+    const studentsPanel = screen.getByText('Students').parentElement as HTMLElement
+    await waitFor(() =>
+      expect(within(studentsPanel).getByText('Alice')).toBeInTheDocument(),
+    )
+    expect(within(studentsPanel).getByText('Bob')).toBeInTheDocument()
+    expect(within(studentsPanel).getAllByLabelText('Connected')).toHaveLength(1)
+    expect(within(studentsPanel).getAllByLabelText('Offline')).toHaveLength(1)
+
+    const aliceRow = within(studentsPanel).getByText('Alice').closest(
+      'div[class*="justify-between"]',
+    ) as HTMLElement
+    expect(within(aliceRow).getByText('Ack')).toHaveClass('text-ecg-green')
+    expect(within(aliceRow).getByText('Arr')).not.toHaveClass('text-ecg-green')
+    expect(within(aliceRow).getByText(/Shk 1/)).toBeInTheDocument()
+  })
+
   it('lets a session instructor force a new attempt', async () => {
     const user = userEvent.setup()
     const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {

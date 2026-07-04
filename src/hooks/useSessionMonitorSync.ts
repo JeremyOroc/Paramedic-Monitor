@@ -13,6 +13,8 @@ type SessionStatePayload = {
 
 type UseSessionMonitorSyncOptions = {
   code: string
+  /** Sent with each poll as a presence heartbeat for the instructor roster. */
+  participantToken?: string
   intervalMs?: number
   onSessionInactive?: (status: string) => void
   onNewAttempt?: (attemptVersion: number) => void
@@ -27,6 +29,7 @@ type UseSessionMonitorSyncOptions = {
  */
 export function useSessionMonitorSync({
   code,
+  participantToken = '',
   intervalMs = SESSION_SYNC_INTERVAL_MS,
   onSessionInactive,
   onNewAttempt,
@@ -35,16 +38,22 @@ export function useSessionMonitorSync({
   const lastVersionRef = useRef<number | null>(null)
   const lastAttemptRef = useRef<number | null>(null)
   const onSessionInactiveRef = useRef(onSessionInactive)
-  onSessionInactiveRef.current = onSessionInactive
   const onNewAttemptRef = useRef(onNewAttempt)
-  onNewAttemptRef.current = onNewAttempt
+  useEffect(() => {
+    onSessionInactiveRef.current = onSessionInactive
+    onNewAttemptRef.current = onNewAttempt
+  }, [onNewAttempt, onSessionInactive])
 
   useEffect(() => {
     let cancelled = false
 
     async function pollState() {
       try {
-        const response = await fetch(`/api/session/${code}/state`)
+        const response = await fetch(`/api/session/${code}/state`, {
+          headers: participantToken
+            ? { 'x-session-participant-token': participantToken }
+            : undefined,
+        })
         if (!response.ok) return
         const data = (await response.json()) as SessionStatePayload
         if (cancelled) return
@@ -82,5 +91,5 @@ export function useSessionMonitorSync({
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [applySharedState, code, intervalMs])
+  }, [applySharedState, code, intervalMs, participantToken])
 }

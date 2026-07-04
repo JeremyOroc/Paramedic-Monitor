@@ -14,6 +14,7 @@ export default function WaitingRoomPage() {
   const router = useRouter()
   const code = params.code.toUpperCase()
   const [nickname, setNickname] = useState('')
+  const [participantToken, setParticipantToken] = useState('')
   const [status, setStatus] = useState<'waiting' | 'active' | 'ended' | 'loading'>('loading')
   const [error, setError] = useState('')
   const storageKey = useMemo(() => participantStorageKey(code), [code])
@@ -24,15 +25,22 @@ export default function WaitingRoomPage() {
       router.replace('/')
       return
     }
-    const parsed = JSON.parse(raw) as { nickname?: string }
+    const parsed = JSON.parse(raw) as { nickname?: string; participantToken?: string }
     setNickname(parsed.nickname ?? '')
+    setParticipantToken(parsed.participantToken ?? '')
   }, [router, storageKey])
 
   useEffect(() => {
     let cancelled = false
     async function pollStatus() {
       try {
-        const response = await fetch(`/api/session/${code}/status`)
+        // The participant token turns the poll into a presence heartbeat for
+        // the instructor roster.
+        const response = await fetch(`/api/session/${code}/status`, {
+          headers: participantToken
+            ? { 'x-session-participant-token': participantToken }
+            : undefined,
+        })
         const data = await response.json()
         if (!response.ok) throw new Error(data.error ?? 'Unable to load room')
         if (cancelled) return
@@ -53,7 +61,7 @@ export default function WaitingRoomPage() {
       cancelled = true
       window.clearInterval(interval)
     }
-  }, [code, router])
+  }, [code, participantToken, router])
 
   return (
     <main className="grid min-h-screen place-items-center bg-black px-6 text-white">

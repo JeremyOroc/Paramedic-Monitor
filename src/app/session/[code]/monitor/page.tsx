@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
 import { MonitorPage, type StudentEventRecord } from '@/app/page'
@@ -16,7 +16,7 @@ export default function SessionMonitorPage() {
   const router = useRouter()
   const code = params.code.toUpperCase()
   const storageKey = useMemo(() => participantStorageKey(code), [code])
-  const participantTokenRef = useRef('')
+  const [participantToken, setParticipantToken] = useState('')
 
   useEffect(() => {
     const raw = localStorage.getItem(storageKey)
@@ -25,8 +25,11 @@ export default function SessionMonitorPage() {
       return
     }
     const parsed = JSON.parse(raw) as { participantToken?: string }
-    participantTokenRef.current = parsed.participantToken ?? ''
-    if (!participantTokenRef.current) router.replace('/')
+    if (!parsed.participantToken) {
+      router.replace('/')
+      return
+    }
+    setParticipantToken(parsed.participantToken)
   }, [router, storageKey])
 
   // A forced new attempt restarts the trainee's drill: clear the local store
@@ -35,6 +38,7 @@ export default function SessionMonitorPage() {
   const resetStore = useMonitorStore((s) => s.reset)
   useSessionMonitorSync({
     code,
+    participantToken,
     onSessionInactive: () => router.replace(`/session/${code}/waiting`),
     onNewAttempt: (version) => {
       resetStore()
@@ -44,7 +48,6 @@ export default function SessionMonitorPage() {
 
   const recordStudentEvent = useCallback(
     (event: StudentEventRecord) => {
-      const participantToken = participantTokenRef.current
       if (!participantToken) return
       void fetch(`/api/session/${code}/student-event`, {
         method: 'POST',
@@ -55,7 +58,7 @@ export default function SessionMonitorPage() {
         body: JSON.stringify(event),
       })
     },
-    [code],
+    [code, participantToken],
   )
 
   return <MonitorPage key={attemptVersion} onStudentEvent={recordStudentEvent} />

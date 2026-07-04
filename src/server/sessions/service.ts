@@ -60,6 +60,22 @@ async function getSessionByCode(code: string): Promise<SessionRecord> {
   return data as SessionRecord
 }
 
+async function findParticipantByToken(
+  sessionId: string,
+  participantToken: string,
+): Promise<ParticipantRecord | null> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('participants')
+    .select('id, session_id, nickname, joined_at, last_seen_at')
+    .eq('session_id', sessionId)
+    .eq('token_hash', hashSessionToken(participantToken))
+    .maybeSingle()
+
+  if (error) throw new SessionError(error.message, 500)
+  return (data as ParticipantRecord | null) ?? null
+}
+
 async function ensureAttempt(
   sessionId: string,
   participantId: string,
@@ -137,17 +153,7 @@ export async function joinSession(
 
   const supabase = createServiceClient()
   if (participantToken) {
-    const { data: existing, error } = await supabase
-      .from('participants')
-      .select('id, session_id, nickname, joined_at, last_seen_at, token_hash')
-      .eq('session_id', session.id)
-
-    if (error) throw new SessionError(error.message, 500)
-    const match = (existing as ParticipantRecord[] | null | undefined)?.find(
-      (participant) =>
-        participant.token_hash &&
-        verifySessionToken(participantToken, participant.token_hash),
-    )
+    const match = await findParticipantByToken(session.id, participantToken)
     if (match) {
       const { data: updated, error: updateError } = await supabase
         .from('participants')
@@ -209,17 +215,7 @@ export async function verifyParticipant(
 ): Promise<{ session: SessionRecord; participant: ParticipantRecord }> {
   if (!participantToken) throw new SessionError('Participant token required', 401)
   const session = await getSessionByCode(code)
-  const supabase = createServiceClient()
-  const { data, error } = await supabase
-    .from('participants')
-    .select('id, session_id, nickname, joined_at, last_seen_at, token_hash')
-    .eq('session_id', session.id)
-
-  if (error) throw new SessionError(error.message, 500)
-  const participant = (data as ParticipantRecord[] | null | undefined)?.find(
-    (candidate) =>
-      candidate.token_hash && verifySessionToken(participantToken, candidate.token_hash),
-  )
+  const participant = await findParticipantByToken(session.id, participantToken)
   if (!participant) throw new SessionError('Invalid participant token', 403)
   await ensureAttempt(session.id, participant.id, session.active_attempt_version)
   return { session, participant }
@@ -272,9 +268,20 @@ export async function endSession(code: string, hostToken: string) {
   return data as SessionRecord
 }
 
-export async function getSessionStatus(code: string) {
+export async function getSessionStatus(code: string, participantToken?: string) {
   const session = await getSessionByCode(code)
   const supabase = createServiceClient()
+
+  // Student polls double as a presence heartbeat so the instructor roster can
+  // show who is connected. Best-effort: a failed touch never fails the poll.
+  if (participantToken) {
+    await supabase
+      .from('participants')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('session_id', session.id)
+      .eq('token_hash', hashSessionToken(participantToken))
+  }
+
   const { data: state, error } = await supabase
     .from('session_state')
     .select('state, version, updated_at')

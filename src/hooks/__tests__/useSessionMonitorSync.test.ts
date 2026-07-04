@@ -57,6 +57,23 @@ describe('useSessionMonitorSync', () => {
     unmount()
   })
 
+  it('sends the participant token as a heartbeat header when provided', async () => {
+    fetchMock.mockImplementation(() => okJson(statePayload(1)))
+    const { unmount } = renderHook(() =>
+      useSessionMonitorSync({
+        code: 'ABC123',
+        participantToken: 'participant_token',
+        intervalMs: 10,
+      }),
+    )
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    expect(fetchMock).toHaveBeenCalledWith('/api/session/ABC123/state', {
+      headers: { 'x-session-participant-token': 'participant_token' },
+    })
+    unmount()
+  })
+
   it('fires onNewAttempt and re-applies the same state version on a new attempt', async () => {
     fetchMock.mockImplementation(() => okJson(statePayload(1, 'active', 1)))
     const onNewAttempt = vi.fn()

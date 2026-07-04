@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-07-04] [realtime] - Add live student roster with presence heartbeat
+
+- Student monitor and waiting-room polls now carry the participant token; the server stamps `last_seen_at` so the instructor roster shows connected/offline dots (8-second window).
+- The instructor Students panel shows per-student, per-attempt progress: Acknowledge/Arrival/Transport milestones plus shock and medication counts derived from the existing event log.
+- Participant lookups now query the deterministic `token_hash` directly (indexed via migration 003) instead of scanning and hash-comparing every participant per request.
+- Added roster helper tests, heartbeat-header hook coverage, and an admin roster rendering test.
+
 ## [2026-07-04] [realtime] - Add instructor New Attempt flow
 
 - Added `POST /api/session/[code]/attempt` (host token required) that increments the session's `active_attempt_version`.
