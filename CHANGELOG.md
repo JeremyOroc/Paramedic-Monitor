@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-07-04] [realtime] - Drop public-read RLS policies on session tables
+
+- Added migration `004_drop_public_read_policies.sql`: the anon key can no longer read participants (nicknames/token hashes), student events, attempts, or shared state across rooms.
+- RLS remains enabled on all session tables; API routes keep using the service-role key, so app behavior is unchanged.
+
 ## [2026-07-04] [realtime] - Add live student roster with presence heartbeat
 
 - Student monitor and waiting-room polls now carry the participant token; the server stamps `last_seen_at` so the instructor roster shows connected/offline dots (8-second window).

@@ -13,6 +13,9 @@
 ---
 
 ## Completed
+- [x] **Session table RLS lockdown — COMPLETE:**
+  - [x] Migration `004_drop_public_read_policies.sql` removes the anon-key public-read policies on `session_state`, `participants`, `participant_attempts`, and `student_events`
+  - [x] RLS stays enabled; all session traffic continues through the service-role API routes, so no behavior changes
 - [x] **Live student roster with heartbeat — COMPLETE:**
   - [x] Student monitor and waiting-room polls send the participant token as a presence heartbeat; the server stamps `last_seen_at` on each poll
   - [x] Participant lookups (join resume, event auth, heartbeat) go through an indexed `token_hash` equality query instead of scanning all participants (migration `003_participant_token_index.sql`)
