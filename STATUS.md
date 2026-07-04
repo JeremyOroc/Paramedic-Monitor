@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Session expiry enforcement — COMPLETE:**
+  - [x] Sessions past `expires_at` now read as `ended` everywhere via `applySessionExpiry` in the central session lookup
+  - [x] Expired rooms get the existing ended-room UX for free: waiting-room notice, join rejection, monitor stops applying state, instructor status shows ENDED
+  - [x] Start / Dispatch and New Attempt reject ended (including expired) rooms with 410
+  - [x] Unit coverage for expiry mapping, boundary time, null/malformed `expires_at`, and already-ended sessions
 - [x] **Session table RLS lockdown — COMPLETE:**
   - [x] Migration `004_drop_public_read_policies.sql` removes the anon-key public-read policies on `session_state`, `participants`, `participant_attempts`, and `student_events`
   - [x] RLS stays enabled; all session traffic continues through the service-role API routes, so no behavior changes

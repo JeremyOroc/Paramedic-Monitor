@@ -39,6 +39,22 @@ function normalizeCode(code: string): string {
   return code.trim().toUpperCase()
 }
 
+/**
+ * Sessions past `expires_at` read as `ended` everywhere, so stale room codes
+ * get the normal ended-room UX (waiting room notice, join rejection) instead
+ * of behaving like live rooms forever. Expired rows are kept; only their
+ * effective status changes.
+ */
+export function applySessionExpiry(
+  session: SessionRecord,
+  now: number = Date.now(),
+): SessionRecord {
+  if (session.status === 'ended' || !session.expires_at) return session
+  const expiresAt = Date.parse(session.expires_at)
+  if (!Number.isFinite(expiresAt) || expiresAt > now) return session
+  return { ...session, status: 'ended' }
+}
+
 function normalizeNickname(nickname: string): string {
   return nickname.trim().replace(/\s+/g, ' ').slice(0, 32)
 }
@@ -57,7 +73,7 @@ async function getSessionByCode(code: string): Promise<SessionRecord> {
     .single()
 
   if (error || !data) throw new SessionError('Session not found', 404)
-  return data as SessionRecord
+  return applySessionExpiry(data as SessionRecord)
 }
 
 async function findParticipantByToken(
@@ -223,6 +239,9 @@ export async function verifyParticipant(
 
 export async function startSession(code: string, hostToken: string) {
   const session = await verifyHost(code, hostToken)
+  if (session.status === 'ended') {
+    throw new SessionError('Session has ended', 410)
+  }
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('sessions')

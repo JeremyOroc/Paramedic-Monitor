@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-07-04] [realtime] - Enforce session expiry
+
+- Sessions past their `expires_at` (24h default) now read as `ended` through the central session lookup, so stale room codes get the normal ended-room UX instead of staying live forever.
+- Start / Dispatch now rejects ended (including expired) rooms with 410, matching the existing New Attempt guard.
+- Added unit tests for the expiry mapping, boundary conditions, and malformed timestamps.
+
 ## [2026-07-04] [realtime] - Drop public-read RLS policies on session tables
 
 - Added migration `004_drop_public_read_policies.sql`: the anon key can no longer read participants (nicknames/token hashes), student events, attempts, or shared state across rooms.
