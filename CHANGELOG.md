@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-07-04] [realtime] - Start new rooms with a blank admin console
+
+- Creating a room now resets the persisted monitor store (vitals, caller info, dispatch countdown, armed gate) before redirecting to the instructor page, so a previous drill's state no longer leaks into a new room.
+- Added landing-page coverage for the reset.
+
 ## [2026-07-04] [realtime] - Keep the host token out of the instructor URL
 
 - The instructor page now stores the `?host=` token in localStorage on first load and strips it from the address bar via a route replace.

@@ -13,6 +13,10 @@
 ---
 
 ## Completed
+- [x] **Fresh admin state on room creation — COMPLETE:**
+  - [x] Creating a room resets the persisted admin console (vitals, caller info, dispatch countdown, armed gate) before redirecting to the instructor page
+  - [x] Prevents a previous drill's countdown/state from leaking into a new room
+  - [x] Landing page test covers the reset
 - [x] **Host token removed from instructor URL — COMPLETE:**
   - [x] The instructor page moves the `?host=` token into localStorage on first load and rewrites the address bar to the clean route
   - [x] Refreshes and revisits resume from localStorage, matching the student participant-token pattern

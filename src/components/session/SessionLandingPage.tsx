@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import { useMonitorStore } from '@/store/monitorStore'
+
 function participantStorageKey(code: string) {
   return `paramedic-monitor.participant.${code.toUpperCase()}`
 }
@@ -21,6 +23,9 @@ export function SessionLandingPage() {
       const response = await fetch('/api/session/create', { method: 'POST' })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error ?? 'Unable to create room')
+      // The admin console persists across sessions; a new room must start
+      // from a blank drill (no leftover dispatch countdown, vitals, or gate).
+      useMonitorStore.getState().reset()
       router.push(data.instructorUrl)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to create room')
