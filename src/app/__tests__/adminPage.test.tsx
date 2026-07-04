@@ -62,6 +62,36 @@ describe('AdminPage', () => {
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'))
   })
 
+  it('lets a session instructor force a new attempt', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      const body = url.endsWith('/attempt')
+        ? { session: { status: 'active', active_attempt_version: 2 } }
+        : {
+            session: { status: 'active', active_attempt_version: 1 },
+            participants: [],
+            events: [],
+          }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'New Attempt' }))
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/session/ABC123/attempt', {
+        method: 'POST',
+        headers: { 'x-session-host-token': 'host_token' },
+      }),
+    )
+  })
+
   it('pushes session state immediately when CPR override toggles', async () => {
     const user = userEvent.setup()
     const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {

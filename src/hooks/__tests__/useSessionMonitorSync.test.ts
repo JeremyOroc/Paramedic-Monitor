@@ -4,8 +4,8 @@ import { renderHook } from '@testing-library/react'
 import { useSessionMonitorSync } from '../useSessionMonitorSync'
 import { useMonitorStore } from '@/store/monitorStore'
 
-const statePayload = (version: number, status = 'active') => ({
-  session: { status },
+const statePayload = (version: number, status = 'active', attemptVersion = 1) => ({
+  session: { status, active_attempt_version: attemptVersion },
   state: { state: { cprOverrideActive: true }, version },
 })
 
@@ -54,6 +54,22 @@ describe('useSessionMonitorSync', () => {
 
     await vi.waitFor(() => expect(onSessionInactive).toHaveBeenCalledWith('waiting'))
     expect(applySpy).not.toHaveBeenCalled()
+    unmount()
+  })
+
+  it('fires onNewAttempt and re-applies the same state version on a new attempt', async () => {
+    fetchMock.mockImplementation(() => okJson(statePayload(1, 'active', 1)))
+    const onNewAttempt = vi.fn()
+    const { unmount } = renderHook(() =>
+      useSessionMonitorSync({ code: 'ABC123', intervalMs: 10, onNewAttempt }),
+    )
+
+    await vi.waitFor(() => expect(applySpy).toHaveBeenCalledTimes(1))
+    expect(onNewAttempt).not.toHaveBeenCalled()
+
+    fetchMock.mockImplementation(() => okJson(statePayload(1, 'active', 2)))
+    await vi.waitFor(() => expect(onNewAttempt).toHaveBeenCalledWith(2))
+    await vi.waitFor(() => expect(applySpy).toHaveBeenCalledTimes(2))
     unmount()
   })
 

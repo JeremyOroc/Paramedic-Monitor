@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-07-04] [realtime] - Add instructor New Attempt flow
+
+- Added `POST /api/session/[code]/attempt` (host token required) that increments the session's `active_attempt_version`.
+- Instructor session header now shows the current attempt number and a New Attempt button while the room is active.
+- Student monitors restart their drill on an attempt change: local store reset, monitor remount, and a forced re-apply of the latest shared snapshot; new student events record under the new attempt version.
+- Added route, sync-hook, and admin page tests for the flow.
+
 ## [2026-07-04] [realtime] - Push CPR override and Reset to sessions immediately
 
 - Session instructors now push shared state the moment CPR override toggles or a Reset bumps `monitorResetVersion`, since both bypass Save → Send and the Send button stays disabled without pending changes.

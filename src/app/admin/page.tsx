@@ -102,6 +102,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   )
   const [participants, setParticipants] = useState<ReviewParticipant[]>([])
   const [studentEvents, setStudentEvents] = useState<StudentEvent[]>([])
+  const [attemptVersion, setAttemptVersion] = useState(1)
   const [sessionError, setSessionError] = useState('')
 
   const refreshReview = useCallback(async () => {
@@ -117,6 +118,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     }
     setSessionError('')
     setSessionStatus(data.session.status)
+    if (typeof data.session.active_attempt_version === 'number') {
+      setAttemptVersion(data.session.active_attempt_version)
+    }
     setParticipants(data.participants ?? [])
     setStudentEvents(data.events ?? [])
   }, [session])
@@ -140,6 +144,21 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       return
     }
     setSessionStatus(data.session.status)
+    await refreshReview()
+  }
+
+  const startNewAttempt = async () => {
+    if (!session) return
+    const response = await fetch(`/api/session/${session.code}/attempt`, {
+      method: 'POST',
+      headers: { 'x-session-host-token': session.hostToken },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      setSessionError(data.error ?? 'Unable to start a new attempt')
+      return
+    }
+    setAttemptVersion(data.session.active_attempt_version)
     await refreshReview()
   }
 
@@ -310,6 +329,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               <RoomCodeCopy code={session.code} className="mt-2" />
               <p className="text-sm text-neutral-300">
                 Status: <span className="font-bold uppercase">{sessionStatus}</span>
+                {' · '}Attempt <span className="font-bold">{attemptVersion}</span>
               </p>
             </div>
             <button
@@ -319,6 +339,14 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               className="ml-auto border border-ecg-green bg-ecg-green px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Start / Dispatch
+            </button>
+            <button
+              type="button"
+              onClick={startNewAttempt}
+              disabled={sessionStatus !== 'active'}
+              className="border border-pending-amber bg-pending-amber/15 px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-pending-amber hover:bg-pending-amber hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              New Attempt
             </button>
             <button
               type="button"

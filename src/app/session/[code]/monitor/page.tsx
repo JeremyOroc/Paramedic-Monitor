@@ -1,10 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
 import { MonitorPage, type StudentEventRecord } from '@/app/page'
 import { useSessionMonitorSync } from '@/hooks/useSessionMonitorSync'
+import { useMonitorStore } from '@/store/monitorStore'
 
 function participantStorageKey(code: string) {
   return `paramedic-monitor.participant.${code.toUpperCase()}`
@@ -28,9 +29,17 @@ export default function SessionMonitorPage() {
     if (!participantTokenRef.current) router.replace('/')
   }, [router, storageKey])
 
+  // A forced new attempt restarts the trainee's drill: clear the local store
+  // and remount the monitor so controller state (power, capture, etc.) resets.
+  const [attemptVersion, setAttemptVersion] = useState(1)
+  const resetStore = useMonitorStore((s) => s.reset)
   useSessionMonitorSync({
     code,
     onSessionInactive: () => router.replace(`/session/${code}/waiting`),
+    onNewAttempt: (version) => {
+      resetStore()
+      setAttemptVersion(version)
+    },
   })
 
   const recordStudentEvent = useCallback(
@@ -49,5 +58,5 @@ export default function SessionMonitorPage() {
     [code],
   )
 
-  return <MonitorPage onStudentEvent={recordStudentEvent} />
+  return <MonitorPage key={attemptVersion} onStudentEvent={recordStudentEvent} />
 }

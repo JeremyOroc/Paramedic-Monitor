@@ -13,6 +13,12 @@
 ---
 
 ## Completed
+- [x] **Instructor New Attempt flow — COMPLETE:**
+  - [x] Added host-token-protected `POST /api/session/[code]/attempt` that bumps `active_attempt_version`
+  - [x] Instructor panel shows the current attempt number and a New Attempt button while the room is active
+  - [x] Student monitors detect the attempt change, reset their local drill state, remount the monitor, and re-apply the latest shared snapshot
+  - [x] Student events keep recording against the new attempt version, so per-attempt logs stay separated
+  - [x] Route, hook, and admin page coverage added for the new-attempt flow
 - [x] **Immediate session pushes for CPR override and Reset — COMPLETE:**
   - [x] In session mode, toggling CPR override pushes the shared state right away instead of waiting behind a disabled Send button
   - [x] Monitor-tab and Caller-Info-tab Reset push immediately via the shared `monitorResetVersion` bump, so student monitors clear without a Send
