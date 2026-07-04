@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-07-04] [realtime] - Stop session polling from wiping trainee progress
+
+- Trimmed `SharedMonitorState` to instructor-authoritative fields only; patient info, dispatch Acknowledge/Arrival/Transport, EtCO2 calibration, and the accepted-BP layer stay trainee-local.
+- `applySharedState` now keeps trainee dispatch progress for the same run, clears Acknowledge/Arrival on a new dispatch run, and clears the gate on disarm — matching the local re-dispatch Send contract.
+- Instructor resets propagate through `monitorResetVersion`, clearing trainee-local reading/calibration layers when it changes.
+- Extracted student polling into `useSessionMonitorSync`: snapshots apply only when the shared state version changes, and network failures no longer throw unhandled.
+- Added store and hook regression tests for shared-state semantics and version-gated polling.
+
 ## [2026-06-27] [realtime] - Add instructor end-room control
 
 - Added `POST /api/session/[code]/end` for host-token-protected room ending.

@@ -1,0 +1,69 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+
+import { useMonitorStore, type SharedMonitorState } from '@/store/monitorStore'
+
+export const SESSION_SYNC_INTERVAL_MS = 1500
+
+type SessionStatePayload = {
+  session?: { status?: string }
+  state?: { state?: Partial<SharedMonitorState>; version?: number } | null
+}
+
+type UseSessionMonitorSyncOptions = {
+  code: string
+  intervalMs?: number
+  onSessionInactive?: (status: string) => void
+}
+
+/**
+ * Polls the shared session state and applies it to the monitor store.
+ * Snapshots are applied only when the state version changes, so trainee-local
+ * progress is not rewritten on every poll tick.
+ */
+export function useSessionMonitorSync({
+  code,
+  intervalMs = SESSION_SYNC_INTERVAL_MS,
+  onSessionInactive,
+}: UseSessionMonitorSyncOptions) {
+  const applySharedState = useMonitorStore((s) => s.applySharedState)
+  const lastVersionRef = useRef<number | null>(null)
+  const onSessionInactiveRef = useRef(onSessionInactive)
+  onSessionInactiveRef.current = onSessionInactive
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function pollState() {
+      try {
+        const response = await fetch(`/api/session/${code}/state`)
+        if (!response.ok) return
+        const data = (await response.json()) as SessionStatePayload
+        if (cancelled) return
+
+        const status = data.session?.status
+        if (status !== 'active') {
+          if (status) onSessionInactiveRef.current?.(status)
+          return
+        }
+
+        const version = data.state?.version
+        const shared = data.state?.state
+        if (!shared || typeof version !== 'number') return
+        if (lastVersionRef.current === version) return
+        lastVersionRef.current = version
+        applySharedState(shared)
+      } catch {
+        // Network blip — keep polling; the next tick retries.
+      }
+    }
+
+    void pollState()
+    const interval = window.setInterval(() => void pollState(), intervalMs)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [applySharedState, code, intervalMs])
+}

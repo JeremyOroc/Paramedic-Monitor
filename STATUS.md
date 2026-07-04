@@ -13,6 +13,12 @@
 ---
 
 ## Completed
+- [x] **Session shared-state stomping fix — COMPLETE:**
+  - [x] `SharedMonitorState` now carries only instructor-authoritative fields; trainee-local progress (patient info, dispatch Acknowledge/Arrival/Transport, EtCO2 calibration, accepted BP layer) is excluded from shared snapshots
+  - [x] `applySharedState` preserves trainee dispatch progress for the same run, clears Ack/Arrival on a new dispatch run, and fully clears the gate when it disarms
+  - [x] Instructor resets propagate via `monitorResetVersion` in the shared snapshot, clearing trainee-local calibration/accepted-BP layers when it changes
+  - [x] Student monitor polling moved into `useSessionMonitorSync`, which applies snapshots only when the state version changes and survives failed polls
+  - [x] Store and hook regression coverage added for shared-state semantics and version-gated polling
 - [x] **Instructor end-room control — COMPLETE:**
   - [x] Added an instructor-only end-room API route that switches the session status to `ended`
   - [x] Added an End Room control to the session instructor panel
