@@ -5,6 +5,77 @@
 
 ---
 
+## [2026-07-04] [realtime] - Start new rooms with a blank admin console
+
+- Creating a room now resets the persisted monitor store (vitals, caller info, dispatch countdown, armed gate) before redirecting to the instructor page, so a previous drill's state no longer leaks into a new room.
+- Added landing-page coverage for the reset.
+
+## [2026-07-04] [realtime] - Keep the host token out of the instructor URL
+
+- The instructor page now stores the `?host=` token in localStorage on first load and strips it from the address bar via a route replace.
+- Refreshes resume from storage; opening the clean URL without a stored token still shows the access-required screen.
+- Added page tests for token capture/strip, storage resume, and missing-token handling.
+
+## [2026-07-04] [realtime] - Enforce session expiry
+
+- Sessions past their `expires_at` (24h default) now read as `ended` through the central session lookup, so stale room codes get the normal ended-room UX instead of staying live forever.
+- Start / Dispatch now rejects ended (including expired) rooms with 410, matching the existing New Attempt guard.
+- Added unit tests for the expiry mapping, boundary conditions, and malformed timestamps.
+
+## [2026-07-04] [realtime] - Drop public-read RLS policies on session tables
+
+- Added migration `004_drop_public_read_policies.sql`: the anon key can no longer read participants (nicknames/token hashes), student events, attempts, or shared state across rooms.
+- RLS remains enabled on all session tables; API routes keep using the service-role key, so app behavior is unchanged.
+
+## [2026-07-04] [realtime] - Add live student roster with presence heartbeat
+
+- Student monitor and waiting-room polls now carry the participant token; the server stamps `last_seen_at` so the instructor roster shows connected/offline dots (8-second window).
+- The instructor Students panel shows per-student, per-attempt progress: Acknowledge/Arrival/Transport milestones plus shock and medication counts derived from the existing event log.
+- Participant lookups now query the deterministic `token_hash` directly (indexed via migration 003) instead of scanning and hash-comparing every participant per request.
+- Added roster helper tests, heartbeat-header hook coverage, and an admin roster rendering test.
+
+## [2026-07-04] [realtime] - Add instructor New Attempt flow
+
+- Added `POST /api/session/[code]/attempt` (host token required) that increments the session's `active_attempt_version`.
+- Instructor session header now shows the current attempt number and a New Attempt button while the room is active.
+- Student monitors restart their drill on an attempt change: local store reset, monitor remount, and a forced re-apply of the latest shared snapshot; new student events record under the new attempt version.
+- Added route, sync-hook, and admin page tests for the flow.
+
+## [2026-07-04] [realtime] - Push CPR override and Reset to sessions immediately
+
+- Session instructors now push shared state the moment CPR override toggles or a Reset bumps `monitorResetVersion`, since both bypass Save → Send and the Send button stays disabled without pending changes.
+- Background push failures surface in the instructor session error banner.
+- Added admin page coverage for CPR-toggle and Reset-triggered state POSTs.
+
+## [2026-07-04] [realtime] - Stop session polling from wiping trainee progress
+
+- Trimmed `SharedMonitorState` to instructor-authoritative fields only; patient info, dispatch Acknowledge/Arrival/Transport, EtCO2 calibration, and the accepted-BP layer stay trainee-local.
+- `applySharedState` now keeps trainee dispatch progress for the same run, clears Acknowledge/Arrival on a new dispatch run, and clears the gate on disarm — matching the local re-dispatch Send contract.
+- Instructor resets propagate through `monitorResetVersion`, clearing trainee-local reading/calibration layers when it changes.
+- Extracted student polling into `useSessionMonitorSync`: snapshots apply only when the shared state version changes, and network failures no longer throw unhandled.
+- Added store and hook regression tests for shared-state semantics and version-gated polling.
+
+## [2026-06-27] [realtime] - Add instructor end-room control
+
+- Added `POST /api/session/[code]/end` for host-token-protected room ending.
+- Added an End Room button to the instructor session panel.
+- Redirected instructors back to the lobby after a room is ended.
+- Updated the student waiting room to show an ended-room state with a return-to-lobby action.
+
+## [2026-06-27] [realtime] - Make session room codes copyable
+
+- Added a reusable room-code copy control with selectable uppercase code text.
+- Wired the copy control into instructor and student waiting-room session views.
+- Added focused coverage for clipboard copy behavior.
+
+## [2026-06-27] [realtime] - Add secure session room vertical slice
+
+- Replaced the default entry point with a create/join room lobby while preserving `/?dev=1` for the local monitor.
+- Added private host-token instructor rooms, nickname-based student join, waiting room flow, and Start/Dispatch release.
+- Added session APIs and Supabase migration for shared instructor state plus per-student participants, attempts, and event logs.
+- Wired session instructor Send to push confirmed monitor state and session monitors to record student Acknowledge/Arrival/Transport, meds, Analyze, Charge, and Shock events.
+- Added focused coverage for token hashing/verification and create/join lobby behavior.
+
 ## [2026-06-19] [instructor] - Keep auto-sorted vitals Off
 
 - Universal Caller Info scenario auto-sort now fills origin vital numbers without activating those vitals.

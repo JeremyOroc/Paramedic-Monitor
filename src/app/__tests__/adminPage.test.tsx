@@ -1,14 +1,219 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
 
 import AdminPage from '../admin/page'
 
+const routerReplace = vi.hoisted(() => vi.fn())
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: routerReplace,
+    prefetch: vi.fn(),
+    back: vi.fn(),
+  }),
+  useSearchParams: () => new URLSearchParams(window.location.search),
+  usePathname: () => window.location.pathname,
+}))
+
 describe('AdminPage', () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
+    routerReplace.mockClear()
     useMonitorStore.getState().reset()
+  })
+
+  it('lets a session instructor end an active room', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch')
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            session: { status: 'active' },
+            participants: [],
+            events: [],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ session: { status: 'ended' } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'End Room' }))
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/session/ABC123/end', {
+        method: 'POST',
+        headers: { 'x-session-host-token': 'host_token' },
+      }),
+    )
+    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'))
+  })
+
+  it('shows a live roster with connection dots and per-student progress', async () => {
+    vi.spyOn(window, 'fetch').mockImplementation(async () => {
+      const body = {
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [
+          {
+            id: 'student-1',
+            nickname: 'Alice',
+            joined_at: '2026-07-04T11:00:00.000Z',
+            last_seen_at: new Date().toISOString(),
+          },
+          {
+            id: 'student-2',
+            nickname: 'Bob',
+            joined_at: '2026-07-04T11:00:00.000Z',
+            last_seen_at: '2026-07-04T11:00:05.000Z',
+          },
+        ],
+        events: [
+          {
+            id: 'e1',
+            session_id: 's',
+            participant_id: 'student-1',
+            attempt_version: 1,
+            kind: 'acknowledge',
+            label: 'Acknowledge',
+            payload: {},
+            occurred_at: '2026-07-04T11:01:00.000Z',
+          },
+          {
+            id: 'e2',
+            session_id: 's',
+            participant_id: 'student-1',
+            attempt_version: 1,
+            kind: 'shock',
+            label: 'Shock',
+            payload: {},
+            occurred_at: '2026-07-04T11:02:00.000Z',
+          },
+        ],
+      }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+
+    await waitFor(() => expect(screen.getByText('Students')).toBeInTheDocument())
+    const studentsPanel = screen.getByText('Students').parentElement as HTMLElement
+    await waitFor(() =>
+      expect(within(studentsPanel).getByText('Alice')).toBeInTheDocument(),
+    )
+    expect(within(studentsPanel).getByText('Bob')).toBeInTheDocument()
+    expect(within(studentsPanel).getAllByLabelText('Connected')).toHaveLength(1)
+    expect(within(studentsPanel).getAllByLabelText('Offline')).toHaveLength(1)
+
+    const aliceRow = within(studentsPanel).getByText('Alice').closest(
+      'div[class*="justify-between"]',
+    ) as HTMLElement
+    expect(within(aliceRow).getByText('Ack')).toHaveClass('text-ecg-green')
+    expect(within(aliceRow).getByText('Arr')).not.toHaveClass('text-ecg-green')
+    expect(within(aliceRow).getByText(/Shk 1/)).toBeInTheDocument()
+  })
+
+  it('lets a session instructor force a new attempt', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      const body = url.endsWith('/attempt')
+        ? { session: { status: 'active', active_attempt_version: 2 } }
+        : {
+            session: { status: 'active', active_attempt_version: 1 },
+            participants: [],
+            events: [],
+          }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'New Attempt' }))
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith('/api/session/ABC123/attempt', {
+        method: 'POST',
+        headers: { 'x-session-host-token': 'host_token' },
+      }),
+    )
+  })
+
+  it('pushes session state immediately when CPR override toggles', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      const body = url.includes('/review')
+        ? { session: { status: 'active' }, participants: [], events: [] }
+        : { session: { status: 'active' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    const statePosts = () =>
+      fetchMock.mock.calls.filter(
+        ([url, init]) => String(url).endsWith('/state') && init?.method === 'POST',
+      )
+    expect(statePosts()).toHaveLength(0)
+
+    await user.click(screen.getByRole('button', { name: 'CPR' }))
+
+    await waitFor(() => expect(statePosts()).toHaveLength(1))
+    const posted = JSON.parse(String(statePosts()[0][1]?.body))
+    expect(posted.state.cprOverrideActive).toBe(true)
+  })
+
+  it('pushes session state immediately when Reset is clicked', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      const body = url.includes('/review')
+        ? { session: { status: 'active' }, participants: [], events: [] }
+        : { session: { status: 'active' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+    const versionBefore = useMonitorStore.getState().monitorResetVersion
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
+
+    await waitFor(() => {
+      const statePosts = fetchMock.mock.calls.filter(
+        ([url, init]) => String(url).endsWith('/state') && init?.method === 'POST',
+      )
+      expect(statePosts).toHaveLength(1)
+      const posted = JSON.parse(String(statePosts[0][1]?.body))
+      expect(posted.state.monitorResetVersion).toBe(versionBefore + 1)
+    })
   })
 
   it('shows monitor controls by default and keeps caller info in its own tab', async () => {

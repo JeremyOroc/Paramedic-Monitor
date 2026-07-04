@@ -13,6 +13,64 @@
 ---
 
 ## Completed
+- [x] **Fresh admin state on room creation — COMPLETE:**
+  - [x] Creating a room resets the persisted admin console (vitals, caller info, dispatch countdown, armed gate) before redirecting to the instructor page
+  - [x] Prevents a previous drill's countdown/state from leaking into a new room
+  - [x] Landing page test covers the reset
+- [x] **Host token removed from instructor URL — COMPLETE:**
+  - [x] The instructor page moves the `?host=` token into localStorage on first load and rewrites the address bar to the clean route
+  - [x] Refreshes and revisits resume from localStorage, matching the student participant-token pattern
+  - [x] Projected screens, browser history, and screenshots no longer expose room control
+  - [x] Page tests cover URL-token capture/strip, storage resume, and the access-required screen
+- [x] **Session expiry enforcement — COMPLETE:**
+  - [x] Sessions past `expires_at` now read as `ended` everywhere via `applySessionExpiry` in the central session lookup
+  - [x] Expired rooms get the existing ended-room UX for free: waiting-room notice, join rejection, monitor stops applying state, instructor status shows ENDED
+  - [x] Start / Dispatch and New Attempt reject ended (including expired) rooms with 410
+  - [x] Unit coverage for expiry mapping, boundary time, null/malformed `expires_at`, and already-ended sessions
+- [x] **Session table RLS lockdown — COMPLETE:**
+  - [x] Migration `004_drop_public_read_policies.sql` removes the anon-key public-read policies on `session_state`, `participants`, `participant_attempts`, and `student_events`
+  - [x] RLS stays enabled; all session traffic continues through the service-role API routes, so no behavior changes
+- [x] **Live student roster with heartbeat — COMPLETE:**
+  - [x] Student monitor and waiting-room polls send the participant token as a presence heartbeat; the server stamps `last_seen_at` on each poll
+  - [x] Participant lookups (join resume, event auth, heartbeat) go through an indexed `token_hash` equality query instead of scanning all participants (migration `003_participant_token_index.sql`)
+  - [x] Instructor Students panel shows a connected/offline dot per student (8s window) plus per-attempt progress: Ack/Arr/Txp milestones and shock/medication counts
+  - [x] Added `src/lib/sessionRoster.ts` helpers with tests, heartbeat-header hook coverage, and an admin roster rendering test
+- [x] **Instructor New Attempt flow — COMPLETE:**
+  - [x] Added host-token-protected `POST /api/session/[code]/attempt` that bumps `active_attempt_version`
+  - [x] Instructor panel shows the current attempt number and a New Attempt button while the room is active
+  - [x] Student monitors detect the attempt change, reset their local drill state, remount the monitor, and re-apply the latest shared snapshot
+  - [x] Student events keep recording against the new attempt version, so per-attempt logs stay separated
+  - [x] Route, hook, and admin page coverage added for the new-attempt flow
+- [x] **Immediate session pushes for CPR override and Reset — COMPLETE:**
+  - [x] In session mode, toggling CPR override pushes the shared state right away instead of waiting behind a disabled Send button
+  - [x] Monitor-tab and Caller-Info-tab Reset push immediately via the shared `monitorResetVersion` bump, so student monitors clear without a Send
+  - [x] Failed background pushes surface in the instructor session error banner
+  - [x] Admin page tests cover CPR-toggle and Reset-triggered state POSTs
+- [x] **Session shared-state stomping fix — COMPLETE:**
+  - [x] `SharedMonitorState` now carries only instructor-authoritative fields; trainee-local progress (patient info, dispatch Acknowledge/Arrival/Transport, EtCO2 calibration, accepted BP layer) is excluded from shared snapshots
+  - [x] `applySharedState` preserves trainee dispatch progress for the same run, clears Ack/Arrival on a new dispatch run, and fully clears the gate when it disarms
+  - [x] Instructor resets propagate via `monitorResetVersion` in the shared snapshot, clearing trainee-local calibration/accepted-BP layers when it changes
+  - [x] Student monitor polling moved into `useSessionMonitorSync`, which applies snapshots only when the state version changes and survives failed polls
+  - [x] Store and hook regression coverage added for shared-state semantics and version-gated polling
+- [x] **Instructor end-room control — COMPLETE:**
+  - [x] Added an instructor-only end-room API route that switches the session status to `ended`
+  - [x] Added an End Room control to the session instructor panel
+  - [x] Ending a room redirects the instructor back to the lobby
+  - [x] Waiting-room students see a Room ended state and can return to the lobby
+- [x] **Session room code copy affordance — COMPLETE:**
+  - [x] Instructor and student waiting-room views show a selectable room code with a Copy button
+  - [x] Copy action writes the normalized uppercase room code to the clipboard
+  - [x] Added focused component coverage for room-code copy behavior
+- [x] **Session room vertical slice — COMPLETE:**
+  - [x] Default `/` page is now a create/join room lobby, with `/?dev=1` preserving the local monitor
+  - [x] Session creation returns a private instructor host link and creates secure hashed host credentials
+  - [x] Student join uses room code + nickname and stores a participant token for refresh resume
+  - [x] Added waiting room route that holds students until instructor Start/Dispatch
+  - [x] Session instructor route wraps the existing admin console and shows room status, waiting students, and live evaluation log
+  - [x] Admin Send can push the latest confirmed monitor state to session shared state
+  - [x] Session monitor route applies shared instructor state and records per-student Acknowledge/Arrival/Transport, meds, Analyze, Charge, and Shock events
+  - [x] Added Supabase migration for session hosts, session state, participants, participant attempts, and student events
+  - [x] Added focused coverage for session token hashing/verification and create/join lobby behavior
 - [x] **Local developer setup helper — COMPLETE:**
   - [x] Dependencies installed with a project-local portable Node.js runtime because system `npm` was unavailable
   - [x] Added `start-local.ps1` for launching the Next.js dev server with the portable runtime
@@ -410,7 +468,7 @@
 
 ## Blocked / Needs Input
 - [ ] **12-lead waveform assets** — User to provide gif/mp4 12-lead waveforms in `/public/waveforms/12lead/<rhythm>/<lead>.gif` for each rhythm × lead (I, II, III, aVR, aVL, aVF, V1–V6). ECG/SpO2/EtCO2 are now canvas-rendered and no longer need assets.
-- [ ] **Supabase credentials** — Deferred. Will be needed once realtime / sessions phase begins. Copy URL + anon key into `.env.local`, run the migration, enable Realtime on `vitals_snapshots`.
+- [ ] **Supabase credentials** — Needed for deployed sessions. Copy URL + anon key + service role key into Vercel/local env, run migrations `001` through `003`, and enable Realtime on session tables if replacing polling with subscriptions.
 - [ ] **Paramedic-supplied waveform videos** — Real ECG/SpO2/EtCO2/12-lead videos for production fidelity (later phase).
 - [ ] **Neonate joule default** — Set to 10J. Confirm with paramedic friend.
 

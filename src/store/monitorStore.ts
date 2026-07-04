@@ -76,6 +76,23 @@ type BpDisplay = Pick<Vitals, 'bp_sys' | 'bp_dia'>
 type BpActiveState = Pick<VitalActiveState, 'bp_sys' | 'bp_dia'>
 export type Etco2CalibrationStatus = 'idle' | 'calibrating' | 'calibrated'
 
+// Instructor-authoritative state pushed to session monitors. Student-local
+// progress (patient info edits, dispatch Acknowledge/Arrival/Transport, EtCO2
+// calibration, and the accepted-BP reading layer) is intentionally excluded so
+// applying a shared snapshot never wipes what a trainee has done on their own
+// monitor. `monitorResetVersion` propagates instructor resets: monitors clear
+// their local progress when it changes.
+export type SharedMonitorState = {
+  confirmed: Vitals
+  confirmedVitalActive: VitalActiveState
+  callerInfoConfirmed: CallerInfo
+  dispatchRouteConfirmed: DispatchRoute
+  dispatch: DispatchState
+  dispatchConfirmedSeconds: number
+  cprOverrideActive: boolean
+  monitorResetVersion: number
+}
+
 const initialBpDisplay: BpDisplay = {
   bp_sys: initial.bp_sys,
   bp_dia: initial.bp_dia,
@@ -264,6 +281,8 @@ export type MonitorState = {
   resetVitalsToNormal: () => void
   save: () => void
   send: () => void
+  getSharedState: () => SharedMonitorState
+  applySharedState: (shared: Partial<SharedMonitorState>) => void
   reset: () => void
 }
 
@@ -271,7 +290,7 @@ export const STORAGE_KEY = 'paramedic-monitor.v1'
 
 export const useMonitorStore = create<MonitorState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       draft: initial,
       saved: initial,
       confirmed: initial,
@@ -525,6 +544,90 @@ export const useMonitorStore = create<MonitorState>()(
               acknowledgedAt: null,
               arrivedAt: null,
             },
+          }
+        }),
+      getSharedState: (): SharedMonitorState => {
+        const s = get()
+        return {
+          confirmed: { ...s.confirmed },
+          confirmedVitalActive: { ...s.confirmedVitalActive },
+          callerInfoConfirmed: { ...s.callerInfoConfirmed },
+          dispatchRouteConfirmed: { ...s.dispatchRouteConfirmed },
+          dispatch: {
+            ...s.dispatch,
+            callerEvents: [...s.dispatch.callerEvents],
+          },
+          dispatchConfirmedSeconds: s.dispatchConfirmedSeconds,
+          cprOverrideActive: s.cprOverrideActive,
+          monitorResetVersion: s.monitorResetVersion,
+        }
+      },
+      applySharedState: (shared) =>
+        set((s) => {
+          const confirmed = normalizeVitals(shared.confirmed)
+          const confirmedVitalActive = normalizeVitalActive(
+            shared.confirmedVitalActive,
+            undefined,
+          )
+
+          // Dispatch timing/content is instructor-authoritative, but the gate
+          // progress belongs to this trainee. Same run keeps their progress; a
+          // new armed run clears Ack/Arrival (same contract as a local
+          // re-dispatch Send); a disarmed gate is a full drill reset.
+          const incoming = normalizeDispatch(
+            shared.dispatch,
+            s.dispatchConfirmedSeconds * 1000,
+          )
+          let dispatch: DispatchState
+          if (incoming.runId === s.dispatch.runId) {
+            dispatch = {
+              ...incoming,
+              acknowledgedAt: s.dispatch.acknowledgedAt,
+              arrivedAt: s.dispatch.arrivedAt,
+              transportedAt: s.dispatch.transportedAt,
+              callerEvents: s.dispatch.callerEvents,
+            }
+          } else if (incoming.armed) {
+            dispatch = {
+              ...incoming,
+              acknowledgedAt: null,
+              arrivedAt: null,
+              transportedAt: s.dispatch.transportedAt,
+              callerEvents: s.dispatch.callerEvents,
+            }
+          } else {
+            dispatch = { ...DEFAULT_DISPATCH }
+          }
+
+          // An instructor reset clears the trainee-local reading/calibration
+          // layers; otherwise those stay untouched by shared snapshots.
+          const sharedResetVersion =
+            typeof shared.monitorResetVersion === 'number'
+              ? shared.monitorResetVersion
+              : null
+          const resetSideEffects =
+            sharedResetVersion !== null && sharedResetVersion !== s.monitorResetVersion
+              ? {
+                  monitorResetVersion: sharedResetVersion,
+                  etco2CalibrationStatus: 'idle' as Etco2CalibrationStatus,
+                  acceptedBp: initialBpDisplay,
+                  acceptedBpActive: inactiveBpActive,
+                }
+              : {}
+
+          return {
+            confirmed,
+            confirmedVitalActive,
+            confirmedVitalsActive: anyVitalActive(confirmedVitalActive),
+            callerInfoConfirmed: normalizeCallerInfo(shared.callerInfoConfirmed),
+            dispatchRouteConfirmed: normalizeDispatchRoute(shared.dispatchRouteConfirmed),
+            dispatch,
+            dispatchConfirmedSeconds:
+              typeof shared.dispatchConfirmedSeconds === 'number'
+                ? shared.dispatchConfirmedSeconds
+                : s.dispatchConfirmedSeconds,
+            cprOverrideActive: shared.cprOverrideActive === true,
+            ...resetSideEffects,
           }
         }),
       reset: () =>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
@@ -15,6 +16,7 @@ import {
 } from '@/components/instructor/PatientPhysicalPanel'
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
+import { RoomCodeCopy } from '@/components/session/RoomCodeCopy'
 import {
   CALLER_INFO_AUTO_SORT_FIELDS,
   parseCallerInfoAutoSort,
@@ -29,11 +31,13 @@ import {
   parsePatientPhysicalAutoSort,
   type PatientPhysicalFindings,
 } from '@/lib/patientPhysicalAutoSort'
+import { isConnected, participantProgress } from '@/lib/sessionRoster'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
 import type { NumericVitalField } from '@/types/vitals'
+import type { StudentEvent } from '@/types/session'
 
 type AdminTab = 'monitor' | 'caller' | 'patient' | 'physical'
 type PatientPhysicalIconGroupId =
@@ -57,7 +61,22 @@ const AUTO_SORT_VITAL_FIELDS: ReadonlyArray<NumericVitalField> = [
   'etco2',
 ]
 
-export default function AdminPage() {
+type SessionAdminProps = {
+  session?: {
+    code: string
+    hostToken: string
+  }
+}
+
+type ReviewParticipant = {
+  id: string
+  nickname: string
+  joined_at: string
+  last_seen_at: string | null
+}
+
+export default function AdminPage({ session }: SessionAdminProps = {}) {
+  const router = useRouter()
   useStoreHydration()
   const [tab, setTab] = useState<AdminTab>('monitor')
   const [patientSelections, setPatientSelections] = useState<PatientInformationSelections>(
@@ -78,6 +97,119 @@ export default function AdminPage() {
   const resetMonitorVitals = useMonitorStore((s) => s.resetMonitorVitals)
   const setInactiveDraftVitals = useMonitorStore((s) => s.setInactiveDraftVitals)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
+  const getSharedState = useMonitorStore((s) => s.getSharedState)
+  const [sessionStatus, setSessionStatus] = useState<'waiting' | 'active' | 'ended' | 'error'>(
+    'waiting',
+  )
+  const [participants, setParticipants] = useState<ReviewParticipant[]>([])
+  const [studentEvents, setStudentEvents] = useState<StudentEvent[]>([])
+  const [attemptVersion, setAttemptVersion] = useState(1)
+  const [sessionError, setSessionError] = useState('')
+
+  const refreshReview = useCallback(async () => {
+    if (!session) return
+    const response = await fetch(`/api/session/${session.code}/review`, {
+      headers: { 'x-session-host-token': session.hostToken },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      setSessionError(data.error ?? 'Unable to load session review')
+      setSessionStatus('error')
+      return
+    }
+    setSessionError('')
+    setSessionStatus(data.session.status)
+    if (typeof data.session.active_attempt_version === 'number') {
+      setAttemptVersion(data.session.active_attempt_version)
+    }
+    setParticipants(data.participants ?? [])
+    setStudentEvents(data.events ?? [])
+  }, [session])
+
+  useEffect(() => {
+    if (!session) return
+    void refreshReview()
+    const interval = window.setInterval(() => void refreshReview(), 2500)
+    return () => window.clearInterval(interval)
+  }, [refreshReview, session])
+
+  const startSession = async () => {
+    if (!session) return
+    const response = await fetch(`/api/session/${session.code}/start`, {
+      method: 'POST',
+      headers: { 'x-session-host-token': session.hostToken },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      setSessionError(data.error ?? 'Unable to start session')
+      return
+    }
+    setSessionStatus(data.session.status)
+    await refreshReview()
+  }
+
+  const startNewAttempt = async () => {
+    if (!session) return
+    const response = await fetch(`/api/session/${session.code}/attempt`, {
+      method: 'POST',
+      headers: { 'x-session-host-token': session.hostToken },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      setSessionError(data.error ?? 'Unable to start a new attempt')
+      return
+    }
+    setAttemptVersion(data.session.active_attempt_version)
+    await refreshReview()
+  }
+
+  const endSession = async () => {
+    if (!session) return
+    const response = await fetch(`/api/session/${session.code}/end`, {
+      method: 'POST',
+      headers: { 'x-session-host-token': session.hostToken },
+    })
+    const data = await response.json()
+    if (!response.ok) {
+      setSessionError(data.error ?? 'Unable to end session')
+      return
+    }
+    setSessionStatus(data.session.status)
+    router.replace('/')
+  }
+
+  const sendSessionState = useCallback(async () => {
+    if (!session) return
+    const response = await fetch(`/api/session/${session.code}/state`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-session-host-token': session.hostToken,
+      },
+      body: JSON.stringify({ state: getSharedState() }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
+  }, [getSharedState, session])
+
+  // CPR override and Reset bypass Save → Send, so in a session they must push
+  // shared state themselves — the Send button stays disabled without pending
+  // Save → Send changes and would otherwise strand these on the admin screen.
+  const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
+  const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
+  const immediatePushRef = useRef<{ cpr: boolean; resetVersion: number } | null>(null)
+  useEffect(() => {
+    if (!session) return
+    const prev = immediatePushRef.current
+    immediatePushRef.current = { cpr: cprOverrideActive, resetVersion: monitorResetVersion }
+    if (!prev) return
+    if (prev.cpr === cprOverrideActive && prev.resetVersion === monitorResetVersion) return
+    void sendSessionState().catch((caught) => {
+      setSessionError(
+        caught instanceof Error ? caught.message : 'Unable to send session state',
+      )
+    })
+  }, [cprOverrideActive, monitorResetVersion, sendSessionState, session])
   const resetPatientInformation = () => {
     setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
     setPatientText(EMPTY_PATIENT_INFORMATION_TEXT())
@@ -188,6 +320,120 @@ export default function AdminPage() {
 
   return (
     <InstructorLayout>
+      {session && (
+        <section className="grid gap-4 border border-cyan-bp/60 bg-cyan-bp/10 p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div>
+              <p className="font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp">
+                Room code
+              </p>
+              <RoomCodeCopy code={session.code} className="mt-2" />
+              <p className="text-sm text-neutral-300">
+                Status: <span className="font-bold uppercase">{sessionStatus}</span>
+                {' · '}Attempt <span className="font-bold">{attemptVersion}</span>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={startSession}
+              disabled={sessionStatus === 'active' || sessionStatus === 'ended'}
+              className="ml-auto border border-ecg-green bg-ecg-green px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Start / Dispatch
+            </button>
+            <button
+              type="button"
+              onClick={startNewAttempt}
+              disabled={sessionStatus !== 'active'}
+              className="border border-pending-amber bg-pending-amber/15 px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-pending-amber hover:bg-pending-amber hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              New Attempt
+            </button>
+            <button
+              type="button"
+              onClick={endSession}
+              disabled={sessionStatus === 'ended'}
+              className="border border-alarm-red bg-alarm-red/15 px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              End Room
+            </button>
+          </div>
+          {sessionError && <p className="text-sm font-semibold text-pending-amber">{sessionError}</p>}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="border border-neutral-800 bg-black/40 p-3">
+              <h2 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-400">
+                Students
+              </h2>
+              <div className="mt-2 grid gap-2">
+                {participants.length === 0 ? (
+                  <p className="text-sm text-neutral-500">No students joined yet.</p>
+                ) : (
+                  participants.map((participant) => {
+                    const connected = isConnected(participant.last_seen_at)
+                    const progress = participantProgress(
+                      studentEvents,
+                      participant.id,
+                      attemptVersion,
+                    )
+                    return (
+                      <div
+                        key={participant.id}
+                        className="flex flex-wrap items-center justify-between gap-2 border border-neutral-800 px-3 py-2 text-sm"
+                      >
+                        <span className="flex items-center gap-2 font-bold text-white">
+                          <span
+                            role="status"
+                            aria-label={connected ? 'Connected' : 'Offline'}
+                            className={cn(
+                              'inline-block h-2 w-2 rounded-full',
+                              connected ? 'bg-ecg-green' : 'bg-neutral-600',
+                            )}
+                          />
+                          {participant.nickname}
+                        </span>
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+                          <span className={cn(progress.acknowledged && 'text-ecg-green')}>Ack</span>
+                          {' · '}
+                          <span className={cn(progress.arrived && 'text-ecg-green')}>Arr</span>
+                          {' · '}
+                          <span className={cn(progress.transported && 'text-ecg-green')}>Txp</span>
+                          {' · '}Shk {progress.shocks}
+                          {' · '}Med {progress.medications}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+            <div className="max-h-56 overflow-auto border border-neutral-800 bg-black/40 p-3">
+              <h2 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-400">
+                Live evaluation
+              </h2>
+              <div className="mt-2 grid gap-2">
+                {studentEvents.length === 0 ? (
+                  <p className="text-sm text-neutral-500">No student events yet.</p>
+                ) : (
+                  studentEvents.slice(-12).map((event) => {
+                    const participant = participants.find((item) => item.id === event.participant_id)
+                    return (
+                      <div key={event.id} className="border border-neutral-800 px-3 py-2 text-sm">
+                        <span className="font-bold text-cyan-bp">
+                          {participant?.nickname ?? 'Student'}
+                        </span>{' '}
+                        <span className="text-white">{event.label}</span>
+                        <span className="ml-2 text-xs text-neutral-500">
+                          v{event.attempt_version}
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
       <div className="grid grid-cols-2 border border-neutral-800 bg-neutral-950 p-1 md:grid-cols-4">
         <button
           type="button"
@@ -270,7 +516,7 @@ export default function AdminPage() {
       )}
       <div className="flex items-center gap-3">
         <SaveButton />
-        <SendButton />
+        <SendButton onSent={session ? sendSessionState : undefined} />
         <button
           type="button"
           onClick={handleReset}
@@ -280,7 +526,7 @@ export default function AdminPage() {
         </button>
       </div>
       <p className="text-xs text-neutral-500">
-        Open <span className="text-neutral-300">/</span> in another tab to see the monitor.
+        Open <span className="text-neutral-300">{session ? `/session/${session.code}/waiting` : '/'}</span> in another tab to see the monitor.
         Changes propagate after <span className="text-pending-amber">Send</span>.
       </p>
     </InstructorLayout>
