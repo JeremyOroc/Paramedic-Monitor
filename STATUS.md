@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Immediate session pushes for CPR override and Reset — COMPLETE:**
+  - [x] In session mode, toggling CPR override pushes the shared state right away instead of waiting behind a disabled Send button
+  - [x] Monitor-tab and Caller-Info-tab Reset push immediately via the shared `monitorResetVersion` bump, so student monitors clear without a Send
+  - [x] Failed background pushes surface in the instructor session error banner
+  - [x] Admin page tests cover CPR-toggle and Reset-triggered state POSTs
 - [x] **Session shared-state stomping fix — COMPLETE:**
   - [x] `SharedMonitorState` now carries only instructor-authoritative fields; trainee-local progress (patient info, dispatch Acknowledge/Arrival/Transport, EtCO2 calibration, accepted BP layer) is excluded from shared snapshots
   - [x] `applySharedState` preserves trainee dispatch progress for the same run, clears Ack/Arrival on a new dispatch run, and fully clears the gate when it disarms

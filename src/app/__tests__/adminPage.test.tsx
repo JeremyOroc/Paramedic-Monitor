@@ -62,6 +62,64 @@ describe('AdminPage', () => {
     await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'))
   })
 
+  it('pushes session state immediately when CPR override toggles', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      const body = url.includes('/review')
+        ? { session: { status: 'active' }, participants: [], events: [] }
+        : { session: { status: 'active' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    const statePosts = () =>
+      fetchMock.mock.calls.filter(
+        ([url, init]) => String(url).endsWith('/state') && init?.method === 'POST',
+      )
+    expect(statePosts()).toHaveLength(0)
+
+    await user.click(screen.getByRole('button', { name: 'CPR' }))
+
+    await waitFor(() => expect(statePosts()).toHaveLength(1))
+    const posted = JSON.parse(String(statePosts()[0][1]?.body))
+    expect(posted.state.cprOverrideActive).toBe(true)
+  })
+
+  it('pushes session state immediately when Reset is clicked', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      const body = url.includes('/review')
+        ? { session: { status: 'active' }, participants: [], events: [] }
+        : { session: { status: 'active' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+    const versionBefore = useMonitorStore.getState().monitorResetVersion
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }))
+
+    await waitFor(() => {
+      const statePosts = fetchMock.mock.calls.filter(
+        ([url, init]) => String(url).endsWith('/state') && init?.method === 'POST',
+      )
+      expect(statePosts).toHaveLength(1)
+      const posted = JSON.parse(String(statePosts[0][1]?.body))
+      expect(posted.state.monitorResetVersion).toBe(versionBefore + 1)
+    })
+  })
+
   it('shows monitor controls by default and keeps caller info in its own tab', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)

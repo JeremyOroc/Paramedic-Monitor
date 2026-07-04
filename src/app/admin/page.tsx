@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
@@ -158,7 +158,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     router.replace('/')
   }
 
-  const sendSessionState = async () => {
+  const sendSessionState = useCallback(async () => {
     if (!session) return
     const response = await fetch(`/api/session/${session.code}/state`, {
       method: 'POST',
@@ -170,7 +170,26 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
-  }
+  }, [getSharedState, session])
+
+  // CPR override and Reset bypass Save → Send, so in a session they must push
+  // shared state themselves — the Send button stays disabled without pending
+  // Save → Send changes and would otherwise strand these on the admin screen.
+  const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
+  const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
+  const immediatePushRef = useRef<{ cpr: boolean; resetVersion: number } | null>(null)
+  useEffect(() => {
+    if (!session) return
+    const prev = immediatePushRef.current
+    immediatePushRef.current = { cpr: cprOverrideActive, resetVersion: monitorResetVersion }
+    if (!prev) return
+    if (prev.cpr === cprOverrideActive && prev.resetVersion === monitorResetVersion) return
+    void sendSessionState().catch((caught) => {
+      setSessionError(
+        caught instanceof Error ? caught.message : 'Unable to send session state',
+      )
+    })
+  }, [cprOverrideActive, monitorResetVersion, sendSessionState, session])
   const resetPatientInformation = () => {
     setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
     setPatientText(EMPTY_PATIENT_INFORMATION_TEXT())

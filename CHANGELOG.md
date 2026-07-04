@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-07-04] [realtime] - Push CPR override and Reset to sessions immediately
+
+- Session instructors now push shared state the moment CPR override toggles or a Reset bumps `monitorResetVersion`, since both bypass Save → Send and the Send button stays disabled without pending changes.
+- Background push failures surface in the instructor session error banner.
+- Added admin page coverage for CPR-toggle and Reset-triggered state POSTs.
+
 ## [2026-07-04] [realtime] - Stop session polling from wiping trainee progress
 
 - Trimmed `SharedMonitorState` to instructor-authoritative fields only; patient info, dispatch Acknowledge/Arrival/Transport, EtCO2 calibration, and the accepted-BP layer stay trainee-local.
