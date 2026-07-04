@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Host token removed from instructor URL — COMPLETE:**
+  - [x] The instructor page moves the `?host=` token into localStorage on first load and rewrites the address bar to the clean route
+  - [x] Refreshes and revisits resume from localStorage, matching the student participant-token pattern
+  - [x] Projected screens, browser history, and screenshots no longer expose room control
+  - [x] Page tests cover URL-token capture/strip, storage resume, and the access-required screen
 - [x] **Session expiry enforcement — COMPLETE:**
   - [x] Sessions past `expires_at` now read as `ended` everywhere via `applySessionExpiry` in the central session lookup
   - [x] Expired rooms get the existing ended-room UX for free: waiting-room notice, join rejection, monitor stops applying state, instructor status shows ENDED

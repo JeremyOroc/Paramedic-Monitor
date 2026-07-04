@@ -1,14 +1,50 @@
 'use client'
 
-import { useParams, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 
 import AdminPage from '@/app/admin/page'
+
+function hostStorageKey(code: string) {
+  return `paramedic-monitor.host.${code.toUpperCase()}`
+}
 
 export default function SessionInstructorPage() {
   const params = useParams<{ code: string }>()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const code = params.code.toUpperCase()
-  const hostToken = searchParams.get('host') ?? ''
+  const [hostToken, setHostToken] = useState('')
+  const [resolved, setResolved] = useState(false)
+
+  // The private link carries the host token once; move it into localStorage
+  // and strip it from the address bar so a projected screen, browser history,
+  // or shared screenshot never exposes room control.
+  useEffect(() => {
+    const storageKey = hostStorageKey(code)
+    const fromUrl = searchParams.get('host') ?? ''
+    if (fromUrl) {
+      localStorage.setItem(storageKey, JSON.stringify({ hostToken: fromUrl }))
+      setHostToken(fromUrl)
+      setResolved(true)
+      router.replace(`/session/${code}/instructor`)
+      return
+    }
+    const raw = localStorage.getItem(storageKey)
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { hostToken?: string }
+        setHostToken(parsed.hostToken ?? '')
+      } catch {
+        // Corrupt storage entry — fall through to the access-required screen.
+      }
+    }
+    setResolved(true)
+  }, [code, router, searchParams])
+
+  if (!resolved) {
+    return <main className="min-h-screen bg-black" />
+  }
 
   if (!hostToken) {
     return (

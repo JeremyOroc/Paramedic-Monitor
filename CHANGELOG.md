@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-07-04] [realtime] - Keep the host token out of the instructor URL
+
+- The instructor page now stores the `?host=` token in localStorage on first load and strips it from the address bar via a route replace.
+- Refreshes resume from storage; opening the clean URL without a stored token still shows the access-required screen.
+- Added page tests for token capture/strip, storage resume, and missing-token handling.
+
 ## [2026-07-04] [realtime] - Enforce session expiry
 
 - Sessions past their `expires_at` (24h default) now read as `ended` through the central session lookup, so stale room codes get the normal ended-room UX instead of staying live forever.
