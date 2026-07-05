@@ -13,6 +13,9 @@
 ---
 
 ## Completed
+- [x] **Leaflet CSS Turbopack build fix — COMPLETE:**
+  - [x] Moved the packaged Leaflet stylesheet import out of Tailwind-processed `globals.css` and into the root app layout
+  - [x] Kept local Leaflet monitor theme overrides in `globals.css`
 - [x] **Fresh admin state on room creation — COMPLETE:**
   - [x] Creating a room resets the persisted admin console (vitals, caller info, dispatch countdown, armed gate) before redirecting to the instructor page
   - [x] Prevents a previous drill's countdown/state from leaking into a new room

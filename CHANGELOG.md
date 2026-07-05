@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-07-05] [monitor] - Fix Leaflet CSS build import
+
+- Moved the packaged Leaflet stylesheet import from `globals.css` to the root app layout so Next/Turbopack resolves it outside Tailwind's PostCSS import evaluation.
+- Left the local Leaflet marker/control overrides in `globals.css`.
+
 ## [2026-07-04] [realtime] - Start new rooms with a blank admin console
 
 - Creating a room now resets the persisted monitor store (vitals, caller info, dispatch countdown, armed gate) before redirecting to the instructor page, so a previous drill's state no longer leaks into a new room.
