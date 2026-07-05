@@ -27,20 +27,29 @@ export function participantProgress(
   participantId: string,
   attemptVersion: number,
 ): RosterProgress {
-  const own = events.filter(
-    (event) =>
-      event.participant_id === participantId &&
-      event.attempt_version === attemptVersion,
-  )
-  const count = (kind: StudentEvent['kind']) =>
-    own.filter((event) => event.kind === kind).length
-
-  return {
-    acknowledged: count('acknowledge') > 0,
-    arrived: count('arrival') > 0,
-    transported: count('transport') > 0,
-    shocks: count('shock'),
-    medications: count('medication'),
-    analyzes: count('analyze'),
+  const progress: RosterProgress = {
+    acknowledged: false,
+    arrived: false,
+    transported: false,
+    shocks: 0,
+    medications: 0,
+    analyzes: 0,
   }
+
+  for (const event of events) {
+    if (
+      event.participant_id !== participantId ||
+      event.attempt_version !== attemptVersion
+    ) {
+      continue
+    }
+    if (event.kind === 'acknowledge') progress.acknowledged = true
+    else if (event.kind === 'arrival') progress.arrived = true
+    else if (event.kind === 'transport') progress.transported = true
+    else if (event.kind === 'shock') progress.shocks += 1
+    else if (event.kind === 'medication') progress.medications += 1
+    else if (event.kind === 'analyze') progress.analyzes += 1
+  }
+
+  return progress
 }

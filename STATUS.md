@@ -13,6 +13,14 @@
 ---
 
 ## Completed
+- [x] **Session code cleanup pass — COMPLETE:**
+  - [x] Added `src/lib/sessionStorage.ts` as the single home for participant/host token storage keys, read/write/clear helpers, and the heartbeat header — replacing four per-page copies
+  - [x] Added `hostSessionAction` route factory; the start/end/attempt API routes are each one line now
+  - [x] Admin session handlers share one `hostFetch` helper (URL build + host token + error mapping) instead of five hand-rolled fetch blocks
+  - [x] Deduplicated session/participant/event column lists in the session service
+  - [x] `participantProgress` computes roster progress in one pass over the events
+  - [x] Admin page tests share a `mockFetchByUrl` helper instead of repeated Response boilerplate
+  - [x] Net −69 lines; behavior unchanged, full suite green
 - [x] **Fresh admin state on room creation — COMPLETE:**
   - [x] Creating a room resets the persisted admin console (vitals, caller info, dispatch countdown, armed gate) before redirecting to the instructor page
   - [x] Prevents a previous drill's countdown/state from leaking into a new room

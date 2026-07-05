@@ -11,6 +11,11 @@ export type SessionRecord = {
   expires_at: string | null
 }
 
+const SESSION_COLUMNS = 'id, code, status, active_attempt_version, created_at, expires_at'
+const PARTICIPANT_COLUMNS = 'id, session_id, nickname, joined_at, last_seen_at'
+const STUDENT_EVENT_COLUMNS =
+  'id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at'
+
 export type ParticipantRecord = {
   id: string
   session_id: string
@@ -68,7 +73,7 @@ async function getSessionByCode(code: string): Promise<SessionRecord> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('sessions')
-    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .select(SESSION_COLUMNS)
     .eq('code', normalized)
     .single()
 
@@ -83,7 +88,7 @@ async function findParticipantByToken(
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('participants')
-    .select('id, session_id, nickname, joined_at, last_seen_at')
+    .select(PARTICIPANT_COLUMNS)
     .eq('session_id', sessionId)
     .eq('token_hash', hashSessionToken(participantToken))
     .maybeSingle()
@@ -121,7 +126,7 @@ export async function createSession(origin: string) {
     const { data: session, error } = await supabase
       .from('sessions')
       .insert({ code, status: 'waiting', active_attempt_version: 1 })
-      .select('id, code, status, active_attempt_version, created_at, expires_at')
+      .select(SESSION_COLUMNS)
       .single()
 
     if (error) {
@@ -175,7 +180,7 @@ export async function joinSession(
         .from('participants')
         .update({ nickname: normalizedNickname, last_seen_at: new Date().toISOString() })
         .eq('id', match.id)
-        .select('id, session_id, nickname, joined_at, last_seen_at')
+        .select(PARTICIPANT_COLUMNS)
         .single()
       if (updateError || !updated) {
         throw new SessionError(updateError?.message ?? 'Unable to resume participant', 500)
@@ -193,7 +198,7 @@ export async function joinSession(
       nickname: normalizedNickname,
       token_hash: hashSessionToken(nextParticipantToken),
     })
-    .select('id, session_id, nickname, joined_at, last_seen_at')
+    .select(PARTICIPANT_COLUMNS)
     .single()
 
   if (error || !participant) {
@@ -247,7 +252,7 @@ export async function startSession(code: string, hostToken: string) {
     .from('sessions')
     .update({ status: 'active' })
     .eq('id', session.id)
-    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .select(SESSION_COLUMNS)
     .single()
 
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to start session', 500)
@@ -264,7 +269,7 @@ export async function startNewAttempt(code: string, hostToken: string) {
     .from('sessions')
     .update({ active_attempt_version: session.active_attempt_version + 1 })
     .eq('id', session.id)
-    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .select(SESSION_COLUMNS)
     .single()
 
   if (error || !data) {
@@ -280,7 +285,7 @@ export async function endSession(code: string, hostToken: string) {
     .from('sessions')
     .update({ status: 'ended' })
     .eq('id', session.id)
-    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .select(SESSION_COLUMNS)
     .single()
 
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to end session', 500)
@@ -365,7 +370,7 @@ export async function recordStudentEvent(
       label,
       payload: input.payload ?? {},
     })
-    .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at')
+    .select(STUDENT_EVENT_COLUMNS)
     .single()
 
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to record event', 500)
@@ -377,14 +382,14 @@ export async function getReview(code: string, hostToken: string) {
   const supabase = createServiceClient()
   const { data: participants, error: participantsError } = await supabase
     .from('participants')
-    .select('id, session_id, nickname, joined_at, last_seen_at')
+    .select(PARTICIPANT_COLUMNS)
     .eq('session_id', session.id)
     .order('joined_at', { ascending: true })
   if (participantsError) throw new SessionError(participantsError.message, 500)
 
   const { data: events, error: eventsError } = await supabase
     .from('student_events')
-    .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at')
+    .select(STUDENT_EVENT_COLUMNS)
     .eq('session_id', session.id)
     .order('occurred_at', { ascending: true })
   if (eventsError) throw new SessionError(eventsError.message, 500)

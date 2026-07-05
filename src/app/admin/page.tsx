@@ -68,6 +68,10 @@ type SessionAdminProps = {
   }
 }
 
+function errorText(caught: unknown, fallback: string): string {
+  return caught instanceof Error ? caught.message : fallback
+}
+
 type ReviewParticipant = {
   id: string
   nickname: string
@@ -106,25 +110,38 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const [attemptVersion, setAttemptVersion] = useState(1)
   const [sessionError, setSessionError] = useState('')
 
+  // Shared fetch for the host-authenticated session endpoints: builds the
+  // URL, attaches the host token, and throws the API error message on failure.
+  const hostFetch = useCallback(
+    async (path: string, init?: RequestInit) => {
+      if (!session) return null
+      const response = await fetch(`/api/session/${session.code}${path}`, {
+        ...init,
+        headers: { ...init?.headers, 'x-session-host-token': session.hostToken },
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error ?? 'Session request failed')
+      return data
+    },
+    [session],
+  )
+
   const refreshReview = useCallback(async () => {
-    if (!session) return
-    const response = await fetch(`/api/session/${session.code}/review`, {
-      headers: { 'x-session-host-token': session.hostToken },
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      setSessionError(data.error ?? 'Unable to load session review')
+    try {
+      const data = await hostFetch('/review')
+      if (!data) return
+      setSessionError('')
+      setSessionStatus(data.session.status)
+      if (typeof data.session.active_attempt_version === 'number') {
+        setAttemptVersion(data.session.active_attempt_version)
+      }
+      setParticipants(data.participants ?? [])
+      setStudentEvents(data.events ?? [])
+    } catch (caught) {
+      setSessionError(errorText(caught, 'Unable to load session review'))
       setSessionStatus('error')
-      return
     }
-    setSessionError('')
-    setSessionStatus(data.session.status)
-    if (typeof data.session.active_attempt_version === 'number') {
-      setAttemptVersion(data.session.active_attempt_version)
-    }
-    setParticipants(data.participants ?? [])
-    setStudentEvents(data.events ?? [])
-  }, [session])
+  }, [hostFetch])
 
   useEffect(() => {
     if (!session) return
@@ -134,63 +151,45 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   }, [refreshReview, session])
 
   const startSession = async () => {
-    if (!session) return
-    const response = await fetch(`/api/session/${session.code}/start`, {
-      method: 'POST',
-      headers: { 'x-session-host-token': session.hostToken },
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      setSessionError(data.error ?? 'Unable to start session')
-      return
+    try {
+      const data = await hostFetch('/start', { method: 'POST' })
+      if (!data) return
+      setSessionStatus(data.session.status)
+      await refreshReview()
+    } catch (caught) {
+      setSessionError(errorText(caught, 'Unable to start session'))
     }
-    setSessionStatus(data.session.status)
-    await refreshReview()
   }
 
   const startNewAttempt = async () => {
-    if (!session) return
-    const response = await fetch(`/api/session/${session.code}/attempt`, {
-      method: 'POST',
-      headers: { 'x-session-host-token': session.hostToken },
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      setSessionError(data.error ?? 'Unable to start a new attempt')
-      return
+    try {
+      const data = await hostFetch('/attempt', { method: 'POST' })
+      if (!data) return
+      setAttemptVersion(data.session.active_attempt_version)
+      await refreshReview()
+    } catch (caught) {
+      setSessionError(errorText(caught, 'Unable to start a new attempt'))
     }
-    setAttemptVersion(data.session.active_attempt_version)
-    await refreshReview()
   }
 
   const endSession = async () => {
-    if (!session) return
-    const response = await fetch(`/api/session/${session.code}/end`, {
-      method: 'POST',
-      headers: { 'x-session-host-token': session.hostToken },
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      setSessionError(data.error ?? 'Unable to end session')
-      return
+    try {
+      const data = await hostFetch('/end', { method: 'POST' })
+      if (!data) return
+      setSessionStatus(data.session.status)
+      router.replace('/')
+    } catch (caught) {
+      setSessionError(errorText(caught, 'Unable to end session'))
     }
-    setSessionStatus(data.session.status)
-    router.replace('/')
   }
 
   const sendSessionState = useCallback(async () => {
-    if (!session) return
-    const response = await fetch(`/api/session/${session.code}/state`, {
+    await hostFetch('/state', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-session-host-token': session.hostToken,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state: getSharedState() }),
     })
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
-  }, [getSharedState, session])
+  }, [getSharedState, hostFetch])
 
   // CPR override and Reset bypass Save → Send, so in a session they must push
   // shared state themselves — the Send button stays disabled without pending
@@ -205,9 +204,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     if (!prev) return
     if (prev.cpr === cprOverrideActive && prev.resetVersion === monitorResetVersion) return
     void sendSessionState().catch((caught) => {
-      setSessionError(
-        caught instanceof Error ? caught.message : 'Unable to send session state',
-      )
+      setSessionError(errorText(caught, 'Unable to send session state'))
     })
   }, [cprOverrideActive, monitorResetVersion, sendSessionState, session])
   const resetPatientInformation = () => {

@@ -19,6 +19,22 @@ vi.mock('next/navigation', () => ({
   usePathname: () => window.location.pathname,
 }))
 
+/** Mocks window.fetch to answer each URL with the JSON body `resolve` returns. */
+function mockFetchByUrl(resolve: (url: string) => unknown) {
+  return vi.spyOn(window, 'fetch').mockImplementation(async (input) =>
+    new Response(JSON.stringify(resolve(String(input))), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  )
+}
+
+const emptyReview = (status = 'active') => ({
+  session: { status, active_attempt_version: 1 },
+  participants: [],
+  events: [],
+})
+
 describe('AdminPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -28,24 +44,9 @@ describe('AdminPage', () => {
 
   it('lets a session instructor end an active room', async () => {
     const user = userEvent.setup()
-    const fetchMock = vi.spyOn(window, 'fetch')
-    fetchMock
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            session: { status: 'active' },
-            participants: [],
-            events: [],
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ session: { status: 'ended' } }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      )
+    const fetchMock = mockFetchByUrl((url) =>
+      url.endsWith('/end') ? { session: { status: 'ended' } } : emptyReview(),
+    )
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
 
@@ -63,51 +64,45 @@ describe('AdminPage', () => {
   })
 
   it('shows a live roster with connection dots and per-student progress', async () => {
-    vi.spyOn(window, 'fetch').mockImplementation(async () => {
-      const body = {
-        session: { status: 'active', active_attempt_version: 1 },
-        participants: [
-          {
-            id: 'student-1',
-            nickname: 'Alice',
-            joined_at: '2026-07-04T11:00:00.000Z',
-            last_seen_at: new Date().toISOString(),
-          },
-          {
-            id: 'student-2',
-            nickname: 'Bob',
-            joined_at: '2026-07-04T11:00:00.000Z',
-            last_seen_at: '2026-07-04T11:00:05.000Z',
-          },
-        ],
-        events: [
-          {
-            id: 'e1',
-            session_id: 's',
-            participant_id: 'student-1',
-            attempt_version: 1,
-            kind: 'acknowledge',
-            label: 'Acknowledge',
-            payload: {},
-            occurred_at: '2026-07-04T11:01:00.000Z',
-          },
-          {
-            id: 'e2',
-            session_id: 's',
-            participant_id: 'student-1',
-            attempt_version: 1,
-            kind: 'shock',
-            label: 'Shock',
-            payload: {},
-            occurred_at: '2026-07-04T11:02:00.000Z',
-          },
-        ],
-      }
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    })
+    mockFetchByUrl(() => ({
+      session: { status: 'active', active_attempt_version: 1 },
+      participants: [
+        {
+          id: 'student-1',
+          nickname: 'Alice',
+          joined_at: '2026-07-04T11:00:00.000Z',
+          last_seen_at: new Date().toISOString(),
+        },
+        {
+          id: 'student-2',
+          nickname: 'Bob',
+          joined_at: '2026-07-04T11:00:00.000Z',
+          last_seen_at: '2026-07-04T11:00:05.000Z',
+        },
+      ],
+      events: [
+        {
+          id: 'e1',
+          session_id: 's',
+          participant_id: 'student-1',
+          attempt_version: 1,
+          kind: 'acknowledge',
+          label: 'Acknowledge',
+          payload: {},
+          occurred_at: '2026-07-04T11:01:00.000Z',
+        },
+        {
+          id: 'e2',
+          session_id: 's',
+          participant_id: 'student-1',
+          attempt_version: 1,
+          kind: 'shock',
+          label: 'Shock',
+          payload: {},
+          occurred_at: '2026-07-04T11:02:00.000Z',
+        },
+      ],
+    }))
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
 
@@ -130,20 +125,11 @@ describe('AdminPage', () => {
 
   it('lets a session instructor force a new attempt', async () => {
     const user = userEvent.setup()
-    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      const body = url.endsWith('/attempt')
+    const fetchMock = mockFetchByUrl((url) =>
+      url.endsWith('/attempt')
         ? { session: { status: 'active', active_attempt_version: 2 } }
-        : {
-            session: { status: 'active', active_attempt_version: 1 },
-            participants: [],
-            events: [],
-          }
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    })
+        : emptyReview(),
+    )
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
@@ -160,16 +146,11 @@ describe('AdminPage', () => {
 
   it('pushes session state immediately when CPR override toggles', async () => {
     const user = userEvent.setup()
-    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      const body = url.includes('/review')
-        ? { session: { status: 'active' }, participants: [], events: [] }
-        : { session: { status: 'active' }, state: { version: 1 } }
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    })
+    const fetchMock = mockFetchByUrl((url) =>
+      url.includes('/review')
+        ? emptyReview()
+        : { session: { status: 'active' }, state: { version: 1 } },
+    )
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
@@ -189,16 +170,11 @@ describe('AdminPage', () => {
 
   it('pushes session state immediately when Reset is clicked', async () => {
     const user = userEvent.setup()
-    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      const body = url.includes('/review')
-        ? { session: { status: 'active' }, participants: [], events: [] }
-        : { session: { status: 'active' }, state: { version: 1 } }
-      return new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
-    })
+    const fetchMock = mockFetchByUrl((url) =>
+      url.includes('/review')
+        ? emptyReview()
+        : { session: { status: 'active' }, state: { version: 1 } },
+    )
     const versionBefore = useMonitorStore.getState().monitorResetVersion
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)

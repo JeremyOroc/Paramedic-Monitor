@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-07-05] [realtime] - Session code cleanup pass
+
+- Centralized participant/host token storage in `src/lib/sessionStorage.ts`; landing, waiting, monitor, and instructor pages now share the same key builders, JSON parsing, and heartbeat header helper.
+- Collapsed the start/end/attempt API routes onto a `hostSessionAction` factory in `server/sessions/http.ts`.
+- Admin session handlers (review/start/attempt/end/state) share one host-authenticated `hostFetch` helper.
+- Deduplicated Supabase column lists in the session service and made `participantProgress` a single pass.
+- Consolidated admin test fetch mocks behind `mockFetchByUrl`. Net −69 lines, no behavior change.
+
 ## [2026-07-04] [realtime] - Start new rooms with a blank admin console
 
 - Creating a room now resets the persisted monitor store (vitals, caller info, dispatch countdown, armed gate) before redirecting to the instructor page, so a previous drill's state no longer leaks into a new room.

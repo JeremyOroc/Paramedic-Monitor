@@ -16,3 +16,26 @@ export function hostTokenFromRequest(request: Request): string {
 export function participantTokenFromRequest(request: Request): string {
   return request.headers.get('x-session-participant-token') ?? ''
 }
+
+type SessionRouteContext = {
+  params: Promise<{ code: string }>
+}
+
+/**
+ * Builds the POST handler for a host-token session action (start, end, new
+ * attempt): reads the room code and host token, runs the action, and returns
+ * `{ session }` or the mapped session error.
+ */
+export function hostSessionAction<T>(
+  action: (code: string, hostToken: string) => Promise<T>,
+) {
+  return async function POST(request: Request, { params }: SessionRouteContext) {
+    try {
+      const { code } = await params
+      const session = await action(code, hostTokenFromRequest(request))
+      return NextResponse.json({ session })
+    } catch (error) {
+      return jsonError(error)
+    }
+  }
+}

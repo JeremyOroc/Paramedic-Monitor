@@ -3,11 +3,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+import {
+  readParticipantSession,
+  writeParticipantSession,
+} from '@/lib/sessionStorage'
 import { useMonitorStore } from '@/store/monitorStore'
-
-function participantStorageKey(code: string) {
-  return `paramedic-monitor.participant.${code.toUpperCase()}`
-}
 
 export function SessionLandingPage() {
   const router = useRouter()
@@ -40,9 +40,7 @@ export function SessionLandingPage() {
     setBusy(true)
     setError('')
     try {
-      const existing = localStorage.getItem(participantStorageKey(normalizedCode))
-      const existingToken =
-        existing ? (JSON.parse(existing) as { participantToken?: string }).participantToken : ''
+      const existingToken = readParticipantSession(normalizedCode)?.participantToken ?? ''
       const response = await fetch('/api/session/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,14 +52,11 @@ export function SessionLandingPage() {
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error ?? 'Unable to join room')
-      localStorage.setItem(
-        participantStorageKey(normalizedCode),
-        JSON.stringify({
-          participantToken: data.participantToken,
-          participantId: data.participant.id,
-          nickname: data.participant.nickname,
-        }),
-      )
+      writeParticipantSession(normalizedCode, {
+        participantToken: data.participantToken,
+        participantId: data.participant.id,
+        nickname: data.participant.nickname,
+      })
       router.push(`/session/${normalizedCode}/waiting`)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Unable to join room')

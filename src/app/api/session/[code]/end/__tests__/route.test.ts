@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/server/sessions/http', () => ({
-  hostTokenFromRequest: vi.fn(() => 'host_token'),
-  jsonError: vi.fn((error: Error & { status?: number }) =>
-    Response.json({ error: error.message }, { status: error.status ?? 500 }),
-  ),
-}))
-
-vi.mock('@/server/sessions/service', () => ({
+vi.mock('@/server/sessions/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/server/sessions/service')>()),
   endSession: vi.fn(),
 }))
 
@@ -30,9 +24,12 @@ describe('POST /api/session/[code]/end', () => {
       expires_at: null,
     })
 
-    const response = await POST(new Request('http://localhost/api/session/ABC123/end'), {
-      params: Promise.resolve({ code: 'ABC123' }),
-    })
+    const response = await POST(
+      new Request('http://localhost/api/session/ABC123/end', {
+        headers: { 'x-session-host-token': 'host_token' },
+      }),
+      { params: Promise.resolve({ code: 'ABC123' }) },
+    )
 
     await expect(response.json()).resolves.toEqual({
       session: {

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 
+import { participantHeaders } from '@/lib/sessionStorage'
 import { useMonitorStore, type SharedMonitorState } from '@/store/monitorStore'
 
 export const SESSION_SYNC_INTERVAL_MS = 1500
@@ -50,9 +51,7 @@ export function useSessionMonitorSync({
     async function pollState() {
       try {
         const response = await fetch(`/api/session/${code}/state`, {
-          headers: participantToken
-            ? { 'x-session-participant-token': participantToken }
-            : undefined,
+          headers: participantHeaders(participantToken),
         })
         if (!response.ok) return
         const data = (await response.json()) as SessionStatePayload

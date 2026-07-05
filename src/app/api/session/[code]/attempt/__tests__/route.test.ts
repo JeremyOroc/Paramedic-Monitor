@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@/server/sessions/http', () => ({
-  hostTokenFromRequest: vi.fn(() => 'host_token'),
-  jsonError: vi.fn((error: Error & { status?: number }) =>
-    Response.json({ error: error.message }, { status: error.status ?? 500 }),
-  ),
-}))
-
-vi.mock('@/server/sessions/service', () => ({
+vi.mock('@/server/sessions/service', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/server/sessions/service')>()),
   startNewAttempt: vi.fn(),
 }))
 
@@ -31,7 +25,9 @@ describe('POST /api/session/[code]/attempt', () => {
     })
 
     const response = await POST(
-      new Request('http://localhost/api/session/ABC123/attempt'),
+      new Request('http://localhost/api/session/ABC123/attempt', {
+        headers: { 'x-session-host-token': 'host_token' },
+      }),
       { params: Promise.resolve({ code: 'ABC123' }) },
     )
 

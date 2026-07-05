@@ -4,10 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 
 import AdminPage from '@/app/admin/page'
-
-function hostStorageKey(code: string) {
-  return `paramedic-monitor.host.${code.toUpperCase()}`
-}
+import { readHostToken, writeHostToken } from '@/lib/sessionStorage'
 
 export default function SessionInstructorPage() {
   const params = useParams<{ code: string }>()
@@ -21,24 +18,15 @@ export default function SessionInstructorPage() {
   // and strip it from the address bar so a projected screen, browser history,
   // or shared screenshot never exposes room control.
   useEffect(() => {
-    const storageKey = hostStorageKey(code)
     const fromUrl = searchParams.get('host') ?? ''
     if (fromUrl) {
-      localStorage.setItem(storageKey, JSON.stringify({ hostToken: fromUrl }))
+      writeHostToken(code, fromUrl)
       setHostToken(fromUrl)
       setResolved(true)
       router.replace(`/session/${code}/instructor`)
       return
     }
-    const raw = localStorage.getItem(storageKey)
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw) as { hostToken?: string }
-        setHostToken(parsed.hostToken ?? '')
-      } catch {
-        // Corrupt storage entry — fall through to the access-required screen.
-      }
-    }
+    setHostToken(readHostToken(code))
     setResolved(true)
   }, [code, router, searchParams])
 
