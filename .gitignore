@@ -37,6 +37,8 @@ dev-server.err.log
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the template has no real values and documents what's required.
+!.env.example
 
 # vercel
 .vercel
