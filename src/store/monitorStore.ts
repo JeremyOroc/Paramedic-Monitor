@@ -56,6 +56,23 @@ const initial: Vitals = {
   etco2_waveform: 'off',
 }
 
+// The ECG on/off switch has no flag of its own — 'off' is a member of Rhythm,
+// so switching ECG off overwrites the chosen rhythm. `lastRhythm` remembers the
+// selection so switching back on restores it instead of snapping to a default.
+// Numeric vitals don't need this: their value and their on/off flag are already
+// separate (`draft` vs `draftVitalActive`).
+export type ActiveRhythm = Exclude<Rhythm, 'off'>
+
+const DEFAULT_ACTIVE_RHYTHM: ActiveRhythm = 'nsr'
+
+function normalizeActiveRhythm(value: unknown): ActiveRhythm {
+  if (typeof value !== 'string') return DEFAULT_ACTIVE_RHYTHM
+  if (value === 'off' || !VALID_RHYTHMS.has(value as Rhythm)) {
+    return DEFAULT_ACTIVE_RHYTHM
+  }
+  return value as ActiveRhythm
+}
+
 const inactiveVitals: VitalActiveState = {
   hr: false,
   bp_sys: false,
@@ -242,6 +259,8 @@ export type MonitorState = {
   draftVitalActive: VitalActiveState
   savedVitalActive: VitalActiveState
   confirmedVitalActive: VitalActiveState
+  /** Last rhythm chosen while ECG was on; restored when it is switched back on. */
+  lastRhythm: ActiveRhythm
   callerInfoDraft: CallerInfo
   callerInfoSaved: CallerInfo
   callerInfoConfirmed: CallerInfo
@@ -300,6 +319,7 @@ export const useMonitorStore = create<MonitorState>()(
       draftVitalActive: inactiveVitals,
       savedVitalActive: inactiveVitals,
       confirmedVitalActive: inactiveVitals,
+      lastRhythm: DEFAULT_ACTIVE_RHYTHM,
       callerInfoDraft: DEFAULT_CALLER_INFO,
       callerInfoSaved: DEFAULT_CALLER_INFO,
       callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -325,10 +345,17 @@ export const useMonitorStore = create<MonitorState>()(
           const draftVitalActive = isNumericVitalField(field)
             ? { ...s.draftVitalActive, [field]: true }
             : s.draftVitalActive
+          // Switching ECG off writes rhythm 'off' over the selection, so only a
+          // real rhythm updates the memory.
+          const lastRhythm =
+            field === 'rhythm' && value !== 'off'
+              ? normalizeActiveRhythm(value)
+              : s.lastRhythm
           return {
             draft,
             draftVitalActive,
             draftVitalsActive: anyVitalActive(draftVitalActive),
+            lastRhythm,
           }
         }),
       setTimedDraftVitals: (vitals) =>
@@ -641,6 +668,7 @@ export const useMonitorStore = create<MonitorState>()(
           draftVitalActive: inactiveVitals,
           savedVitalActive: inactiveVitals,
           confirmedVitalActive: inactiveVitals,
+          lastRhythm: DEFAULT_ACTIVE_RHYTHM,
           callerInfoDraft: DEFAULT_CALLER_INFO,
           callerInfoSaved: DEFAULT_CALLER_INFO,
           callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -713,6 +741,7 @@ export const useMonitorStore = create<MonitorState>()(
           draftVitalsActive: anyVitalActive(draftVitalActive),
           savedVitalsActive: anyVitalActive(savedVitalActive),
           confirmedVitalsActive: anyVitalActive(confirmedVitalActive),
+          lastRhythm: normalizeActiveRhythm(persistedState?.lastRhythm),
           callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
           callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
           callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),

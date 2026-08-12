@@ -131,6 +131,34 @@ describe('specialized selector wrappers', () => {
     expect(screen.getByTestId('status-rhythm')).toHaveTextContent('-')
   })
 
+  it('EcgRhythmSelector restores the chosen rhythm after an off/on toggle', async () => {
+    const user = userEvent.setup()
+    render(<EcgRhythmSelector />)
+
+    // Choosing a rhythm while ECG is off switches it on.
+    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'Cardiac Arrest' }))
+    await user.click(screen.getByRole('button', { name: 'Torsades' }))
+    expect(useMonitorStore.getState().draft.rhythm).toBe('torsades')
+
+    await user.click(screen.getByRole('button', { name: 'ECG on' }))
+    expect(useMonitorStore.getState().draft.rhythm).toBe('off')
+    expect(screen.getByRole('button', { name: 'Rhythm Options' })).toBeInTheDocument()
+
+    // Switching back on used to snap to NSR, discarding the selection.
+    await user.click(screen.getByRole('button', { name: 'ECG off' }))
+    expect(useMonitorStore.getState().draft.rhythm).toBe('torsades')
+    expect(screen.getByRole('button', { name: 'Torsades' })).toBeInTheDocument()
+  })
+
+  it('EcgRhythmSelector still opens on NSR when no rhythm has been chosen yet', async () => {
+    const user = userEvent.setup()
+    render(<EcgRhythmSelector />)
+
+    await user.click(screen.getByRole('button', { name: 'ECG off' }))
+    expect(useMonitorStore.getState().draft.rhythm).toBe('nsr')
+  })
+
   it('EcgRhythmSelector selects Anterior MI from the MI category', async () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)

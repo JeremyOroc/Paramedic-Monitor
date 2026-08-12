@@ -77,6 +77,7 @@ export function EcgRhythmSelector() {
   const saved = useMonitorStore((s) => s.saved)
   const confirmed = useMonitorStore((s) => s.confirmed)
   const setDraft = useMonitorStore((s) => s.setDraft)
+  const lastRhythm = useMonitorStore((s) => s.lastRhythm)
 
   const current = draft.rhythm
   const connected = current !== 'off'
@@ -120,7 +121,9 @@ export function EcgRhythmSelector() {
           <OnOffToggle
             active={connected}
             label="ECG"
-            onToggle={(nextConnected) => setDraft('rhythm', nextConnected ? 'nsr' : 'off')}
+            onToggle={(nextConnected) =>
+              setDraft('rhythm', nextConnected ? lastRhythm : 'off')
+            }
           />
           <span
             className={cn(
