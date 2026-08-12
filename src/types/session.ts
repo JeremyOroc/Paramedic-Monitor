@@ -25,6 +25,7 @@ export type StudentEventKind =
   | 'analyze'
   | 'charge'
   | 'shock'
+  | 'etco2_calibration'
 
 export type StudentEvent = {
   id: string

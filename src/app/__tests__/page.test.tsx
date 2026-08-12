@@ -5,8 +5,12 @@ import type { ReactNode } from 'react'
 
 import { pauseAlarm, playAlarm, playCallerInfoAlert } from '@/lib/audio'
 import { useMonitorStore } from '@/store/monitorStore'
+import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 
 import MonitorPage from '../page'
+// The default export is the route wrapper and renders MonitorPage without
+// props; the session monitor page uses this named export to pass onStudentEvent.
+import { MonitorPage as MonitorPageWithProps } from '../page'
 
 vi.mock('@/lib/audio', () => ({
   pauseAlarm: vi.fn(),
@@ -551,7 +555,7 @@ describe('MonitorPage', () => {
     expect(screen.queryByText('35')).not.toBeInTheDocument()
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
 
-    act(() => { vi.advanceTimersByTime(10000) })
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS) })
 
     expect(screen.getByText('35')).toBeInTheDocument()
     expect(screen.getByText('live-etco2')).toBeInTheDocument()
@@ -807,7 +811,7 @@ describe('MonitorPage', () => {
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
 
-    act(() => { vi.advanceTimersByTime(10000) })
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS) })
 
     expect(screen.getByText('live-etco2')).toBeInTheDocument()
     expect(screen.queryByText('live-spo2')).not.toBeInTheDocument()
@@ -839,7 +843,27 @@ describe('MonitorPage', () => {
     expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
   })
 
-  it('shows EtCO2 loading on first toggle and only marks it loaded after 10 seconds', () => {
+  it('reports EtCO2 calibration to the instructor only once it completes', () => {
+    vi.useFakeTimers()
+    const onStudentEvent = vi.fn()
+    render(<MonitorPageWithProps onStudentEvent={onStudentEvent} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS - 1) })
+    expect(onStudentEvent).not.toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'etco2_calibration' }),
+    )
+
+    // Calibration status lives only in the trainee's own store, so this event is
+    // the sole way the instructor roster ever learns about it.
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(onStudentEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'etco2_calibration' }),
+    )
+    vi.useRealTimers()
+  })
+
+  it('shows EtCO2 loading on first toggle and only marks it loaded after the full calibration time', () => {
     vi.useFakeTimers()
     render(<MonitorPage />)
 
@@ -847,7 +871,7 @@ describe('MonitorPage', () => {
     expect(screen.getByText('showing-etco2')).toBeInTheDocument()
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
 
-    act(() => { vi.advanceTimersByTime(9999) })
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS - 1) })
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
 
     act(() => { vi.advanceTimersByTime(1) })
@@ -870,7 +894,7 @@ describe('MonitorPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
-    act(() => { vi.advanceTimersByTime(9999) })
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS - 1) })
     expect(screen.getByText('etco2-loading')).toBeInTheDocument()
     vi.useRealTimers()
   })
@@ -880,7 +904,7 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
-    act(() => { vi.advanceTimersByTime(10000) })
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS) })
     fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
     expect(screen.queryByText('etco2-loading')).not.toBeInTheDocument()
 
@@ -895,7 +919,7 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
-    act(() => { vi.advanceTimersByTime(10000) })
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS) })
     expect(screen.getByText('showing-etco2')).toBeInTheDocument()
 
     act(() => useMonitorStore.getState().resetMonitorVitals())

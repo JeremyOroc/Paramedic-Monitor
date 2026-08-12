@@ -97,33 +97,32 @@ body {
   animation: caller-info-alert-flash 0.58s ease-in-out 4;
 }
 
+/* Calibration progress bar: fills left to right, starting as a thin hairline and
+   thickening as it completes. animation-duration is set inline from
+   ETCO2_CALIBRATION_MS so the bar and the timer that ends calibration cannot
+   drift apart. Static properties match the `from` frame to avoid a flash on the
+   first painted frame. */
 .etco2-calibration-progress {
-  animation: etco2-calibration-progress 10s linear forwards;
+  animation-name: etco2-calibration-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
   left: 0%;
-  height: 4px;
-  opacity: 0.75;
+  height: 1px;
+  opacity: 0.55;
   transform: translateY(-50%);
-  width: 34%;
+  width: 4%;
 }
 
 @keyframes etco2-calibration-progress {
   from {
-    left: 0%;
-    height: 4px;
-    opacity: 0.75;
-    width: 34%;
-  }
-  50% {
-    left: 0%;
-    height: 2px;
-    opacity: 0.65;
-    width: 16%;
-  }
-  to {
-    left: 0%;
     height: 1px;
     opacity: 0.55;
-    width: 5%;
+    width: 4%;
+  }
+  to {
+    height: 4px;
+    opacity: 0.95;
+    width: 100%;
   }
 }
 

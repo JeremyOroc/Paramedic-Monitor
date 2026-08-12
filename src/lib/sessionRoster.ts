@@ -11,6 +11,7 @@ export type RosterProgress = {
   shocks: number
   medications: number
   analyzes: number
+  etco2Calibrated: boolean
 }
 
 export function isConnected(
@@ -42,5 +43,8 @@ export function participantProgress(
     shocks: count('shock'),
     medications: count('medication'),
     analyzes: count('analyze'),
+    // Calibration is a student-side action on their own monitor, so the
+    // instructor only learns about it through this event stream.
+    etco2Calibrated: count('etco2_calibration') > 0,
   }
 }
