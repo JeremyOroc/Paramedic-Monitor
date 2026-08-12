@@ -35,9 +35,12 @@ function PhysicalButton({
       type="button"
       aria-label={ariaLabel}
       disabled={disabled}
+      // No click sound: these are the navigation keys (left soft keys and the
+      // right cluster), pressed constantly while moving through menus, and the
+      // repetition was noise in practice. The defib controls, Pacer, and power
+      // keep theirs — those are meaningful cues, not navigation.
       onClick={() => {
         if (disabled) return
-        playButtonClick()
         onClick?.()
       }}
       className={cn(
