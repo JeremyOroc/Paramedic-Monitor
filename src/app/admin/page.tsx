@@ -126,12 +126,17 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setStudentEvents(data.events ?? [])
   }, [session])
 
+  // Polls the roster and student events. This is the "subscribe to an external
+  // system" case effects exist for; the rule fires only because the first poll
+  // runs synchronously so the panel is not blank for the first 2.5s.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!session) return
     void refreshReview()
     const interval = window.setInterval(() => void refreshReview(), 2500)
     return () => window.clearInterval(interval)
   }, [refreshReview, session])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const startSession = async () => {
     if (!session) return
@@ -160,6 +165,12 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       return
     }
     setAttemptVersion(data.session.active_attempt_version)
+    // A new attempt is a fresh drill in the same room, so the instructor side
+    // resets too. Without this the previous run's vitals, caller info, and
+    // dispatch stay loaded and get pushed straight back onto trainees who have
+    // just been hard-reset by the attempt bump. Done only after the POST
+    // succeeds, so a failed request does not wipe the panel.
+    resetAllInstructorState()
     await refreshReview()
   }
 
@@ -219,7 +230,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setPatientPhysicalFindings({})
     setPatientPhysicalActiveIconGroup(null)
   }
-  const resetUniversalAutoSort = () => {
+  // Everything on the instructor side: the store (bumping monitorResetVersion,
+  // which the effect above picks up to push the cleared state to students) plus
+  // the panel state that lives in local component state rather than the store.
+  const resetAllInstructorState = () => {
     reset()
     setUniversalAutoSortText('')
     resetPatientInformation()
@@ -229,7 +243,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     tab === 'monitor'
       ? resetMonitorVitals
       : tab === 'caller'
-        ? resetUniversalAutoSort
+        ? resetAllInstructorState
         : tab === 'patient'
           ? resetPatientInformation
           : resetPatientPhysical
@@ -399,6 +413,14 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                           <span className={cn(progress.transported && 'text-ecg-green')}>Txp</span>
                           {' · '}Shk {progress.shocks}
                           {' · '}Med {progress.medications}
+                          {' · '}
+                          <span
+                            data-testid={`roster-etco2-${participant.id}`}
+                            data-calibrated={progress.etco2Calibrated}
+                            className={cn(progress.etco2Calibrated && 'text-purple-etco2')}
+                          >
+                            EtCO2
+                          </span>
                         </span>
                       </div>
                     )
