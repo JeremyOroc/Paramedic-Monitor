@@ -126,9 +126,11 @@ body {
   }
 }
 
+/* Full-screen assignment dispatch runs edge to edge — it is the surface itself,
+   not a tablet resting on a wall, so no aspect-ratio or max-width cap. */
 .dispatch-tablet-frame-assignment {
-  width: min(94vw, calc(92vh * 4 / 3), 1120px);
-  aspect-ratio: 4 / 3;
+  width: 100%;
+  height: 100%;
 }
 
 .dispatch-tablet-frame-classic {

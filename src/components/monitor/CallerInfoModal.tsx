@@ -144,6 +144,11 @@ export function CallerInfoModal({
     return info[field].trim() !== '' || info[labelField].trim() !== ''
   })
 
+  // The full-screen assignment view *is* the dispatch surface, so it runs edge
+  // to edge rather than sitting as a 4:3 tablet on a beige wall. The classic
+  // variant keeps the tablet-on-a-wall framing.
+  const assignmentFullBleed = fullScreen && variant === 'assignment'
+
   return (
     <section
       aria-label="Caller info"
@@ -165,13 +170,16 @@ export function CallerInfoModal({
       <div
         className={cn(
           'flex h-full w-full items-center justify-center overflow-hidden',
-          fullScreen ? 'bg-dispatch-wall p-5' : 'bg-black/80 p-4',
+          !fullScreen && 'bg-black/80 p-4',
+          fullScreen && (assignmentFullBleed ? 'bg-dispatch-bezel' : 'bg-dispatch-wall p-5'),
         )}
       >
         <div
           data-testid="dispatch-tablet-frame"
           className={cn(
-            'relative flex overflow-hidden rounded-[22px] border-[7px] border-dispatch-bezel bg-dispatch-bezel shadow-2xl',
+            'relative flex overflow-hidden border-dispatch-bezel bg-dispatch-bezel shadow-2xl',
+            // Rounded corners would let the wall show through at the edges.
+            assignmentFullBleed ? 'border-0' : 'rounded-[22px] border-[7px]',
             variant === 'assignment'
               ? fullScreen
                 ? 'dispatch-tablet-frame-assignment'
@@ -181,7 +189,10 @@ export function CallerInfoModal({
                 : 'h-[92%] w-[84%] min-w-[360px] max-w-[680px]',
           )}
         >
-          <div className="absolute left-1/2 top-2 z-10 h-1.5 w-12 -translate-x-1/2 rounded-full bg-neutral-800" />
+          {/* Tablet speaker slot — only meaningful when it reads as a device. */}
+          {!assignmentFullBleed && (
+            <div className="absolute left-1/2 top-2 z-10 h-1.5 w-12 -translate-x-1/2 rounded-full bg-neutral-800" />
+          )}
           {variant === 'classic' ? (
             <ClassicCallerInfoContent
               info={info}
