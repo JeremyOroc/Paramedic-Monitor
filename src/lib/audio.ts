@@ -5,6 +5,32 @@ const CALLER_INFO_ALERT_SRC = '/audio/caller_info_alarm.mp4'
 const CHARGE_BEEP_SRC = '/audio/charge_beep.mp3'
 const SHOCK_READY_SRC = '/audio/shock_ready_beep.mp3'
 
+// Playback level per cue, 0..1. The source files are not loudness-normalised,
+// so levels are set here rather than left at the 1.0 default. Looping cues
+// (alarm, charge, shock-ready) sit well under the one-shots because they run
+// continuously — a full-scale looping beep is painful over a classroom speaker.
+// Tune by ear; this map is the only place levels are set.
+export const AUDIO_LEVELS = {
+  buttonClick: 0.35,
+  alarm: 0.45,
+  callerInfoAlert: 0.5,
+  chargeBeep: 0.3,
+  shockReadyBeep: 0.25,
+  performCpr: 0.7,
+  metronome100Bpm: 0.45,
+  /** Fallback for voice prompts played through playSystemAudio(). */
+  voicePrompt: 0.7,
+} as const
+
+/** Per-file overrides for playSystemAudio() cues; falls back to voicePrompt. */
+const SYSTEM_AUDIO_LEVELS: Record<string, number> = {
+  'stand_clear.mp3': 0.7,
+  'press_shock.mp3': 0.7,
+  'shock_not_advised.mp3': 0.7,
+  'stop_cpr.mp3': 0.7,
+  'analysis_halted.mp3': 0.7,
+}
+
 let _pool: HTMLAudioElement[] = []
 let _poolIndex = 0
 let _alarm: HTMLAudioElement | null = null
@@ -12,6 +38,34 @@ let _callerInfoAlert: HTMLAudioElement | null = null
 let _chargeBeep: HTMLAudioElement | null = null
 let _shockReadyBeep: HTMLAudioElement | null = null
 let _muted = false
+
+// Every cue's intended level, so the Web Audio gain nodes below can be given the
+// right value when the graph is built on the first gesture.
+const _levels = new WeakMap<HTMLAudioElement, number>()
+
+function createCue(src: string, level: number, loop = false): HTMLAudioElement {
+  const el = new Audio(src)
+  el.preload = 'auto'
+  el.loop = loop
+  // Ignored on iOS, where volume is hardware-controlled — this is the fallback
+  // for browsers where the Web Audio graph cannot be built. Once an element is
+  // routed through a gain node this is reset to 1 so we do not attenuate twice.
+  el.volume = level
+  _levels.set(el, level)
+  return el
+}
+
+// Looping cues run until something explicitly pauses them, so a request made
+// while playback is still locked is not a moment that can be missed — it is a
+// state that is still true once we unlock. Remember it here and replay on
+// unlock; priming only grants permission, it does not restart what was blocked.
+// One-shots (button click, voice prompts, caller alert) are deliberately not
+// tracked — replaying those late would fire them out of context.
+const _wantsPlaying = {
+  alarm: false,
+  chargeBeep: false,
+  shockReadyBeep: false,
+}
 
 export function setAudioMuted(muted: boolean): void {
   _muted = muted
@@ -28,26 +82,13 @@ export function setAudioMuted(muted: boolean): void {
 const _systemAudioPools: Record<string, HTMLAudioElement[]> = {}
 
 if (typeof window !== 'undefined') {
-  _pool = Array.from({ length: POOL_SIZE }, () => {
-    const el = new Audio(BUTTON_CLICK_SRC)
-    el.preload = 'auto'
-    return el
-  })
-
-  _alarm = new Audio(ALARM_SRC)
-  _alarm.preload = 'auto'
-  _alarm.loop = true
-
-  _callerInfoAlert = new Audio(CALLER_INFO_ALERT_SRC)
-  _callerInfoAlert.preload = 'auto'
-
-  _chargeBeep = new Audio(CHARGE_BEEP_SRC)
-  _chargeBeep.preload = 'auto'
-  _chargeBeep.loop = true
-
-  _shockReadyBeep = new Audio(SHOCK_READY_SRC)
-  _shockReadyBeep.preload = 'auto'
-  _shockReadyBeep.loop = true
+  _pool = Array.from({ length: POOL_SIZE }, () =>
+    createCue(BUTTON_CLICK_SRC, AUDIO_LEVELS.buttonClick),
+  )
+  _alarm = createCue(ALARM_SRC, AUDIO_LEVELS.alarm, true)
+  _callerInfoAlert = createCue(CALLER_INFO_ALERT_SRC, AUDIO_LEVELS.callerInfoAlert)
+  _chargeBeep = createCue(CHARGE_BEEP_SRC, AUDIO_LEVELS.chargeBeep, true)
+  _shockReadyBeep = createCue(SHOCK_READY_SRC, AUDIO_LEVELS.shockReadyBeep, true)
 }
 
 export function playSystemAudio(filename: string): void {
@@ -55,9 +96,12 @@ export function playSystemAudio(filename: string): void {
   if (_muted) return
   const src = `/audio/${filename}`
   if (!_systemAudioPools[src]) {
+    const level = SYSTEM_AUDIO_LEVELS[filename] ?? AUDIO_LEVELS.voicePrompt
     _systemAudioPools[src] = Array.from({ length: 2 }, () => {
-      const el = new Audio(src)
-      el.preload = 'auto'
+      const el = createCue(src, level)
+      // Pools are built lazily, so an element created after the first gesture
+      // has missed the routing pass in unlockAudio and needs its own.
+      if (_unlocked) routeThroughGain(el)
       return el
     })
   }
@@ -81,12 +125,14 @@ export function playButtonClick(): void {
 export function playAlarm(): void {
   if (!_alarm) return
   if (_muted) return
+  _wantsPlaying.alarm = true
   if (!_alarm.paused) return
   _alarm.currentTime = 0
   _alarm.play().catch(() => {})
 }
 
 export function pauseAlarm(): void {
+  _wantsPlaying.alarm = false
   if (!_alarm) return
   _alarm.pause()
   _alarm.currentTime = 0
@@ -109,12 +155,14 @@ export function pauseCallerInfoAlert(): void {
 export function playChargeBeep(): void {
   if (!_chargeBeep) return
   if (_muted) return
+  _wantsPlaying.chargeBeep = true
   if (!_chargeBeep.paused) return
   _chargeBeep.currentTime = 0
   _chargeBeep.play().catch(() => {})
 }
 
 export function pauseChargeBeep(): void {
+  _wantsPlaying.chargeBeep = false
   if (!_chargeBeep) return
   _chargeBeep.pause()
   _chargeBeep.currentTime = 0
@@ -123,12 +171,14 @@ export function pauseChargeBeep(): void {
 export function playShockReadyBeep(): void {
   if (!_shockReadyBeep) return
   if (_muted) return
+  _wantsPlaying.shockReadyBeep = true
   if (!_shockReadyBeep.paused) return
   _shockReadyBeep.currentTime = 0
   _shockReadyBeep.play().catch(() => {})
 }
 
 export function pauseShockReadyBeep(): void {
+  _wantsPlaying.shockReadyBeep = false
   if (!_shockReadyBeep) return
   _shockReadyBeep.pause()
   _shockReadyBeep.currentTime = 0
@@ -143,11 +193,8 @@ let _100bpm: HTMLAudioElement | null = null
 let _onPerformCprEnded: (() => void) | null = null
 
 if (typeof window !== 'undefined') {
-  _performCpr = new Audio('/audio/perform_cpr.mp3')
-  _performCpr.preload = 'auto'
-
-  _100bpm = new Audio('/audio/100_bpm.mp3')
-  _100bpm.preload = 'auto'
+  _performCpr = createCue('/audio/perform_cpr.mp3', AUDIO_LEVELS.performCpr)
+  _100bpm = createCue('/audio/100_bpm.mp3', AUDIO_LEVELS.metronome100Bpm)
 
   _performCpr.addEventListener('ended', () => {
     if (!_muted && _100bpm) {
@@ -181,4 +228,163 @@ export function stopCprAudioSequence(): void {
   _performCpr.currentTime = 0
   _100bpm.pause()
   _100bpm.currentTime = 0
+}
+
+// ── Autoplay unlock ──────────────────────────────────────────────────────────
+// Browsers reject play() until the page has a user gesture. Most of our cues
+// fire from effects reacting to polled session state (the alarm when the
+// instructor starts a scenario) or to async defib timers — not from the click
+// that ultimately caused them. Those calls are rejected, and because every
+// play() site ends in .catch(() => {}) the failure is silent: no sound, no
+// console error. The symptom is that audio stays dead until the trainee hits a
+// control that happens to call play() inside a gesture — toggling mute did
+// exactly that, which is why it "fixed" everything for the rest of the session.
+//
+// Priming each element once, muted, on the first gesture clears it for the
+// lifetime of the page.
+
+// ── Output gain ──────────────────────────────────────────────────────────────
+// HTMLMediaElement.volume is not settable on iOS: Safari always reports 1 and
+// leaves level to the hardware buttons, so AUDIO_LEVELS is a no-op there and
+// every cue plays at full scale — the shock beep loops at 1.0 on an iPad no
+// matter what the map says. Routing each element through a Web Audio GainNode
+// gives us attenuation iOS does respect.
+//
+// MediaElementAudioSourceNode is used rather than decoding into AudioBuffers so
+// playback still streams: 100_bpm.mp3 is 11 MB and would be hundreds of MB of
+// PCM if fully decoded, which an iPad tab will not tolerate. Mixing in the graph
+// also means overlapping cues share one output stream rather than competing as
+// separate media streams, which older iOS restricts.
+//
+// Where Web Audio is unavailable (jsdom under test, very old browsers) nothing
+// is routed and el.volume from createCue stays in effect.
+
+let _ctx: AudioContext | null = null
+let _audioGraphUnavailable = false
+const _routed = new WeakSet<HTMLAudioElement>()
+
+function audioContext(): AudioContext | null {
+  if (_ctx || _audioGraphUnavailable) return _ctx
+  const Ctor =
+    typeof window === 'undefined'
+      ? undefined
+      : window.AudioContext ??
+        (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!Ctor) {
+    _audioGraphUnavailable = true
+    return null
+  }
+  try {
+    _ctx = new Ctor()
+  } catch {
+    _audioGraphUnavailable = true
+  }
+  return _ctx
+}
+
+function routeThroughGain(el: HTMLAudioElement): void {
+  const ctx = audioContext()
+  if (!ctx || _routed.has(el)) return
+  try {
+    const source = ctx.createMediaElementSource(el)
+    const gain = ctx.createGain()
+    gain.gain.value = _levels.get(el) ?? 1
+    source.connect(gain)
+    gain.connect(ctx.destination)
+    _routed.add(el)
+    // The gain node is the only attenuation now; leaving el.volume set as well
+    // would apply the level twice on browsers that honour it.
+    el.volume = 1
+  } catch {
+    // Already routed, or the graph refused the element — keep el.volume.
+  }
+}
+
+let _unlocked = false
+
+function primeElement(el: HTMLAudioElement): Promise<void> {
+  const wasMuted = el.muted
+  const wasLoop = el.loop
+  el.muted = true
+  el.loop = false
+  const restore = () => {
+    el.pause()
+    el.currentTime = 0
+    el.muted = wasMuted
+    el.loop = wasLoop
+  }
+  try {
+    const started = el.play()
+    // Older browsers return void rather than a promise.
+    if (started && typeof started.then === 'function') {
+      return started.then(restore, restore)
+    }
+    restore()
+    return Promise.resolve()
+  } catch {
+    restore()
+    return Promise.resolve()
+  }
+}
+
+// Replay looping cues that were requested while playback was locked. Must run
+// only after every prime has settled — priming ends in pause(), so resuming
+// first would be undone immediately.
+function resumeDesiredCues(): void {
+  if (_wantsPlaying.alarm) playAlarm()
+  if (_wantsPlaying.chargeBeep) playChargeBeep()
+  if (_wantsPlaying.shockReadyBeep) playShockReadyBeep()
+}
+
+function allAudioElements(): HTMLAudioElement[] {
+  const els: HTMLAudioElement[] = [..._pool]
+  for (const el of [
+    _alarm,
+    _callerInfoAlert,
+    _chargeBeep,
+    _shockReadyBeep,
+    _performCpr,
+    _100bpm,
+  ]) {
+    if (el) els.push(el)
+  }
+  for (const pool of Object.values(_systemAudioPools)) els.push(...pool)
+  return els
+}
+
+/**
+ * Unlocks playback for every preloaded element. Registered automatically on the
+ * first pointer/key event; exported so a known-good gesture (the monitor power
+ * button) can call it directly. Safe to call more than once.
+ */
+export function unlockAudio(): void {
+  if (typeof window === 'undefined') return
+  if (_unlocked) return
+  _unlocked = true
+  const elements = allAudioElements()
+  // Building and resuming the context inside the gesture matters on iOS: one
+  // created outside a gesture starts suspended and stays silent.
+  const ctx = audioContext()
+  if (ctx) {
+    void ctx.resume().catch(() => {})
+    for (const el of elements) routeThroughGain(el)
+  }
+  void Promise.all(elements.map(primeElement)).then(resumeDesiredCues)
+}
+
+if (typeof window !== 'undefined') {
+  const onFirstGesture = () => unlockAudio()
+  const opts = { once: true, capture: true } as const
+  window.addEventListener('pointerdown', onFirstGesture, opts)
+  window.addEventListener('keydown', onFirstGesture, opts)
+  window.addEventListener('touchstart', onFirstGesture, opts)
+
+  // iOS suspends the AudioContext when the tab is backgrounded, and once cues
+  // are routed through the graph a suspended context means total silence. The
+  // unlock listeners above are one-shot, so without this a trainee who switches
+  // apps mid-drill comes back to a monitor that never makes another sound.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return
+    if (_ctx?.state === 'suspended') void _ctx.resume().catch(() => {})
+  })
 }

@@ -52,9 +52,14 @@ export function useDefibSequence({
   const durationRef = useRef<number>(0)
   // Capture rhythm at analyze time so mid-analyze changes don't affect the result
   const rhythmAtAnalyzeRef = useRef<Rhythm>(rhythm)
-  // Always up-to-date callback ref — avoids stale closures inside timed phases
+  // Always up-to-date callback ref — avoids stale closures inside timed phases.
+  // Assigned in an effect rather than during render: mutating a ref while
+  // rendering is not safe under concurrent rendering, and the ref is only ever
+  // read from timers and effects, which run after commit.
   const onAnalyzeResultRef = useRef(onAnalyzeResult)
-  onAnalyzeResultRef.current = onAnalyzeResult
+  useEffect(() => {
+    onAnalyzeResultRef.current = onAnalyzeResult
+  }, [onAnalyzeResult])
 
   const energy = resolveEnergy(energyState, patientMode)
 

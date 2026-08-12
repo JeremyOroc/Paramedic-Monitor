@@ -158,6 +158,47 @@ describe('AdminPage', () => {
     )
   })
 
+  it('clears the instructor panel when a new attempt starts', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      const body = url.endsWith('/attempt')
+        ? { session: { status: 'active', active_attempt_version: 2 } }
+        : {
+            session: { status: 'active', active_attempt_version: 1 },
+            participants: [],
+            events: [],
+          }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    // Load the previous run's scenario onto the instructor side.
+    act(() => {
+      useMonitorStore.getState().setDraft('rhythm', 'vf')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('vf')
+    const versionBefore = useMonitorStore.getState().monitorResetVersion
+
+    await user.click(screen.getByRole('button', { name: 'New Attempt' }))
+
+    // Without the reset this stayed 'vf' and was pushed back onto trainees who
+    // had just been hard-reset by the attempt bump.
+    await waitFor(() => {
+      expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
+    })
+    expect(useMonitorStore.getState().draft.rhythm).toBe('off')
+    // The bumped reset version is what propagates the clear to students.
+    expect(useMonitorStore.getState().monitorResetVersion).toBeGreaterThan(versionBefore)
+  })
+
   it('pushes session state immediately when CPR override toggles', async () => {
     const user = userEvent.setup()
     const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {

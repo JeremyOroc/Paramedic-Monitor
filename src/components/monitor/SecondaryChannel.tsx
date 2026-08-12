@@ -12,6 +12,13 @@ import { COLORS, cn } from '@/lib/utils'
 import type { Etco2Waveform, Spo2Waveform } from '@/types/vitals'
 import { DisconnectedWaveform } from './DisconnectedWaveform'
 
+/**
+ * How long EtCO2 calibration runs. Drives both the progress bar animation below
+ * and the timer in the monitor page that flips the status to `calibrated`, so
+ * the two cannot drift apart.
+ */
+export const ETCO2_CALIBRATION_MS = 45000
+
 type SecondaryChannelProps = {
   channel: 'spo2' | 'etco2'
   hr: number
@@ -114,7 +121,10 @@ export function SecondaryChannel({
           className="absolute inset-0 overflow-hidden bg-black"
         >
           <div className="absolute left-0 top-1/2 h-px w-full bg-purple-etco2/25" />
-          <div className="etco2-calibration-progress absolute left-0 top-1/2 w-full origin-left bg-purple-etco2" />
+          <div
+            className="etco2-calibration-progress absolute left-0 top-1/2 origin-left bg-purple-etco2"
+            style={{ animationDuration: `${ETCO2_CALIBRATION_MS}ms` }}
+          />
         </div>
       ) : connected ? (
         <LiveSecondaryCanvas

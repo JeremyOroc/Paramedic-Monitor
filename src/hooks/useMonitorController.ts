@@ -65,6 +65,29 @@ type MonitorControllerState = {
   printPreviewOpen: boolean
 }
 
+/**
+ * Overlays that take over the screen while they are up. The nav cluster must not
+ * reach the background through them: moving the highlight, toggling the status
+ * bar, or opening the patient-mode modal *behind* an open menu all happen out of
+ * the trainee's sight and leave the monitor somewhere they never chose to be.
+ *
+ * `patientModalOpen` and `patientInfoOpen` are deliberately excluded — they
+ * consume the nav keys themselves to move within their own contents.
+ *
+ * Each of these is closed by a soft key (Back, Med Back, Close Log), never by
+ * the nav cluster, so swallowing nav here cannot strand anyone in a menu.
+ */
+function hasBlockingOverlay(state: MonitorControllerState): boolean {
+  return (
+    state.eventLogOpen ||
+    state.medicationMode ||
+    state.callerInfoOpen ||
+    state.printPreviewOpen ||
+    state.captureState === 'acquiring' ||
+    state.captureState === 'result'
+  )
+}
+
 type Action =
   | { type: 'selectPatientMode'; mode: PatientMode }
   | { type: 'closePatientModal' }
@@ -289,9 +312,20 @@ function reducer(
     case 'toggleEtco2':
       return { ...state, secondary: state.secondary === 'spo2' ? 'etco2' : 'spo2' }
     case 'resetMonitorUi':
+      // A drill reset has to clear everything the previous run produced —
+      // medication timestamps, analyze entries, captured 12-leads, open menus,
+      // where the highlight was parked — or the next trainee inherits the last
+      // run's history. This used to reset only `secondary`, so the med log
+      // survived every reset and the room had to be recreated to clear it.
+      //
+      // Power, the elapsed timer, and mute deliberately survive: they are device
+      // state the trainee set, not results of the drill, and the dispatch gate
+      // already governs when the next run begins.
       return {
-        ...state,
-        secondary: 'spo2',
+        ...initialState,
+        isPoweredOn: state.isPoweredOn,
+        isTimerRunning: state.isTimerRunning,
+        isMuted: state.isMuted,
       }
     case 'startCapture':
       return {
@@ -405,7 +439,10 @@ export function useMonitorController({
     dispatch({ type: 'back' })
   }, [clearCaptureTimer, state.captureState])
 
+  const blockingOverlay = hasBlockingOverlay(state)
+
   const onEnter = useCallback(() => {
+    if (blockingOverlay) return
     if (!state.patientModalOpen && state.patientInfoOpen) {
       if (!state.editing) {
         dispatch({ type: 'beginPatientInfoEdit', patientInfo })
@@ -425,6 +462,7 @@ export function useMonitorController({
     dispatch({ type: 'selectionEnter', activeSelectedControl })
   }, [
     activeSelectedControl,
+    blockingOverlay,
     patientInfo,
     setPatientAge,
     setPatientSex,
@@ -436,6 +474,7 @@ export function useMonitorController({
   ])
 
   const onMoveUp = useCallback(() => {
+    if (blockingOverlay) return
     if (state.patientModalOpen) {
       dispatch({ type: 'movePatientModeHighlight', direction: -1 })
     } else if (state.patientInfoOpen) {
@@ -443,9 +482,10 @@ export function useMonitorController({
     } else {
       dispatch({ type: 'moveSelectedControl', direction: 1 })
     }
-  }, [patientInfo, state.patientInfoOpen, state.patientModalOpen])
+  }, [blockingOverlay, patientInfo, state.patientInfoOpen, state.patientModalOpen])
 
   const onMoveDown = useCallback(() => {
+    if (blockingOverlay) return
     if (state.patientModalOpen) {
       dispatch({ type: 'movePatientModeHighlight', direction: 1 })
     } else if (state.patientInfoOpen) {
@@ -453,7 +493,7 @@ export function useMonitorController({
     } else {
       dispatch({ type: 'moveSelectedControl', direction: -1 })
     }
-  }, [patientInfo, state.patientInfoOpen, state.patientModalOpen])
+  }, [blockingOverlay, patientInfo, state.patientInfoOpen, state.patientModalOpen])
 
   const onCaptureTwelveLead = useCallback(() => {
     clearCaptureTimer()

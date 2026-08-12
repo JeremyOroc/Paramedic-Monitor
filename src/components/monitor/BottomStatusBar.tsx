@@ -18,45 +18,37 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
   const { formatted: cprTime, isDone } = useCPRTimer(cprStartTime)
   const prevIsDone = useRef(isDone)
   const [checkPatient, setCheckPatient] = useState(false)
-  const checkPatientTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Stop CPR → Check Patient after 5 seconds
+  // Stop CPR → Check Patient after 5 seconds.
+  // Arms on entering the state and resets on leaving it, so `checkPatient` is no
+  // longer a dependency — it used to be, which re-ran this effect every time the
+  // flag flipped and made it re-enter its own else branch.
   useEffect(() => {
-    if (isDone && defibState === 'cpr') {
-      if (!checkPatient) {
-        checkPatientTimerRef.current = setTimeout(() => setCheckPatient(true), 5000)
-      }
-    } else {
-      if (checkPatientTimerRef.current) {
-        clearTimeout(checkPatientTimerRef.current)
-        checkPatientTimerRef.current = null
-      }
+    if (!isDone || defibState !== 'cpr') return
+    const timer = setTimeout(() => setCheckPatient(true), 5000)
+    return () => {
+      clearTimeout(timer)
       setCheckPatient(false)
     }
-    return () => {
-      if (checkPatientTimerRef.current) clearTimeout(checkPatientTimerRef.current)
-    }
-  }, [isDone, defibState, checkPatient])
+  }, [isDone, defibState])
 
   const [showDeliveredFlash, setShowDeliveredFlash] = useState(false)
-  const deliveredTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Show "J DELIVERED" for 4 seconds when entering CPR from shock_advised
+  // Show "J DELIVERED" for 4 seconds when entering CPR from shock_advised.
+  // The flash is raised from the effect body deliberately: it is triggered by a
+  // prop transition rather than a user event, so there is no handler to set it
+  // from, and it cannot be derived from the props either — two shocks at the
+  // same energy give an identical lastDeliveredJoules, so a derived flag would
+  // never re-show for the second one.
   useEffect(() => {
-    if (defibState === 'cpr' && lastDeliveredJoules != null) {
-      setShowDeliveredFlash(true)
-      deliveredTimerRef.current = setTimeout(() => setShowDeliveredFlash(false), 4000)
-    } else {
-      if (deliveredTimerRef.current) {
-        clearTimeout(deliveredTimerRef.current)
-        deliveredTimerRef.current = null
-      }
+    if (defibState !== 'cpr' || lastDeliveredJoules == null) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
+    setShowDeliveredFlash(true)
+    const timer = setTimeout(() => setShowDeliveredFlash(false), 4000)
+    return () => {
+      clearTimeout(timer)
       setShowDeliveredFlash(false)
     }
-    return () => {
-      if (deliveredTimerRef.current) clearTimeout(deliveredTimerRef.current)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defibState, lastDeliveredJoules])
 
   useEffect(() => {

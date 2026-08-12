@@ -604,6 +604,42 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('vf')
   })
 
+  it('restores the last chosen rhythm when ECG is switched back on', () => {
+    // The ECG toggle writes rhythm 'off', which overwrites the selection, so the
+    // store remembers it separately. Previously switching back on hardcoded NSR.
+    useMonitorStore.getState().setDraft('rhythm', 'vf')
+    expect(useMonitorStore.getState().lastRhythm).toBe('vf')
+
+    useMonitorStore.getState().setDraft('rhythm', 'off')
+    expect(useMonitorStore.getState().draft.rhythm).toBe('off')
+    expect(useMonitorStore.getState().lastRhythm).toBe('vf')
+
+    const { lastRhythm } = useMonitorStore.getState()
+    useMonitorStore.getState().setDraft('rhythm', lastRhythm)
+    expect(useMonitorStore.getState().draft.rhythm).toBe('vf')
+  })
+
+  it('defaults lastRhythm to NSR until a rhythm is chosen', () => {
+    expect(useMonitorStore.getState().lastRhythm).toBe('nsr')
+    useMonitorStore.getState().setDraft('rhythm', 'off')
+    expect(useMonitorStore.getState().lastRhythm).toBe('nsr')
+  })
+
+  it('tracks the most recent rhythm across several changes', () => {
+    for (const rhythm of ['vt', 'third-degree', 'anterior-mi'] as const) {
+      useMonitorStore.getState().setDraft('rhythm', rhythm)
+      expect(useMonitorStore.getState().lastRhythm).toBe(rhythm)
+    }
+    useMonitorStore.getState().setDraft('rhythm', 'off')
+    expect(useMonitorStore.getState().lastRhythm).toBe('anterior-mi')
+  })
+
+  it('clears the remembered rhythm on reset', () => {
+    useMonitorStore.getState().setDraft('rhythm', 'torsades')
+    useMonitorStore.getState().reset()
+    expect(useMonitorStore.getState().lastRhythm).toBe('nsr')
+  })
+
   it('Anterior MI flows through the same draft save send pipeline', () => {
     useMonitorStore.getState().setDraft('rhythm', 'anterior-mi')
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')

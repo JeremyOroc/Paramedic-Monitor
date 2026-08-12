@@ -287,4 +287,120 @@ describe('useMonitorController', () => {
     act(() => result.current.onMedBack())
     expect(result.current.medicationMode).toBe(false)
   })
+
+  it('clears medication history and timestamps on a drill reset', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTreatment())
+    act(() => result.current.onMedClick('Epinephrine', '10:00:00'))
+    act(() => result.current.onAnalyzeResult('shock', '10:01:00'))
+    expect(result.current.eventLog).toHaveLength(2)
+
+    act(() => result.current.onResetMonitorUi())
+
+    expect(result.current.eventLog).toEqual([])
+    expect(result.current.medicationMode).toBe(false)
+    expect(result.current.medicationPage).toBe(1)
+    expect(result.current.eventLogOpen).toBe(false)
+  })
+
+  it('clears a captured 12-lead and open menus on a drill reset', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTwelveLead())
+    act(() => result.current.onCaptureTwelveLead())
+    act(() => vi.advanceTimersByTime(20000))
+    expect(result.current.lastCapture).not.toBeNull()
+
+    act(() => result.current.onResetMonitorUi())
+
+    expect(result.current.lastCapture).toBeNull()
+    expect(result.current.captureState).toBe('idle')
+    expect(result.current.printPreviewOpen).toBe(false)
+    expect(result.current.view).toBe('main')
+    expect(result.current.selectedControl).toBe('dateTime')
+  })
+
+  it('keeps power and mute across a drill reset', () => {
+    const { result } = setup()
+
+    act(() => result.current.onToggleMute())
+    const { isPoweredOn, isMuted, isTimerRunning } = result.current
+
+    act(() => result.current.onResetMonitorUi())
+
+    expect(result.current.isPoweredOn).toBe(isPoweredOn)
+    expect(result.current.isMuted).toBe(isMuted)
+    expect(result.current.isTimerRunning).toBe(isTimerRunning)
+  })
+
+  it('nav still moves the background selection when nothing is open', () => {
+    const { result } = setup()
+
+    const before = result.current.selectedControl
+    act(() => result.current.onMoveUp())
+    expect(result.current.selectedControl).not.toBe(before)
+  })
+
+  it('nav does not reach the background while the event log is open', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTreatment())
+    act(() => result.current.onMedInfo())
+    expect(result.current.eventLogOpen).toBe(true)
+
+    const before = result.current.selectedControl
+    act(() => result.current.onMoveUp())
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onMoveUp())
+    expect(result.current.selectedControl).toBe(before)
+  })
+
+  it('nav does not reach the background while medication mode is up', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTreatment())
+    expect(result.current.medicationMode).toBe(true)
+
+    // A single move: up-then-down nets to zero and would pass either way.
+    const before = result.current.selectedControl
+    act(() => result.current.onMoveUp())
+    expect(result.current.selectedControl).toBe(before)
+  })
+
+  it('Enter does not act on the background control while a menu is up', () => {
+    const { result } = setup()
+
+    // Park the background selection on a control Enter would visibly change.
+    for (let i = 0; i < 12; i += 1) {
+      if (result.current.selectedControl === 'bottomStatusToggle') break
+      act(() => result.current.onMoveUp())
+    }
+    expect(result.current.selectedControl).toBe('bottomStatusToggle')
+    const before = result.current.bottomStatusVisible
+
+    act(() => result.current.onTreatment())
+    act(() => result.current.onMedInfo())
+    act(() => result.current.onEnter())
+
+    expect(result.current.bottomStatusVisible).toBe(before)
+    expect(result.current.selectedControl).toBe('bottomStatusToggle')
+  })
+
+  it('still lets nav move within the patient mode modal', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12; i += 1) {
+      if (result.current.selectedControl === 'patientMode') break
+      act(() => result.current.onMoveUp())
+    }
+    expect(result.current.selectedControl).toBe('patientMode')
+
+    act(() => result.current.onEnter())
+    expect(result.current.patientModalOpen).toBe(true)
+
+    const before = result.current.patientModeHighlightedIndex
+    act(() => result.current.onMoveDown())
+    expect(result.current.patientModeHighlightedIndex).not.toBe(before)
+  })
 })

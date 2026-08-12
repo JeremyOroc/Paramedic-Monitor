@@ -25,6 +25,7 @@ import { EventLogModal } from '@/components/monitor/EventLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
+import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 import { useMonitorClock } from '@/hooks/useMonitorClock'
 import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
@@ -161,12 +162,19 @@ export function MonitorPage({
       etco2LoadTimerRef.current = null
       if (useMonitorStore.getState().monitorResetVersion === resetVersion) {
         completeEtco2Calibration()
+        // Calibration status lives only in this trainee's own store, so the
+        // instructor panel can only learn about it through the event stream.
+        onStudentEvent?.({
+          kind: 'etco2_calibration',
+          label: 'EtCO2 Calibrated',
+        })
       }
-    }, 10000)
+    }, ETCO2_CALIBRATION_MS)
   }, [
     clearEtco2LoadTimer,
     completeEtco2Calibration,
     monitorResetVersion,
+    onStudentEvent,
     startEtco2Calibration,
   ])
 
