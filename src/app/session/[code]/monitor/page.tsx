@@ -18,6 +18,10 @@ export default function SessionMonitorPage() {
   const storageKey = useMemo(() => participantStorageKey(code), [code])
   const [participantToken, setParticipantToken] = useState('')
 
+  // localStorage does not exist during SSR, so this cannot move into a lazy
+  // useState initializer — hydrating from storage after mount is the only
+  // correct place for it.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const raw = localStorage.getItem(storageKey)
     if (!raw) {
@@ -31,6 +35,7 @@ export default function SessionMonitorPage() {
     }
     setParticipantToken(parsed.participantToken)
   }, [router, storageKey])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // A forced new attempt restarts the trainee's drill: clear the local store
   // and remount the monitor so controller state (power, capture, etc.) resets.

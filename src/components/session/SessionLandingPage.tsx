@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { useMonitorStore } from '@/store/monitorStore'
@@ -128,12 +129,12 @@ export function SessionLandingPage() {
                 Create Room
               </button>
             </div>
-            <a
+            <Link
               href="/?dev=1"
               className="text-center text-xs font-bold uppercase tracking-wider text-neutral-600 hover:text-neutral-300"
             >
               Open local monitor dev mode
-            </a>
+            </Link>
         </div>
       </section>
     </main>

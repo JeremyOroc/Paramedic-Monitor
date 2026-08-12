@@ -19,6 +19,10 @@ export default function WaitingRoomPage() {
   const [error, setError] = useState('')
   const storageKey = useMemo(() => participantStorageKey(code), [code])
 
+  // localStorage does not exist during SSR, so this cannot move into a lazy
+  // useState initializer — hydrating from storage after mount is the only
+  // correct place for it.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const raw = localStorage.getItem(storageKey)
     if (!raw) {
@@ -29,6 +33,7 @@ export default function WaitingRoomPage() {
     setNickname(parsed.nickname ?? '')
     setParticipantToken(parsed.participantToken ?? '')
   }, [router, storageKey])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     let cancelled = false

@@ -20,6 +20,11 @@ export default function SessionInstructorPage() {
   // The private link carries the host token once; move it into localStorage
   // and strip it from the address bar so a projected screen, browser history,
   // or shared screenshot never exposes room control.
+  //
+  // set-state-in-effect is disabled for the whole effect: localStorage does not
+  // exist during SSR, so this cannot move into a lazy useState initializer —
+  // hydrating from storage after mount is the only correct place for it.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const storageKey = hostStorageKey(code)
     const fromUrl = searchParams.get('host') ?? ''
@@ -41,6 +46,7 @@ export default function SessionInstructorPage() {
     }
     setResolved(true)
   }, [code, router, searchParams])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   if (!resolved) {
     return <main className="min-h-screen bg-black" />
