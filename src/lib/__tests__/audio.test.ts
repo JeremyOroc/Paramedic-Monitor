@@ -23,15 +23,27 @@ function callsFor(file: string, opts: { muted: boolean }): PlayCall[] {
  */
 type RoutedCue = { src: string; gain: number }
 
-function installFakeAudioContext(): { routed: RoutedCue[]; resumes: number } {
+function installFakeAudioContext(
+  initialState: AudioContextState = 'running',
+): { routed: RoutedCue[]; resumes: number; ctx: () => { state: AudioContextState } } {
   const routed: RoutedCue[] = []
   const state = { resumes: 0 }
   let pending: RoutedCue | null = null
+  // Context state lives in the closure rather than on the instance so tests can
+  // suspend it without the helper having to hand back `this`.
+  const ctxState = { value: initialState }
 
   class FakeAudioContext {
     destination = { id: 'destination' }
+    // A suspended context makes routed cues silent, so canStartCue refuses to
+    // start them and tries to resume. Without a truthful state here that retry
+    // never settles and the module spins.
+    get state(): AudioContextState {
+      return ctxState.value
+    }
     resume() {
       state.resumes += 1
+      ctxState.value = 'running'
       return Promise.resolve()
     }
     createMediaElementSource(el: HTMLAudioElement) {
@@ -61,6 +73,14 @@ function installFakeAudioContext(): { routed: RoutedCue[]; resumes: number } {
     get resumes() {
       return state.resumes
     },
+    ctx: () => ({
+      get state(): AudioContextState {
+        return ctxState.value
+      },
+      set state(next: AudioContextState) {
+        ctxState.value = next
+      },
+    }),
   }
 }
 
@@ -214,6 +234,46 @@ describe('output gain', () => {
     expect(ctx.routed.find((e) => e.src.endsWith('stand_clear.mp3'))?.gain).toBe(
       audio.AUDIO_LEVELS.voicePrompt,
     )
+  })
+
+  it('does not start cues into a suspended context, and restores them on resume', async () => {
+    // A suspended graph is total silence while play() still succeeds, so a
+    // looping cue would run inaudibly and every one of them would become
+    // hearable at the same instant the context resumed.
+    const ctx = installFakeAudioContext('suspended')
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await vi.waitFor(() => expect(ctx.routed.length).toBeGreaterThan(0))
+    ctx.ctx().state = 'suspended'
+    calls = []
+
+    audio.playAlarm()
+    expect(callsFor('alarm.mp3', { muted: false })).toHaveLength(0)
+
+    // The intent survives, so the alarm starts once the context is running
+    // rather than being lost — but it starts then, not silently before.
+    await vi.waitFor(() => {
+      expect(callsFor('alarm.mp3', { muted: false })).not.toHaveLength(0)
+    })
+  })
+
+  it('drops one-shots requested against a suspended context', async () => {
+    const ctx = installFakeAudioContext('suspended')
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await vi.waitFor(() => expect(ctx.routed.length).toBeGreaterThan(0))
+    ctx.ctx().state = 'suspended'
+    calls = []
+
+    // Replaying a voice prompt late is what produced the "everything fired at
+    // once" pile-up, so its moment is allowed to pass.
+    audio.playSystemAudio('stand_clear.mp3')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(callsFor('stand_clear.mp3', { muted: false })).toHaveLength(0)
   })
 
   it('falls back to element volume where Web Audio is unavailable', async () => {
