@@ -39,6 +39,22 @@ let _chargeBeep: HTMLAudioElement | null = null
 let _shockReadyBeep: HTMLAudioElement | null = null
 let _muted = false
 
+// Every cue's intended level, so the Web Audio gain nodes below can be given the
+// right value when the graph is built on the first gesture.
+const _levels = new WeakMap<HTMLAudioElement, number>()
+
+function createCue(src: string, level: number, loop = false): HTMLAudioElement {
+  const el = new Audio(src)
+  el.preload = 'auto'
+  el.loop = loop
+  // Ignored on iOS, where volume is hardware-controlled — this is the fallback
+  // for browsers where the Web Audio graph cannot be built. Once an element is
+  // routed through a gain node this is reset to 1 so we do not attenuate twice.
+  el.volume = level
+  _levels.set(el, level)
+  return el
+}
+
 // Looping cues run until something explicitly pauses them, so a request made
 // while playback is still locked is not a moment that can be missed — it is a
 // state that is still true once we unlock. Remember it here and replay on
@@ -66,31 +82,13 @@ export function setAudioMuted(muted: boolean): void {
 const _systemAudioPools: Record<string, HTMLAudioElement[]> = {}
 
 if (typeof window !== 'undefined') {
-  _pool = Array.from({ length: POOL_SIZE }, () => {
-    const el = new Audio(BUTTON_CLICK_SRC)
-    el.preload = 'auto'
-    el.volume = AUDIO_LEVELS.buttonClick
-    return el
-  })
-
-  _alarm = new Audio(ALARM_SRC)
-  _alarm.preload = 'auto'
-  _alarm.loop = true
-  _alarm.volume = AUDIO_LEVELS.alarm
-
-  _callerInfoAlert = new Audio(CALLER_INFO_ALERT_SRC)
-  _callerInfoAlert.preload = 'auto'
-  _callerInfoAlert.volume = AUDIO_LEVELS.callerInfoAlert
-
-  _chargeBeep = new Audio(CHARGE_BEEP_SRC)
-  _chargeBeep.preload = 'auto'
-  _chargeBeep.loop = true
-  _chargeBeep.volume = AUDIO_LEVELS.chargeBeep
-
-  _shockReadyBeep = new Audio(SHOCK_READY_SRC)
-  _shockReadyBeep.preload = 'auto'
-  _shockReadyBeep.loop = true
-  _shockReadyBeep.volume = AUDIO_LEVELS.shockReadyBeep
+  _pool = Array.from({ length: POOL_SIZE }, () =>
+    createCue(BUTTON_CLICK_SRC, AUDIO_LEVELS.buttonClick),
+  )
+  _alarm = createCue(ALARM_SRC, AUDIO_LEVELS.alarm, true)
+  _callerInfoAlert = createCue(CALLER_INFO_ALERT_SRC, AUDIO_LEVELS.callerInfoAlert)
+  _chargeBeep = createCue(CHARGE_BEEP_SRC, AUDIO_LEVELS.chargeBeep, true)
+  _shockReadyBeep = createCue(SHOCK_READY_SRC, AUDIO_LEVELS.shockReadyBeep, true)
 }
 
 export function playSystemAudio(filename: string): void {
@@ -100,9 +98,10 @@ export function playSystemAudio(filename: string): void {
   if (!_systemAudioPools[src]) {
     const level = SYSTEM_AUDIO_LEVELS[filename] ?? AUDIO_LEVELS.voicePrompt
     _systemAudioPools[src] = Array.from({ length: 2 }, () => {
-      const el = new Audio(src)
-      el.preload = 'auto'
-      el.volume = level
+      const el = createCue(src, level)
+      // Pools are built lazily, so an element created after the first gesture
+      // has missed the routing pass in unlockAudio and needs its own.
+      if (_unlocked) routeThroughGain(el)
       return el
     })
   }
@@ -194,13 +193,8 @@ let _100bpm: HTMLAudioElement | null = null
 let _onPerformCprEnded: (() => void) | null = null
 
 if (typeof window !== 'undefined') {
-  _performCpr = new Audio('/audio/perform_cpr.mp3')
-  _performCpr.preload = 'auto'
-  _performCpr.volume = AUDIO_LEVELS.performCpr
-
-  _100bpm = new Audio('/audio/100_bpm.mp3')
-  _100bpm.preload = 'auto'
-  _100bpm.volume = AUDIO_LEVELS.metronome100Bpm
+  _performCpr = createCue('/audio/perform_cpr.mp3', AUDIO_LEVELS.performCpr)
+  _100bpm = createCue('/audio/100_bpm.mp3', AUDIO_LEVELS.metronome100Bpm)
 
   _performCpr.addEventListener('ended', () => {
     if (!_muted && _100bpm) {
@@ -248,6 +242,63 @@ export function stopCprAudioSequence(): void {
 //
 // Priming each element once, muted, on the first gesture clears it for the
 // lifetime of the page.
+
+// ── Output gain ──────────────────────────────────────────────────────────────
+// HTMLMediaElement.volume is not settable on iOS: Safari always reports 1 and
+// leaves level to the hardware buttons, so AUDIO_LEVELS is a no-op there and
+// every cue plays at full scale — the shock beep loops at 1.0 on an iPad no
+// matter what the map says. Routing each element through a Web Audio GainNode
+// gives us attenuation iOS does respect.
+//
+// MediaElementAudioSourceNode is used rather than decoding into AudioBuffers so
+// playback still streams: 100_bpm.mp3 is 11 MB and would be hundreds of MB of
+// PCM if fully decoded, which an iPad tab will not tolerate. Mixing in the graph
+// also means overlapping cues share one output stream rather than competing as
+// separate media streams, which older iOS restricts.
+//
+// Where Web Audio is unavailable (jsdom under test, very old browsers) nothing
+// is routed and el.volume from createCue stays in effect.
+
+let _ctx: AudioContext | null = null
+let _audioGraphUnavailable = false
+const _routed = new WeakSet<HTMLAudioElement>()
+
+function audioContext(): AudioContext | null {
+  if (_ctx || _audioGraphUnavailable) return _ctx
+  const Ctor =
+    typeof window === 'undefined'
+      ? undefined
+      : window.AudioContext ??
+        (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!Ctor) {
+    _audioGraphUnavailable = true
+    return null
+  }
+  try {
+    _ctx = new Ctor()
+  } catch {
+    _audioGraphUnavailable = true
+  }
+  return _ctx
+}
+
+function routeThroughGain(el: HTMLAudioElement): void {
+  const ctx = audioContext()
+  if (!ctx || _routed.has(el)) return
+  try {
+    const source = ctx.createMediaElementSource(el)
+    const gain = ctx.createGain()
+    gain.gain.value = _levels.get(el) ?? 1
+    source.connect(gain)
+    gain.connect(ctx.destination)
+    _routed.add(el)
+    // The gain node is the only attenuation now; leaving el.volume set as well
+    // would apply the level twice on browsers that honour it.
+    el.volume = 1
+  } catch {
+    // Already routed, or the graph refused the element — keep el.volume.
+  }
+}
 
 let _unlocked = false
 
@@ -310,8 +361,15 @@ export function unlockAudio(): void {
   if (typeof window === 'undefined') return
   if (_unlocked) return
   _unlocked = true
-  const primed = allAudioElements().map(primeElement)
-  void Promise.all(primed).then(resumeDesiredCues)
+  const elements = allAudioElements()
+  // Building and resuming the context inside the gesture matters on iOS: one
+  // created outside a gesture starts suspended and stays silent.
+  const ctx = audioContext()
+  if (ctx) {
+    void ctx.resume().catch(() => {})
+    for (const el of elements) routeThroughGain(el)
+  }
+  void Promise.all(elements.map(primeElement)).then(resumeDesiredCues)
 }
 
 if (typeof window !== 'undefined') {
@@ -320,4 +378,13 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pointerdown', onFirstGesture, opts)
   window.addEventListener('keydown', onFirstGesture, opts)
   window.addEventListener('touchstart', onFirstGesture, opts)
+
+  // iOS suspends the AudioContext when the tab is backgrounded, and once cues
+  // are routed through the graph a suspended context means total silence. The
+  // unlock listeners above are one-shot, so without this a trainee who switches
+  // apps mid-drill comes back to a monitor that never makes another sound.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return
+    if (_ctx?.state === 'suspended') void _ctx.resume().catch(() => {})
+  })
 }
