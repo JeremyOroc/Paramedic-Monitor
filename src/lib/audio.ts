@@ -69,12 +69,33 @@ const _wantsPlaying = {
 
 export function setAudioMuted(muted: boolean): void {
   _muted = muted
-  if (muted) {
-    pauseAlarm()
-    pauseCallerInfoAlert()
-    pauseChargeBeep()
-    pauseShockReadyBeep()
-    stopCprAudioSequence()
+  if (muted) stopAllAudio()
+}
+
+/**
+ * Silence everything and forget any pending intent.
+ *
+ * The cue elements are module singletons, so unmounting the monitor does not
+ * touch them — the CPR metronome outlived a New Attempt and kept playing until
+ * someone hit mute, which was the only other caller of stopCprAudioSequence.
+ * A drill reset has to stop the sound of the previous run too, and clear the
+ * looping-cue intent flags so the next unlock cannot replay a stale request.
+ */
+export function stopAllAudio(): void {
+  pauseAlarm()
+  pauseCallerInfoAlert()
+  pauseChargeBeep()
+  pauseShockReadyBeep()
+  stopCprAudioSequence()
+  for (const pool of Object.values(_systemAudioPools)) {
+    for (const el of pool) {
+      el.pause()
+      el.currentTime = 0
+    }
+  }
+  for (const el of _pool) {
+    el.pause()
+    el.currentTime = 0
   }
 }
 
