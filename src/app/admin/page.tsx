@@ -165,6 +165,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       return
     }
     setAttemptVersion(data.session.active_attempt_version)
+    // The room drops back to 'waiting', which re-enables Start / Dispatch so the
+    // next run is armed deliberately rather than by the next Send.
+    setSessionStatus(data.session.status)
     // A new attempt is a fresh drill in the same room, so the instructor side
     // resets too. Without this the previous run's vitals, caller info, and
     // dispatch stay loaded and get pushed straight back onto trainees who have
