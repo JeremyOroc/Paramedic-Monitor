@@ -260,9 +260,17 @@ export async function startNewAttempt(code: string, hostToken: string) {
     throw new SessionError('Session has ended', 410)
   }
   const supabase = createServiceClient()
+  // Back to 'waiting' as well as bumping the attempt: a new attempt is a fresh
+  // drill, so trainees return to the waiting room and the instructor arms the
+  // next run with Start / Dispatch deliberately. Leaving the room 'active' kept
+  // that button disabled, so the next Send armed the gate on its own and the
+  // scenario began the moment content was pushed.
   const { data, error } = await supabase
     .from('sessions')
-    .update({ active_attempt_version: session.active_attempt_version + 1 })
+    .update({
+      active_attempt_version: session.active_attempt_version + 1,
+      status: 'waiting',
+    })
     .eq('id', session.id)
     .select('id, code, status, active_attempt_version, created_at, expires_at')
     .single()

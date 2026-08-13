@@ -116,17 +116,18 @@ describe('audio autoplay unlock', () => {
     })
   })
 
-  it('primes muted so unlocking is inaudible', async () => {
+  it('makes no sound of its own on unlock', async () => {
     await import('@/lib/audio')
 
     locked = false
     window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 30))
 
-    await vi.waitFor(() => {
-      expect(callsFor('shock_ready_beep.mp3', { muted: true })).not.toHaveLength(0)
-    })
-    // Nothing was requested, so nothing should sound after priming.
-    expect(callsFor('shock_ready_beep.mp3', { muted: false })).toHaveLength(0)
+    // An earlier version primed every element on the first gesture to unlock
+    // them individually. Once cues are routed through the graph the element's
+    // own muted flag no longer silences it, so that first click on a freshly
+    // loaded page — typing a room code — played every cue at once.
+    expect(calls).toHaveLength(0)
   })
 
   it('does not resume a looping cue that was paused before the gesture', async () => {
@@ -134,15 +135,14 @@ describe('audio autoplay unlock', () => {
 
     audio.playShockReadyBeep()
     audio.pauseShockReadyBeep()
+    const before = callsFor('shock_ready_beep.mp3', { muted: false }).length
 
     locked = false
     window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 30))
 
-    await vi.waitFor(() => {
-      expect(callsFor('shock_ready_beep.mp3', { muted: true })).not.toHaveLength(0)
-    })
-    // Only the original blocked attempt; the pause cleared the intent.
-    expect(callsFor('shock_ready_beep.mp3', { muted: false })).toHaveLength(1)
+    // The pause cleared the intent, so unlock has nothing to restore.
+    expect(callsFor('shock_ready_beep.mp3', { muted: false })).toHaveLength(before)
   })
 
   it('does not replay one-shot cues late', async () => {
@@ -153,25 +153,27 @@ describe('audio autoplay unlock', () => {
 
     locked = false
     window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 30))
 
-    await vi.waitFor(() => {
-      expect(callsFor('button_click.mp3', { muted: true })).not.toHaveLength(0)
-    })
     expect(callsFor('button_click.mp3', { muted: false })).toHaveLength(before)
   })
 
   it('unlocks only once', async () => {
     const audio = await import('@/lib/audio')
 
+    audio.playAlarm()
     locked = false
+    const before = callsFor('alarm.mp3', { muted: false }).length
+
     audio.unlockAudio()
-    await vi.waitFor(() => {
-      expect(callsFor('alarm.mp3', { muted: true })).toHaveLength(1)
-    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const afterFirst = callsFor('alarm.mp3', { muted: false }).length
+    expect(afterFirst).toBeGreaterThan(before)
 
     audio.unlockAudio()
     window.dispatchEvent(new Event('pointerdown'))
-    expect(callsFor('alarm.mp3', { muted: true })).toHaveLength(1)
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(callsFor('alarm.mp3', { muted: false })).toHaveLength(afterFirst)
   })
 })
 
@@ -199,9 +201,6 @@ describe('output gain', () => {
 
     locked = false
     window.dispatchEvent(new Event('pointerdown'))
-    await vi.waitFor(() => {
-      expect(callsFor('shock_ready_beep.mp3', { muted: true })).not.toHaveLength(0)
-    })
 
     audio.playShockReadyBeep()
     // Element volume is meaningless on iOS; once routed it must be wide open so
@@ -245,7 +244,7 @@ describe('output gain', () => {
 
     locked = false
     window.dispatchEvent(new Event('pointerdown'))
-    await vi.waitFor(() => expect(ctx.routed.length).toBeGreaterThan(0))
+    expect(ctx.routed.length).toBeGreaterThan(0)
     ctx.ctx().state = 'suspended'
     calls = []
 
@@ -265,7 +264,7 @@ describe('output gain', () => {
 
     locked = false
     window.dispatchEvent(new Event('pointerdown'))
-    await vi.waitFor(() => expect(ctx.routed.length).toBeGreaterThan(0))
+    expect(ctx.routed.length).toBeGreaterThan(0)
     ctx.ctx().state = 'suspended'
     calls = []
 
@@ -282,9 +281,6 @@ describe('output gain', () => {
 
     locked = false
     window.dispatchEvent(new Event('pointerdown'))
-    await vi.waitFor(() => {
-      expect(callsFor('shock_ready_beep.mp3', { muted: true })).not.toHaveLength(0)
-    })
 
     audio.playShockReadyBeep()
     const played = callsFor('shock_ready_beep.mp3', { muted: false })

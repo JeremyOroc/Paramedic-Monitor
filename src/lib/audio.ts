@@ -16,7 +16,9 @@ export const AUDIO_LEVELS = {
   callerInfoAlert: 0.5,
   chargeBeep: 0.3,
   shockReadyBeep: 0.25,
-  performCpr: 0.7,
+  // Spoken instruction over a noisy room — needs to carry above the metronome
+  // that follows it.
+  performCpr: 1,
   metronome100Bpm: 0.45,
   /** Fallback for voice prompts played through playSystemAudio(). */
   voicePrompt: 0.7,
@@ -166,6 +168,7 @@ export function pauseAlarm(): void {
 export function playCallerInfoAlert(): void {
   if (!_callerInfoAlert) return
   if (_muted) return
+  if (!canStartCue()) return
   _callerInfoAlert.pause()
   _callerInfoAlert.currentTime = 0
   _callerInfoAlert.play().catch(() => {})
@@ -267,8 +270,13 @@ export function stopCprAudioSequence(): void {
 // control that happens to call play() inside a gesture — toggling mute did
 // exactly that, which is why it "fixed" everything for the rest of the session.
 //
-// Priming each element once, muted, on the first gesture clears it for the
-// lifetime of the page.
+// The fix is intent, not priming. A cue asked for before any gesture records
+// that it is wanted and does not call play(); the first gesture resumes the
+// audio context and starts whatever is still wanted. Unlock itself must never
+// make a sound — an earlier version primed every element on that gesture to
+// unlock them individually, and once cues are routed through the graph the
+// element's own muted flag no longer silences it, so the first click on a
+// freshly loaded page played every cue at once.
 
 // ── Output gain ──────────────────────────────────────────────────────────────
 // HTMLMediaElement.volume is not settable on iOS: Safari always reports 1 and
@@ -288,7 +296,8 @@ export function stopCprAudioSequence(): void {
 
 let _ctx: AudioContext | null = null
 let _audioGraphUnavailable = false
-const _routed = new WeakSet<HTMLAudioElement>()
+// Keyed by element so priming can drop each gain to 0 and restore it after.
+const _routed = new WeakMap<HTMLAudioElement, GainNode>()
 
 function audioContext(): AudioContext | null {
   if (_ctx || _audioGraphUnavailable) return _ctx
@@ -347,7 +356,7 @@ function routeThroughGain(el: HTMLAudioElement): void {
     gain.gain.value = _levels.get(el) ?? 1
     source.connect(gain)
     gain.connect(ctx.destination)
-    _routed.add(el)
+    _routed.set(el, gain)
     // The gain node is the only attenuation now; leaving el.volume set as well
     // would apply the level twice on browsers that honour it.
     el.volume = 1
@@ -357,31 +366,6 @@ function routeThroughGain(el: HTMLAudioElement): void {
 }
 
 let _unlocked = false
-
-function primeElement(el: HTMLAudioElement): Promise<void> {
-  const wasMuted = el.muted
-  const wasLoop = el.loop
-  el.muted = true
-  el.loop = false
-  const restore = () => {
-    el.pause()
-    el.currentTime = 0
-    el.muted = wasMuted
-    el.loop = wasLoop
-  }
-  try {
-    const started = el.play()
-    // Older browsers return void rather than a promise.
-    if (started && typeof started.then === 'function') {
-      return started.then(restore, restore)
-    }
-    restore()
-    return Promise.resolve()
-  } catch {
-    restore()
-    return Promise.resolve()
-  }
-}
 
 // Replay looping cues that were requested while playback was locked. Must run
 // only after every prime has settled — priming ends in pause(), so resuming
@@ -417,15 +401,16 @@ export function unlockAudio(): void {
   if (typeof window === 'undefined') return
   if (_unlocked) return
   _unlocked = true
-  const elements = allAudioElements()
   // Building and resuming the context inside the gesture matters on iOS: one
   // created outside a gesture starts suspended and stays silent.
   const ctx = audioContext()
   if (ctx) {
     void ctx.resume().catch(() => {})
-    for (const el of elements) routeThroughGain(el)
+    for (const el of allAudioElements()) routeThroughGain(el)
   }
-  void Promise.all(elements.map(primeElement)).then(resumeDesiredCues)
+  // Only what should be sounding right now. Unlock must never make noise of its
+  // own — cues requested before the gesture recorded intent instead of playing.
+  resumeDesiredCues()
 }
 
 if (typeof window !== 'undefined') {

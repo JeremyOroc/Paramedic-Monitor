@@ -74,6 +74,33 @@ describe('useSessionMonitorSync', () => {
     unmount()
   })
 
+  it('still fires onNewAttempt when the attempt bump also parks the room in waiting', async () => {
+    // A New Attempt drops the room back to 'waiting' so the instructor arms the
+    // next run deliberately. If the status gate ran first the trainee would be
+    // sent to the waiting room without ever clearing the previous run's
+    // persisted store, and would come back to the monitor still holding it.
+    fetchMock.mockImplementation(() => okJson(statePayload(1, 'active', 1)))
+    const onNewAttempt = vi.fn()
+    const onSessionInactive = vi.fn()
+    const { unmount } = renderHook(() =>
+      useSessionMonitorSync({
+        code: 'ABC123',
+        intervalMs: 10,
+        onNewAttempt,
+        onSessionInactive,
+      }),
+    )
+
+    await vi.waitFor(() => expect(applySpy).toHaveBeenCalled())
+    expect(onNewAttempt).not.toHaveBeenCalled()
+
+    fetchMock.mockImplementation(() => okJson(statePayload(1, 'waiting', 2)))
+
+    await vi.waitFor(() => expect(onNewAttempt).toHaveBeenCalledWith(2))
+    await vi.waitFor(() => expect(onSessionInactive).toHaveBeenCalledWith('waiting'))
+    unmount()
+  })
+
   it('fires onNewAttempt and re-applies the same state version on a new attempt', async () => {
     fetchMock.mockImplementation(() => okJson(statePayload(1, 'active', 1)))
     const onNewAttempt = vi.fn()

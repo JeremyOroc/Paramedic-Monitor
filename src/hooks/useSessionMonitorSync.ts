@@ -58,12 +58,10 @@ export function useSessionMonitorSync({
         const data = (await response.json()) as SessionStatePayload
         if (cancelled) return
 
-        const status = data.session?.status
-        if (status !== 'active') {
-          if (status) onSessionInactiveRef.current?.(status)
-          return
-        }
-
+        // Read the attempt before the status gate. A new attempt also drops the
+        // room back to 'waiting', and bailing on status first would send the
+        // trainee to the waiting room without ever clearing the previous run's
+        // persisted store — they would return to the monitor still holding it.
         const attemptVersion = data.session?.active_attempt_version
         if (typeof attemptVersion === 'number') {
           const lastAttempt = lastAttemptRef.current
@@ -72,6 +70,12 @@ export function useSessionMonitorSync({
             lastVersionRef.current = null
             onNewAttemptRef.current?.(attemptVersion)
           }
+        }
+
+        const status = data.session?.status
+        if (status !== 'active') {
+          if (status) onSessionInactiveRef.current?.(status)
+          return
         }
 
         const version = data.state?.version
