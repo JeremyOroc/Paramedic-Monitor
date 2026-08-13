@@ -69,12 +69,33 @@ const _wantsPlaying = {
 
 export function setAudioMuted(muted: boolean): void {
   _muted = muted
-  if (muted) {
-    pauseAlarm()
-    pauseCallerInfoAlert()
-    pauseChargeBeep()
-    pauseShockReadyBeep()
-    stopCprAudioSequence()
+  if (muted) stopAllAudio()
+}
+
+/**
+ * Silence everything and forget any pending intent.
+ *
+ * The cue elements are module singletons, so unmounting the monitor does not
+ * touch them — the CPR metronome outlived a New Attempt and kept playing until
+ * someone hit mute, which was the only other caller of stopCprAudioSequence.
+ * A drill reset has to stop the sound of the previous run too, and clear the
+ * looping-cue intent flags so the next unlock cannot replay a stale request.
+ */
+export function stopAllAudio(): void {
+  pauseAlarm()
+  pauseCallerInfoAlert()
+  pauseChargeBeep()
+  pauseShockReadyBeep()
+  stopCprAudioSequence()
+  for (const pool of Object.values(_systemAudioPools)) {
+    for (const el of pool) {
+      el.pause()
+      el.currentTime = 0
+    }
+  }
+  for (const el of _pool) {
+    el.pause()
+    el.currentTime = 0
   }
 }
 
@@ -106,6 +127,8 @@ export function playSystemAudio(filename: string): void {
     })
   }
   
+  if (!canStartCue()) return
+
   const pool = _systemAudioPools[src]
   // Find a free element or just use the first/next one
   const freeEl = pool.find(el => el.paused) || pool[0]
@@ -116,6 +139,7 @@ export function playSystemAudio(filename: string): void {
 export function playButtonClick(): void {
   if (_pool.length === 0) return
   if (_muted) return
+  if (!canStartCue()) return
   const el = _pool[_poolIndex]
   _poolIndex = (_poolIndex + 1) % POOL_SIZE
   el.currentTime = 0
@@ -126,6 +150,7 @@ export function playAlarm(): void {
   if (!_alarm) return
   if (_muted) return
   _wantsPlaying.alarm = true
+  if (!canStartCue()) return
   if (!_alarm.paused) return
   _alarm.currentTime = 0
   _alarm.play().catch(() => {})
@@ -156,6 +181,7 @@ export function playChargeBeep(): void {
   if (!_chargeBeep) return
   if (_muted) return
   _wantsPlaying.chargeBeep = true
+  if (!canStartCue()) return
   if (!_chargeBeep.paused) return
   _chargeBeep.currentTime = 0
   _chargeBeep.play().catch(() => {})
@@ -172,6 +198,7 @@ export function playShockReadyBeep(): void {
   if (!_shockReadyBeep) return
   if (_muted) return
   _wantsPlaying.shockReadyBeep = true
+  if (!canStartCue()) return
   if (!_shockReadyBeep.paused) return
   _shockReadyBeep.currentTime = 0
   _shockReadyBeep.play().catch(() => {})
@@ -282,6 +309,35 @@ function audioContext(): AudioContext | null {
   return _ctx
 }
 
+/**
+ * True when a cue may start now.
+ *
+ * Once cues are routed through the graph, a suspended context is total silence
+ * while play() still succeeds — so a looping cue keeps looping inaudibly and
+ * every one of them becomes hearable at the same instant the context resumes.
+ * That is the "all the earlier sounds fired at once when I hit analyze" report.
+ *
+ * Rather than let cues accumulate silently, refuse to start them and try to
+ * resume. Looping cues have already recorded their intent by this point, so
+ * resumeDesiredCues restores whatever is still wanted once the context is
+ * actually running; one-shots are simply dropped, which is right — their moment
+ * has passed and replaying them late is what caused the pile-up.
+ */
+function canStartCue(): boolean {
+  const ctx = _ctx
+  if (!ctx || ctx.state === 'running') return true
+  void ctx
+    .resume()
+    // Only replay once the context has actually reached running. resume() can
+    // resolve with the context still suspended (iOS outside a gesture), and
+    // replaying then would re-enter canStartCue and resume in a tight loop.
+    .then(() => {
+      if (ctx.state === 'running') resumeDesiredCues()
+    })
+    .catch(() => {})
+  return false
+}
+
 function routeThroughGain(el: HTMLAudioElement): void {
   const ctx = audioContext()
   if (!ctx || _routed.has(el)) return
@@ -381,10 +437,17 @@ if (typeof window !== 'undefined') {
 
   // iOS suspends the AudioContext when the tab is backgrounded, and once cues
   // are routed through the graph a suspended context means total silence. The
-  // unlock listeners above are one-shot, so without this a trainee who switches
-  // apps mid-drill comes back to a monitor that never makes another sound.
+  // unlock listeners above are one-shot, so without these two a trainee who
+  // switches apps mid-drill comes back to a monitor that never sounds again.
+  const recoverContext = () => {
+    if (_ctx?.state !== 'suspended') return
+    void _ctx.resume().then(resumeDesiredCues).catch(() => {})
+  }
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'visible') return
-    if (_ctx?.state === 'suspended') void _ctx.resume().catch(() => {})
+    if (document.visibilityState === 'visible') recoverContext()
   })
+  // Not one-shot: resume() only reliably succeeds inside a gesture on iOS, so
+  // every gesture is a chance to recover a context that suspended later.
+  window.addEventListener('pointerdown', recoverContext, { capture: true })
+  window.addEventListener('touchstart', recoverContext, { capture: true })
 }

@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
-import { pauseAlarm, playAlarm, playCallerInfoAlert } from '@/lib/audio'
+import { pauseAlarm, playAlarm, playCallerInfoAlert, stopAllAudio } from '@/lib/audio'
 import { useMonitorStore } from '@/store/monitorStore'
 import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 
@@ -24,6 +24,7 @@ vi.mock('@/lib/audio', () => ({
   playSystemAudio: vi.fn(),
   playCprAudioSequence: vi.fn(),
   stopCprAudioSequence: vi.fn(),
+  stopAllAudio: vi.fn(),
 }))
 
 vi.mock('@/components/monitor/DeviceShell', () => ({
@@ -861,6 +862,26 @@ describe('MonitorPage', () => {
       expect.objectContaining({ kind: 'etco2_calibration' }),
     )
     vi.useRealTimers()
+  })
+
+  it('silences in-flight audio on a drill reset', () => {
+    render(<MonitorPage />)
+    vi.mocked(stopAllAudio).mockClear()
+
+    // The CPR metronome is a module singleton, so nothing about a reset or the
+    // New Attempt remount stopped it — it ran until someone hit mute.
+    act(() => useMonitorStore.getState().reset())
+
+    expect(stopAllAudio).toHaveBeenCalled()
+  })
+
+  it('silences audio when the monitor unmounts', () => {
+    const { unmount } = render(<MonitorPage />)
+    vi.mocked(stopAllAudio).mockClear()
+
+    unmount()
+
+    expect(stopAllAudio).toHaveBeenCalled()
   })
 
   it('shows EtCO2 loading on first toggle and only marks it loaded after the full calibration time', () => {

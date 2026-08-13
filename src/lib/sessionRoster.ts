@@ -23,6 +23,23 @@ export function isConnected(
   return Number.isFinite(seen) && now - seen <= CONNECTED_WINDOW_MS
 }
 
+/**
+ * Whether anyone in the room has calibrated EtCO2 on this attempt.
+ *
+ * Calibration happens on the trainee's own monitor and is not part of the
+ * shared session state, so the instructor panel can only learn about it from
+ * this event stream. Scoped to the attempt so it clears on New Attempt.
+ */
+export function anyoneCalibratedEtco2(
+  events: readonly StudentEvent[],
+  attemptVersion: number,
+): boolean {
+  return events.some(
+    (event) =>
+      event.kind === 'etco2_calibration' && event.attempt_version === attemptVersion,
+  )
+}
+
 export function participantProgress(
   events: readonly StudentEvent[],
   participantId: string,

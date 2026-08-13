@@ -35,7 +35,7 @@ import { useNibpReading } from '@/hooks/useNibpReading'
 import { formatEstTime } from '@/lib/estTime'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
-import { playCallerInfoAlert, setAudioMuted } from '@/lib/audio'
+import { playCallerInfoAlert, setAudioMuted, stopAllAudio } from '@/lib/audio'
 import { SessionLandingPage } from '@/components/session/SessionLandingPage'
 
 const CALLER_INFO_ALERT_FLASH_MS = 2320
@@ -208,8 +208,15 @@ export function MonitorPage({
 
   useEffect(() => {
     clearEtco2LoadTimer()
+    // Cue elements are module singletons, so a reset or a New Attempt remount
+    // does not stop them on its own — the CPR metronome survived both and ran
+    // until someone hit mute.
+    stopAllAudio()
     controller.onResetMonitorUi()
   }, [clearEtco2LoadTimer, controller.onResetMonitorUi, monitorResetVersion])
+
+  // Leaving the monitor entirely must silence it too.
+  useEffect(() => stopAllAudio, [])
 
   const handleToggleEtco2 = useCallback(() => {
     const willShowEtco2 = controller.secondary !== 'etco2'

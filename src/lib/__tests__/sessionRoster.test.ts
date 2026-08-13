@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import {
   CONNECTED_WINDOW_MS,
+  anyoneCalibratedEtco2,
   isConnected,
   participantProgress,
 } from '../sessionRoster'
@@ -35,6 +36,25 @@ describe('isConnected', () => {
     expect(isConnected(null, NOW)).toBe(false)
     expect(isConnected(undefined, NOW)).toBe(false)
     expect(isConnected('not-a-date', NOW)).toBe(false)
+  })
+})
+
+describe('anyoneCalibratedEtco2', () => {
+  it('is true once any student calibrates on the current attempt', () => {
+    const events = [makeEvent({ id: 'e1', kind: 'arrival' })]
+    expect(anyoneCalibratedEtco2(events, 1)).toBe(false)
+
+    const calibrated = [
+      ...events,
+      makeEvent({ id: 'e2', kind: 'etco2_calibration', participant_id: 'student-3' }),
+    ]
+    expect(anyoneCalibratedEtco2(calibrated, 1)).toBe(true)
+  })
+
+  it('clears on a new attempt', () => {
+    const events = [makeEvent({ id: 'e1', kind: 'etco2_calibration', attempt_version: 1 })]
+    expect(anyoneCalibratedEtco2(events, 1)).toBe(true)
+    expect(anyoneCalibratedEtco2(events, 2)).toBe(false)
   })
 })
 

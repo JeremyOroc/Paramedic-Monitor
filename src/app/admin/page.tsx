@@ -31,7 +31,7 @@ import {
   parsePatientPhysicalAutoSort,
   type PatientPhysicalFindings,
 } from '@/lib/patientPhysicalAutoSort'
-import { isConnected, participantProgress } from '@/lib/sessionRoster'
+import { anyoneCalibratedEtco2, isConnected, participantProgress } from '@/lib/sessionRoster'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -413,14 +413,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                           <span className={cn(progress.transported && 'text-ecg-green')}>Txp</span>
                           {' · '}Shk {progress.shocks}
                           {' · '}Med {progress.medications}
-                          {' · '}
-                          <span
-                            data-testid={`roster-etco2-${participant.id}`}
-                            data-calibrated={progress.etco2Calibrated}
-                            className={cn(progress.etco2Calibrated && 'text-purple-etco2')}
-                          >
-                            EtCO2
-                          </span>
                         </span>
                       </div>
                     )
@@ -514,6 +506,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         <VitalsControls
           autoSortText={universalAutoSortText}
           onTimedVitalsClick={handleTimedVitalsPatientPhysicalUpdate}
+          sessionEtco2Calibrated={
+            session ? anyoneCalibratedEtco2(studentEvents, attemptVersion) : undefined
+          }
         />
       ) : tab === 'patient' ? (
         <PatientInformationPanel
