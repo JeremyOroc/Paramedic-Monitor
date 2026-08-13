@@ -23,15 +23,27 @@ const TIMED_VITAL_BUTTONS: ReadonlyArray<TimedVitalsSlot> = ['T1', 'T2', 'T3', '
 type VitalsControlsProps = {
   autoSortText: string
   onTimedVitalsClick?: (slot: TimedVitalsSlot) => void
+  /**
+   * Set in a session, where calibration happens on a trainee's monitor and only
+   * reaches the instructor through the student-event stream. Left undefined in
+   * local dev mode, where one store serves both roles and the store's own
+   * calibration status is the truth.
+   */
+  sessionEtco2Calibrated?: boolean
 }
 
-export function VitalsControls({ autoSortText, onTimedVitalsClick }: VitalsControlsProps) {
+export function VitalsControls({
+  autoSortText,
+  onTimedVitalsClick,
+  sessionEtco2Calibrated,
+}: VitalsControlsProps) {
   const resetVitalsToNormal = useMonitorStore((s) => s.resetVitalsToNormal)
   const setTimedDraftVitals = useMonitorStore((s) => s.setTimedDraftVitals)
   const etco2CalibrationStatus = useMonitorStore((s) => s.etco2CalibrationStatus)
   const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
   const setCprOverrideActive = useMonitorStore((s) => s.setCprOverrideActive)
-  const etco2Calibrated = etco2CalibrationStatus === 'calibrated'
+  const etco2Calibrated =
+    sessionEtco2Calibrated ?? etco2CalibrationStatus === 'calibrated'
 
   const applyParsedVitals = (parsed: ReturnType<typeof parseTimedVitalsAutoSort>) => {
     const timedVitals: Partial<Record<NumericVitalField, number>> = {}

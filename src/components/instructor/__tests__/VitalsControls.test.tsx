@@ -177,6 +177,38 @@ describe('VitalsControls', () => {
     expect(indicator).toHaveAttribute('data-calibrated', 'false')
   })
 
+  it('lights the EtCO2 indicator from session state, not the local store', () => {
+    // In a session, calibration happens on the trainee's monitor and only
+    // reaches the instructor through the student-event stream — the local
+    // store's own status stays idle forever, which is why this box never lit.
+    const { rerender } = render(
+      <VitalsControls autoSortText="" sessionEtco2Calibrated={false} />,
+    )
+
+    const indicator = screen.getByTestId('admin-etco2-calibration-indicator')
+    expect(indicator).toHaveAttribute('data-calibrated', 'false')
+
+    rerender(<VitalsControls autoSortText="" sessionEtco2Calibrated />)
+
+    expect(indicator).toHaveAttribute('data-calibrated', 'true')
+    expect(indicator).toHaveClass('border-purple-etco2', 'text-purple-etco2')
+  })
+
+  it('ignores the local store status when session state is supplied', () => {
+    render(<VitalsControls autoSortText="" sessionEtco2Calibrated={false} />)
+
+    act(() => {
+      useMonitorStore.getState().startEtco2Calibration()
+      useMonitorStore.getState().completeEtco2Calibration()
+    })
+
+    // The instructor calibrating nothing locally must not light the box.
+    expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
+      'data-calibrated',
+      'false',
+    )
+  })
+
   it('toggles the CPR override immediately from the ECG column', async () => {
     const user = userEvent.setup()
     render(<VitalsControls autoSortText="" />)
