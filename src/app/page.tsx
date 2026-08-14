@@ -206,12 +206,24 @@ export function MonitorPage({
     }, CALLER_INFO_ALERT_FLASH_MS)
   }, [dispatchState.runId, showDispatchCallerPage])
 
+  const silencedResetVersionRef = useRef(monitorResetVersion)
+
   useEffect(() => {
     clearEtco2LoadTimer()
     // Cue elements are module singletons, so a reset or a New Attempt remount
     // does not stop them on its own — the CPR metronome survived both and ran
     // until someone hit mute.
-    stopAllAudio()
+    //
+    // Only on a real reset though, never on mount. This effect also runs when
+    // the monitor first mounts, and React runs effects in declaration order, so
+    // silencing here killed the dispatch alert that the caller-info effect
+    // above had just started: the first scenario of every session was silent,
+    // while later dispatches — which do not remount — sounded fine. The unmount
+    // cleanup below already covers leaving the monitor.
+    if (silencedResetVersionRef.current !== monitorResetVersion) {
+      silencedResetVersionRef.current = monitorResetVersion
+      stopAllAudio()
+    }
     controller.onResetMonitorUi()
   }, [clearEtco2LoadTimer, controller.onResetMonitorUi, monitorResetVersion])
 

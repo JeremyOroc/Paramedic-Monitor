@@ -220,6 +220,26 @@ describe('MonitorPage', () => {
     expect(screen.getByTestId('caller-info-alert-flash')).toBeInTheDocument()
   })
 
+  it('does not silence audio on mount, so the first dispatch alert survives', () => {
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+    })
+    vi.mocked(stopAllAudio).mockClear()
+
+    render(<MonitorPage />)
+
+    // The reset effect also runs on mount, and effects run in declaration
+    // order — silencing there killed the alert the caller-info effect had just
+    // started, so the first scenario of every session was silent while later
+    // dispatches, which do not remount, sounded fine.
+    expect(playCallerInfoAlert).toHaveBeenCalled()
+    expect(stopAllAudio).not.toHaveBeenCalled()
+  })
+
   it('does not replay the assignment alert for the same dispatch run', () => {
     window.history.pushState({}, '', '/')
     act(() => {
