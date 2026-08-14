@@ -98,6 +98,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const setInactiveDraftVitals = useMonitorStore((s) => s.setInactiveDraftVitals)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const getSharedState = useMonitorStore((s) => s.getSharedState)
+  const startDispatchClock = useMonitorStore((s) => s.startDispatchClock)
+  // Flips true on the first Send. Used to gate Start: the call has to be staged
+  // before the room can open, so opening it is what begins the scenario.
+  const dispatchArmed = useMonitorStore((s) => s.dispatch.armed)
   const [sessionStatus, setSessionStatus] = useState<'waiting' | 'active' | 'ended' | 'error'>(
     'waiting',
   )
@@ -140,6 +144,16 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
 
   const startSession = async () => {
     if (!session) return
+    // Re-stamp and push the dispatch clock before opening the room, so trainees
+    // arriving on the very first status poll already have travel time measured
+    // from now rather than from whenever the call was staged.
+    startDispatchClock()
+    try {
+      await sendSessionState()
+    } catch (caught) {
+      setSessionError(caught instanceof Error ? caught.message : 'Unable to send session state')
+      return
+    }
     const response = await fetch(`/api/session/${session.code}/start`, {
       method: 'POST',
       headers: { 'x-session-host-token': session.hostToken },
@@ -353,7 +367,12 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             <button
               type="button"
               onClick={startSession}
-              disabled={sessionStatus === 'active' || sessionStatus === 'ended'}
+              title={
+                dispatchArmed ? undefined : 'Save and Send the call info before starting'
+              }
+              disabled={
+                sessionStatus === 'active' || sessionStatus === 'ended' || !dispatchArmed
+              }
               className="ml-auto border border-ecg-green bg-ecg-green px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Start / Dispatch

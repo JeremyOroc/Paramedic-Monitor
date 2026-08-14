@@ -158,6 +158,75 @@ describe('AdminPage', () => {
     )
   })
 
+  it('keeps Start disabled until the call info has been sent', async () => {
+    vi.spyOn(window, 'fetch').mockImplementation(async () =>
+      new Response(
+        JSON.stringify({
+          session: { status: 'waiting', active_attempt_version: 1 },
+          participants: [],
+          events: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+
+    // Opening the room is what begins the scenario, so the call has to be
+    // staged first — otherwise trainees land on an empty dispatch.
+    const start = screen.getByRole('button', { name: 'Start / Dispatch' })
+    expect(start).toBeDisabled()
+
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    expect(start).toBeEnabled()
+  })
+
+  it('stamps the dispatch clock from when the room opens, not from Send', async () => {
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const body = String(input).endsWith('/start')
+        ? { session: { status: 'active', active_attempt_version: 1 } }
+        : {
+            session: { status: 'waiting', active_attempt_version: 1 },
+            participants: [],
+            events: [],
+            state: { version: 1 },
+          }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+
+    act(() => {
+      useMonitorStore.getState().setDispatchMinutes(2)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+      // Stand in for a previous run's state. Only startDispatchClock clears
+      // this, so it proves the clock was re-stamped as the room opened rather
+      // than left at whatever Send set — a plain timestamp compare would pass
+      // trivially, since Send and Start can land in the same millisecond.
+      useMonitorStore.getState().acknowledgeCall('10:00:00')
+    })
+    expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBe('10:00:00')
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
+
+    await waitFor(() => {
+      expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBeNull()
+    })
+    expect(useMonitorStore.getState().dispatch.arrivedAt).toBeNull()
+  })
+
   it('clears the instructor panel when a new attempt starts', async () => {
     const user = userEvent.setup()
     vi.spyOn(window, 'fetch').mockImplementation(async (input) => {

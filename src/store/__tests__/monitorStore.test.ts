@@ -604,6 +604,47 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('vf')
   })
 
+  it('re-stamps the dispatch clock when the room opens', () => {
+    vi.useFakeTimers()
+    const store = () => useMonitorStore.getState()
+    store().setDispatchMinutes(2)
+    store().save()
+    store().send()
+
+    const stampedAtSend = store().dispatch.countdownEndsAt
+    expect(stampedAtSend).not.toBeNull()
+
+    // Send stamps the clock, but with Start gated behind a Send the instructor
+    // can spend minutes settling the room first — trainees would otherwise
+    // arrive with travel time already burned off.
+    vi.advanceTimersByTime(90_000)
+    store().startDispatchClock()
+
+    expect(store().dispatch.countdownEndsAt).toBeGreaterThan(stampedAtSend as number)
+    expect(store().dispatch.startedAt).toBe(Date.now())
+    expect(store().dispatch.countdownEndsAt).toBe(Date.now() + 2 * 60 * 1000)
+    vi.useRealTimers()
+  })
+
+  it('leaves the clock alone when no call has been dispatched', () => {
+    const before = useMonitorStore.getState().dispatch
+    useMonitorStore.getState().startDispatchClock()
+    expect(useMonitorStore.getState().dispatch).toEqual(before)
+  })
+
+  it('clears acknowledge and arrival when the room opens', () => {
+    const store = () => useMonitorStore.getState()
+    store().save()
+    store().send()
+    store().acknowledgeCall('10:00:00')
+    expect(store().dispatch.acknowledgedAt).toBe('10:00:00')
+
+    store().startDispatchClock()
+
+    expect(store().dispatch.acknowledgedAt).toBeNull()
+    expect(store().dispatch.arrivedAt).toBeNull()
+  })
+
   it('restores the last chosen rhythm when ECG is switched back on', () => {
     // The ECG toggle writes rhythm 'off', which overwrites the selection, so the
     // store remembers it separately. Previously switching back on hardcoded NSR.

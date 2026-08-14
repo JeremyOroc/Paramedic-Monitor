@@ -300,6 +300,7 @@ export type MonitorState = {
   resetVitalsToNormal: () => void
   save: () => void
   send: () => void
+  startDispatchClock: () => void
   getSharedState: () => SharedMonitorState
   applySharedState: (shared: Partial<SharedMonitorState>) => void
   reset: () => void
@@ -522,6 +523,29 @@ export const useMonitorStore = create<MonitorState>()(
             s.dispatchSeconds,
           ),
         })),
+      // Re-stamp the dispatch clock at the moment the room opens.
+      //
+      // Send arms the gate and stamps the countdown as a side effect, but with
+      // Start gated behind a Send the instructor stages the call first and may
+      // take minutes settling the room before opening it. Left alone, trainees
+      // would arrive with travel time already burned off — or expired. Both the
+      // travel countdown and the response timer should measure from when the
+      // call actually reaches them.
+      startDispatchClock: () =>
+        set((s) => {
+          if (!s.dispatch.armed) return s
+          const now = Date.now()
+          return {
+            dispatch: {
+              ...s.dispatch,
+              startedAt: now,
+              countdownEndsAt: now + s.dispatchConfirmedSeconds * 1000,
+              // Nobody has been able to act yet; this is the start of the run.
+              acknowledgedAt: null,
+              arrivedAt: null,
+            },
+          }
+        }),
       send: () =>
         set((s) => {
           const now = Date.now()
