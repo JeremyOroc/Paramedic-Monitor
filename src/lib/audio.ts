@@ -397,6 +397,45 @@ function allAudioElements(): HTMLAudioElement[] {
  * first pointer/key event; exported so a known-good gesture (the monitor power
  * button) can call it directly. Safe to call more than once.
  */
+// A one-sample silent WAV. Inline so there is no asset to fetch and nothing to
+// fail on a slow connection.
+const SILENT_LOOP_SRC =
+  'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA'
+
+let _keepAlive: HTMLAudioElement | null = null
+
+/**
+ * Hold the iOS audio session open with a silent loop.
+ *
+ * iOS only permits play() from inside a user gesture's call stack — unlike
+ * desktop, an earlier tap somewhere on the page is not enough — and it suspends
+ * the audio context whenever nothing is sounding. Cues fired from timers or
+ * effects therefore stayed silent on iPad: the dispatch alert, "press shock",
+ * and the shock-ready beep, all of which fire from a timer, while every cue
+ * fired straight from a tap (button clicks, "stand clear", the CPR voice)
+ * played fine. That split is what identified this.
+ *
+ * Keeping a silent element looping means the session never goes idle, so later
+ * timer-driven cues are allowed through. It also moves the session off the
+ * "ambient" category, which is what lets Web Audio survive the hardware ringer
+ * switch. Started inside the unlock gesture, where iOS permits it.
+ *
+ * This element is deliberately not routed through the gain graph and not
+ * included in allAudioElements(), so stopAllAudio() leaves it running.
+ */
+function startAudioKeepAlive(): void {
+  if (_keepAlive) return
+  try {
+    const el = new Audio(SILENT_LOOP_SRC)
+    el.loop = true
+    el.preload = 'auto'
+    _keepAlive = el
+    void el.play().catch(() => {})
+  } catch {
+    _keepAlive = null
+  }
+}
+
 export function unlockAudio(): void {
   if (typeof window === 'undefined') return
   if (_unlocked) return
@@ -408,6 +447,7 @@ export function unlockAudio(): void {
     void ctx.resume().catch(() => {})
     for (const el of allAudioElements()) routeThroughGain(el)
   }
+  startAudioKeepAlive()
   // Only what should be sounding right now. Unlock must never make noise of its
   // own — cues requested before the gesture recorded intent instead of playing.
   resumeDesiredCues()
@@ -425,6 +465,10 @@ if (typeof window !== 'undefined') {
   // unlock listeners above are one-shot, so without these two a trainee who
   // switches apps mid-drill comes back to a monitor that never sounds again.
   const recoverContext = () => {
+    // iOS pauses the keep-alive when the tab is backgrounded or interrupted by
+    // a call; without restarting it the session goes idle again and
+    // timer-driven cues stop being allowed through.
+    if (_keepAlive?.paused) void _keepAlive.play().catch(() => {})
     if (_ctx?.state !== 'suspended') return
     void _ctx.resume().then(resumeDesiredCues).catch(() => {})
   }
