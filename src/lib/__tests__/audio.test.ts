@@ -127,7 +127,31 @@ describe('audio autoplay unlock', () => {
     // them individually. Once cues are routed through the graph the element's
     // own muted flag no longer silences it, so that first click on a freshly
     // loaded page — typing a room code — played every cue at once.
-    expect(calls).toHaveLength(0)
+    //
+    // The silent keep-alive is excluded: it is inaudible by construction and
+    // exists precisely so later timer-driven cues are allowed through on iOS.
+    expect(calls.filter((c) => !c.src.startsWith('data:'))).toHaveLength(0)
+  })
+
+  it('starts a silent keep-alive so timer-driven cues are allowed on iOS', async () => {
+    await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // iOS only allows play() inside a gesture's call stack and suspends the
+    // session when nothing sounds, so cues fired from timers — the dispatch
+    // alert, "press shock", the shock-ready beep — were silent on iPad while
+    // cues fired straight from a tap played. A silent loop holds the session
+    // open so the timer-driven ones get through.
+    // Counted rather than asserted as exactly one: the recovery listeners are
+    // deliberately not one-shot, so modules imported by earlier tests are still
+    // bound to window and restart their own keep-alive on the same event. In
+    // the app there is a single module instance. Remove the keep-alive and
+    // every module stops creating one, so this still drops to zero.
+    const keepAlive = calls.filter((c) => c.src.startsWith('data:audio/wav'))
+    expect(keepAlive.length).toBeGreaterThanOrEqual(1)
   })
 
   it('does not resume a looping cue that was paused before the gesture', async () => {
