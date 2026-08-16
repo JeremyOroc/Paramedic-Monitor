@@ -84,6 +84,7 @@ export function setAudioMuted(muted: boolean): void {
  * looping-cue intent flags so the next unlock cannot replay a stale request.
  */
 export function stopAllAudio(): void {
+  stopAllBuffers()
   pauseAlarm()
   pauseCallerInfoAlert()
   pauseChargeBeep()
@@ -129,6 +130,8 @@ export function playSystemAudio(filename: string): void {
     })
   }
   
+  const level = SYSTEM_AUDIO_LEVELS[filename] ?? AUDIO_LEVELS.voicePrompt
+  if (playFromBuffer(src, level, false)) return
   if (!canStartCue()) return
 
   const pool = _systemAudioPools[src]
@@ -141,6 +144,7 @@ export function playSystemAudio(filename: string): void {
 export function playButtonClick(): void {
   if (_pool.length === 0) return
   if (_muted) return
+  if (playFromBuffer(BUTTON_CLICK_SRC, AUDIO_LEVELS.buttonClick, false)) return
   if (!canStartCue()) return
   const el = _pool[_poolIndex]
   _poolIndex = (_poolIndex + 1) % POOL_SIZE
@@ -152,6 +156,7 @@ export function playAlarm(): void {
   if (!_alarm) return
   if (_muted) return
   _wantsPlaying.alarm = true
+  if (playFromBuffer(ALARM_SRC, AUDIO_LEVELS.alarm, true)) return
   if (!canStartCue()) return
   if (!_alarm.paused) return
   _alarm.currentTime = 0
@@ -160,6 +165,7 @@ export function playAlarm(): void {
 
 export function pauseAlarm(): void {
   _wantsPlaying.alarm = false
+  stopBuffer(ALARM_SRC)
   if (!_alarm) return
   _alarm.pause()
   _alarm.currentTime = 0
@@ -168,6 +174,7 @@ export function pauseAlarm(): void {
 export function playCallerInfoAlert(): void {
   if (!_callerInfoAlert) return
   if (_muted) return
+  if (playFromBuffer(CALLER_INFO_ALERT_SRC, AUDIO_LEVELS.callerInfoAlert, false)) return
   if (!canStartCue()) return
   _callerInfoAlert.pause()
   _callerInfoAlert.currentTime = 0
@@ -184,6 +191,7 @@ export function playChargeBeep(): void {
   if (!_chargeBeep) return
   if (_muted) return
   _wantsPlaying.chargeBeep = true
+  if (playFromBuffer(CHARGE_BEEP_SRC, AUDIO_LEVELS.chargeBeep, true)) return
   if (!canStartCue()) return
   if (!_chargeBeep.paused) return
   _chargeBeep.currentTime = 0
@@ -192,6 +200,7 @@ export function playChargeBeep(): void {
 
 export function pauseChargeBeep(): void {
   _wantsPlaying.chargeBeep = false
+  stopBuffer(CHARGE_BEEP_SRC)
   if (!_chargeBeep) return
   _chargeBeep.pause()
   _chargeBeep.currentTime = 0
@@ -201,6 +210,7 @@ export function playShockReadyBeep(): void {
   if (!_shockReadyBeep) return
   if (_muted) return
   _wantsPlaying.shockReadyBeep = true
+  if (playFromBuffer(SHOCK_READY_SRC, AUDIO_LEVELS.shockReadyBeep, true)) return
   if (!canStartCue()) return
   if (!_shockReadyBeep.paused) return
   _shockReadyBeep.currentTime = 0
@@ -209,6 +219,7 @@ export function playShockReadyBeep(): void {
 
 export function pauseShockReadyBeep(): void {
   _wantsPlaying.shockReadyBeep = false
+  stopBuffer(SHOCK_READY_SRC)
   if (!_shockReadyBeep) return
   _shockReadyBeep.pause()
   _shockReadyBeep.currentTime = 0
@@ -218,23 +229,30 @@ export function pauseShockReadyBeep(): void {
 // perform_cpr.mp3 plays first; when it naturally ends, 100_bpm.mp3 starts.
 // Both are stopped together by stopCprAudioSequence().
 
+const PERFORM_CPR_SRC = '/audio/perform_cpr.mp3'
+
 let _performCpr: HTMLAudioElement | null = null
 let _100bpm: HTMLAudioElement | null = null
 let _onPerformCprEnded: (() => void) | null = null
 
 if (typeof window !== 'undefined') {
-  _performCpr = createCue('/audio/perform_cpr.mp3', AUDIO_LEVELS.performCpr)
+  _performCpr = createCue(PERFORM_CPR_SRC, AUDIO_LEVELS.performCpr)
   _100bpm = createCue('/audio/100_bpm.mp3', AUDIO_LEVELS.metronome100Bpm)
 
-  _performCpr.addEventListener('ended', () => {
-    if (!_muted && _100bpm) {
-      _100bpm.currentTime = 0
-      _100bpm.play().catch(() => {})
-    }
-    const cb = _onPerformCprEnded
-    _onPerformCprEnded = null
-    cb?.()
-  })
+  _performCpr.addEventListener('ended', handlePerformCprEnded)
+}
+
+// Starts the metronome and fires the caller's callback. Shared by the element
+// 'ended' event and, when the voice line plays from a buffer, a timer for the
+// buffer's duration — buffer sources have no 'ended' event we can rely on here.
+function handlePerformCprEnded(): void {
+  if (!_muted && _100bpm) {
+    _100bpm.currentTime = 0
+    _100bpm.play().catch(() => {})
+  }
+  const cb = _onPerformCprEnded
+  _onPerformCprEnded = null
+  cb?.()
 }
 
 export function playCprAudioSequence(onEnded?: () => void): void {
@@ -248,6 +266,18 @@ export function playCprAudioSequence(onEnded?: () => void): void {
   _performCpr.currentTime = 0
   _onPerformCprEnded = onEnded ?? null
   if (_muted) return
+  // The spoken instruction goes through a buffer like every other short cue.
+  // The metronome that follows stays an element: at 11 MB it would be hundreds
+  // of MB decoded, so it has to stream. It starts from this cue's 'ended'
+  // handler, which is not a gesture, so on iOS it depends on the session being
+  // held open — see the silent loop in unlockAudio.
+  if (playFromBuffer(PERFORM_CPR_SRC, AUDIO_LEVELS.performCpr, false)) {
+    window.setTimeout(
+      () => _onPerformCprEnded && handlePerformCprEnded(),
+      (_buffers.get(PERFORM_CPR_SRC)?.duration ?? 0) * 1000,
+    )
+    return
+  }
   _performCpr.play().catch(() => {})
 }
 
@@ -332,6 +362,108 @@ function audioContext(): AudioContext | null {
  * actually running; one-shots are simply dropped, which is right — their moment
  * has passed and replaying them late is what caused the pile-up.
  */
+// ── Decoded cue playback ─────────────────────────────────────────────────────
+// iOS only permits HTMLMediaElement.play() from inside a user gesture's call
+// stack. An earlier tap on the page is enough for desktop but not for Safari on
+// iOS, so cues fired from timers or effects — the dispatch alert, "press shock",
+// the shock-ready beep — stayed silent on iPad while cues fired straight from a
+// tap ("stand clear", the CPR voice, button clicks) played fine.
+//
+// AudioBufferSourceNode is not governed by that rule. Given a running context a
+// buffer can be started from anywhere, so decoding each cue once and playing it
+// from a buffer removes the gesture requirement entirely. It also sidesteps
+// iOS refusing to preload media and the quirks of MediaElementAudioSourceNode.
+//
+// The elements are kept as the fallback path for browsers without Web Audio
+// (and for jsdom under test), and for 100_bpm.mp3, which is 11 MB and would be
+// hundreds of MB decoded.
+
+const _buffers = new Map<string, AudioBuffer>()
+const _activeLoops = new Map<string, AudioBufferSourceNode>()
+let _buffersRequested = false
+
+/** Cues small enough to hold decoded. Excludes the 11 MB metronome. */
+function bufferableSources(): string[] {
+  const sources = new Set<string>([
+    BUTTON_CLICK_SRC,
+    ALARM_SRC,
+    CALLER_INFO_ALERT_SRC,
+    CHARGE_BEEP_SRC,
+    SHOCK_READY_SRC,
+    PERFORM_CPR_SRC,
+  ])
+  for (const filename of Object.keys(SYSTEM_AUDIO_LEVELS)) {
+    sources.add(`/audio/${filename}`)
+  }
+  return [...sources]
+}
+
+async function decodeInto(ctx: AudioContext, src: string): Promise<void> {
+  if (_buffers.has(src)) return
+  try {
+    const response = await fetch(src)
+    if (!response.ok) return
+    const bytes = await response.arrayBuffer()
+    // Safari historically only supports the callback form; the promise form is
+    // available in every version we target, but failures must not reject the
+    // whole batch.
+    const buffer = await ctx.decodeAudioData(bytes)
+    _buffers.set(src, buffer)
+  } catch {
+    // Leave it unbuffered — playback falls back to the element for this cue.
+  }
+}
+
+function preloadBuffers(ctx: AudioContext): void {
+  if (_buffersRequested) return
+  _buffersRequested = true
+  for (const src of bufferableSources()) void decodeInto(ctx, src)
+}
+
+/**
+ * Play a decoded cue. Returns false when it cannot — no context, context not
+ * running, or the buffer has not decoded yet — so callers fall back to the
+ * element path rather than going silent.
+ */
+function playFromBuffer(src: string, level: number, loop: boolean): boolean {
+  const ctx = _ctx
+  if (!ctx || ctx.state !== 'running') return false
+  const buffer = _buffers.get(src)
+  if (!buffer) return false
+  try {
+    stopBuffer(src)
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.loop = loop
+    const gain = ctx.createGain()
+    gain.gain.value = level
+    source.connect(gain)
+    gain.connect(ctx.destination)
+    source.start()
+    if (loop) _activeLoops.set(src, source)
+    else source.addEventListener('ended', () => source.disconnect())
+    return true
+  } catch {
+    return false
+  }
+}
+
+function stopBuffer(src: string): void {
+  const source = _activeLoops.get(src)
+  if (!source) return
+  _activeLoops.delete(src)
+  try {
+    source.stop()
+    source.disconnect()
+  } catch {
+    // Already stopped.
+  }
+}
+
+function stopAllBuffers(): void {
+  for (const src of [..._activeLoops.keys()]) stopBuffer(src)
+}
+
 function canStartCue(): boolean {
   const ctx = _ctx
   if (!ctx || ctx.state === 'running') return true
@@ -423,6 +555,32 @@ let _keepAlive: HTMLAudioElement | null = null
  * This element is deliberately not routed through the gain graph and not
  * included in allAudioElements(), so stopAllAudio() leaves it running.
  */
+let _silentLoop: AudioBufferSourceNode | null = null
+
+/**
+ * Keep the context out of the suspended state with a silent looping buffer.
+ *
+ * The previous attempt at this looped a `data:` URI through an `<audio>`
+ * element; iOS Safari has long-standing trouble with data URIs in media
+ * elements, and it did not hold the session open on device. A buffer source
+ * runs inside the context itself, so there is no element and no URI involved —
+ * the context always has something scheduled and does not go idle.
+ */
+function startSilentContextLoop(ctx: AudioContext): void {
+  if (_silentLoop) return
+  try {
+    const buffer = ctx.createBuffer(1, Math.max(1, Math.floor(ctx.sampleRate)), ctx.sampleRate)
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.loop = true
+    source.connect(ctx.destination)
+    source.start()
+    _silentLoop = source
+  } catch {
+    _silentLoop = null
+  }
+}
+
 function startAudioKeepAlive(): void {
   if (_keepAlive) return
   try {
@@ -446,6 +604,10 @@ export function unlockAudio(): void {
   if (ctx) {
     void ctx.resume().catch(() => {})
     for (const el of allAudioElements()) routeThroughGain(el)
+    // Decode the short cues so they can be played from anywhere, including the
+    // timers and effects iOS will not accept an element play() from.
+    preloadBuffers(ctx)
+    startSilentContextLoop(ctx)
   }
   startAudioKeepAlive()
   // Only what should be sounding right now. Unlock must never make noise of its
