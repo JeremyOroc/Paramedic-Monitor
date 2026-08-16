@@ -1,0 +1,50 @@
+name: Deploy to Vercel
+
+# Vercel's Hobby plan only builds commits authored by the account owner. Merges
+# by any other collaborator are skipped, so a production deploy currently means
+# asking the owner to click Redeploy by hand.
+#
+# A deploy hook is a plain HTTP trigger rather than a git event, so it is not
+# subject to that check. This fires one on every push to main, which includes
+# PR merges, whoever made them.
+#
+# One-time setup, by the Vercel project owner:
+#   1. Vercel → Project → Settings → Git → Deploy Hooks → create one for `main`
+#   2. GitHub → Settings → Secrets and variables → Actions → new repository
+#      secret named VERCEL_DEPLOY_HOOK, holding that URL
+#
+# The secret needs repo admin to add. The hook builds whatever branch it was
+# created for, not the pushed SHA — for main → production that is the same
+# thing, but it means a hook created for the wrong branch fails silently.
+
+on:
+  push:
+    branches: [main]
+  # Lets the owner re-trigger a build from the Actions tab without a push.
+  workflow_dispatch:
+
+# A newer push supersedes an in-flight run; no point queueing stale builds.
+concurrency:
+  group: vercel-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Vercel production build
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::VERCEL_DEPLOY_HOOK is not set. See the setup steps at the top of this workflow."
+            exit 1
+          fi
+          status=$(curl -sS -o body.txt -w '%{http_code}' -X POST "$HOOK")
+          cat body.txt
+          echo
+          if [ "$status" -ge 300 ]; then
+            echo "::error::Deploy hook returned HTTP $status"
+            exit 1
+          fi
+          echo "Triggered a Vercel production build (HTTP $status)."
