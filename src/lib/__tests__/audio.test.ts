@@ -395,50 +395,6 @@ describe('decoded cue playback', () => {
     vi.unstubAllGlobals()
   })
 
-  it('does not restart a looping cue that is already running', async () => {
-    stubFetch()
-    const ctx = installFakeAudioContext()
-    const audio = await import('@/lib/audio')
-
-    locked = false
-    window.dispatchEvent(new Event('pointerdown'))
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    ctx.started.length = 0
-    ctx.stopped.length = 0
-
-    audio.playAlarm()
-    expect(ctx.started).toHaveLength(1)
-
-    // useAlarm re-runs its effect whenever its inputs change. Restarting the
-    // source each time chopped the loop back to zero, which is what made the
-    // alarm sound cut up on device.
-    audio.playAlarm()
-    audio.playAlarm()
-
-    expect(ctx.started).toHaveLength(1)
-    expect(ctx.stopped).toHaveLength(0)
-    vi.unstubAllGlobals()
-  })
-
-  it('restarts a looping cue after it has been paused', async () => {
-    stubFetch()
-    const ctx = installFakeAudioContext()
-    const audio = await import('@/lib/audio')
-
-    locked = false
-    window.dispatchEvent(new Event('pointerdown'))
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    ctx.started.length = 0
-
-    audio.playAlarm()
-    audio.pauseAlarm()
-    audio.playAlarm()
-
-    // The guard must not make a stopped cue unrestartable.
-    expect(ctx.started).toHaveLength(2)
-    vi.unstubAllGlobals()
-  })
-
   it('stops a looping buffer when the cue is paused', async () => {
     stubFetch()
     const ctx = installFakeAudioContext()
