@@ -25,8 +25,17 @@ type RoutedCue = { src: string; gain: number }
 
 function installFakeAudioContext(
   initialState: AudioContextState = 'running',
-): { routed: RoutedCue[]; resumes: number; ctx: () => { state: AudioContextState } } {
+): {
+  routed: RoutedCue[]
+  resumes: number
+  started: Array<{ loop: boolean; gain: number }>
+  stopped: number[]
+  ctx: () => { state: AudioContextState }
+} {
   const routed: RoutedCue[] = []
+  const started: Array<{ loop: boolean; gain: number }> = []
+  const stopped: number[] = []
+  const lastGain = { value: 1 }
   const state = { resumes: 0 }
   let pending: RoutedCue | null = null
   // Context state lives in the closure rather than on the instance so tests can
@@ -53,10 +62,11 @@ function installFakeAudioContext(
     }
     createGain() {
       const entry = pending
-      return {
+      const node = {
         gain: {
           set value(next: number) {
             if (entry) entry.gain = next
+            lastGain.value = next
           },
           get value() {
             return entry?.gain ?? 1
@@ -64,12 +74,37 @@ function installFakeAudioContext(
         },
         connect: () => {},
       }
+      return node
+    }
+    decodeAudioData(bytes: ArrayBuffer) {
+      return Promise.resolve({ duration: 1, byteLength: bytes.byteLength } as unknown as AudioBuffer)
+    }
+    createBuffer() {
+      return { duration: 1 } as unknown as AudioBuffer
+    }
+    createBufferSource() {
+      const node = {
+        buffer: null as AudioBuffer | null,
+        loop: false,
+        connect: () => {},
+        disconnect: () => {},
+        addEventListener: () => {},
+        start: () => {
+          started.push({ loop: node.loop, gain: lastGain.value })
+        },
+        stop: () => {
+          stopped.push(1)
+        },
+      }
+      return node
     }
   }
 
   ;(window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext
   return {
     routed,
+    started,
+    stopped,
     get resumes() {
       return state.resumes
     },
@@ -309,6 +344,88 @@ describe('output gain', () => {
     audio.playShockReadyBeep()
     const played = callsFor('shock_ready_beep.mp3', { muted: false })
     expect(played.at(-1)?.volume).toBe(audio.AUDIO_LEVELS.shockReadyBeep)
+  })
+})
+
+describe('decoded cue playback', () => {
+  function stubFetch() {
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)) }),
+    )
+  }
+
+  it('plays cues from decoded buffers rather than media elements', async () => {
+    stubFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    // Decoding is async and fire-and-forget; nothing can come from a buffer
+    // until it lands. The silent keep-alive loop starts immediately, so
+    // counting started sources is not a signal that decoding finished.
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    ctx.started.length = 0
+    calls = []
+
+    // iOS refuses element play() outside a tap's call stack, which is why the
+    // dispatch alert, "press shock" and the shock-ready beep were silent while
+    // tap-fired cues played. A buffer source has no such rule.
+    audio.playShockReadyBeep()
+
+    expect(ctx.started.length).toBeGreaterThan(0)
+    expect(callsFor('shock_ready_beep.mp3', { muted: false })).toHaveLength(0)
+    vi.unstubAllGlobals()
+  })
+
+  it('applies the cue level to the buffer gain', async () => {
+    stubFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    ctx.started.length = 0
+
+    audio.playShockReadyBeep()
+    const last = ctx.started.at(-1)
+    expect(last?.gain).toBe(audio.AUDIO_LEVELS.shockReadyBeep)
+    expect(last?.loop).toBe(true)
+    vi.unstubAllGlobals()
+  })
+
+  it('stops a looping buffer when the cue is paused', async () => {
+    stubFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    audio.playAlarm()
+    const before = ctx.stopped.length
+    audio.pauseAlarm()
+
+    expect(ctx.stopped.length).toBeGreaterThan(before)
+    vi.unstubAllGlobals()
+  })
+
+  it('falls back to the element when a cue has not decoded', async () => {
+    // Decoding never resolves, so the buffer path is unavailable.
+    vi.stubGlobal('fetch', () => new Promise(() => {}))
+    installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    calls = []
+
+    audio.playShockReadyBeep()
+
+    expect(callsFor('shock_ready_beep.mp3', { muted: false })).not.toHaveLength(0)
+    vi.unstubAllGlobals()
   })
 })
 
