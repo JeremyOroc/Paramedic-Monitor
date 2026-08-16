@@ -430,6 +430,11 @@ function playFromBuffer(src: string, level: number, loop: boolean): boolean {
   if (!ctx || ctx.state !== 'running') return false
   const buffer = _buffers.get(src)
   if (!buffer) return false
+  // A looping cue that is already running must be left alone. The element path
+  // guards this with `if (!el.paused) return`; without the equivalent here,
+  // every re-run of the alarm effect stopped the source and started a new one,
+  // chopping the loop back to its beginning — the alarm "sounding cut".
+  if (loop && _activeLoops.has(src)) return true
   try {
     stopBuffer(src)
     const source = ctx.createBufferSource()
