@@ -1,13 +1,11 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import type { EventLogEntry } from '@/types/eventLog'
+
+export type { EventLogEntry } from '@/types/eventLog'
 
 export const EVENT_LOG_ITEMS_PER_PAGE = 8
-
-export type EventLogEntry = {
-  name: string
-  time: string
-}
 
 export type EventLogHighlightedButton = 'exit' | 'prev' | 'next'
 

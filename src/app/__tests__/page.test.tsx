@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 
@@ -42,8 +42,15 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
       onLeftAnalyse: () => void
       onToggleEtco2: () => void
       onTreatment: () => void
+      onPatientInfo: () => void
+      onBack: () => void
     }
-    nav: { onMoveUp: () => void; onMoveDown: () => void; onEnter: () => void }
+    nav: {
+      onHome: () => void
+      onMoveUp: () => void
+      onMoveDown: () => void
+      onEnter: () => void
+    }
     meds?: {
       onMedClick?: (name: string) => void
       onMedInfo?: () => void
@@ -64,6 +71,12 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
       <button type="button" onClick={softKeys.onTreatment}>
         Treatment
       </button>
+      <button type="button" onClick={softKeys.onPatientInfo}>
+        Patient Info
+      </button>
+      <button type="button" onClick={softKeys.onBack}>
+        Back
+      </button>
       <button type="button" onClick={() => meds?.onMedClick?.('O2')}>
         Administer O2
       </button>
@@ -75,6 +88,9 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
       </button>
       <button type="button" onClick={nav.onMoveUp}>
         Move up
+      </button>
+      <button type="button" onClick={nav.onHome}>
+        Home
       </button>
       <button type="button" onClick={nav.onMoveDown}>
         Move down
@@ -452,6 +468,10 @@ describe('MonitorPage', () => {
       useMonitorStore.getState().setDraft('bp_sys', 110)
       useMonitorStore.getState().setDraft('bp_dia', 70)
       useMonitorStore.getState().setDraft('spo2', 97)
+      useMonitorStore.getState().setDraftVitalActive('hr', true)
+      useMonitorStore.getState().setDraftVitalActive('bp_sys', true)
+      useMonitorStore.getState().setDraftVitalActive('bp_dia', true)
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -485,6 +505,10 @@ describe('MonitorPage', () => {
       useMonitorStore.getState().setDraft('bp_sys', 110)
       useMonitorStore.getState().setDraft('bp_dia', 70)
       useMonitorStore.getState().setDraft('spo2', 97)
+      useMonitorStore.getState().setDraftVitalActive('hr', true)
+      useMonitorStore.getState().setDraftVitalActive('bp_sys', true)
+      useMonitorStore.getState().setDraftVitalActive('bp_dia', true)
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -506,6 +530,7 @@ describe('MonitorPage', () => {
     act(() => {
       useMonitorStore.getState().setDraft('hr', 82)
       useMonitorStore.getState().setDraft('rhythm', 'nsr')
+      useMonitorStore.getState().setDraftVitalActive('hr', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -538,6 +563,7 @@ describe('MonitorPage', () => {
       useMonitorStore.getState().setDraft('bp_sys', 130)
       useMonitorStore.getState().setDraft('bp_dia', 85)
       useMonitorStore.getState().setDraftVitalActive('bp_sys', false)
+      useMonitorStore.getState().setDraftVitalActive('bp_dia', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -560,6 +586,7 @@ describe('MonitorPage', () => {
     vi.useFakeTimers()
     act(() => {
       useMonitorStore.getState().setDraft('etco2', 35)
+      useMonitorStore.getState().setDraftVitalActive('etco2', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -673,6 +700,8 @@ describe('MonitorPage', () => {
       )
       useMonitorStore.getState().setDraft('bp_sys', 220)
       useMonitorStore.getState().setDraft('bp_dia', 230)
+      useMonitorStore.getState().setDraftVitalActive('bp_sys', true)
+      useMonitorStore.getState().setDraftVitalActive('bp_dia', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -727,6 +756,8 @@ describe('MonitorPage', () => {
       )
       useMonitorStore.getState().setDraft('bp_sys', 220)
       useMonitorStore.getState().setDraft('bp_dia', 230)
+      useMonitorStore.getState().setDraftVitalActive('bp_sys', true)
+      useMonitorStore.getState().setDraftVitalActive('bp_dia', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -751,6 +782,8 @@ describe('MonitorPage', () => {
       )
       useMonitorStore.getState().setDraft('hr', 150)
       useMonitorStore.getState().setDraft('spo2', 80)
+      useMonitorStore.getState().setDraftVitalActive('hr', true)
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -818,6 +851,8 @@ describe('MonitorPage', () => {
     act(() => {
       useMonitorStore.getState().setDraft('spo2', 97)
       useMonitorStore.getState().setDraft('etco2', 35)
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
+      useMonitorStore.getState().setDraftVitalActive('etco2', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
@@ -992,6 +1027,33 @@ describe('MonitorPage', () => {
     vi.useRealTimers()
   })
 
+  it('renders merged Call and medication rows in chronological order', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-01-15T17:41:28Z'))
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.acknowledgeCall('12:41:18')
+      store.arriveCall('12:41:21')
+      store.transportCall('12:41:52')
+    })
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Treatment' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Administer O2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Med Info' }))
+
+    const rows = within(screen.getByRole('region', { name: 'Event log' }))
+      .getAllByRole('listitem')
+      .map((row) => row.textContent)
+    expect(rows).toEqual([
+      'Call - Acknowledge12:41:18',
+      'Call - Arrival12:41:21',
+      'O212:41:28',
+      'Call - Transport12:41:52',
+    ])
+    vi.useRealTimers()
+  })
+
   it('paginates the merged dispatch and medication event log with shell navigation', () => {
     act(() => {
       const store = useMonitorStore.getState()
@@ -1017,6 +1079,108 @@ describe('MonitorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Move up' }))
     fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
     expect(screen.getByText('Page 1 of 2')).toBeInTheDocument()
+  })
+
+  it('records trainee-visible vitals every five minutes and opens them from Home', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 88)
+      store.setDraft('bp_sys', 130)
+      store.setDraft('bp_dia', 75)
+      store.setDraft('etco2', 36)
+      store.setDraft('spo2', 97)
+      store.setDraftVitalActive('hr', true)
+      store.setDraftVitalActive('bp_sys', true)
+      store.setDraftVitalActive('bp_dia', true)
+      store.setDraftVitalActive('etco2', true)
+      store.setDraftVitalActive('spo2', true)
+      store.save()
+      store.send()
+      store.acceptBpReading(
+        { bp_sys: 118, bp_dia: 76 },
+        { bp_sys: true, bp_dia: false },
+      )
+      store.startEtco2Calibration()
+      store.completeEtco2Calibration()
+      store.setCprOverrideActive(true)
+    })
+
+    render(<MonitorPage />)
+    act(() => {
+      vi.advanceTimersByTime(300_000)
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+
+    const vitalLog = screen.getByRole('region', { name: 'Vital Log' })
+    expect(screen.getByRole('heading', { name: 'Vital Log' })).toBeInTheDocument()
+    expect(vitalLog).toHaveTextContent('00:05:00')
+    expect(vitalLog).toHaveTextContent('120')
+    expect(vitalLog).toHaveTextContent('118')
+    expect(vitalLog).toHaveTextContent('36')
+    expect(vitalLog).toHaveTextContent('97')
+    expect(vitalLog).toHaveTextContent('-')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+    expect(screen.queryByRole('region', { name: 'Vital Log' })).toBeNull()
+  })
+
+  it('keeps recorded Vital Log rows across an instructor monitor reset', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    render(<MonitorPage />)
+
+    act(() => {
+      vi.advanceTimersByTime(300_000)
+      useMonitorStore.getState().resetMonitorVitals()
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+
+    expect(
+      within(screen.getByRole('region', { name: 'Vital Log' })).getByText('00:05:00'),
+    ).toBeInTheDocument()
+  })
+
+  it('paginates twelve Vital Log rows with the physical navigation buttons', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    render(<MonitorPage />)
+
+    act(() => {
+      vi.advanceTimersByTime(3_600_000)
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument()
+    expect(screen.getByText('00:40:00')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument()
+    expect(screen.getByText('00:45:00')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: 'Vital Log' })).getByText('01:00:00'),
+    ).toBeInTheDocument()
+  })
+
+  it('blocks every other modal opener until Vital Log closes', () => {
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Patient Info' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Treatment' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Med Info' }))
+
+    expect(screen.getByRole('heading', { name: 'Vital Log' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Patient Info' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Event log' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.queryByRole('heading', { name: 'Vital Log' })).toBeNull()
   })
 
   it('stamps analyze event rows with real Eastern time', () => {

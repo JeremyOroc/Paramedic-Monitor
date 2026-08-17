@@ -130,6 +130,7 @@ export type SoftKeyHandlers = {
 }
 
 export type NavHandlers = {
+  onHome: () => void
   onMoveUp: () => void
   onMoveDown: () => void
   onEnter: () => void
@@ -214,7 +215,7 @@ export function DeviceShell({
     onCaptureTwelveLead,
     onPrint,
   } = softKeys
-  const { onMoveUp, onMoveDown, onEnter } = nav
+  const { onHome, onMoveUp, onMoveDown, onEnter } = nav
   const medicationMode = meds?.mode ?? false
   const medicationPage: MedicationPage = meds?.page ?? 1
   const onMedClick = meds?.onMedClick ?? (() => {})
@@ -442,6 +443,7 @@ export function DeviceShell({
                 </div>
               </div>
               <RightControlCluster
+                onHome={lock(onHome)}
                 onMoveUp={lock(onMoveUp)}
                 onMoveDown={lock(onMoveDown)}
                 onEnter={lock(onEnter)}
@@ -633,6 +635,7 @@ function LeftSoftKeys({ keys, disabled }: { keys: SoftKey[]; disabled: boolean }
 }
 
 type RightControlClusterProps = {
+  onHome: () => void
   onMoveUp: () => void
   onMoveDown: () => void
   onEnter: () => void
@@ -643,6 +646,7 @@ type RightControlClusterProps = {
 }
 
 function RightControlCluster({
+  onHome,
   onMoveUp,
   onMoveDown,
   onEnter,
@@ -684,6 +688,7 @@ function RightControlCluster({
       <div className="absolute inset-x-[2%] bottom-[0%] top-[29%] rounded-[19px] bg-[#b9b9b8] shadow-[inset_7px_8px_10px_rgba(255,255,255,0.26),inset_-8px_-9px_10px_rgba(102,102,102,0.2)]">
         <PhysicalButton
           ariaLabel="Home"
+          onClick={onHome}
           disabled={disabled}
           className="absolute left-[10%] top-[10%] h-[13.5%] w-[39%] rounded-[13px]"
         >

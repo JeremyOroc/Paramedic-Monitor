@@ -29,7 +29,9 @@ import {
   type DispatchRoute,
 } from '@/types/dispatchRoute'
 import { dispatchCountdownSeconds } from '@/store/fieldState'
+import { buildEventLogEntry } from '@/lib/eventLog'
 import type { EventLogEntry } from '@/components/monitor/EventLogModal'
+import type { EventLogStamp } from '@/types/eventLog'
 
 export type Vitals = {
   hr: number
@@ -43,7 +45,7 @@ export type Vitals = {
 }
 
 export type TimedDraftVitals = Partial<Record<NumericVitalField, number>>
-export type InactiveDraftVitals = Partial<Record<NumericVitalField, number>>
+export type DraftVitalValues = Partial<Record<NumericVitalField, number>>
 
 const initial: Vitals = {
   hr: 0,
@@ -168,14 +170,6 @@ function normalizeBpActive(
   }
 }
 
-function isNumericVitalField(field: keyof Vitals): field is NumericVitalField {
-  return field === 'hr' ||
-    field === 'bp_sys' ||
-    field === 'bp_dia' ||
-    field === 'etco2' ||
-    field === 'spo2'
-}
-
 function anyVitalActive(active: VitalActiveState): boolean {
   return Object.values(active).some(Boolean)
 }
@@ -280,7 +274,7 @@ export type MonitorState = {
   acceptedBpActive: BpActiveState
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
   setTimedDraftVitals: (vitals: TimedDraftVitals) => void
-  setInactiveDraftVitals: (vitals: InactiveDraftVitals) => void
+  setDraftVitalValues: (vitals: DraftVitalValues) => void
   setDraftVitalActive: (field: NumericVitalField, active: boolean) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
   setDispatchRouteDraft: (route: DispatchRoute) => void
@@ -288,9 +282,9 @@ export type MonitorState = {
   setPatientSex: (sex: PatientSex) => void
   setDispatchMinutes: (minutes: number) => void
   setDispatchSeconds: (seconds: number) => void
-  acknowledgeCall: (estTime: string) => void
-  arriveCall: (estTime: string) => void
-  transportCall: (estTime: string) => void
+  acknowledgeCall: (stamp: EventLogStamp | string) => void
+  arriveCall: (stamp: EventLogStamp | string) => void
+  transportCall: (stamp: EventLogStamp | string) => void
   startEtco2Calibration: () => void
   cancelEtco2Calibration: () => void
   completeEtco2Calibration: () => void
@@ -341,11 +335,12 @@ export const useMonitorStore = create<MonitorState>()(
       setDraft: (field, value) =>
         set((s) => {
           const draft: Vitals = { ...s.draft, [field]: value }
-          if (field === 'spo2') draft.spo2_waveform = 'normal'
-          if (field === 'etco2') draft.etco2_waveform = 'normal'
-          const draftVitalActive = isNumericVitalField(field)
-            ? { ...s.draftVitalActive, [field]: true }
-            : s.draftVitalActive
+          if (field === 'spo2') {
+            draft.spo2_waveform = s.draftVitalActive.spo2 ? 'normal' : 'off'
+          }
+          if (field === 'etco2') {
+            draft.etco2_waveform = s.draftVitalActive.etco2 ? 'normal' : 'off'
+          }
           // Switching ECG off writes rhythm 'off' over the selection, so only a
           // real rhythm updates the memory.
           const lastRhythm =
@@ -354,8 +349,8 @@ export const useMonitorStore = create<MonitorState>()(
               : s.lastRhythm
           return {
             draft,
-            draftVitalActive,
-            draftVitalsActive: anyVitalActive(draftVitalActive),
+            draftVitalActive: s.draftVitalActive,
+            draftVitalsActive: anyVitalActive(s.draftVitalActive),
             lastRhythm,
           }
         }),
@@ -373,19 +368,18 @@ export const useMonitorStore = create<MonitorState>()(
             draftVitalsActive: anyVitalActive(s.draftVitalActive),
           }
         }),
-      setInactiveDraftVitals: (vitals) =>
+      setDraftVitalValues: (vitals) =>
         set((s) => {
           const draft: Vitals = { ...s.draft, ...vitals }
-          const draftVitalActive = { ...s.draftVitalActive }
-          for (const field of Object.keys(vitals) as NumericVitalField[]) {
-            draftVitalActive[field] = false
+          if (vitals.spo2 !== undefined) {
+            draft.spo2_waveform = s.draftVitalActive.spo2 ? 'normal' : 'off'
           }
-          if (vitals.spo2 !== undefined) draft.spo2_waveform = 'off'
-          if (vitals.etco2 !== undefined) draft.etco2_waveform = 'off'
+          if (vitals.etco2 !== undefined) {
+            draft.etco2_waveform = s.draftVitalActive.etco2 ? 'normal' : 'off'
+          }
           return {
             draft,
-            draftVitalActive,
-            draftVitalsActive: anyVitalActive(draftVitalActive),
+            draftVitalsActive: anyVitalActive(s.draftVitalActive),
           }
         }),
       setDraftVitalActive: (field, active) =>
@@ -412,44 +406,47 @@ export const useMonitorStore = create<MonitorState>()(
         set({ dispatchMinutes: Math.max(0, Math.floor(minutes) || 0) }),
       setDispatchSeconds: (seconds) =>
         set({ dispatchSeconds: Math.min(59, Math.max(0, Math.floor(seconds) || 0)) }),
-      acknowledgeCall: (estTime) =>
+      acknowledgeCall: (stamp) =>
         set((s) => {
           if (s.dispatch.acknowledgedAt) return s
+          const entry = buildEventLogEntry(`Call - ${CALLER_EVENT_LABELS.acknowledge}`, stamp)
           return {
             dispatch: {
               ...s.dispatch,
-              acknowledgedAt: estTime,
+              acknowledgedAt: entry.time,
               callerEvents: [
                 ...s.dispatch.callerEvents,
-                { name: `Call - ${CALLER_EVENT_LABELS.acknowledge}`, time: estTime },
+                entry,
               ],
             },
           }
         }),
-      arriveCall: (estTime) =>
+      arriveCall: (stamp) =>
         set((s) => {
           if (s.dispatch.arrivedAt) return s
+          const entry = buildEventLogEntry(`Call - ${CALLER_EVENT_LABELS.arrival}`, stamp)
           return {
             dispatch: {
               ...s.dispatch,
-              arrivedAt: estTime,
+              arrivedAt: entry.time,
               callerEvents: [
                 ...s.dispatch.callerEvents,
-                { name: `Call - ${CALLER_EVENT_LABELS.arrival}`, time: estTime },
+                entry,
               ],
             },
           }
         }),
-      transportCall: (estTime) =>
+      transportCall: (stamp) =>
         set((s) => {
           if (s.dispatch.transportedAt) return s
+          const entry = buildEventLogEntry(`Call - ${CALLER_EVENT_LABELS.transport}`, stamp)
           return {
             dispatch: {
               ...s.dispatch,
-              transportedAt: estTime,
+              transportedAt: entry.time,
               callerEvents: [
                 ...s.dispatch.callerEvents,
-                { name: `Call - ${CALLER_EVENT_LABELS.transport}`, time: estTime },
+                entry,
               ],
             },
           }

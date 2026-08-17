@@ -13,6 +13,16 @@
 ---
 
 ## Completed
+- [x] **Home toggle, chronological Event Log, and manual vital switches — COMPLETE:**
+  - [x] Physical Home toggles Vital Log closed without weakening its mutual exclusion or changing the underlying monitor mode
+  - [x] Call, medication, and Analyze rows form one oldest-first stream with exact capture ordering for new events and stable visible-time fallback for legacy rows
+  - [x] Direct, universal auto-sort, and timed numeric edits preserve manual channel state through Save and Send, including SpO2/EtCO2 waveform connectivity
+  - [x] Full unit/integration coverage, production build, and rendered monitor/admin browser QA pass
+- [x] **Home Vital Log — COMPLETE:**
+  - [x] Physical Home opens an Event Log-sized Vital Log containing immutable five-minute snapshots of trainee-visible FC, PNI SYS/DIA, EtCO2, and SpO2 values
+  - [x] Missing values render as `-`; skipped timer boundaries catch up with the freshest snapshot, while power-off and refresh reset the timer-bound history
+  - [x] Eight-row pages use cyclic Exit → Prev → Next navigation, physical Back closes the modal, and all competing monitor overlays are mutually exclusive
+  - [x] Timer, sampling, component, controller, physical-button, and monitor-flow tests cover the feature; production build and rendered desktop browser QA pass
 - [x] **Cyclic modal navigation and Exit controls — COMPLETE:**
   - [x] Patient Info cycles Age → Sex → Exit in both directions; its former arrow now reads Exit and Enter closes only the panel
   - [x] Event Log opens on Exit, cycles Exit → Prev → Next with wrap-around, keeps disabled page actions selectable no-ops, and preserves medication mode when Exit closes the log

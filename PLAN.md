@@ -18,7 +18,9 @@
 - The call assignment screen should show New Assignment and assignment detail labels without decorative icons.
 - Automatic call assignment display should play `/audio/caller_info_alarm.mp4` and gently flash 4 times for each new dispatch run; manual sidebar reopening must stay silent.
 - T1/T2/T3/U1/U2/U3 timed vitals must update draft numbers without turning Off vitals back On; SpO2/EtCO2 graph connections stay tied to their existing On/Off toggle state.
-- Universal Caller Info scenario auto-sort must fill origin vital numbers while forcing those vitals Off until the instructor manually toggles them On.
+- Direct vital fields, universal scenario auto-sort, and timed vital updates must change draft numbers without changing the current manual On/Off state; Save and Send retain inactive values for later manual activation.
+- Pressing physical Home while Vital Log is already open must close it; Home remains blocked by every other modal or capture/print overlay.
+- Event Log must merge Call, medication, and Analyze entries into an oldest-first chronological stream using hidden capture ordering, with stable `HH:MM:SS` fallback for legacy rows.
 
 ---
 
@@ -235,6 +237,7 @@ paramedic-monitor/
    - Inner dark sidebar labels are visual only and must not be clickable
    - Right physical Move up / Move down / Enter buttons cycle a blue selected state through monitor header, right vitals, visible waveform labels/scales, ECG labels, and the minus toggle row. Enter is inert except on the minus toggle.
    - Medication mode keeps the normal right-side Move up / Move down / Enter monitor navigation active. When the medication Info soft key opens the event log, those three controls temporarily navigate the log instead. Exit is selected on open; multi-page logs cycle Down through Exit → Prev → Next → Exit and Up in reverse, while single-page logs keep Exit as the only selection. Enter closes only the log from Exit or activates the highlighted page direction from Prev/Next. The log shows 8 events per page, hides pagination for 0–8 events, consumes navigation without changing the background, and keeps unavailable first/last-page directions selectable but disabled when multiple pages exist. Closing the log restores normal monitor navigation while medication mode remains open.
+   - The physical Home button opens a mutually exclusive `Vital Log` modal matching the Event Log geometry. Beginning at `00:05:00`, it records immutable trainee-visible snapshots every five elapsed monitor minutes in Timestamp → FC → PNI SYS → PNI DIA → ETCO2 → SPO2 order. FC includes the CPR override; PNI uses independently active accepted cuff values; EtCO2 requires an active, calibrated channel; SpO2 requires an active channel; unavailable values render as `-`. The log shows 8 rows per page and reuses the Event Log Exit/Prev/Next cyclic navigation and boundary behavior. Back closes it, Home cannot open it over another modal, and no other modal can open while it owns the screen. Its history clears with the monitor session timer on power-off or refresh, but not on an instructor vital reset while that timer continues.
    - Header/subbar reference controls include a combined date/time selectable region, patient-mode selectable region, beacon icon, selectable battery icon, a small minus rectangle beneath date/time, and a larger empty rectangle beside it.
    - The minus toggle hides or restores the bottom status/defib/CPR panel. When hidden, the main waveform area expands to show ECG, EtCO2, and SpO2 rows while the right vitals column stays unchanged.
    - Graph title metadata displays `SpO2 1x` and, when EtCO2 is visible, `EtCO2 0 to 60 mmHg`; this text does not change the internal EtCO2 renderer scale.
@@ -254,6 +257,8 @@ paramedic-monitor/
 - BP alarm-suppression tests cover active NIBP suppression, cancel restore, completion restore, and HR/SpO2 alarms staying active during BP reading.
 - Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
 - Medication/event-log navigation tests cover normal monitor navigation while medication mode is open, Exit-first cyclic navigation, single-page Exit-only isolation, multi-page Prev/Next selection and boundary clamping, merged dispatch/medication/analyze event counts, and navigation restoration after closing the log.
+- Home/Vital Log tests cover five-minute sampling and skipped-boundary catch-up, visible-value and inactive-channel rules, independent PNI columns, timer-reset cleanup, eight-row pagination, cyclic navigation, Back/Exit closure, physical Home wiring, and mutual exclusion with every existing modal flow.
+- Home/event/vital-input regression tests cover Home toggle closure, interleaved and same-second event chronology, midnight rollover, legacy ordering, chronological pagination, and manual On/Off preservation across direct, auto-sort, timed, Save, and Send flows.
 - Controller tests cover initial monitor state, selection toggling, patient-info draft/commit/cancel,
   cyclic Patient Info navigation and Exit activation, 12-lead capture timers, Back precedence,
   and power-off cleanup.

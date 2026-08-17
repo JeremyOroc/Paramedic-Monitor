@@ -14,6 +14,7 @@ export const COLORS = {
   alarmRed:     '#ff2020',
   pendingAmber: '#ffaa00',
   selectionBlue: '#1f4cff',
+  modalSurface:  '#8ba88c',
   bottomBar:    '#1a1a1a',
   sidebarBg:    '#0d0d0d',
   // 12-lead Capture printout (warm tan/salmon ECG paper, dark ink) + acquire bar

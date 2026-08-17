@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
@@ -22,6 +22,10 @@ import {
 } from '@/components/monitor/CallerInfoModal'
 import { PatientInfoPanel } from '@/components/monitor/PatientInfoPanel'
 import { EventLogModal } from '@/components/monitor/EventLogModal'
+import {
+  VitalLogModal,
+  VITAL_LOG_ITEMS_PER_PAGE,
+} from '@/components/monitor/VitalLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
@@ -29,10 +33,11 @@ import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 import { useMonitorClock } from '@/hooks/useMonitorClock'
 import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
+import { useVitalLog } from '@/hooks/useVitalLog'
 import { useCountdown } from '@/hooks/useCountdown'
 import { useElapsedTimer } from '@/hooks/useElapsedTimer'
 import { useNibpReading } from '@/hooks/useNibpReading'
-import { formatEstTime } from '@/lib/estTime'
+import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { playCallerInfoAlert, setAudioMuted, stopAllAudio } from '@/lib/audio'
@@ -94,7 +99,10 @@ export function MonitorPage({
     initialPoweredOn: devBypass,
     callerEventCount: dispatchState.callerEvents.length,
   })
-  const sessionTimer = useSessionTimer(controller.isTimerRunning)
+  const {
+    formatted: sessionTimer,
+    elapsedSeconds: sessionElapsedSeconds,
+  } = useSessionTimer(controller.isTimerRunning)
 
   // Dispatch startup gate: countdown is travel-time to scene; the trainee must
   // Acknowledge, wait out the countdown, then mark Arrival before power unlocks.
@@ -114,18 +122,21 @@ export function MonitorPage({
   }
 
   const onCallerEvent = (key: CallerEventKey) => {
-    const est = formatEstTime()
-    if (key === 'acknowledge') acknowledgeCall(est)
-    else if (key === 'arrival') arriveCall(est)
-    else transportCall(est)
+    const stamp = createEventLogStamp()
+    if (key === 'acknowledge') acknowledgeCall(stamp)
+    else if (key === 'arrival') arriveCall(stamp)
+    else transportCall(stamp)
     onStudentEvent?.({
       kind: key,
       label: key === 'acknowledge' ? 'Acknowledge' : key === 'arrival' ? 'Arrival' : 'Transport',
-      payload: { time: est },
+      payload: { time: stamp.time },
     })
   }
 
-  const mergedEventLog = [...dispatchState.callerEvents, ...controller.eventLog]
+  const mergedEventLog = useMemo(
+    () => sortEventLogEntries([...dispatchState.callerEvents, ...controller.eventLog]),
+    [controller.eventLog, dispatchState.callerEvents],
+  )
   // Arrival used to flip straight to the monitor. Now each dispatch run keeps
   // the tablet up until the trainee explicitly taps "Go to Monitor".
   const [enteredMonitorRunId, setEnteredMonitorRunId] = useState<string | null>(null)
@@ -253,7 +264,7 @@ export function MonitorPage({
     patientMode: controller.patientMode,
     rhythm: confirmed.rhythm,
     onAnalyzeResult(result) {
-      controller.onAnalyzeResult(result, formatEstTime())
+      controller.onAnalyzeResult(result, createEventLogStamp())
       onStudentEvent?.({
         kind: 'analyze',
         label: result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock',
@@ -318,6 +329,38 @@ export function MonitorPage({
   const etco2DisplayActive = confirmedVitalActive.etco2 && etco2Loaded
   const displayedHr = cprOverrideActive ? 120 : confirmed.hr
   const displayedHrActive = cprOverrideActive || confirmedVitalActive.hr
+
+  const vitalLogSnapshot = useMemo(
+    () => ({
+      fc: displayedHrActive ? displayedHr : null,
+      pniSys: acceptedBpActive.bp_sys ? acceptedBp.bp_sys : null,
+      pniDia: acceptedBpActive.bp_dia ? acceptedBp.bp_dia : null,
+      etco2: etco2DisplayActive ? confirmed.etco2 : null,
+      spo2: confirmedVitalActive.spo2 ? confirmed.spo2 : null,
+    }),
+    [
+      acceptedBp.bp_dia,
+      acceptedBp.bp_sys,
+      acceptedBpActive.bp_dia,
+      acceptedBpActive.bp_sys,
+      confirmed.etco2,
+      confirmed.spo2,
+      confirmedVitalActive.spo2,
+      displayedHr,
+      displayedHrActive,
+      etco2DisplayActive,
+    ],
+  )
+  const vitalLog = useVitalLog({
+    elapsedSeconds: sessionElapsedSeconds,
+    isRunning: controller.isTimerRunning,
+    snapshot: vitalLogSnapshot,
+  })
+  const vitalLogTotalPages = Math.max(
+    1,
+    Math.ceil(vitalLog.length / VITAL_LOG_ITEMS_PER_PAGE),
+  )
+  const vitalLogHasPagination = vitalLogTotalPages > 1
 
   useDefibAudio(defib.state, controller.isMuted)
 
@@ -448,6 +491,12 @@ export function MonitorPage({
         page={controller.eventLogPage}
         highlightedButton={controller.eventLogHighlightedButton}
       />
+      <VitalLogModal
+        open={controller.vitalLogOpen}
+        log={vitalLog}
+        page={controller.vitalLogPage}
+        highlightedButton={controller.vitalLogHighlightedButton}
+      />
       {controller.isTwelveLead && controller.captureState === 'acquiring' && (
         <div className="absolute inset-0 z-40">
           <AcquiringDialog durationMs={ACQUIRE_MS} />
@@ -552,20 +601,21 @@ export function MonitorPage({
           onPrint: controller.onPrint,
         }}
         nav={{
-          onMoveUp: controller.onMoveUp,
-          onMoveDown: controller.onMoveDown,
-          onEnter: controller.onEnter,
+          onHome: controller.onHome,
+          onMoveUp: () => controller.onMoveUp(vitalLogHasPagination),
+          onMoveDown: () => controller.onMoveDown(vitalLogHasPagination),
+          onEnter: () => controller.onEnter(vitalLogTotalPages),
         }}
         meds={{
           mode: controller.medicationMode,
           page: controller.medicationPage,
           onMedClick: (name) => {
-            const time = formatEstTime()
-            controller.onMedClick(name, time)
+            const stamp = createEventLogStamp()
+            controller.onMedClick(name, stamp)
             onStudentEvent?.({
               kind: 'medication',
               label: name,
-              payload: { time },
+              payload: { time: stamp.time },
             })
           },
           onMedPageChange: controller.onMedPageChange,

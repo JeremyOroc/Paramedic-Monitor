@@ -9,12 +9,15 @@ import {
   type EventLogHighlightedButton,
 } from '@/components/monitor/EventLogModal'
 import type { PatientInfoField } from '@/components/monitor/PatientInfoPanel'
+import type { VitalLogHighlightedButton } from '@/components/monitor/VitalLogModal'
 import type { Vitals } from '@/store/monitorStore'
 import type { MonitorSelection } from '@/types/monitorSelection'
 import { clampAge, toggleSex, type PatientInfo, type PatientSex } from '@/types/patientInfo'
 import { DEFAULT_VITALS, type PatientMode, type Rhythm } from '@/types/vitals'
 import { setAudioMuted } from '@/lib/audio'
+import { buildEventLogEntry } from '@/lib/eventLog'
 import { NEXT_MED_PAGE, type MedicationPage } from '@/lib/monitor/medications'
+import type { EventLogStamp } from '@/types/eventLog'
 
 export type MonitorView = 'main' | '12lead'
 export type SecondaryChannel = 'spo2' | 'etco2'
@@ -42,6 +45,8 @@ const TOP_SELECTIONS: MonitorSelection[] = [
 const PATIENT_INFO_FIELDS: readonly PatientInfoField[] = ['age', 'sex', 'exit']
 const EVENT_LOG_BUTTONS: readonly EventLogHighlightedButton[] = ['exit', 'prev', 'next']
 const EVENT_LOG_EXIT_ONLY: readonly EventLogHighlightedButton[] = ['exit']
+const VITAL_LOG_BUTTONS: readonly VitalLogHighlightedButton[] = ['exit', 'prev', 'next']
+const VITAL_LOG_EXIT_ONLY: readonly VitalLogHighlightedButton[] = ['exit']
 
 type MonitorControllerState = {
   view: MonitorView
@@ -61,6 +66,9 @@ type MonitorControllerState = {
   eventLogOpen: boolean
   eventLogPage: number
   eventLogHighlightedButton: EventLogHighlightedButton
+  vitalLogOpen: boolean
+  vitalLogPage: number
+  vitalLogHighlightedButton: VitalLogHighlightedButton
   flashedMed: string | null
   isPoweredOn: boolean
   isMuted: boolean
@@ -90,7 +98,21 @@ type MonitorControllerState = {
 function hasBlockingOverlay(state: MonitorControllerState): boolean {
   return (
     state.eventLogOpen ||
+    state.vitalLogOpen ||
     state.callerInfoOpen ||
+    state.printPreviewOpen ||
+    state.captureState === 'acquiring' ||
+    state.captureState === 'result'
+  )
+}
+
+function hasAnyModalOrOverlay(state: MonitorControllerState): boolean {
+  return (
+    state.patientModalOpen ||
+    state.callerInfoOpen ||
+    state.patientInfoOpen ||
+    state.eventLogOpen ||
+    state.vitalLogOpen ||
     state.printPreviewOpen ||
     state.captureState === 'acquiring' ||
     state.captureState === 'result'
@@ -105,7 +127,7 @@ type Action =
   | { type: 'moveSelectedControl'; direction: 1 | -1 }
   | { type: 'toggleBottomStatus' }
   | { type: 'enterMedicationMode' }
-  | { type: 'addMedicationEvent'; name: string; time: string }
+  | { type: 'addMedicationEvent'; name: string; stamp: EventLogStamp | string }
   | { type: 'clearMedicationFlash'; name: string }
   | { type: 'nextMedicationPage' }
   | { type: 'exitMedicationMode' }
@@ -113,6 +135,10 @@ type Action =
   | { type: 'closeEventLog' }
   | { type: 'moveEventLogHighlight'; direction: 1 | -1; hasPagination: boolean }
   | { type: 'activateEventLogButton'; totalPages: number }
+  | { type: 'toggleVitalLog' }
+  | { type: 'closeVitalLog' }
+  | { type: 'moveVitalLogHighlight'; direction: 1 | -1; hasPagination: boolean }
+  | { type: 'activateVitalLogButton'; totalPages: number }
   | { type: 'openCallerInfo' }
   | { type: 'closeCallerInfo' }
   | { type: 'openPatientInfo' }
@@ -131,7 +157,7 @@ type Action =
   | { type: 'powerOn' }
   | { type: 'powerOff' }
   | { type: 'setJumpscareActive'; active: boolean }
-  | { type: 'addAnalyzeEvent'; result: 'shock' | 'no_shock'; time: string }
+  | { type: 'addAnalyzeEvent'; result: 'shock' | 'no_shock'; stamp: EventLogStamp | string }
 
 type UseMonitorControllerOptions = {
   confirmed: Vitals
@@ -162,6 +188,9 @@ const initialState: MonitorControllerState = {
   eventLogOpen: false,
   eventLogPage: 1,
   eventLogHighlightedButton: 'exit',
+  vitalLogOpen: false,
+  vitalLogPage: 1,
+  vitalLogHighlightedButton: 'exit',
   flashedMed: null,
   isPoweredOn: true,
   isMuted: false,
@@ -261,7 +290,10 @@ function reducer(
     case 'addMedicationEvent':
       return {
         ...state,
-        eventLog: [...state.eventLog, { name: action.name, time: action.time }],
+        eventLog: [
+          ...state.eventLog,
+          buildEventLogEntry(action.name, action.stamp),
+        ],
         flashedMed: action.name,
       }
     case 'clearMedicationFlash':
@@ -272,8 +304,10 @@ function reducer(
       // Two-step Back: close the event log first if it's open, otherwise leave
       // medication mode. Mirrors the pre-refactor handleMedBack behavior.
       if (state.eventLogOpen) return { ...state, eventLogOpen: false }
+      if (state.vitalLogOpen) return { ...state, vitalLogOpen: false }
       return { ...state, medicationMode: false }
     case 'openEventLog':
+      if (state.vitalLogOpen) return state
       return {
         ...state,
         eventLogOpen: true,
@@ -303,11 +337,45 @@ function reducer(
             ? Math.max(1, state.eventLogPage - 1)
             : Math.min(action.totalPages, state.eventLogPage + 1),
       }
+    case 'toggleVitalLog':
+      if (state.vitalLogOpen) return { ...state, vitalLogOpen: false }
+      if (hasAnyModalOrOverlay(state)) return state
+      return {
+        ...state,
+        vitalLogOpen: true,
+        vitalLogPage: 1,
+        vitalLogHighlightedButton: 'exit',
+      }
+    case 'closeVitalLog':
+      return { ...state, vitalLogOpen: false }
+    case 'moveVitalLogHighlight': {
+      const buttons = action.hasPagination ? VITAL_LOG_BUTTONS : VITAL_LOG_EXIT_ONLY
+      const currentIndex = buttons.indexOf(state.vitalLogHighlightedButton)
+      const safeIndex = currentIndex === -1 ? 0 : currentIndex
+      return {
+        ...state,
+        vitalLogHighlightedButton:
+          buttons[(safeIndex + action.direction + buttons.length) % buttons.length],
+      }
+    }
+    case 'activateVitalLogButton':
+      if (state.vitalLogHighlightedButton === 'exit') {
+        return { ...state, vitalLogOpen: false }
+      }
+      return {
+        ...state,
+        vitalLogPage:
+          state.vitalLogHighlightedButton === 'prev'
+            ? Math.max(1, state.vitalLogPage - 1)
+            : Math.min(action.totalPages, state.vitalLogPage + 1),
+      }
     case 'openCallerInfo':
+      if (state.vitalLogOpen) return state
       return { ...state, callerInfoOpen: true }
     case 'closeCallerInfo':
       return { ...state, callerInfoOpen: false }
     case 'openPatientInfo':
+      if (state.vitalLogOpen) return state
       return {
         ...state,
         patientInfoOpen: true,
@@ -377,6 +445,7 @@ function reducer(
         isMuted: state.isMuted,
       }
     case 'startCapture':
+      if (state.vitalLogOpen) return state
       return {
         ...state,
         patientInfoOpen: false,
@@ -391,8 +460,10 @@ function reducer(
         lastCapture: action.snapshot,
       }
     case 'openPrintPreview':
+      if (state.vitalLogOpen) return state
       return state.lastCapture ? { ...state, printPreviewOpen: true } : state
     case 'back':
+      if (state.vitalLogOpen) return { ...state, vitalLogOpen: false }
       if (state.callerInfoOpen) return { ...state, callerInfoOpen: false }
       if (state.patientModalOpen) return { ...state, patientModalOpen: false }
       if (state.printPreviewOpen) return { ...state, printPreviewOpen: false }
@@ -422,6 +493,9 @@ function reducer(
         eventLogOpen: false,
         eventLogPage: 1,
         eventLogHighlightedButton: 'exit',
+        vitalLogOpen: false,
+        vitalLogPage: 1,
+        vitalLogHighlightedButton: 'exit',
         selectedControl: 'dateTime',
         bottomStatusVisible: true,
       }
@@ -429,7 +503,10 @@ function reducer(
       return { ...state, jumpscareActive: action.active }
     case 'addAnalyzeEvent': {
       const name = action.result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock'
-      return { ...state, eventLog: [...state.eventLog, { name, time: action.time }] }
+      return {
+        ...state,
+        eventLog: [...state.eventLog, buildEventLogEntry(name, action.stamp)],
+      }
     }
     default:
       return state
@@ -498,7 +575,11 @@ export function useMonitorController({
 
   const blockingOverlay = hasBlockingOverlay(state)
 
-  const onEnter = useCallback(() => {
+  const onEnter = useCallback((vitalLogTotalPages = 1) => {
+    if (state.vitalLogOpen) {
+      dispatch({ type: 'activateVitalLogButton', totalPages: vitalLogTotalPages })
+      return
+    }
     if (state.eventLogOpen) {
       dispatch({ type: 'activateEventLogButton', totalPages: eventLogTotalPages })
       return
@@ -538,9 +619,18 @@ export function useMonitorController({
     state.patientInfoOpen,
     state.patientModalOpen,
     state.selectedField,
+    state.vitalLogOpen,
   ])
 
-  const onMoveUp = useCallback(() => {
+  const onMoveUp = useCallback((vitalLogHasPagination = false) => {
+    if (state.vitalLogOpen) {
+      dispatch({
+        type: 'moveVitalLogHighlight',
+        direction: -1,
+        hasPagination: vitalLogHasPagination,
+      })
+      return
+    }
     if (state.eventLogOpen) {
       dispatch({
         type: 'moveEventLogHighlight',
@@ -564,9 +654,18 @@ export function useMonitorController({
     state.eventLogOpen,
     state.patientInfoOpen,
     state.patientModalOpen,
+    state.vitalLogOpen,
   ])
 
-  const onMoveDown = useCallback(() => {
+  const onMoveDown = useCallback((vitalLogHasPagination = false) => {
+    if (state.vitalLogOpen) {
+      dispatch({
+        type: 'moveVitalLogHighlight',
+        direction: 1,
+        hasPagination: vitalLogHasPagination,
+      })
+      return
+    }
     if (state.eventLogOpen) {
       dispatch({
         type: 'moveEventLogHighlight',
@@ -590,9 +689,11 @@ export function useMonitorController({
     state.eventLogOpen,
     state.patientInfoOpen,
     state.patientModalOpen,
+    state.vitalLogOpen,
   ])
 
   const onCaptureTwelveLead = useCallback(() => {
+    if (state.vitalLogOpen) return
     clearCaptureTimer()
     const snapshot = { rhythm: confirmed.rhythm, hr: confirmed.hr }
     dispatch({ type: 'startCapture', snapshot })
@@ -600,11 +701,11 @@ export function useMonitorController({
       captureTimerRef.current = null
       dispatch({ type: 'completeCapture', snapshot })
     }, ACQUIRE_MS)
-  }, [clearCaptureTimer, confirmed.hr, confirmed.rhythm])
+  }, [clearCaptureTimer, confirmed.hr, confirmed.rhythm, state.vitalLogOpen])
 
-  const onMedClick = useCallback((name: string, time: string) => {
+  const onMedClick = useCallback((name: string, stamp: EventLogStamp | string) => {
     clearFlashTimer()
-    dispatch({ type: 'addMedicationEvent', name, time })
+    dispatch({ type: 'addMedicationEvent', name, stamp })
     flashTimerRef.current = setTimeout(() => {
       flashTimerRef.current = null
       dispatch({ type: 'clearMedicationFlash', name })
@@ -637,6 +738,8 @@ export function useMonitorController({
     displayAge,
     displaySex,
     onBack,
+    onHome: () => dispatch({ type: 'toggleVitalLog' }),
+    onCloseVitalLog: () => dispatch({ type: 'closeVitalLog' }),
     onEnter,
     onMoveUp,
     onMoveDown,
@@ -657,8 +760,8 @@ export function useMonitorController({
     onToggleMute,
     onPowerOn: () => dispatch({ type: 'powerOn' }),
     onPowerOff,
-    onAnalyzeResult: (result: 'shock' | 'no_shock', time: string) =>
-      dispatch({ type: 'addAnalyzeEvent', result, time }),
+    onAnalyzeResult: (result: 'shock' | 'no_shock', stamp: EventLogStamp | string) =>
+      dispatch({ type: 'addAnalyzeEvent', result, stamp }),
     onToggleBottomStatus: () => dispatch({ type: 'toggleBottomStatus' }),
     onSetJumpscareActive: (active: boolean) =>
       dispatch({ type: 'setJumpscareActive', active }),

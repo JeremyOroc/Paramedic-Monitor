@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 
-export function useSessionTimer(isRunning: boolean): string {
+export type SessionTimerState = {
+  formatted: string
+  elapsedSeconds: number
+}
+
+export function useSessionTimer(isRunning: boolean): SessionTimerState {
   const [elapsed, setElapsed] = useState(0)
   const startRef = useRef<number | null>(null)
 
@@ -39,5 +44,8 @@ export function useSessionTimer(isRunning: boolean): string {
   const h = Math.floor(displayElapsed / 3600)
   const m = Math.floor((displayElapsed % 3600) / 60)
   const s = displayElapsed % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return {
+    formatted: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`,
+    elapsedSeconds: displayElapsed,
+  }
 }

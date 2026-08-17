@@ -44,22 +44,22 @@ describe('VitalInput', () => {
     expect(shell).toContainElement(screen.getByText('bpm'))
   })
 
-  it('typing updates draft, turns the vital On, and marks it dirty', async () => {
+  it('typing updates draft, keeps the vital Off, and marks it dirty', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" unit="bpm" />)
     const input = screen.getByLabelText('FC') as HTMLInputElement
     await user.clear(input)
     await user.type(input, '160')
     expect(useMonitorStore.getState().draft.hr).toBe(160)
-    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
     expect(screen.getByTestId('status-hr')).toHaveAttribute('data-status', 'dirty')
-    expect(screen.getByRole('button', { name: 'FC on' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'FC off' })).toHaveAttribute(
       'aria-pressed',
-      'true',
+      'false',
     )
   })
 
-  it('typing SpO2 connects the SpO2 graph in draft state', async () => {
+  it('typing SpO2 keeps the SpO2 graph disconnected while Off', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="spo2" label="SpO2" unit="%" />)
     const input = screen.getByLabelText('SpO2') as HTMLInputElement
@@ -69,12 +69,12 @@ describe('VitalInput', () => {
 
     const s = useMonitorStore.getState()
     expect(s.draft.spo2).toBe(98)
-    expect(s.draftVitalActive.spo2).toBe(true)
-    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draftVitalActive.spo2).toBe(false)
+    expect(s.draft.spo2_waveform).toBe('off')
     expect(s.draft.etco2_waveform).toBe('off')
   })
 
-  it('typing EtCO2 connects the EtCO2 graph in draft state', async () => {
+  it('typing EtCO2 keeps the EtCO2 graph disconnected while Off', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="etco2" label="EtCO2" unit="mmHg" />)
     const input = screen.getByLabelText('EtCO2') as HTMLInputElement
@@ -84,8 +84,8 @@ describe('VitalInput', () => {
 
     const s = useMonitorStore.getState()
     expect(s.draft.etco2).toBe(35)
-    expect(s.draftVitalActive.etco2).toBe(true)
-    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.draftVitalActive.etco2).toBe(false)
+    expect(s.draft.etco2_waveform).toBe('off')
     expect(s.draft.spo2_waveform).toBe('off')
   })
 
@@ -169,9 +169,30 @@ describe('VitalInput', () => {
 
       expect(input.value).toBe(String(nonZero))
       expect(useMonitorStore.getState().draft[field]).toBe(nonZero)
+      expect(useMonitorStore.getState().draftVitalActive[field]).toBe(false)
       expect(screen.getByTestId(`status-${field}`)).toHaveAttribute(
         'data-status',
         'dirty',
+      )
+    },
+  )
+
+  it.each(VITAL_FIELDS)(
+    'preserves an active $label switch while editing its number',
+    async ({ field, label, nonZero }) => {
+      const user = userEvent.setup()
+      act(() => useMonitorStore.getState().setDraftVitalActive(field, true))
+      render(<VitalInput field={field} label={label} />)
+      const input = screen.getByLabelText(label) as HTMLInputElement
+
+      await user.clear(input)
+      await user.type(input, String(nonZero))
+
+      expect(useMonitorStore.getState().draft[field]).toBe(nonZero)
+      expect(useMonitorStore.getState().draftVitalActive[field]).toBe(true)
+      expect(screen.getByRole('button', { name: `${label} on` })).toHaveAttribute(
+        'aria-pressed',
+        'true',
       )
     },
   )
@@ -220,6 +241,7 @@ describe('VitalInput', () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" />)
     const input = screen.getByLabelText('FC') as HTMLInputElement
+    await user.click(screen.getByRole('button', { name: 'FC off' }))
     await user.clear(input)
     await user.type(input, '0')
     await user.click(screen.getByRole('button', { name: 'FC on' }))
