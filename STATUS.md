@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Cyclic modal navigation and Exit controls — COMPLETE:**
+  - [x] Patient Info cycles Age → Sex → Exit in both directions; its former arrow now reads Exit and Enter closes only the panel
+  - [x] Event Log opens on Exit, cycles Exit → Prev → Next with wrap-around, keeps disabled page actions selectable no-ops, and preserves medication mode when Exit closes the log
+  - [x] Single-page logs expose Exit as their sole selection; multi-page logs place Exit directly above Prev
+  - [x] Controller, component, and physical-button page-flow tests plus rendered desktop browser QA cover both modal flows
 - [x] **Medication and event-log navigation restoration — COMPLETE:**
   - [x] Right-side Move up / Move down / Enter controls retain normal monitor selection behavior while medication mode is open
   - [x] Open event logs temporarily own the navigation cluster: arrows select Prev/Next, Enter pages, single-page logs remain isolated, and first/last-page actions clamp safely

@@ -20,9 +20,18 @@ describe('EventLogModal', () => {
   it.each([0, 8])('hides pagination for a log with %i entries', (count) => {
     render(<EventLogModal open log={makeLog(count)} />)
 
+    expect(screen.getByText('Exit')).toHaveAttribute('aria-current', 'true')
     expect(screen.queryByText(/Page \d+ of \d+/)).toBeNull()
     expect(screen.queryByText(/Prev/)).toBeNull()
     expect(screen.queryByText(/Next/)).toBeNull()
+  })
+
+  it('renders Exit above Prev for a multi-page log', () => {
+    render(<EventLogModal open log={makeLog(9)} />)
+
+    const exit = screen.getByText('Exit')
+    const prev = screen.getByText(/Prev/)
+    expect(exit.compareDocumentPosition(prev) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('renders the requested page with highlighted and disabled edge states', () => {
@@ -35,7 +44,9 @@ describe('EventLogModal', () => {
     expect(screen.getByText('Event 1')).toBeInTheDocument()
     expect(screen.getByText('Event 8')).toBeInTheDocument()
     expect(screen.queryByText('Event 9')).toBeNull()
+    expect(screen.getByText('Exit')).not.toHaveAttribute('aria-current')
     expect(screen.getByText(/Prev/)).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByText(/Prev/)).toHaveAttribute('aria-current', 'true')
     expect(screen.getByText(/Prev/)).toHaveClass('bg-[#2f6df6]', 'opacity-30')
     expect(screen.getByText(/Next/)).toHaveAttribute('aria-disabled', 'false')
 
@@ -46,6 +57,7 @@ describe('EventLogModal', () => {
     expect(screen.queryByText('Event 1')).toBeNull()
     expect(screen.getByText(/Prev/)).toHaveAttribute('aria-disabled', 'false')
     expect(screen.getByText(/Next/)).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByText(/Next/)).toHaveAttribute('aria-current', 'true')
     expect(screen.getByText(/Next/)).toHaveClass('bg-[#2f6df6]', 'opacity-30')
   })
 })

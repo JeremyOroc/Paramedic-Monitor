@@ -5,6 +5,19 @@
 
 ---
 
+## [2026-08-17] [monitor] - Implement cyclic modal navigation and Exit controls
+
+- Added wrap-around Patient Info browsing through Age, Sex, and Exit; replaced the left arrow with an Exit label that closes only the panel on right-cluster Enter.
+- Added an Exit-first Event Log cursor, cyclic Exit/Prev/Next navigation for multi-page logs, Exit-only single-page navigation, and an Exit control positioned above Prev.
+- Preserved Patient Info editing, physical Back precedence, disabled pagination boundary no-ops, and the underlying 12-lead or medication mode after Exit.
+- Added controller, component, and full physical-button flow regressions; all 676 tests pass, lint has no errors, and rendered desktop browser QA completed without console warnings or errors.
+
+## [2026-08-17] [monitor] - Define cyclic modal navigation and Exit controls
+
+- Updated the monitor interaction requirements so Patient Info cycles Age → Sex → Exit and Event Log cycles Exit → Prev → Next, with reverse wrapping on Move Up.
+- Specified that modal Exit closes only the active overlay, single-page event logs expose Exit as their sole selection, and disabled page actions remain selectable no-ops at their boundaries.
+- Expanded the phase testing requirements to cover cursor wrapping, Exit activation, page clamping, and preservation of the underlying 12-lead or medication mode.
+
 ## [2026-08-17] [monitor] - Restore medication and event-log navigation
 
 - Restored normal right-cluster Move up / Move down / Enter behavior while the medication soft-key menu is open.

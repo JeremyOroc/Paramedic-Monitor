@@ -1,5 +1,7 @@
 'use client'
 
+import { cn } from '@/lib/utils'
+
 export const EVENT_LOG_ITEMS_PER_PAGE = 8
 
 export type EventLogEntry = {
@@ -7,12 +9,14 @@ export type EventLogEntry = {
   time: string
 }
 
+export type EventLogHighlightedButton = 'exit' | 'prev' | 'next'
+
 type EventLogModalProps = {
   open: boolean
   log: EventLogEntry[]
   rightOffset?: number
   page?: number
-  highlightedButton?: 'prev' | 'next'
+  highlightedButton?: EventLogHighlightedButton
 }
 
 export function EventLogModal({
@@ -20,7 +24,7 @@ export function EventLogModal({
   log,
   rightOffset = 96,
   page = 1,
-  highlightedButton = 'next',
+  highlightedButton = 'exit',
 }: EventLogModalProps) {
   if (!open) return null
 
@@ -59,25 +63,57 @@ export function EventLogModal({
           <p className="text-black/70 text-sm">No events recorded.</p>
         )}
       </div>
-      {showPagination && (
-        <div className="flex items-center justify-between bg-[#8ba88c] border-t border-black/20 px-4 py-1.5 text-xs font-mono">
+      <div
+        data-testid="event-log-actions"
+        className="border-t border-black/20 bg-[#8ba88c] px-4 py-1.5 font-mono text-xs"
+      >
+        <div className="flex justify-start">
           <span
-            aria-disabled={page === 1}
-            className={`px-2 py-1 font-bold ${highlightedButton === 'prev' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === 1 ? 'opacity-30' : ''}`}
+            aria-current={highlightedButton === 'exit' ? 'true' : undefined}
+            className={cn(
+              'px-2 py-1 font-bold',
+              highlightedButton === 'exit'
+                ? 'bg-[#2f6df6] text-white'
+                : 'text-black opacity-50',
+            )}
           >
-            &#8592; Prev
-          </span>
-          <span className="text-black/70">
-            Page {page} of {totalPages}
-          </span>
-          <span
-            aria-disabled={page === totalPages}
-            className={`px-2 py-1 font-bold ${highlightedButton === 'next' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === totalPages ? 'opacity-30' : ''}`}
-          >
-            Next &#8594;
+            Exit
           </span>
         </div>
-      )}
+        {showPagination && (
+          <div className="mt-1 flex items-center justify-between">
+            <span
+              aria-current={highlightedButton === 'prev' ? 'true' : undefined}
+              aria-disabled={page === 1}
+              className={cn(
+                'px-2 py-1 font-bold',
+                highlightedButton === 'prev'
+                  ? 'bg-[#2f6df6] text-white'
+                  : 'text-black opacity-50',
+                page === 1 && 'opacity-30',
+              )}
+            >
+              &#8592; Prev
+            </span>
+            <span className="text-black/70">
+              Page {page} of {totalPages}
+            </span>
+            <span
+              aria-current={highlightedButton === 'next' ? 'true' : undefined}
+              aria-disabled={page === totalPages}
+              className={cn(
+                'px-2 py-1 font-bold',
+                highlightedButton === 'next'
+                  ? 'bg-[#2f6df6] text-white'
+                  : 'text-black opacity-50',
+                page === totalPages && 'opacity-30',
+              )}
+            >
+              Next &#8594;
+            </span>
+          </div>
+        )}
+      </div>
     </section>
   )
 }

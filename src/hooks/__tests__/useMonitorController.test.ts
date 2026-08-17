@@ -68,7 +68,7 @@ describe('useMonitorController', () => {
     expect(result.current.captureLock).toBe(false)
     expect(result.current.lastCapture).toBeNull()
     expect(result.current.eventLogPage).toBe(1)
-    expect(result.current.eventLogHighlightedButton).toBe('next')
+    expect(result.current.eventLogHighlightedButton).toBe('exit')
 
     act(() => result.current.onPrint())
     expect(result.current.printPreviewOpen).toBe(false)
@@ -146,6 +146,27 @@ describe('useMonitorController', () => {
     expect(result.current.editing).toBe(false)
     expect(result.current.displayAge).toBe(40)
     expect(setPatientAge).not.toHaveBeenCalled()
+  })
+
+  it('cycles Patient Info in both directions and exits back to live 12-lead', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTwelveLead())
+    act(() => result.current.onPatientInfo())
+
+    act(() => result.current.onMoveDown())
+    expect(result.current.selectedField).toBe('sex')
+    act(() => result.current.onMoveDown())
+    expect(result.current.selectedField).toBe('exit')
+    act(() => result.current.onMoveDown())
+    expect(result.current.selectedField).toBe('age')
+
+    act(() => result.current.onMoveUp())
+    expect(result.current.selectedField).toBe('exit')
+    act(() => result.current.onEnter())
+
+    expect(result.current.patientInfoOpen).toBe(false)
+    expect(result.current.isTwelveLead).toBe(true)
   })
 
   it('captures a 12-lead after the acquire timer completes', () => {
@@ -391,8 +412,11 @@ describe('useMonitorController', () => {
     act(() => result.current.onMedInfo())
 
     expect(result.current.eventLogPage).toBe(1)
-    expect(result.current.eventLogHighlightedButton).toBe('next')
+    expect(result.current.eventLogHighlightedButton).toBe('exit')
 
+    // Move Up wraps Exit to Next.
+    act(() => result.current.onMoveUp())
+    expect(result.current.eventLogHighlightedButton).toBe('next')
     act(() => result.current.onEnter())
     expect(result.current.eventLogPage).toBe(2)
 
@@ -400,7 +424,10 @@ describe('useMonitorController', () => {
     act(() => result.current.onEnter())
     expect(result.current.eventLogPage).toBe(2)
 
-    act(() => result.current.onMoveUp())
+    // Move Down wraps Next to Exit, then advances to Prev.
+    act(() => result.current.onMoveDown())
+    expect(result.current.eventLogHighlightedButton).toBe('exit')
+    act(() => result.current.onMoveDown())
     expect(result.current.eventLogHighlightedButton).toBe('prev')
     act(() => result.current.onEnter())
     expect(result.current.eventLogPage).toBe(1)
@@ -415,7 +442,24 @@ describe('useMonitorController', () => {
     act(() => result.current.onMedBack())
     act(() => result.current.onMedInfo())
     expect(result.current.eventLogPage).toBe(1)
-    expect(result.current.eventLogHighlightedButton).toBe('next')
+    expect(result.current.eventLogHighlightedButton).toBe('exit')
+  })
+
+  it('keeps single-page event-log navigation on Exit and preserves medication mode', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTreatment())
+    act(() => result.current.onMedInfo())
+
+    expect(result.current.eventLogOpen).toBe(true)
+    expect(result.current.eventLogHighlightedButton).toBe('exit')
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onMoveUp())
+    expect(result.current.eventLogHighlightedButton).toBe('exit')
+
+    act(() => result.current.onEnter())
+    expect(result.current.eventLogOpen).toBe(false)
+    expect(result.current.medicationMode).toBe(true)
   })
 
   it('Enter does not act on the background control while a menu is up', () => {

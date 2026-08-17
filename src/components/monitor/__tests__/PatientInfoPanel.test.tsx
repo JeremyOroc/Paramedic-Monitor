@@ -28,6 +28,15 @@ describe('PatientInfoPanel', () => {
     expect(screen.getByText('63')).toBeInTheDocument()
     expect(screen.getByText('Patient Sex')).toBeInTheDocument()
     expect(screen.getByText('M')).toBeInTheDocument()
+    expect(screen.getByText('Exit')).toBeInTheDocument()
+    expect(screen.queryByText('←')).not.toBeInTheDocument()
+  })
+
+  it('highlights Exit when it is the current navigation item', () => {
+    setup({ selectedField: 'exit' })
+
+    expect(screen.getByText('Exit')).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByText('Exit')).toHaveClass('bg-[#2f6df6]')
   })
 
   it('marks the selected field as current', () => {

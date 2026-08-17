@@ -1008,6 +1008,8 @@ describe('MonitorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Med Info' }))
 
     expect(screen.getByText('Page 1 of 2')).toBeInTheDocument()
+    expect(screen.getByText('Exit')).toHaveAttribute('aria-current', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
     fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
     fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
     expect(screen.getByText('Page 2 of 2')).toBeInTheDocument()

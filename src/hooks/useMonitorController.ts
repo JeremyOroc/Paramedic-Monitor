@@ -6,6 +6,7 @@ import { PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
 import {
   EVENT_LOG_ITEMS_PER_PAGE,
   type EventLogEntry,
+  type EventLogHighlightedButton,
 } from '@/components/monitor/EventLogModal'
 import type { PatientInfoField } from '@/components/monitor/PatientInfoPanel'
 import type { Vitals } from '@/store/monitorStore'
@@ -18,7 +19,6 @@ import { NEXT_MED_PAGE, type MedicationPage } from '@/lib/monitor/medications'
 export type MonitorView = 'main' | '12lead'
 export type SecondaryChannel = 'spo2' | 'etco2'
 export type CaptureState = 'idle' | 'acquiring' | 'result'
-export type EventLogHighlightedButton = 'prev' | 'next'
 export type { MedicationPage }
 
 export type CaptureSnapshot = {
@@ -39,6 +39,9 @@ const TOP_SELECTIONS: MonitorSelection[] = [
   'spo2Vital',
 ]
 
+const PATIENT_INFO_FIELDS: readonly PatientInfoField[] = ['age', 'sex', 'exit']
+const EVENT_LOG_BUTTONS: readonly EventLogHighlightedButton[] = ['exit', 'prev', 'next']
+const EVENT_LOG_EXIT_ONLY: readonly EventLogHighlightedButton[] = ['exit']
 
 type MonitorControllerState = {
   view: MonitorView
@@ -108,7 +111,7 @@ type Action =
   | { type: 'exitMedicationMode' }
   | { type: 'openEventLog' }
   | { type: 'closeEventLog' }
-  | { type: 'highlightEventLogButton'; button: EventLogHighlightedButton }
+  | { type: 'moveEventLogHighlight'; direction: 1 | -1; hasPagination: boolean }
   | { type: 'activateEventLogButton'; totalPages: number }
   | { type: 'openCallerInfo' }
   | { type: 'closeCallerInfo' }
@@ -158,7 +161,7 @@ const initialState: MonitorControllerState = {
   eventLog: [],
   eventLogOpen: false,
   eventLogPage: 1,
-  eventLogHighlightedButton: 'next',
+  eventLogHighlightedButton: 'exit',
   flashedMed: null,
   isPoweredOn: true,
   isMuted: false,
@@ -275,13 +278,24 @@ function reducer(
         ...state,
         eventLogOpen: true,
         eventLogPage: 1,
-        eventLogHighlightedButton: 'next',
+        eventLogHighlightedButton: 'exit',
       }
     case 'closeEventLog':
       return { ...state, eventLogOpen: false }
-    case 'highlightEventLogButton':
-      return { ...state, eventLogHighlightedButton: action.button }
+    case 'moveEventLogHighlight': {
+      const buttons = action.hasPagination ? EVENT_LOG_BUTTONS : EVENT_LOG_EXIT_ONLY
+      const currentIndex = buttons.indexOf(state.eventLogHighlightedButton)
+      const safeIndex = currentIndex === -1 ? 0 : currentIndex
+      return {
+        ...state,
+        eventLogHighlightedButton:
+          buttons[(safeIndex + action.direction + buttons.length) % buttons.length],
+      }
+    }
     case 'activateEventLogButton':
+      if (state.eventLogHighlightedButton === 'exit') {
+        return { ...state, eventLogOpen: false }
+      }
       return {
         ...state,
         eventLogPage:
@@ -304,7 +318,16 @@ function reducer(
     case 'movePatientInfo': {
       if (!state.patientInfoOpen) return state
       if (!state.editing) {
-        return { ...state, selectedField: action.direction === 'up' ? 'age' : 'sex' }
+        const currentIndex = PATIENT_INFO_FIELDS.indexOf(state.selectedField)
+        const safeIndex = currentIndex === -1 ? 0 : currentIndex
+        const delta = action.direction === 'up' ? -1 : 1
+        return {
+          ...state,
+          selectedField:
+            PATIENT_INFO_FIELDS[
+              (safeIndex + delta + PATIENT_INFO_FIELDS.length) % PATIENT_INFO_FIELDS.length
+            ],
+        }
       }
       if (state.selectedField === 'age') {
         const delta = action.direction === 'up' ? 1 : -1
@@ -320,7 +343,7 @@ function reducer(
       return { ...state, editValue: toggleSex(currentSex) }
     }
     case 'beginPatientInfoEdit':
-      if (!state.patientInfoOpen || state.editing) return state
+      if (!state.patientInfoOpen || state.editing || state.selectedField === 'exit') return state
       return {
         ...state,
         editing: true,
@@ -398,7 +421,7 @@ function reducer(
         callerInfoOpen: false,
         eventLogOpen: false,
         eventLogPage: 1,
-        eventLogHighlightedButton: 'next',
+        eventLogHighlightedButton: 'exit',
         selectedControl: 'dateTime',
         bottomStatusVisible: true,
       }
@@ -477,14 +500,16 @@ export function useMonitorController({
 
   const onEnter = useCallback(() => {
     if (state.eventLogOpen) {
-      if (eventLogHasPagination) {
-        dispatch({ type: 'activateEventLogButton', totalPages: eventLogTotalPages })
-      }
+      dispatch({ type: 'activateEventLogButton', totalPages: eventLogTotalPages })
       return
     }
     if (blockingOverlay) return
     if (!state.patientModalOpen && state.patientInfoOpen) {
       if (!state.editing) {
+        if (state.selectedField === 'exit') {
+          dispatch({ type: 'back' })
+          return
+        }
         dispatch({ type: 'beginPatientInfoEdit', patientInfo })
         return
       }
@@ -503,7 +528,6 @@ export function useMonitorController({
   }, [
     activeSelectedControl,
     blockingOverlay,
-    eventLogHasPagination,
     eventLogTotalPages,
     patientInfo,
     setPatientAge,
@@ -518,9 +542,11 @@ export function useMonitorController({
 
   const onMoveUp = useCallback(() => {
     if (state.eventLogOpen) {
-      if (eventLogHasPagination) {
-        dispatch({ type: 'highlightEventLogButton', button: 'prev' })
-      }
+      dispatch({
+        type: 'moveEventLogHighlight',
+        direction: -1,
+        hasPagination: eventLogHasPagination,
+      })
       return
     }
     if (blockingOverlay) return
@@ -542,9 +568,11 @@ export function useMonitorController({
 
   const onMoveDown = useCallback(() => {
     if (state.eventLogOpen) {
-      if (eventLogHasPagination) {
-        dispatch({ type: 'highlightEventLogButton', button: 'next' })
-      }
+      dispatch({
+        type: 'moveEventLogHighlight',
+        direction: 1,
+        hasPagination: eventLogHasPagination,
+      })
       return
     }
     if (blockingOverlay) return

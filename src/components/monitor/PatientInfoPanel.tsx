@@ -3,7 +3,7 @@
 import { cn } from '@/lib/utils'
 import type { PatientSex } from '@/types/patientInfo'
 
-export type PatientInfoField = 'age' | 'sex' | 'back'
+export type PatientInfoField = 'age' | 'sex' | 'exit'
 
 type PatientInfoPanelProps = {
   open: boolean
@@ -75,17 +75,17 @@ export function PatientInfoPanel({
             )
           })}
         </ul>
-        {/* Back button row — navigable via move up/down, Enter triggers back */}
+        {/* Exit is part of the right-cluster navigation sequence. */}
         <div className="mt-4">
           <div
-            aria-label="Back"
-            aria-current={selectedField === 'back' ? 'true' : undefined}
+            aria-label="Exit"
+            aria-current={selectedField === 'exit' ? 'true' : undefined}
             className={cn(
               'inline-flex items-center justify-center px-4 py-2 border-2 border-white font-bold text-white text-lg',
-              selectedField === 'back' ? 'bg-[#2f6df6]' : 'bg-black',
+              selectedField === 'exit' ? 'bg-[#2f6df6]' : 'bg-black',
             )}
           >
-            &#8592;
+            Exit
           </div>
         </div>
       </div>
