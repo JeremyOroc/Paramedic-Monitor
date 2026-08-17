@@ -5,6 +5,53 @@
 
 ---
 
+## [2026-08-17] [monitor] - Implement Home toggle, chronological events, and manual vital switches
+
+- Made physical Home close an open Vital Log and reset its page/selection on the next open while preserving all other modal lockouts and background state.
+- Added hidden absolute capture time and same-millisecond sequence metadata for new Call, medication, and Analyze entries, then sorted the merged Event Log oldest-first before pagination with stable legacy fallback.
+- Changed direct numeric fields, universal auto-sort, and timed updates to preserve manual On/Off state; inactive values now survive Save and Send without connecting SpO2/EtCO2 graphs.
+- Added ordering, midnight, tie, legacy, controller, component, store, admin, and full monitor-flow regressions; all 708 tests pass, lint has no errors, the production build passes, and rendered desktop browser QA completed without console warnings or errors.
+
+## [2026-08-17] [monitor] - Define Home toggle, chronological events, and manual vital switches
+
+- Changed physical Home behavior so an open Vital Log closes on a second Home press while other modal lockouts remain intact.
+- Defined one oldest-first Event Log stream across Call, medication, and Analyze entries, with exact hidden capture ordering for new rows and stable visible-time fallback for legacy rows.
+- Changed all numeric vital-entry paths to preserve the instructor's manual On/Off state; values edited while Off remain inactive through Save and Send but stay available for later activation.
+- Expanded the monitor testing contract to cover toggle closure, event ordering and pagination edge cases, and manual switch preservation across direct, auto-sort, timed, Save, and Send flows.
+
+## [2026-08-17] [monitor] - Implement Home Vital Log
+
+- Connected the physical Home button to a mutually exclusive Vital Log modal with Event Log geometry, matching vital colors, an empty state, `-` placeholders, and eight-row pagination.
+- Added immutable five-minute snapshots driven by the session timer, including trainee-visible CPR FC, independent accepted PNI SYS/DIA values, calibrated active EtCO2, active SpO2, skipped-boundary catch-up, and timer-reset cleanup.
+- Added cyclic Exit/Prev/Next navigation, disabled boundary no-ops, physical Back closure, modal lockout in both directions, and preservation of the underlying monitor, 12-lead, or medication state.
+- Added hook, component, controller, physical-button, and full monitor-flow coverage; all 697 tests pass, lint has no errors, the production build passes, and rendered desktop browser QA completed without console warnings or errors.
+
+## [2026-08-17] [monitor] - Define Home Vital Log behavior
+
+- Specified five-minute trainee-visible vital snapshots beginning at `00:05:00`, with separate PNI SYS/PNI DIA columns and `-` for unavailable values.
+- Defined eight-row pagination, Event Log-style cyclic Exit/Prev/Next navigation, Back closure, timer-bound history cleanup, and mutual exclusion with existing monitor modals.
+- Added the required timer, sampling, component, controller, physical-button, integration, and rendered-browser test coverage to the monitor plan.
+
+## [2026-08-17] [monitor] - Implement cyclic modal navigation and Exit controls
+
+- Added wrap-around Patient Info browsing through Age, Sex, and Exit; replaced the left arrow with an Exit label that closes only the panel on right-cluster Enter.
+- Added an Exit-first Event Log cursor, cyclic Exit/Prev/Next navigation for multi-page logs, Exit-only single-page navigation, and an Exit control positioned above Prev.
+- Preserved Patient Info editing, physical Back precedence, disabled pagination boundary no-ops, and the underlying 12-lead or medication mode after Exit.
+- Added controller, component, and full physical-button flow regressions; all 676 tests pass, lint has no errors, and rendered desktop browser QA completed without console warnings or errors.
+
+## [2026-08-17] [monitor] - Define cyclic modal navigation and Exit controls
+
+- Updated the monitor interaction requirements so Patient Info cycles Age → Sex → Exit and Event Log cycles Exit → Prev → Next, with reverse wrapping on Move Up.
+- Specified that modal Exit closes only the active overlay, single-page event logs expose Exit as their sole selection, and disabled page actions remain selectable no-ops at their boundaries.
+- Expanded the phase testing requirements to cover cursor wrapping, Exit activation, page clamping, and preservation of the underlying 12-lead or medication mode.
+
+## [2026-08-17] [monitor] - Restore medication and event-log navigation
+
+- Restored normal right-cluster Move up / Move down / Enter behavior while the medication soft-key menu is open.
+- Reconnected event-log pagination to the right cluster: arrows select Prev/Next, Enter changes pages, single-page logs consume navigation without touching the background, and boundary actions remain disabled.
+- Counted dispatch, medication, and analyze entries together for the 8-row pagination rule, reset to page 1 on every open, and restored normal navigation immediately after Back closes the log.
+- Added controller, modal, and monitor-page regression coverage and verified the complete physical-button flow in the rendered monitor.
+
 ## [2026-07-05] [monitor] - Fix Leaflet CSS build import
 
 - Moved the packaged Leaflet stylesheet import from `globals.css` to the root app layout so Next/Turbopack resolves it outside Tailwind's PostCSS import evaluation.

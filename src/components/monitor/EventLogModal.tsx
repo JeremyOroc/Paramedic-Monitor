@@ -1,18 +1,20 @@
 'use client'
 
-const ITEMS_PER_PAGE = 8
+import { cn } from '@/lib/utils'
+import type { EventLogEntry } from '@/types/eventLog'
 
-export type EventLogEntry = {
-  name: string
-  time: string
-}
+export type { EventLogEntry } from '@/types/eventLog'
+
+export const EVENT_LOG_ITEMS_PER_PAGE = 8
+
+export type EventLogHighlightedButton = 'exit' | 'prev' | 'next'
 
 type EventLogModalProps = {
   open: boolean
   log: EventLogEntry[]
   rightOffset?: number
   page?: number
-  highlightedButton?: 'prev' | 'next'
+  highlightedButton?: EventLogHighlightedButton
 }
 
 export function EventLogModal({
@@ -20,13 +22,16 @@ export function EventLogModal({
   log,
   rightOffset = 96,
   page = 1,
-  highlightedButton = 'next',
+  highlightedButton = 'exit',
 }: EventLogModalProps) {
   if (!open) return null
 
-  const totalPages = Math.max(1, Math.ceil(log.length / ITEMS_PER_PAGE))
-  const pageEntries = log.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
-  const showPagination = log.length > ITEMS_PER_PAGE
+  const totalPages = Math.max(1, Math.ceil(log.length / EVENT_LOG_ITEMS_PER_PAGE))
+  const pageEntries = log.slice(
+    (page - 1) * EVENT_LOG_ITEMS_PER_PAGE,
+    page * EVENT_LOG_ITEMS_PER_PAGE,
+  )
+  const showPagination = log.length > EVENT_LOG_ITEMS_PER_PAGE
 
   return (
     <section
@@ -42,7 +47,7 @@ export function EventLogModal({
           <ul className="flex flex-col gap-1">
             {pageEntries.map((entry, i) => (
               <li
-                key={(page - 1) * ITEMS_PER_PAGE + i}
+                key={(page - 1) * EVENT_LOG_ITEMS_PER_PAGE + i}
                 className="grid grid-cols-[1fr_1fr] items-stretch"
               >
                 <span className="px-2 py-1 text-xs font-bold text-black">{entry.name}</span>
@@ -56,23 +61,57 @@ export function EventLogModal({
           <p className="text-black/70 text-sm">No events recorded.</p>
         )}
       </div>
-      {showPagination && (
-        <div className="flex items-center justify-between bg-[#8ba88c] border-t border-black/20 px-4 py-1.5 text-xs font-mono">
+      <div
+        data-testid="event-log-actions"
+        className="border-t border-black/20 bg-[#8ba88c] px-4 py-1.5 font-mono text-xs"
+      >
+        <div className="flex justify-start">
           <span
-            className={`px-2 py-1 font-bold ${highlightedButton === 'prev' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === 1 ? 'opacity-30' : ''}`}
+            aria-current={highlightedButton === 'exit' ? 'true' : undefined}
+            className={cn(
+              'px-2 py-1 font-bold',
+              highlightedButton === 'exit'
+                ? 'bg-[#2f6df6] text-white'
+                : 'text-black opacity-50',
+            )}
           >
-            &#8592; Prev
-          </span>
-          <span className="text-black/70">
-            Page {page} of {totalPages}
-          </span>
-          <span
-            className={`px-2 py-1 font-bold ${highlightedButton === 'next' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === totalPages ? 'opacity-30' : ''}`}
-          >
-            Next &#8594;
+            Exit
           </span>
         </div>
-      )}
+        {showPagination && (
+          <div className="mt-1 flex items-center justify-between">
+            <span
+              aria-current={highlightedButton === 'prev' ? 'true' : undefined}
+              aria-disabled={page === 1}
+              className={cn(
+                'px-2 py-1 font-bold',
+                highlightedButton === 'prev'
+                  ? 'bg-[#2f6df6] text-white'
+                  : 'text-black opacity-50',
+                page === 1 && 'opacity-30',
+              )}
+            >
+              &#8592; Prev
+            </span>
+            <span className="text-black/70">
+              Page {page} of {totalPages}
+            </span>
+            <span
+              aria-current={highlightedButton === 'next' ? 'true' : undefined}
+              aria-disabled={page === totalPages}
+              className={cn(
+                'px-2 py-1 font-bold',
+                highlightedButton === 'next'
+                  ? 'bg-[#2f6df6] text-white'
+                  : 'text-black opacity-50',
+                page === totalPages && 'opacity-30',
+              )}
+            >
+              Next &#8594;
+            </span>
+          </div>
+        )}
+      </div>
     </section>
   )
 }

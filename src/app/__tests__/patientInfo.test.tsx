@@ -85,6 +85,25 @@ describe('MonitorPage — Patient Info menu', () => {
     expect(useMonitorStore.getState().patientInfo.sex).toBe('F')
   })
 
+  it('wraps through Exit and closes only the Patient Info panel on Enter', async () => {
+    const user = userEvent.setup()
+    render(<MonitorPage />)
+    await enterTwelveLead(user)
+    await user.click(screen.getByRole('button', { name: 'Patient Info' }))
+
+    await user.click(screen.getByRole('button', { name: 'Move up' }))
+    expect(screen.getByText('Exit')).toHaveAttribute('aria-current', 'true')
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    expect(screen.getByText('Patient Age').closest('li')).toHaveAttribute('aria-current', 'true')
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    expect(screen.getByText('Exit')).toHaveAttribute('aria-current', 'true')
+
+    await user.click(screen.getByRole('button', { name: 'Enter' }))
+    expect(screen.queryByRole('heading', { name: 'Patient Info' })).not.toBeInTheDocument()
+    expect(screen.getByText('aVR')).toBeInTheDocument()
+  })
+
   it('Back closes the panel, then exits the 12-lead view', async () => {
     const user = userEvent.setup()
     render(<MonitorPage />)

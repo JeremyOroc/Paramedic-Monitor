@@ -95,7 +95,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     useState<PatientPhysicalIconGroupId | null>(null)
   const reset = useMonitorStore((s) => s.reset)
   const resetMonitorVitals = useMonitorStore((s) => s.resetMonitorVitals)
-  const setInactiveDraftVitals = useMonitorStore((s) => s.setInactiveDraftVitals)
+  const setDraftVitalValues = useMonitorStore((s) => s.setDraftVitalValues)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const getSharedState = useMonitorStore((s) => s.getSharedState)
   const startDispatchClock = useMonitorStore((s) => s.startDispatchClock)
@@ -307,12 +307,12 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   }
 
   const applyParsedVitals = (parsed: ReturnType<typeof parseVitalsAutoSort>) => {
-    const inactiveVitals: Partial<Record<NumericVitalField, number>> = {}
+    const vitalValues: Partial<Record<NumericVitalField, number>> = {}
     for (const field of AUTO_SORT_VITAL_FIELDS) {
       const value = parsed[field]
-      if (value !== undefined) inactiveVitals[field] = value
+      if (value !== undefined) vitalValues[field] = value
     }
-    setInactiveDraftVitals(inactiveVitals)
+    setDraftVitalValues(vitalValues)
   }
 
   const handleUniversalAutoSortChange = (value: string) => {

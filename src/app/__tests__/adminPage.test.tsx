@@ -513,6 +513,42 @@ describe('AdminPage', () => {
     expect(state.confirmed.etco2_waveform).toBe('normal')
   })
 
+  it('preserves manually active vitals while universal auto-sort changes their values', async () => {
+    const user = userEvent.setup()
+    useMonitorStore.getState().setDraftVitalActive('hr', true)
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    useMonitorStore.getState().setDraftVitalActive('etco2', true)
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
+      target: {
+        value: [
+          '### Vitals (Origin)',
+          'HR: 54 bpm',
+          'SpO2: 78% on room air',
+          'BP: 96/58 mmHg',
+          'EtCO2: 62 mmHg',
+        ].join('\n'),
+      },
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    const state = useMonitorStore.getState()
+    expect(state.confirmed).toMatchObject({ hr: 54, spo2: 78, etco2: 62 })
+    expect(state.confirmedVitalActive).toMatchObject({
+      hr: true,
+      spo2: true,
+      bp_sys: false,
+      bp_dia: false,
+      etco2: true,
+    })
+    expect(state.confirmed.spo2_waveform).toBe('normal')
+    expect(state.confirmed.etco2_waveform).toBe('normal')
+  })
+
   it('updates Patient Physical pulse and respiratory findings from timed vitals buttons', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)

@@ -67,7 +67,7 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setDraft('hr', 160)
     const s = useMonitorStore.getState()
     expect(s.draft.hr).toBe(160)
-    expect(s.draftVitalActive.hr).toBe(true)
+    expect(s.draftVitalActive.hr).toBe(false)
     expect(s.saved.hr).toBe(0)
     expect(s.savedVitalActive.hr).toBe(false)
     expect(s.confirmed.hr).toBe(0)
@@ -277,35 +277,35 @@ describe('monitorStore', () => {
     expect(dispatch.runId).toBe(firstRunId)
   })
 
-  it('numeric vitals stay inactive until a vitals edit is saved and sent', () => {
+  it('numeric values save and send without changing their inactive state', () => {
     expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
 
     useMonitorStore.getState().setDraft('hr', 160)
-    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
-    expect(useMonitorStore.getState().draftVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
+    expect(useMonitorStore.getState().draftVitalsActive).toBe(false)
     expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
 
     useMonitorStore.getState().save()
-    expect(useMonitorStore.getState().savedVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().savedVitalsActive).toBe(false)
     expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
 
     useMonitorStore.getState().send()
-    expect(useMonitorStore.getState().confirmedVitalActive.hr).toBe(true)
-    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(true)
+    expect(useMonitorStore.getState().confirmedVitalActive.hr).toBe(false)
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
     expect(useMonitorStore.getState().confirmed.hr).toBe(160)
   })
 
-  it('SpO2 and EtCO2 numeric edits stage their matching graph connection state', () => {
+  it('SpO2 and EtCO2 numeric edits preserve disconnected graph state', () => {
     useMonitorStore.getState().setDraft('spo2', 98)
     useMonitorStore.getState().setDraft('etco2', 35)
 
     let s = useMonitorStore.getState()
     expect(s.draft.spo2).toBe(98)
-    expect(s.draftVitalActive.spo2).toBe(true)
-    expect(s.draft.spo2_waveform).toBe('normal')
+    expect(s.draftVitalActive.spo2).toBe(false)
+    expect(s.draft.spo2_waveform).toBe('off')
     expect(s.draft.etco2).toBe(35)
-    expect(s.draftVitalActive.etco2).toBe(true)
-    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.draftVitalActive.etco2).toBe(false)
+    expect(s.draft.etco2_waveform).toBe('off')
     expect(s.saved.spo2_waveform).toBe('off')
     expect(s.confirmed.etco2_waveform).toBe('off')
 
@@ -314,20 +314,20 @@ describe('monitorStore', () => {
 
     s = useMonitorStore.getState()
     expect(s.confirmed.spo2).toBe(98)
-    expect(s.confirmed.spo2_waveform).toBe('normal')
+    expect(s.confirmed.spo2_waveform).toBe('off')
     expect(s.confirmed.etco2).toBe(35)
-    expect(s.confirmed.etco2_waveform).toBe('normal')
+    expect(s.confirmed.etco2_waveform).toBe('off')
   })
 
-  it('typed zero still stages SpO2 and EtCO2 graphs as connected', () => {
+  it('typed zero also preserves disconnected SpO2 and EtCO2 graphs', () => {
     useMonitorStore.getState().setDraft('spo2', 0)
     useMonitorStore.getState().setDraft('etco2', 0)
 
     const s = useMonitorStore.getState()
-    expect(s.draftVitalActive.spo2).toBe(true)
-    expect(s.draft.spo2_waveform).toBe('normal')
-    expect(s.draftVitalActive.etco2).toBe(true)
-    expect(s.draft.etco2_waveform).toBe('normal')
+    expect(s.draftVitalActive.spo2).toBe(false)
+    expect(s.draft.spo2_waveform).toBe('off')
+    expect(s.draftVitalActive.etco2).toBe(false)
+    expect(s.draft.etco2_waveform).toBe('off')
   })
 
   it('timed draft vital updates change numbers without turning inactive vitals on', () => {
@@ -397,12 +397,12 @@ describe('monitorStore', () => {
     expect(s.draftVitalsActive).toBe(false)
   })
 
-  it('inactive draft vital updates fill numbers and force matching vitals off', () => {
+  it('bulk draft vital updates fill numbers while preserving every active state', () => {
     useMonitorStore.getState().setDraftVitalActive('hr', true)
     useMonitorStore.getState().setDraftVitalActive('spo2', true)
     useMonitorStore.getState().setDraftVitalActive('etco2', true)
 
-    useMonitorStore.getState().setInactiveDraftVitals({
+    useMonitorStore.getState().setDraftVitalValues({
       hr: 54,
       spo2: 78,
       bp_sys: 96,
@@ -417,11 +417,17 @@ describe('monitorStore', () => {
       bp_sys: 96,
       bp_dia: 58,
       etco2: 62,
-      spo2_waveform: 'off',
-      etco2_waveform: 'off',
+      spo2_waveform: 'normal',
+      etco2_waveform: 'normal',
     })
-    expect(s.draftVitalActive).toEqual(inactiveVitalState)
-    expect(s.draftVitalsActive).toBe(false)
+    expect(s.draftVitalActive).toEqual({
+      hr: true,
+      bp_sys: false,
+      bp_dia: false,
+      etco2: true,
+      spo2: true,
+    })
+    expect(s.draftVitalsActive).toBe(true)
   })
 
   it('HR and BP numeric edits do not change SpO2 or EtCO2 graph state', () => {
@@ -430,25 +436,32 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setDraft('bp_dia', 80)
 
     const s = useMonitorStore.getState()
-    expect(s.draftVitalActive.hr).toBe(true)
-    expect(s.draftVitalActive.bp_sys).toBe(true)
-    expect(s.draftVitalActive.bp_dia).toBe(true)
+    expect(s.draftVitalActive.hr).toBe(false)
+    expect(s.draftVitalActive.bp_sys).toBe(false)
+    expect(s.draftVitalActive.bp_dia).toBe(false)
     expect(s.draft.spo2_waveform).toBe('off')
     expect(s.draft.etco2_waveform).toBe('off')
   })
 
   it('can turn a stored zero vital on and off independently', () => {
     useMonitorStore.getState().setDraft('hr', 0)
-    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
-    useMonitorStore.getState().setDraftVitalActive('hr', false)
-    expect(useMonitorStore.getState().draft.hr).toBe(0)
     expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
-    expect(useMonitorStore.getState().draftVitalsActive).toBe(false)
+    useMonitorStore.getState().setDraftVitalActive('hr', true)
+    expect(useMonitorStore.getState().draft.hr).toBe(0)
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+    expect(useMonitorStore.getState().draftVitalsActive).toBe(true)
+
+    useMonitorStore.getState().setDraftVitalActive('hr', false)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    expect(useMonitorStore.getState().confirmed.hr).toBe(0)
+    expect(useMonitorStore.getState().confirmedVitalActive.hr).toBe(false)
+    expect(useMonitorStore.getState().confirmedVitalsActive).toBe(false)
 
     useMonitorStore.getState().setDraftVitalActive('hr', true)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
-
     expect(useMonitorStore.getState().confirmed.hr).toBe(0)
     expect(useMonitorStore.getState().confirmedVitalActive.hr).toBe(true)
     expect(useMonitorStore.getState().confirmedVitalsActive).toBe(true)

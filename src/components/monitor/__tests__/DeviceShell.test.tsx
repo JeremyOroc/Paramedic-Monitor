@@ -31,6 +31,7 @@ type Overrides = {
     canAdjustEnergy: boolean
   }>
   nav?: Partial<{
+    onHome: () => void
     onMoveUp: () => void
     onMoveDown: () => void
     onEnter: () => void
@@ -64,6 +65,7 @@ function makeProps(overrides: Overrides = {}) {
     onPrint: vi.fn(),
   }
   const nav = {
+    onHome: vi.fn(),
     onMoveUp: vi.fn(),
     onMoveDown: vi.fn(),
     onEnter: vi.fn(),
@@ -288,10 +290,12 @@ describe('DeviceShell', () => {
     await user.click(screen.getByRole('button', { name: 'Capture 12-lead' }))
     await user.click(screen.getByRole('button', { name: 'Patient Info' }))
     await user.click(screen.getByRole('button', { name: 'Enter' }))
+    await user.click(screen.getByRole('button', { name: 'Home' }))
     await user.click(screen.getByRole('button', { name: 'Move up' }))
     expect(props.softKeys.onCaptureTwelveLead).toHaveBeenCalledTimes(0)
     expect(props.softKeys.onPatientInfo).toHaveBeenCalledTimes(0)
     expect(props.nav.onEnter).toHaveBeenCalledTimes(0)
+    expect(props.nav.onHome).toHaveBeenCalledTimes(0)
     expect(props.nav.onMoveUp).toHaveBeenCalledTimes(0)
 
     // Defib controls are disabled too.
@@ -328,6 +332,7 @@ describe('DeviceShell', () => {
     await user.click(screen.getByRole('button', { name: 'Move up' }))
     await user.click(screen.getByRole('button', { name: 'Move down' }))
     await user.click(screen.getByRole('button', { name: 'Enter' }))
+    await user.click(screen.getByRole('button', { name: 'Home' }))
     await user.click(screen.getByRole('button', { name: 'Alarm' }))
     await user.click(screen.getByRole('button', { name: 'Patient event' }))
     await user.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
@@ -340,6 +345,7 @@ describe('DeviceShell', () => {
     expect(props.nav.onMoveUp).not.toHaveBeenCalled()
     expect(props.nav.onMoveDown).not.toHaveBeenCalled()
     expect(props.nav.onEnter).not.toHaveBeenCalled()
+    expect(props.nav.onHome).not.toHaveBeenCalled()
     expect(props.defib.onAnalyse).not.toHaveBeenCalled()
     expect(props.defib.onCharge).not.toHaveBeenCalled()
     expect(props.defib.onShock).not.toHaveBeenCalled()
@@ -361,13 +367,15 @@ describe('DeviceShell', () => {
     expect(props.softKeys.onToggleEtco2).toHaveBeenCalledTimes(0)
   })
 
-  it('wires the right-cluster Move up / Move down / Enter buttons', async () => {
+  it('wires the right-cluster Home / Move up / Move down / Enter buttons', async () => {
     const user = userEvent.setup()
     const props = makeProps()
     render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Home' }))
     await user.click(screen.getByRole('button', { name: 'Move up' }))
     await user.click(screen.getByRole('button', { name: 'Move down' }))
     await user.click(screen.getByRole('button', { name: 'Enter' }))
+    expect(props.nav.onHome).toHaveBeenCalledTimes(1)
     expect(props.nav.onMoveUp).toHaveBeenCalledTimes(1)
     expect(props.nav.onMoveDown).toHaveBeenCalledTimes(1)
     expect(props.nav.onEnter).toHaveBeenCalledTimes(1)
@@ -433,6 +441,7 @@ describe('DeviceShell', () => {
     const user = userEvent.setup()
     const props = makeProps({
       nav: {
+        onHome: vi.fn(),
         onMoveUp: vi.fn(),
         onMoveDown: vi.fn(),
         onEnter: vi.fn(),
@@ -440,10 +449,12 @@ describe('DeviceShell', () => {
     })
 
     render(<DeviceShell {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Home' }))
     await user.click(screen.getByRole('button', { name: 'Move up' }))
     await user.click(screen.getByRole('button', { name: 'Move down' }))
     await user.click(screen.getByRole('button', { name: 'Enter' }))
 
+    expect(props.nav.onHome).toHaveBeenCalledTimes(1)
     expect(props.nav.onMoveUp).toHaveBeenCalledTimes(1)
     expect(props.nav.onMoveDown).toHaveBeenCalledTimes(1)
     expect(props.nav.onEnter).toHaveBeenCalledTimes(1)
