@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Medication and event-log navigation restoration — COMPLETE:**
+  - [x] Right-side Move up / Move down / Enter controls retain normal monitor selection behavior while medication mode is open
+  - [x] Open event logs temporarily own the navigation cluster: arrows select Prev/Next, Enter pages, single-page logs remain isolated, and first/last-page actions clamp safely
+  - [x] Pagination uses the merged dispatch, medication, and analyze event count; closing the log restores normal navigation without leaving medication mode
+  - [x] Controller, modal, and monitor-page regression tests plus rendered browser QA cover the complete flow
 - [x] **Leaflet CSS Turbopack build fix — COMPLETE:**
   - [x] Moved the packaged Leaflet stylesheet import out of Tailwind-processed `globals.css` and into the root app layout
   - [x] Kept local Leaflet monitor theme overrides in `globals.css`

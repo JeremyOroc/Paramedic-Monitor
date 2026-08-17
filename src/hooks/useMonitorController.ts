@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from 'react'
 
 import { PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
-import type { EventLogEntry } from '@/components/monitor/EventLogModal'
+import {
+  EVENT_LOG_ITEMS_PER_PAGE,
+  type EventLogEntry,
+} from '@/components/monitor/EventLogModal'
 import type { PatientInfoField } from '@/components/monitor/PatientInfoPanel'
 import type { Vitals } from '@/store/monitorStore'
 import type { MonitorSelection } from '@/types/monitorSelection'
@@ -15,6 +18,7 @@ import { NEXT_MED_PAGE, type MedicationPage } from '@/lib/monitor/medications'
 export type MonitorView = 'main' | '12lead'
 export type SecondaryChannel = 'spo2' | 'etco2'
 export type CaptureState = 'idle' | 'acquiring' | 'result'
+export type EventLogHighlightedButton = 'prev' | 'next'
 export type { MedicationPage }
 
 export type CaptureSnapshot = {
@@ -52,6 +56,8 @@ type MonitorControllerState = {
   medicationPage: MedicationPage
   eventLog: EventLogEntry[]
   eventLogOpen: boolean
+  eventLogPage: number
+  eventLogHighlightedButton: EventLogHighlightedButton
   flashedMed: string | null
   isPoweredOn: boolean
   isMuted: boolean
@@ -74,13 +80,13 @@ type MonitorControllerState = {
  * `patientModalOpen` and `patientInfoOpen` are deliberately excluded — they
  * consume the nav keys themselves to move within their own contents.
  *
- * Each of these is closed by a soft key (Back, Med Back, Close Log), never by
- * the nav cluster, so swallowing nav here cannot strand anyone in a menu.
+ * Event-log navigation is handled before this guard. Medication mode is not a
+ * blocking overlay: its left soft-key labels remain visible while the right
+ * cluster continues to navigate the monitor normally.
  */
 function hasBlockingOverlay(state: MonitorControllerState): boolean {
   return (
     state.eventLogOpen ||
-    state.medicationMode ||
     state.callerInfoOpen ||
     state.printPreviewOpen ||
     state.captureState === 'acquiring' ||
@@ -102,6 +108,8 @@ type Action =
   | { type: 'exitMedicationMode' }
   | { type: 'openEventLog' }
   | { type: 'closeEventLog' }
+  | { type: 'highlightEventLogButton'; button: EventLogHighlightedButton }
+  | { type: 'activateEventLogButton'; totalPages: number }
   | { type: 'openCallerInfo' }
   | { type: 'closeCallerInfo' }
   | { type: 'openPatientInfo' }
@@ -130,6 +138,7 @@ type UseMonitorControllerOptions = {
   // Normal users boot locked-off; the dispatch gate flips this on. Defaults to
   // true so existing callers (and the dev bypass) keep the always-on behavior.
   initialPoweredOn?: boolean
+  callerEventCount?: number
 }
 
 const initialState: MonitorControllerState = {
@@ -148,6 +157,8 @@ const initialState: MonitorControllerState = {
   medicationPage: 1,
   eventLog: [],
   eventLogOpen: false,
+  eventLogPage: 1,
+  eventLogHighlightedButton: 'next',
   flashedMed: null,
   isPoweredOn: true,
   isMuted: false,
@@ -260,9 +271,24 @@ function reducer(
       if (state.eventLogOpen) return { ...state, eventLogOpen: false }
       return { ...state, medicationMode: false }
     case 'openEventLog':
-      return { ...state, eventLogOpen: true }
+      return {
+        ...state,
+        eventLogOpen: true,
+        eventLogPage: 1,
+        eventLogHighlightedButton: 'next',
+      }
     case 'closeEventLog':
       return { ...state, eventLogOpen: false }
+    case 'highlightEventLogButton':
+      return { ...state, eventLogHighlightedButton: action.button }
+    case 'activateEventLogButton':
+      return {
+        ...state,
+        eventLogPage:
+          state.eventLogHighlightedButton === 'prev'
+            ? Math.max(1, state.eventLogPage - 1)
+            : Math.min(action.totalPages, state.eventLogPage + 1),
+      }
     case 'openCallerInfo':
       return { ...state, callerInfoOpen: true }
     case 'closeCallerInfo':
@@ -371,6 +397,8 @@ function reducer(
         patientModalOpen: false,
         callerInfoOpen: false,
         eventLogOpen: false,
+        eventLogPage: 1,
+        eventLogHighlightedButton: 'next',
         selectedControl: 'dateTime',
         bottomStatusVisible: true,
       }
@@ -391,6 +419,7 @@ export function useMonitorController({
   setPatientAge,
   setPatientSex,
   initialPoweredOn = true,
+  callerEventCount = 0,
 }: UseMonitorControllerOptions) {
   const [state, dispatch] = useReducer(reducer, initialPoweredOn, (poweredOn) => ({
     ...initialState,
@@ -423,6 +452,11 @@ export function useMonitorController({
 
   const selectableControls = useMemo(() => getSelectableControls(state), [state])
   const activeSelectedControl = useMemo(() => getActiveSelectedControl(state), [state])
+  const eventLogTotalPages = Math.max(
+    1,
+    Math.ceil((callerEventCount + state.eventLog.length) / EVENT_LOG_ITEMS_PER_PAGE),
+  )
+  const eventLogHasPagination = eventLogTotalPages > 1
 
   const displayAge =
     state.editing && state.selectedField === 'age' && typeof state.editValue === 'number'
@@ -442,6 +476,12 @@ export function useMonitorController({
   const blockingOverlay = hasBlockingOverlay(state)
 
   const onEnter = useCallback(() => {
+    if (state.eventLogOpen) {
+      if (eventLogHasPagination) {
+        dispatch({ type: 'activateEventLogButton', totalPages: eventLogTotalPages })
+      }
+      return
+    }
     if (blockingOverlay) return
     if (!state.patientModalOpen && state.patientInfoOpen) {
       if (!state.editing) {
@@ -463,10 +503,13 @@ export function useMonitorController({
   }, [
     activeSelectedControl,
     blockingOverlay,
+    eventLogHasPagination,
+    eventLogTotalPages,
     patientInfo,
     setPatientAge,
     setPatientSex,
     state.editing,
+    state.eventLogOpen,
     state.editValue,
     state.patientInfoOpen,
     state.patientModalOpen,
@@ -474,6 +517,12 @@ export function useMonitorController({
   ])
 
   const onMoveUp = useCallback(() => {
+    if (state.eventLogOpen) {
+      if (eventLogHasPagination) {
+        dispatch({ type: 'highlightEventLogButton', button: 'prev' })
+      }
+      return
+    }
     if (blockingOverlay) return
     if (state.patientModalOpen) {
       dispatch({ type: 'movePatientModeHighlight', direction: -1 })
@@ -482,9 +531,22 @@ export function useMonitorController({
     } else {
       dispatch({ type: 'moveSelectedControl', direction: 1 })
     }
-  }, [blockingOverlay, patientInfo, state.patientInfoOpen, state.patientModalOpen])
+  }, [
+    blockingOverlay,
+    eventLogHasPagination,
+    patientInfo,
+    state.eventLogOpen,
+    state.patientInfoOpen,
+    state.patientModalOpen,
+  ])
 
   const onMoveDown = useCallback(() => {
+    if (state.eventLogOpen) {
+      if (eventLogHasPagination) {
+        dispatch({ type: 'highlightEventLogButton', button: 'next' })
+      }
+      return
+    }
     if (blockingOverlay) return
     if (state.patientModalOpen) {
       dispatch({ type: 'movePatientModeHighlight', direction: 1 })
@@ -493,7 +555,14 @@ export function useMonitorController({
     } else {
       dispatch({ type: 'moveSelectedControl', direction: -1 })
     }
-  }, [blockingOverlay, patientInfo, state.patientInfoOpen, state.patientModalOpen])
+  }, [
+    blockingOverlay,
+    eventLogHasPagination,
+    patientInfo,
+    state.eventLogOpen,
+    state.patientInfoOpen,
+    state.patientModalOpen,
+  ])
 
   const onCaptureTwelveLead = useCallback(() => {
     clearCaptureTimer()

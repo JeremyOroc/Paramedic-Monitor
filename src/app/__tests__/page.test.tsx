@@ -992,6 +992,31 @@ describe('MonitorPage', () => {
     vi.useRealTimers()
   })
 
+  it('paginates the merged dispatch and medication event log with shell navigation', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.acknowledgeCall('13:00:00')
+      store.arriveCall('13:01:00')
+      store.transportCall('13:02:00')
+    })
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Treatment' }))
+    for (let i = 0; i < 6; i += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Administer O2' }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Med Info' }))
+
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move up' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument()
+  })
+
   it('stamps analyze event rows with real Eastern time', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-15T18:30:45Z'))

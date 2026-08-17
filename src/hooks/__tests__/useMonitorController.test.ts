@@ -32,6 +32,7 @@ function setup(overrides: Partial<{
   setPatientAge: (age: number) => void
   setPatientSex: (sex: PatientSex) => void
   initialPoweredOn: boolean
+  callerEventCount: number
 }> = {}) {
   const setPatientAge = overrides.setPatientAge ?? vi.fn()
   const setPatientSex = overrides.setPatientSex ?? vi.fn()
@@ -42,6 +43,7 @@ function setup(overrides: Partial<{
       setPatientAge,
       setPatientSex,
       initialPoweredOn: overrides.initialPoweredOn,
+      callerEventCount: overrides.callerEventCount,
     }),
   )
   return { ...rendered, setPatientAge, setPatientSex }
@@ -65,6 +67,8 @@ describe('useMonitorController', () => {
     expect(result.current.captureState).toBe('idle')
     expect(result.current.captureLock).toBe(false)
     expect(result.current.lastCapture).toBeNull()
+    expect(result.current.eventLogPage).toBe(1)
+    expect(result.current.eventLogHighlightedButton).toBe('next')
 
     act(() => result.current.onPrint())
     expect(result.current.printPreviewOpen).toBe(false)
@@ -283,6 +287,10 @@ describe('useMonitorController', () => {
     expect(result.current.eventLogOpen).toBe(false)
     expect(result.current.medicationMode).toBe(true)
 
+    const before = result.current.selectedControl
+    act(() => result.current.onMoveUp())
+    expect(result.current.selectedControl).not.toBe(before)
+
     // Second Back exits medication mode.
     act(() => result.current.onMedBack())
     expect(result.current.medicationMode).toBe(false)
@@ -356,16 +364,58 @@ describe('useMonitorController', () => {
     expect(result.current.selectedControl).toBe(before)
   })
 
-  it('nav does not reach the background while medication mode is up', () => {
+  it('keeps normal monitor navigation active while medication mode is up', () => {
     const { result } = setup()
 
+    act(() => result.current.onMoveDown())
+    expect(result.current.selectedControl).toBe('bottomStatusToggle')
     act(() => result.current.onTreatment())
     expect(result.current.medicationMode).toBe(true)
 
-    // A single move: up-then-down nets to zero and would pass either way.
-    const before = result.current.selectedControl
     act(() => result.current.onMoveUp())
-    expect(result.current.selectedControl).toBe(before)
+    expect(result.current.selectedControl).not.toBe('bottomStatusToggle')
+    act(() => result.current.onMoveDown())
+    expect(result.current.selectedControl).toBe('bottomStatusToggle')
+
+    act(() => result.current.onEnter())
+    expect(result.current.bottomStatusVisible).toBe(false)
+  })
+
+  it('uses the merged caller and local event count for event-log pagination', () => {
+    const { result } = setup({ callerEventCount: 3 })
+
+    act(() => result.current.onTreatment())
+    for (let i = 0; i < 6; i += 1) {
+      act(() => result.current.onMedClick(`Medication ${i + 1}`, `10:00:0${i}`))
+    }
+    act(() => result.current.onMedInfo())
+
+    expect(result.current.eventLogPage).toBe(1)
+    expect(result.current.eventLogHighlightedButton).toBe('next')
+
+    act(() => result.current.onEnter())
+    expect(result.current.eventLogPage).toBe(2)
+
+    // Next remains selectable but is disabled at the last-page boundary.
+    act(() => result.current.onEnter())
+    expect(result.current.eventLogPage).toBe(2)
+
+    act(() => result.current.onMoveUp())
+    expect(result.current.eventLogHighlightedButton).toBe('prev')
+    act(() => result.current.onEnter())
+    expect(result.current.eventLogPage).toBe(1)
+
+    // Prev is disabled at the first-page boundary.
+    act(() => result.current.onEnter())
+    expect(result.current.eventLogPage).toBe(1)
+
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onEnter())
+    expect(result.current.eventLogPage).toBe(2)
+    act(() => result.current.onMedBack())
+    act(() => result.current.onMedInfo())
+    expect(result.current.eventLogPage).toBe(1)
+    expect(result.current.eventLogHighlightedButton).toBe('next')
   })
 
   it('Enter does not act on the background control while a menu is up', () => {

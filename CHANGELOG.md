@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-08-17] [monitor] - Restore medication and event-log navigation
+
+- Restored normal right-cluster Move up / Move down / Enter behavior while the medication soft-key menu is open.
+- Reconnected event-log pagination to the right cluster: arrows select Prev/Next, Enter changes pages, single-page logs consume navigation without touching the background, and boundary actions remain disabled.
+- Counted dispatch, medication, and analyze entries together for the 8-row pagination rule, reset to page 1 on every open, and restored normal navigation immediately after Back closes the log.
+- Added controller, modal, and monitor-page regression coverage and verified the complete physical-button flow in the rendered monitor.
+
 ## [2026-07-05] [monitor] - Fix Leaflet CSS build import
 
 - Moved the packaged Leaflet stylesheet import from `globals.css` to the root app layout so Next/Turbopack resolves it outside Tailwind's PostCSS import evaluation.

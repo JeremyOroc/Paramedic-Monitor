@@ -1,6 +1,6 @@
 'use client'
 
-const ITEMS_PER_PAGE = 8
+export const EVENT_LOG_ITEMS_PER_PAGE = 8
 
 export type EventLogEntry = {
   name: string
@@ -24,9 +24,12 @@ export function EventLogModal({
 }: EventLogModalProps) {
   if (!open) return null
 
-  const totalPages = Math.max(1, Math.ceil(log.length / ITEMS_PER_PAGE))
-  const pageEntries = log.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
-  const showPagination = log.length > ITEMS_PER_PAGE
+  const totalPages = Math.max(1, Math.ceil(log.length / EVENT_LOG_ITEMS_PER_PAGE))
+  const pageEntries = log.slice(
+    (page - 1) * EVENT_LOG_ITEMS_PER_PAGE,
+    page * EVENT_LOG_ITEMS_PER_PAGE,
+  )
+  const showPagination = log.length > EVENT_LOG_ITEMS_PER_PAGE
 
   return (
     <section
@@ -42,7 +45,7 @@ export function EventLogModal({
           <ul className="flex flex-col gap-1">
             {pageEntries.map((entry, i) => (
               <li
-                key={(page - 1) * ITEMS_PER_PAGE + i}
+                key={(page - 1) * EVENT_LOG_ITEMS_PER_PAGE + i}
                 className="grid grid-cols-[1fr_1fr] items-stretch"
               >
                 <span className="px-2 py-1 text-xs font-bold text-black">{entry.name}</span>
@@ -59,6 +62,7 @@ export function EventLogModal({
       {showPagination && (
         <div className="flex items-center justify-between bg-[#8ba88c] border-t border-black/20 px-4 py-1.5 text-xs font-mono">
           <span
+            aria-disabled={page === 1}
             className={`px-2 py-1 font-bold ${highlightedButton === 'prev' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === 1 ? 'opacity-30' : ''}`}
           >
             &#8592; Prev
@@ -67,6 +71,7 @@ export function EventLogModal({
             Page {page} of {totalPages}
           </span>
           <span
+            aria-disabled={page === totalPages}
             className={`px-2 py-1 font-bold ${highlightedButton === 'next' ? 'bg-[#2f6df6] text-white' : 'text-black opacity-50'} ${page === totalPages ? 'opacity-30' : ''}`}
           >
             Next &#8594;

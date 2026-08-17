@@ -92,6 +92,7 @@ export function MonitorPage({
     setPatientAge,
     setPatientSex,
     initialPoweredOn: devBypass,
+    callerEventCount: dispatchState.callerEvents.length,
   })
   const sessionTimer = useSessionTimer(controller.isTimerRunning)
 
@@ -444,6 +445,8 @@ export function MonitorPage({
       <EventLogModal
         open={controller.eventLogOpen}
         log={mergedEventLog}
+        page={controller.eventLogPage}
+        highlightedButton={controller.eventLogHighlightedButton}
       />
       {controller.isTwelveLead && controller.captureState === 'acquiring' && (
         <div className="absolute inset-0 z-40">

@@ -234,6 +234,7 @@ paramedic-monitor/
   - Grey physical soft keys own left-sidebar interactions: 12-lead, EtCO2 toggle, left-menu ANALYSE (opens caller info modal only), and Back
    - Inner dark sidebar labels are visual only and must not be clickable
    - Right physical Move up / Move down / Enter buttons cycle a blue selected state through monitor header, right vitals, visible waveform labels/scales, ECG labels, and the minus toggle row. Enter is inert except on the minus toggle.
+   - Medication mode keeps the normal right-side Move up / Move down / Enter monitor navigation active. When the medication Info soft key opens the event log, those three controls temporarily navigate the log instead: Move up highlights Prev, Move down highlights Next, and Enter activates the highlighted page direction. The log shows 8 events per page, hides pagination for 0–8 events, consumes navigation without changing the background in that single-page state, and keeps unavailable first/last-page directions visible but disabled when multiple pages exist. Closing the log restores normal monitor navigation while medication mode remains open.
    - Header/subbar reference controls include a combined date/time selectable region, patient-mode selectable region, beacon icon, selectable battery icon, a small minus rectangle beneath date/time, and a larger empty rectangle beside it.
    - The minus toggle hides or restores the bottom status/defib/CPR panel. When hidden, the main waveform area expands to show ECG, EtCO2, and SpO2 rows while the right vitals column stays unchanged.
    - Graph title metadata displays `SpO2 1x` and, when EtCO2 is visible, `EtCO2 0 to 60 mmHg`; this text does not change the internal EtCO2 renderer scale.
@@ -252,6 +253,7 @@ paramedic-monitor/
 - Settled PNI tests cover single-number counting, stacked sys/dia settled output, and partial-active BP display after completion.
 - BP alarm-suppression tests cover active NIBP suppression, cancel restore, completion restore, and HR/SpO2 alarms staying active during BP reading.
 - Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
+- Medication/event-log navigation tests cover normal monitor navigation while medication mode is open, single-page log isolation, multi-page Prev/Next selection and boundary clamping, merged dispatch/medication/analyze event counts, and navigation restoration after closing the log.
 - Controller tests cover initial monitor state, selection toggling, patient-info draft/commit/cancel,
   12-lead capture timers, Back precedence, and power-off cleanup.
 
