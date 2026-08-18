@@ -47,6 +47,7 @@ function makeShared(overrides: Partial<SharedMonitorState> = {}): SharedMonitorS
     dispatchRouteConfirmed: { ...DEFAULT_DISPATCH_ROUTE },
     dispatch: { ...DEFAULT_DISPATCH },
     dispatchConfirmedSeconds: 60,
+    cprMode: 'off',
     cprOverrideActive: false,
     monitorResetVersion: useMonitorStore.getState().monitorResetVersion,
     ...overrides,
@@ -67,6 +68,8 @@ describe('monitorStore shared session state', () => {
     expect(shared.monitorResetVersion).toBe(
       useMonitorStore.getState().monitorResetVersion,
     )
+    expect(shared.cprMode).toBe('off')
+    expect(shared.cprOverrideActive).toBe(false)
   })
 
   it('keeps trainee dispatch progress when the same run is re-applied', () => {
@@ -156,15 +159,24 @@ describe('monitorStore shared session state', () => {
     expect(after.acceptedBpActive).toEqual({ bp_sys: false, bp_dia: false })
   })
 
-  it('still applies instructor-authoritative fields from the snapshot', () => {
+  it('applies the instructor CPR mode and other authoritative fields', () => {
     useMonitorStore.getState().applySharedState(
-      makeShared({ cprOverrideActive: true }),
+      makeShared({ cprMode: 'weak', cprOverrideActive: true }),
     )
 
     const after = useMonitorStore.getState()
     expect(after.confirmed).toEqual(sharedVitals())
     expect(after.confirmedVitalActive).toEqual(allActive)
     expect(after.dispatchConfirmedSeconds).toBe(60)
-    expect(after.cprOverrideActive).toBe(true)
+    expect(after.cprMode).toBe('weak')
+  })
+
+  it('maps a legacy active CPR snapshot to Regular CPR', () => {
+    const legacy = makeShared({ cprOverrideActive: true })
+    delete legacy.cprMode
+
+    useMonitorStore.getState().applySharedState(legacy)
+
+    expect(useMonitorStore.getState().cprMode).toBe('regular')
   })
 })

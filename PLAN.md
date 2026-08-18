@@ -745,20 +745,23 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 - ECG and SpO2 canvas waveform erase/update sweep lines share the same
   wall-clock phase so their black refresh bands stay aligned; EtCO2 keeps its
   slower independent capnography sweep.
-- The admin Vitals ECG column includes a CPR override toggle. When active, it
-  immediately overrides the monitor FC display to 120 and replaces the ECG graph
-  with a generated green canvas compression waveform at 120/min; turning it off
-  restores the normal saved FC and ECG rhythm without changing the underlying
-  draft/saved/confirmed vitals. CPR/ECG waveform changes keep the same canvas
-  mounted, so the existing trace remains behind the black sweep line until it is
-  naturally erased.
+- The admin Vitals ECG column includes side-by-side, mutually exclusive Regular
+  CPR and Weak CPR override toggles. Regular CPR immediately overrides monitor FC
+  to 120 and drives the ECG compression trace plus pulse-linked SpO2 graph/bar at
+  120/min; Weak CPR applies the same behavior and waveform shape/amplitude at FC
+  90 and 90/min. Clicking the active mode turns CPR off, while clicking the other
+  mode switches directly. Turning CPR off restores the normal saved FC and ECG
+  rhythm without changing underlying draft/saved/confirmed vitals. CPR/ECG mode
+  changes keep the same canvas mounted so existing trace history remains behind
+  the black sweep line until naturally erased. EtCO2 and the defibrillator CPR
+  timer/audio workflow remain independent.
 - Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
   vitals/rhythm/waveform state back to the disconnected blank startup state; on the
   Caller Info tab it resets the full drill, including caller info, dispatch gate,
   countdown, milestone logs, and monitor vitals. On the Patient Information tab,
   Reset clears only the local SAMPLE/OPQRST checklist selections. On the Patient
   Physical tab, Reset clears only local body-map selections.
-- Gate state is persisted (store version 7; countdown stored as an absolute
+- Gate state is persisted (store version 9; countdown stored as an absolute
   end-timestamp, response timer stored as an absolute start timestamp, and a
   per-dispatch run id) so a mid-drill refresh resumes and repeated reset/re-arm
   scenarios do not reuse the previous Go to Monitor state. `?dev=1` bypasses the

@@ -5,7 +5,7 @@ import {
   type TimedVitalsSlot,
 } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
-import type { NumericVitalField } from '@/types/vitals'
+import type { CprMode, NumericVitalField } from '@/types/vitals'
 
 import { EcgRhythmSelector } from './EcgRhythmSelector'
 import { VitalInput } from './VitalInput'
@@ -19,6 +19,11 @@ const AUTO_SORT_FIELDS: ReadonlyArray<NumericVitalField> = [
 ]
 
 const TIMED_VITAL_BUTTONS: ReadonlyArray<TimedVitalsSlot> = ['T1', 'T2', 'T3', 'U1', 'U2', 'U3']
+
+const CPR_MODES: ReadonlyArray<{ mode: Exclude<CprMode, 'off'>; label: string }> = [
+  { mode: 'regular', label: 'Regular CPR' },
+  { mode: 'weak', label: 'Weak CPR' },
+]
 
 type VitalsControlsProps = {
   autoSortText: string
@@ -40,8 +45,8 @@ export function VitalsControls({
   const resetVitalsToNormal = useMonitorStore((s) => s.resetVitalsToNormal)
   const setTimedDraftVitals = useMonitorStore((s) => s.setTimedDraftVitals)
   const etco2CalibrationStatus = useMonitorStore((s) => s.etco2CalibrationStatus)
-  const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
-  const setCprOverrideActive = useMonitorStore((s) => s.setCprOverrideActive)
+  const cprMode = useMonitorStore((s) => s.cprMode)
+  const setCprMode = useMonitorStore((s) => s.setCprMode)
   const etco2Calibrated =
     sessionEtco2Calibrated ?? etco2CalibrationStatus === 'calibrated'
 
@@ -114,20 +119,32 @@ export function VitalsControls({
           <div data-testid="admin-graph-row-ecg">
             <EcgRhythmSelector />
           </div>
-          <button
-            type="button"
-            aria-pressed={cprOverrideActive}
-            onClick={() => setCprOverrideActive(!cprOverrideActive)}
-            className={[
-              'mt-3 flex h-11 w-full items-center justify-center border px-3',
-              'font-mono text-sm font-bold uppercase tracking-wider transition-colors',
-              cprOverrideActive
-                ? 'border-ecg-green bg-ecg-green/15 text-ecg-green shadow-[0_0_18px_-8px_var(--color-ecg-green)]'
-                : 'border-neutral-600 bg-neutral-900 text-neutral-300 hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green',
-            ].join(' ')}
+          <div
+            role="group"
+            className="mt-3 grid grid-cols-2 gap-2"
+            aria-label="CPR mode"
           >
-            CPR
-          </button>
+            {CPR_MODES.map(({ mode, label }) => {
+              const active = cprMode === mode
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setCprMode(active ? 'off' : mode)}
+                  className={[
+                    'flex h-11 w-full items-center justify-center border px-3',
+                    'font-mono text-sm font-bold uppercase tracking-wider transition-colors',
+                    active
+                      ? 'border-ecg-green bg-ecg-green/15 text-ecg-green shadow-[0_0_18px_-8px_var(--color-ecg-green)]'
+                      : 'border-neutral-600 bg-neutral-900 text-neutral-300 hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              )
+            })}
+          </div>
           <div
             className="relative z-10 mt-3 grid grid-cols-3 grid-rows-2 gap-2"
             aria-label="Timed vitals"

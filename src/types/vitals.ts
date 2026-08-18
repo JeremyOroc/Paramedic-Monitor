@@ -18,6 +18,18 @@ export type Etco2Waveform = 'normal' | 'hypoventilation' | 'obstructed' | 'off'
 
 export type PatientMode = 'adult' | 'pediatric' | 'neonate'
 
+export type CprMode = 'off' | 'regular' | 'weak'
+
+export const CPR_HEART_RATE_BY_MODE: Readonly<Record<CprMode, number | null>> = {
+  off: null,
+  regular: 120,
+  weak: 90,
+}
+
+export function getCprHeartRate(mode: CprMode): number | null {
+  return CPR_HEART_RATE_BY_MODE[mode]
+}
+
 export type NumericVitalField = 'hr' | 'bp_sys' | 'bp_dia' | 'etco2' | 'spo2'
 
 export type VitalActiveState = Record<NumericVitalField, boolean>

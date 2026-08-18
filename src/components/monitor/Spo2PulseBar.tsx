@@ -92,6 +92,7 @@ export function Spo2PulseBar({ hr, spo2, spo2Waveform, className }: Spo2PulseBar
         className,
       )}
       data-testid="spo2-pulse-bar"
+      data-heart-rate={hr}
     >
       <div
         className={cn('w-full bg-yellow-spo2', FILL_CLASS_BY_STEP[fillStep])}

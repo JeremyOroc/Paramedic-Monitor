@@ -157,10 +157,12 @@
   - [x] Automatic call assignment display plays the provided alert sound and shows a 4-pulse gentle flash for each new dispatch run
   - [x] Manual caller-info reopening from the monitor sidebar does not replay the assignment alert
 - [x] **Admin CPR ECG override — COMPLETE:**
-  - [x] Admin Vitals includes a CPR toggle in the ECG column
-  - [x] CPR override immediately displays FC 120 and replaces the ECG graph with a generated green canvas compression waveform
-  - [x] CPR On/Off switching preserves the existing ECG canvas so old trace history remains behind the black sweep line
-  - [x] Turning CPR off restores the previously saved/sent FC and ECG rhythm graph
+  - [x] Admin Vitals includes side-by-side, mutually exclusive Regular CPR and Weak CPR toggles in the ECG column
+  - [x] Regular CPR displays FC 120 and drives ECG/SpO2/pulse-bar cadence at 120/min; Weak CPR displays FC 90 and drives the same traces at 90/min
+  - [x] Clicking the active mode turns CPR off, while clicking the other mode switches directly without activating both
+  - [x] CPR Off/Regular/Weak switching preserves the existing ECG canvas so old trace history remains behind the black sweep line
+  - [x] Turning CPR off restores the previously saved/sent FC and ECG rhythm graph without changing EtCO2 or defibrillator CPR behavior
+  - [x] Persisted and shared-session CPR state uses a typed mode, migrates the legacy boolean to Regular/Off, and emits the legacy active flag for mixed-version compatibility
 - [x] **Admin patient information checklist — COMPLETE:**
   - [x] Added a third admin tab named Patient Information
   - [x] Added side-by-side Sample and OPQRST square checklist panels

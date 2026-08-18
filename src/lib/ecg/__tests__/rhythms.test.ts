@@ -3,6 +3,7 @@ import {
   ASYSTOLE_TUNING,
   CPR_COMPRESSION_TUNING,
   CPR_COMPRESSION_WAVEFORM,
+  getCprCompressionCycleMs,
   ECG_RHYTHMS,
   ECG_SWEEP_MS,
   ETCO2_SCALE_MAX,
@@ -224,6 +225,11 @@ describe('ECG_RHYTHMS', () => {
     expect(zeroCrossings(data)).toBeGreaterThanOrEqual(2)
     expect(zeroCrossings(data)).toBeLessThanOrEqual(4)
     expect(maxAdjacentDelta(data)).toBeLessThan(0.025)
+  })
+
+  it('drives the shared CPR waveform at the selected Regular or Weak CPR rate', () => {
+    expect(getCprCompressionCycleMs(120)).toBe(500)
+    expect(getCprCompressionCycleMs(90)).toBeCloseTo(666.67, 2)
   })
 
   it('1st Degree has a prolonged PR interval before a narrow QRS', () => {

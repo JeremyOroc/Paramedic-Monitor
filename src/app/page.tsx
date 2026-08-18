@@ -44,6 +44,7 @@ import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { playCallerInfoAlert, setAudioMuted, stopAllAudio } from '@/lib/audio'
 import { SessionLandingPage } from '@/components/session/SessionLandingPage'
+import { getCprHeartRate } from '@/types/vitals'
 
 const CALLER_INFO_ALERT_FLASH_MS = 2320
 
@@ -74,7 +75,7 @@ export function MonitorPage({
   const dispatchState = useMonitorStore((s) => s.dispatch)
   const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
   const etco2CalibrationStatus = useMonitorStore((s) => s.etco2CalibrationStatus)
-  const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
+  const cprMode = useMonitorStore((s) => s.cprMode)
   const acknowledgeCall = useMonitorStore((s) => s.acknowledgeCall)
   const arriveCall = useMonitorStore((s) => s.arriveCall)
   const transportCall = useMonitorStore((s) => s.transportCall)
@@ -87,6 +88,8 @@ export function MonitorPage({
   const [callerInfoAlertFlash, setCallerInfoAlertFlash] = useState(false)
   const etco2Loading = etco2CalibrationStatus === 'calibrating'
   const etco2Loaded = etco2CalibrationStatus === 'calibrated'
+  const cprHeartRate = getCprHeartRate(cprMode)
+  const cprOverrideActive = cprHeartRate !== null
 
   const searchParams = useSearchParams()
   const devBypass = searchParams.get('dev') === '1'
@@ -276,7 +279,7 @@ export function MonitorPage({
   })
   const alarmVitals = {
     ...confirmed,
-    hr: cprOverrideActive ? 120 : confirmed.hr,
+    hr: cprHeartRate ?? confirmed.hr,
     bp_sys: acceptedBp.bp_sys,
     bp_dia: acceptedBp.bp_dia,
   }
@@ -339,7 +342,7 @@ export function MonitorPage({
   })
   const acceptedBpDisplayActive = acceptedBpActive.bp_sys || acceptedBpActive.bp_dia
   const etco2DisplayActive = confirmedVitalActive.etco2 && etco2Loaded
-  const displayedHr = cprOverrideActive ? 120 : confirmed.hr
+  const displayedHr = cprHeartRate ?? confirmed.hr
   const displayedHrActive = cprOverrideActive || confirmedVitalActive.hr
 
   const vitalLogSnapshot = useMemo(

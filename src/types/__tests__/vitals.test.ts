@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getActiveAlarms } from '../vitals'
+import { CPR_HEART_RATE_BY_MODE, getActiveAlarms, getCprHeartRate } from '../vitals'
 
 const healthyVitals = {
   hr: 80,
@@ -8,6 +8,19 @@ const healthyVitals = {
   bp_dia: 80,
   spo2: 98,
 }
+
+describe('CPR heart rate', () => {
+  it('maps Off, Regular CPR, and Weak CPR to their effective FC values', () => {
+    expect(CPR_HEART_RATE_BY_MODE).toEqual({
+      off: null,
+      regular: 120,
+      weak: 90,
+    })
+    expect(getCprHeartRate('off')).toBeNull()
+    expect(getCprHeartRate('regular')).toBe(120)
+    expect(getCprHeartRate('weak')).toBe(90)
+  })
+})
 
 describe('getActiveAlarms', () => {
   it('returns no alarms for healthy vitals', () => {

@@ -4,6 +4,7 @@ import {
   CPR_COMPRESSION_WAVEFORM,
   ECG_RHYTHMS,
   ECG_SWEEP_MS,
+  getCprCompressionCycleMs,
   getEcgRhythm,
 } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
@@ -37,7 +38,7 @@ function LiveECGCanvas({
         get().cprOverride ? CPR_COMPRESSION_WAVEFORM : getEcgRhythm(get().rhythm),
       getSignalKey: () => (get().cprOverride ? 'cpr-compression' : get().rhythm),
       getCycleMs: () => {
-        if (get().cprOverride) return CPR_COMPRESSION_WAVEFORM.cycleMs ?? 500
+        if (get().cprOverride) return getCprCompressionCycleMs(get().hr)
         return ECG_RHYTHMS[get().rhythm].cycleMs ?? 60000 / Math.max(20, get().hr)
       },
     }),
@@ -50,6 +51,7 @@ function LiveECGCanvas({
       data-testid={cprOverride ? 'cpr-ecg-canvas' : 'live-ecg-canvas'}
       data-rhythm={rhythm}
       data-cpr-override={cprOverride ? 'true' : 'false'}
+      data-heart-rate={hr}
       className={cn('block h-full w-full', className)}
     />
   )

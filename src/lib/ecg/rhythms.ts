@@ -76,6 +76,10 @@ export const CPR_COMPRESSION_TUNING = {
   wobble: 0.012,
 } as const
 
+export function getCprCompressionCycleMs(hr: number): number {
+  return 60000 / Math.max(20, hr)
+}
+
 let polymorphicVariantSeed = 0
 
 function flatLine(): Float32Array {
