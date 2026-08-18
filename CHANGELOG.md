@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-08-18] [monitor] — Normalize call-info assignment label colors
+
+- Changed the assignment dashboard Response Timer, Call Assignment, dynamic priority, and Lights & Sirens text to the same white treatment as New Assignment.
+- Standardized every assignment-detail label, including optional custom rows, on the existing dispatch blue while leaving values, layout, behavior, and the classic variant unchanged.
+- Added focused palette regressions; all 732 tests pass, ESLint has no errors (12 pre-existing warnings), and rendered 1280×720 in-app Browser QA confirmed the requested computed colors, Back/reopen behavior, and clean console/framework state.
+
 ## [2026-08-17] [monitor] - Implement two-stage NIBP focus and consistent monitor modal styling
 
 - Added label/value NIBP focus with combined alarm-limit selection, read-only arrow no-ops, bidirectional Mode/Interval changes, Enter/Back focus precedence, and preserved live automatic-cuff scheduling.
