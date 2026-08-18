@@ -41,6 +41,14 @@ type CallerInfoDraft = ReturnType<typeof useMonitorStore.getState>['callerInfoDr
 type CallerInfoFormProps = {
   autoSortText: string
   onAutoSortChange: (value: string) => void
+  scenarioTitle: string
+  onScenarioTitleChange: (value: string) => void
+  onSaveScenario: () => void
+  onDeleteScenario: () => void
+  saveScenarioDisabled: boolean
+  deleteScenarioDisabled: boolean
+  scenarioAction: 'idle' | 'saving' | 'deleting'
+  scenarioError: string
 }
 
 function getInitialExtraCount(callerInfoDraft: CallerInfoDraft) {
@@ -59,7 +67,18 @@ function formatDispatchCountdownPreview(minutes: number, seconds: number): strin
   return `${roundedMinutes} min`
 }
 
-export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFormProps) {
+export function CallerInfoForm({
+  autoSortText,
+  onAutoSortChange,
+  scenarioTitle,
+  onScenarioTitleChange,
+  onSaveScenario,
+  onDeleteScenario,
+  saveScenarioDisabled,
+  deleteScenarioDisabled,
+  scenarioAction,
+  scenarioError,
+}: CallerInfoFormProps) {
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
@@ -173,6 +192,16 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
         <span className="text-xs uppercase tracking-wider text-neutral-600">Analyse</span>
       </div>
       <div className="grid gap-3">
+        <label className="grid gap-1">
+          <span className="text-xs uppercase tracking-wider text-neutral-400">Title</span>
+          <input
+            value={scenarioTitle}
+            onChange={(event) => onScenarioTitleChange(event.target.value)}
+            aria-label="Scenario title"
+            placeholder="Scenario title"
+            className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+          />
+        </label>
         <label className="grid gap-1">
           <span className="text-xs uppercase tracking-wider text-neutral-400">
             Auto-sort scenario
@@ -367,6 +396,29 @@ export function CallerInfoForm({ autoSortText, onAutoSortChange }: CallerInfoFor
         >
           Add extra
         </button>
+        {scenarioError ? (
+          <p role="alert" className="text-sm font-semibold text-alarm-red">
+            {scenarioError}
+          </p>
+        ) : null}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={onSaveScenario}
+            disabled={saveScenarioDisabled || scenarioAction !== 'idle'}
+            className="border border-ecg-green bg-neutral-900 px-3 py-2 text-sm font-semibold uppercase tracking-wider text-ecg-green hover:bg-ecg-green/10 focus:outline-none focus:ring-2 focus:ring-ecg-green disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
+          >
+            {scenarioAction === 'saving' ? 'Saving Scenario' : 'Save Scenario'}
+          </button>
+          <button
+            type="button"
+            onClick={onDeleteScenario}
+            disabled={deleteScenarioDisabled || scenarioAction !== 'idle'}
+            className="border border-alarm-red bg-neutral-900 px-3 py-2 text-sm font-semibold uppercase tracking-wider text-alarm-red hover:bg-alarm-red/10 focus:outline-none focus:ring-2 focus:ring-alarm-red disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
+          >
+            {scenarioAction === 'deleting' ? 'Deleting Scenario' : 'Delete Scenario'}
+          </button>
+        </div>
       </div>
     </section>
   )

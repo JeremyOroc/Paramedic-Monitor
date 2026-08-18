@@ -26,6 +26,8 @@ import {
 } from '@/types/patientInfo'
 import {
   DEFAULT_DISPATCH_ROUTE,
+  JOHN_ABBOTT_ADDRESS,
+  JOHN_ABBOTT_COORDINATES,
   normalizeDispatchRoute,
   type DispatchRoute,
 } from '@/types/dispatchRoute'
@@ -33,6 +35,7 @@ import { dispatchCountdownSeconds } from '@/store/fieldState'
 import { buildEventLogEntry } from '@/lib/eventLog'
 import type { EventLogEntry } from '@/components/monitor/EventLogModal'
 import type { EventLogStamp } from '@/types/eventLog'
+import type { ScenarioSnapshotV1 } from '@/types/savedScenario'
 
 export type Vitals = {
   hr: number
@@ -291,6 +294,7 @@ export type MonitorState = {
   setPatientSex: (sex: PatientSex) => void
   setDispatchMinutes: (minutes: number) => void
   setDispatchSeconds: (seconds: number) => void
+  applyScenarioDraft: (snapshot: ScenarioSnapshotV1) => void
   acknowledgeCall: (stamp: EventLogStamp | string) => void
   arriveCall: (stamp: EventLogStamp | string) => void
   transportCall: (stamp: EventLogStamp | string) => void
@@ -415,6 +419,37 @@ export const useMonitorStore = create<MonitorState>()(
         set({ dispatchMinutes: Math.max(0, Math.floor(minutes) || 0) }),
       setDispatchSeconds: (seconds) =>
         set({ dispatchSeconds: Math.min(59, Math.max(0, Math.floor(seconds) || 0)) }),
+      applyScenarioDraft: (snapshot) =>
+        set(() => {
+          const draft = normalizeVitals(snapshot.monitor.draft)
+          const draftVitalActive = normalizeVitalActive(
+            snapshot.monitor.draftVitalActive,
+            undefined,
+          )
+          const originAddress = snapshot.dispatch.originAddress.trim() || JOHN_ABBOTT_ADDRESS
+
+          return {
+            draft,
+            draftVitalActive,
+            draftVitalsActive: anyVitalActive(draftVitalActive),
+            lastRhythm: normalizeActiveRhythm(snapshot.monitor.lastRhythm),
+            callerInfoDraft: normalizeCallerInfo(snapshot.callerInfo),
+            dispatchMinutes: Math.max(0, Math.floor(snapshot.dispatch.minutes) || 0),
+            dispatchSeconds: Math.min(
+              59,
+              Math.max(0, Math.floor(snapshot.dispatch.seconds) || 0),
+            ),
+            dispatchRouteDraft: {
+              ...DEFAULT_DISPATCH_ROUTE,
+              originAddress,
+              origin:
+                originAddress === JOHN_ABBOTT_ADDRESS
+                  ? JOHN_ABBOTT_COORDINATES
+                  : null,
+              destinationAddress: snapshot.callerInfo.address,
+            },
+          }
+        }),
       acknowledgeCall: (stamp) =>
         set((s) => {
           if (s.dispatch.acknowledgedAt) return s
