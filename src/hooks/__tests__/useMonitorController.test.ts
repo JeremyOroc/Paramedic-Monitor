@@ -658,4 +658,139 @@ describe('useMonitorController', () => {
     act(() => result.current.onMoveDown())
     expect(result.current.patientModeHighlightedIndex).not.toBe(before)
   })
+
+  it('opens NIBP from the selected PNI vital with read-only alarm rows', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    expect(result.current.selectedControl).toBe('nibpVital')
+
+    act(() => result.current.onEnter())
+    expect(result.current.nibpModalOpen).toBe(true)
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpAutoInterval).toBe(2)
+
+    act(() => result.current.onEnter())
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpAutoInterval).toBe(2)
+
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onEnter())
+    expect(result.current.nibpHighlightedRow).toBe('diastolicAlarm')
+    expect(result.current.nibpMode).toBe('manual')
+  })
+
+  it('cycles NIBP rows, Mode, and all automatic interval values', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    act(() => result.current.onEnter())
+
+    act(() => result.current.onMoveUp())
+    expect(result.current.nibpHighlightedRow).toBe('exit')
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpHighlightedRow).toBe('mode')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpMode).toBe('automatic')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpMode).toBe('manual')
+
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpHighlightedRow).toBe('autoInterval')
+    for (const expected of [5, 15, 30, 60, 1, 2] as const) {
+      act(() => result.current.onEnter())
+      expect(result.current.nibpAutoInterval).toBe(expected)
+    }
+  })
+
+  it('closes NIBP with Exit or Back and starts each open on Systolic', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    act(() => result.current.onEnter())
+    act(() => result.current.onMoveUp())
+    expect(result.current.nibpHighlightedRow).toBe('exit')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpModalOpen).toBe(false)
+
+    act(() => result.current.onEnter())
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onBack())
+    expect(result.current.nibpModalOpen).toBe(false)
+
+    act(() => result.current.onEnter())
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+  })
+
+  it('makes NIBP modal exclusive with competing monitor menus and navigation', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    act(() => result.current.onEnter())
+    const beforeBottomStatus = result.current.bottomStatusVisible
+
+    act(() => result.current.onHome())
+    act(() => result.current.onPatientInfo())
+    act(() => result.current.onLeftAnalyse())
+    act(() => result.current.onTreatment())
+    act(() => result.current.onTwelveLead())
+    act(() => result.current.onToggleEtco2())
+    act(() => result.current.onToggleBottomStatus())
+
+    expect(result.current.nibpModalOpen).toBe(true)
+    expect(result.current.vitalLogOpen).toBe(false)
+    expect(result.current.patientInfoOpen).toBe(false)
+    expect(result.current.callerInfoOpen).toBe(false)
+    expect(result.current.medicationMode).toBe(false)
+    expect(result.current.view).toBe('main')
+    expect(result.current.secondary).toBe('spo2')
+    expect(result.current.bottomStatusVisible).toBe(beforeBottomStatus)
+  })
+
+  it('restores NIBP defaults on monitor reset and power-off', () => {
+    const { result } = setup()
+
+    const configureAutomatic = () => {
+      for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+        act(() => result.current.onMoveUp())
+      }
+      act(() => result.current.onEnter())
+      act(() => result.current.onMoveDown())
+      act(() => result.current.onMoveDown())
+      act(() => result.current.onMoveDown())
+      act(() => result.current.onEnter())
+      act(() => result.current.onMoveDown())
+      act(() => result.current.onEnter())
+    }
+
+    configureAutomatic()
+    expect(result.current.nibpMode).toBe('automatic')
+    expect(result.current.nibpAutoInterval).toBe(5)
+    act(() => result.current.onResetMonitorUi())
+    expect(result.current.nibpModalOpen).toBe(false)
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpAutoInterval).toBe(2)
+
+    configureAutomatic()
+    act(() => result.current.onPowerOff())
+    expect(result.current.nibpModalOpen).toBe(false)
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpAutoInterval).toBe(2)
+  })
 })

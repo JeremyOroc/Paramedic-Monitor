@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **NIBP settings modal and automatic cuff mode — COMPLETE:**
+  - [x] Selecting PNI with the outer-shell navigation cluster and pressing Enter opens a reference-matched NIBP modal with cyclic physical navigation and Back/Exit closure
+  - [x] SYS/DIA/MAP limits and SmartCuf On are read-only; Mode cycles Manual/Automatic and Interval cycles 1, 2, 5, 15, 30, and 60 minutes
+  - [x] Automatic mode reuses the Patient event cuff sequence on a recurring start-to-start schedule with manual deadline resets, busy-reading skips, inactive-BP dormancy, and power/reset cleanup
+  - [x] Component, hook, controller, and full monitor-flow regressions pass; production build and rendered 1024×768/1366×768 browser QA pass
 - [x] **Home toggle, chronological Event Log, and manual vital switches — COMPLETE:**
   - [x] Physical Home toggles Vital Log closed without weakening its mutual exclusion or changing the underlying monitor mode
   - [x] Call, medication, and Analyze rows form one oldest-first stream with exact capture ordering for new events and stable visible-time fallback for legacy rows

@@ -83,7 +83,7 @@ export function useNibpReading(
     onCompleteRef.current = onComplete
   })
 
-  function clearTimers() {
+  const clearTimers = useCallback(() => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
       timerRef.current = null
@@ -92,7 +92,7 @@ export function useNibpReading(
       clearInterval(intervalRef.current)
       intervalRef.current = null
     }
-  }
+  }, [])
 
   const startReading = useCallback((snapshot: NibpSnapshot) => {
     clearTimers()
@@ -132,25 +132,29 @@ export function useNibpReading(
         }, intervalMs)
       }, READING_MS)
     }, PLEASE_WAIT_MS)
-  }, [])
+  }, [clearTimers])
+
+  const cancelReading = useCallback(() => {
+    clearTimers()
+    setPhase('idle')
+    setDisplayValue('')
+  }, [clearTimers])
 
   const handlePatientEvent = useCallback(() => {
     if (phase === 'idle' || phase === 'settled') {
       startReading(normalizeSnapshot(pending))
     } else {
       // Cancel: return to idle, restore confirmed store values
-      clearTimers()
-      setPhase('idle')
-      setDisplayValue('')
+      cancelReading()
     }
-  }, [phase, pending, startReading])
+  }, [cancelReading, phase, pending, startReading])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       clearTimers()
     }
-  }, [])
+  }, [clearTimers])
 
-  return { phase, displayValue, handlePatientEvent }
+  return { phase, displayValue, handlePatientEvent, cancelReading }
 }

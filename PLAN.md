@@ -419,6 +419,34 @@ existing close-panel and exit-12-lead precedence.
 
 **Milestone:** Clicking Adult label shows mode picker. BP animation plays before numbers appear.
 
+**Requirement change (2026-08-17) — NIBP settings modal and automatic cuff mode:**
+- Selecting the PNI vital with the outer-shell navigation cluster and pressing
+  Enter opens a Zoll-style NIBP modal over the waveform column. The modal owns
+  Up/Down/Enter navigation until Exit or the physical Back key closes it.
+- The cyclic row order is NIBP Systolic Alarm → NIBP Diastolic Alarm → NIBP
+  MAP Alarm → NIBP Mode → NIBP Auto Mode Interval → SmartCuf On/Off → Exit.
+  Alarm values and SmartCuf are read-only; Mode cycles Manual/Automatic and the
+  interval cycles 1, 2, 5, 15, 30, and 60 minutes.
+- Displayed limits are SYS 90–200, DIA 25–225, and MAP 46–216. SYS/DIA reuse
+  the active alarm constants; MAP is reference-only and does not add MAP alarm
+  evaluation. SmartCuf remains On. Start TurboCuf and the reference ruler are
+  intentionally omitted.
+- Automatic mode waits one full selected interval before starting the existing
+  Patient event cuff sequence, then repeats start-to-start. A manual Patient
+  event press keeps the existing start/cancel behavior and restarts the
+  automatic deadline. Busy automatic ticks skip rather than cancel an active
+  reading. Power-off/reset restores Manual, 2 min, and SmartCuf On.
+
+**Testing:**
+- Component coverage verifies reference rows, values, styling, geometry,
+  pointer-inert content, Exit, and omitted TurboCuf/ruler content.
+- Controller coverage verifies PNI opening, cyclic row navigation, read-only
+  no-ops, setting cycles, modal exclusion, Back/Exit, and power/reset defaults.
+- Scheduler coverage uses fake timers for delayed/recurring triggers, manual
+  deadline resets, interval changes, busy skips, dormant BP, and cleanup.
+- Full monitor-flow coverage operates the physical shell controls and verifies
+  an automatic reading enters and completes the existing cuff sequence.
+
 **Requirement change (2026-05-31) — Dispatch lock + countdown startup gate:**
 Supersedes the earlier "power button is local only / never gates the monitor UI"
 note (Phase 3). Normal users now boot the monitor **locked-off**; the power

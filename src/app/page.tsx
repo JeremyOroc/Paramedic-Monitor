@@ -15,6 +15,7 @@ import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { PatientModeModal, PATIENT_MODE_OPTIONS } from '@/components/monitor/PatientModeModal'
+import { NibpModal } from '@/components/monitor/NibpModal'
 import {
   CallerInfoModal,
   type CallerEventKey,
@@ -37,6 +38,7 @@ import { useVitalLog } from '@/hooks/useVitalLog'
 import { useCountdown } from '@/hooks/useCountdown'
 import { useElapsedTimer } from '@/hooks/useElapsedTimer'
 import { useNibpReading } from '@/hooks/useNibpReading'
+import { useNibpAutoMode } from '@/hooks/useNibpAutoMode'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -288,6 +290,7 @@ export function MonitorPage({
     phase: nibpPhase,
     displayValue: nibpDisplayValue,
     handlePatientEvent,
+    cancelReading: cancelNibpReading,
   } = useNibpReading(
     {
       bpSys: confirmed.bp_sys,
@@ -325,6 +328,15 @@ export function MonitorPage({
     acceptedBpActive.bp_dia ||
     confirmedVitalActive.bp_sys ||
     confirmedVitalActive.bp_dia
+  const { handleManualTrigger: handleScheduledPatientEvent } = useNibpAutoMode({
+    enabled:
+      controller.isPoweredOn &&
+      controller.nibpMode === 'automatic' &&
+      bpButtonEnabled,
+    intervalMinutes: controller.nibpAutoInterval,
+    readingActive: isNibpReadingActive,
+    onTrigger: handlePatientEvent,
+  })
   const acceptedBpDisplayActive = acceptedBpActive.bp_sys || acceptedBpActive.bp_dia
   const etco2DisplayActive = confirmedVitalActive.etco2 && etco2Loaded
   const displayedHr = cprOverrideActive ? 120 : confirmed.hr
@@ -550,15 +562,23 @@ export function MonitorPage({
         powerLocked={powerLocked}
         lockScreen={standbyLockScreen}
         screenModal={
-          <PatientModeModal
-            open={controller.patientModalOpen}
-            current={controller.patientMode}
-            highlighted={
-              PATIENT_MODE_OPTIONS[controller.patientModeHighlightedIndex]?.value ?? 'adult'
-            }
-            onSelect={controller.onSelectPatientMode}
-            onClose={controller.onClosePatientModal}
-          />
+          <>
+            <PatientModeModal
+              open={controller.patientModalOpen}
+              current={controller.patientMode}
+              highlighted={
+                PATIENT_MODE_OPTIONS[controller.patientModeHighlightedIndex]?.value ?? 'adult'
+              }
+              onSelect={controller.onSelectPatientMode}
+              onClose={controller.onClosePatientModal}
+            />
+            <NibpModal
+              open={controller.nibpModalOpen}
+              highlightedRow={controller.nibpHighlightedRow}
+              mode={controller.nibpMode}
+              autoInterval={controller.nibpAutoInterval}
+            />
+          </>
         }
         twelveLeadActive={controller.isTwelveLead}
         captureLock={controller.captureLock}
@@ -626,6 +646,7 @@ export function MonitorPage({
           onPowerOn: controller.onPowerOn,
           onPowerOff: () => {
             if (etco2Loading) cancelEtco2Loading()
+            cancelNibpReading()
             controller.onPowerOff()
             defib.reset()
             setAudioMuted(false)
@@ -634,7 +655,7 @@ export function MonitorPage({
         audio={{
           isMuted: controller.isMuted,
           onToggleMute: controller.onToggleMute,
-          onPatientEvent: bpButtonEnabled ? handlePatientEvent : undefined,
+          onPatientEvent: bpButtonEnabled ? handleScheduledPatientEvent : undefined,
         }}
       />
       <CallerInfoModal

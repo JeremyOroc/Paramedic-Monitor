@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-08-17] [monitor] - Implement NIBP settings modal and automatic cuff mode
+
+- Added a Zoll-style NIBP modal over the waveform column with exact alarm values, Manual/Automatic mode, six automatic intervals, SmartCuf On, cyclic physical navigation, and Back/Exit closure; TurboCuf, the ruler, alarm editing, and pointer interaction remain intentionally absent.
+- Added a focused automatic scheduler that reuses the existing Patient event cuff sequence, waits a full interval, repeats start-to-start, resets after manual presses or interval changes, skips busy readings, stays dormant without active BP, and cleans up on power-off/reset.
+- Added immutable NIBP types plus component, scheduler, reading-cleanup, controller, and physical-shell integration coverage; all 724 tests pass, lint has no errors, the production build passes, and rendered 1024×768 and 1366×768 in-app Browser QA completed without console warnings or errors.
+
+## [2026-08-17] [monitor] - Define NIBP settings modal and automatic cuff mode
+
+- Defined a Zoll-style NIBP modal opened from the selected PNI vital with cyclic physical navigation through read-only alarm values, Manual/Automatic mode, six automatic intervals, SmartCuf On, and Exit.
+- Specified recurring start-to-start automatic cuff readings through the existing Patient event sequence, including manual deadline resets, busy-reading skips, dormant inactive-BP behavior, and power/reset defaults.
+- Added the required component, controller, scheduler, integration, and rendered-browser testing contract while keeping MAP display-only and excluding TurboCuf, the ruler, mouse controls, persistence, and realtime changes.
+
 ## [2026-08-17] [monitor] - Implement Home toggle, chronological events, and manual vital switches
 
 - Made physical Home close an open Vital Log and reset its page/selection on the next open while preserving all other modal lockouts and background state.

@@ -18,6 +18,13 @@ import { setAudioMuted } from '@/lib/audio'
 import { buildEventLogEntry } from '@/lib/eventLog'
 import { NEXT_MED_PAGE, type MedicationPage } from '@/lib/monitor/medications'
 import type { EventLogStamp } from '@/types/eventLog'
+import {
+  NIBP_AUTO_INTERVALS,
+  NIBP_MODAL_ROWS,
+  type NibpAutoInterval,
+  type NibpModalRow,
+  type NibpMode,
+} from '@/types/nibp'
 
 export type MonitorView = 'main' | '12lead'
 export type SecondaryChannel = 'spo2' | 'etco2'
@@ -54,6 +61,10 @@ type MonitorControllerState = {
   patientMode: PatientMode
   patientModalOpen: boolean
   patientModeHighlightedIndex: number
+  nibpModalOpen: boolean
+  nibpHighlightedRow: NibpModalRow
+  nibpMode: NibpMode
+  nibpAutoInterval: NibpAutoInterval
   callerInfoOpen: boolean
   patientInfoOpen: boolean
   selectedField: PatientInfoField
@@ -88,8 +99,9 @@ type MonitorControllerState = {
  * bar, or opening the patient-mode modal *behind* an open menu all happen out of
  * the trainee's sight and leave the monitor somewhere they never chose to be.
  *
- * `patientModalOpen` and `patientInfoOpen` are deliberately excluded — they
- * consume the nav keys themselves to move within their own contents.
+ * `patientModalOpen`, `nibpModalOpen`, and `patientInfoOpen` are deliberately
+ * excluded — they consume the nav keys themselves to move within their own
+ * contents.
  *
  * Event-log navigation is handled before this guard. Medication mode is not a
  * blocking overlay: its left soft-key labels remain visible while the right
@@ -109,6 +121,7 @@ function hasBlockingOverlay(state: MonitorControllerState): boolean {
 function hasAnyModalOrOverlay(state: MonitorControllerState): boolean {
   return (
     state.patientModalOpen ||
+    state.nibpModalOpen ||
     state.callerInfoOpen ||
     state.patientInfoOpen ||
     state.eventLogOpen ||
@@ -123,6 +136,8 @@ type Action =
   | { type: 'selectPatientMode'; mode: PatientMode }
   | { type: 'closePatientModal' }
   | { type: 'movePatientModeHighlight'; direction: 1 | -1 }
+  | { type: 'closeNibpModal' }
+  | { type: 'moveNibpHighlight'; direction: 1 | -1 }
   | { type: 'selectionEnter'; activeSelectedControl: MonitorSelection }
   | { type: 'moveSelectedControl'; direction: 1 | -1 }
   | { type: 'toggleBottomStatus' }
@@ -176,6 +191,10 @@ const initialState: MonitorControllerState = {
   patientMode: DEFAULT_VITALS.patient_mode,
   patientModalOpen: false,
   patientModeHighlightedIndex: 0,
+  nibpModalOpen: false,
+  nibpHighlightedRow: 'systolicAlarm',
+  nibpMode: 'manual',
+  nibpAutoInterval: 2,
   callerInfoOpen: false,
   patientInfoOpen: false,
   selectedField: 'age',
@@ -243,7 +262,41 @@ function reducer(
             PATIENT_MODE_OPTIONS.length
           ) % PATIENT_MODE_OPTIONS.length,
       }
+    case 'closeNibpModal':
+      return { ...state, nibpModalOpen: false }
+    case 'moveNibpHighlight': {
+      const currentIndex = NIBP_MODAL_ROWS.indexOf(state.nibpHighlightedRow)
+      const safeIndex = currentIndex === -1 ? 0 : currentIndex
+      return {
+        ...state,
+        nibpHighlightedRow:
+          NIBP_MODAL_ROWS[
+            (safeIndex + action.direction + NIBP_MODAL_ROWS.length) % NIBP_MODAL_ROWS.length
+          ],
+      }
+    }
     case 'selectionEnter': {
+      if (state.nibpModalOpen) {
+        if (state.nibpHighlightedRow === 'mode') {
+          return {
+            ...state,
+            nibpMode: state.nibpMode === 'manual' ? 'automatic' : 'manual',
+          }
+        }
+        if (state.nibpHighlightedRow === 'autoInterval') {
+          const currentIndex = NIBP_AUTO_INTERVALS.indexOf(state.nibpAutoInterval)
+          const safeIndex = currentIndex === -1 ? 0 : currentIndex
+          return {
+            ...state,
+            nibpAutoInterval:
+              NIBP_AUTO_INTERVALS[(safeIndex + 1) % NIBP_AUTO_INTERVALS.length],
+          }
+        }
+        if (state.nibpHighlightedRow === 'exit') {
+          return { ...state, nibpModalOpen: false }
+        }
+        return state
+      }
       if (state.patientModalOpen) {
         const mode = PATIENT_MODE_OPTIONS[state.patientModeHighlightedIndex].value
         return { ...state, patientMode: mode, patientModalOpen: false }
@@ -264,6 +317,13 @@ function reducer(
           patientModalOpen: true,
         }
       }
+      if (action.activeSelectedControl === 'nibpVital') {
+        return {
+          ...state,
+          nibpModalOpen: true,
+          nibpHighlightedRow: 'systolicAlarm',
+        }
+      }
       return state
     }
     case 'moveSelectedControl': {
@@ -280,12 +340,14 @@ function reducer(
       }
     }
     case 'toggleBottomStatus':
+      if (state.nibpModalOpen) return state
       return {
         ...state,
         selectedControl: 'bottomStatusToggle',
         bottomStatusVisible: !state.bottomStatusVisible,
       }
     case 'enterMedicationMode':
+      if (state.nibpModalOpen) return state
       return { ...state, medicationMode: true }
     case 'addMedicationEvent':
       return {
@@ -307,7 +369,7 @@ function reducer(
       if (state.vitalLogOpen) return { ...state, vitalLogOpen: false }
       return { ...state, medicationMode: false }
     case 'openEventLog':
-      if (state.vitalLogOpen) return state
+      if (state.vitalLogOpen || state.nibpModalOpen) return state
       return {
         ...state,
         eventLogOpen: true,
@@ -370,12 +432,12 @@ function reducer(
             : Math.min(action.totalPages, state.vitalLogPage + 1),
       }
     case 'openCallerInfo':
-      if (state.vitalLogOpen) return state
+      if (state.vitalLogOpen || state.nibpModalOpen) return state
       return { ...state, callerInfoOpen: true }
     case 'closeCallerInfo':
       return { ...state, callerInfoOpen: false }
     case 'openPatientInfo':
-      if (state.vitalLogOpen) return state
+      if (state.vitalLogOpen || state.nibpModalOpen) return state
       return {
         ...state,
         patientInfoOpen: true,
@@ -425,8 +487,10 @@ function reducer(
     case 'cancelPatientInfoEdit':
       return { ...state, editing: false, editValue: null }
     case 'enterTwelveLead':
+      if (state.nibpModalOpen) return state
       return { ...state, view: '12lead' }
     case 'toggleEtco2':
+      if (state.nibpModalOpen) return state
       return { ...state, secondary: state.secondary === 'spo2' ? 'etco2' : 'spo2' }
     case 'resetMonitorUi':
       // A drill reset has to clear everything the previous run produced —
@@ -445,7 +509,7 @@ function reducer(
         isMuted: state.isMuted,
       }
     case 'startCapture':
-      if (state.vitalLogOpen) return state
+      if (state.vitalLogOpen || state.nibpModalOpen) return state
       return {
         ...state,
         patientInfoOpen: false,
@@ -460,11 +524,12 @@ function reducer(
         lastCapture: action.snapshot,
       }
     case 'openPrintPreview':
-      if (state.vitalLogOpen) return state
+      if (state.vitalLogOpen || state.nibpModalOpen) return state
       return state.lastCapture ? { ...state, printPreviewOpen: true } : state
     case 'back':
       if (state.vitalLogOpen) return { ...state, vitalLogOpen: false }
       if (state.callerInfoOpen) return { ...state, callerInfoOpen: false }
+      if (state.nibpModalOpen) return { ...state, nibpModalOpen: false }
       if (state.patientModalOpen) return { ...state, patientModalOpen: false }
       if (state.printPreviewOpen) return { ...state, printPreviewOpen: false }
       if (state.editing) return { ...state, editing: false, editValue: null }
@@ -489,6 +554,10 @@ function reducer(
         medicationPage: 1,
         flashedMed: null,
         patientModalOpen: false,
+        nibpModalOpen: false,
+        nibpHighlightedRow: 'systolicAlarm',
+        nibpMode: 'manual',
+        nibpAutoInterval: 2,
         callerInfoOpen: false,
         eventLogOpen: false,
         eventLogPage: 1,
@@ -585,7 +654,7 @@ export function useMonitorController({
       return
     }
     if (blockingOverlay) return
-    if (!state.patientModalOpen && state.patientInfoOpen) {
+    if (!state.patientModalOpen && !state.nibpModalOpen && state.patientInfoOpen) {
       if (!state.editing) {
         if (state.selectedField === 'exit') {
           dispatch({ type: 'back' })
@@ -618,6 +687,7 @@ export function useMonitorController({
     state.editValue,
     state.patientInfoOpen,
     state.patientModalOpen,
+    state.nibpModalOpen,
     state.selectedField,
     state.vitalLogOpen,
   ])
@@ -640,7 +710,9 @@ export function useMonitorController({
       return
     }
     if (blockingOverlay) return
-    if (state.patientModalOpen) {
+    if (state.nibpModalOpen) {
+      dispatch({ type: 'moveNibpHighlight', direction: -1 })
+    } else if (state.patientModalOpen) {
       dispatch({ type: 'movePatientModeHighlight', direction: -1 })
     } else if (state.patientInfoOpen) {
       dispatch({ type: 'movePatientInfo', direction: 'up', patientInfo })
@@ -654,6 +726,7 @@ export function useMonitorController({
     state.eventLogOpen,
     state.patientInfoOpen,
     state.patientModalOpen,
+    state.nibpModalOpen,
     state.vitalLogOpen,
   ])
 
@@ -675,7 +748,9 @@ export function useMonitorController({
       return
     }
     if (blockingOverlay) return
-    if (state.patientModalOpen) {
+    if (state.nibpModalOpen) {
+      dispatch({ type: 'moveNibpHighlight', direction: 1 })
+    } else if (state.patientModalOpen) {
       dispatch({ type: 'movePatientModeHighlight', direction: 1 })
     } else if (state.patientInfoOpen) {
       dispatch({ type: 'movePatientInfo', direction: 'down', patientInfo })
@@ -689,6 +764,7 @@ export function useMonitorController({
     state.eventLogOpen,
     state.patientInfoOpen,
     state.patientModalOpen,
+    state.nibpModalOpen,
     state.vitalLogOpen,
   ])
 
@@ -743,6 +819,7 @@ export function useMonitorController({
     onEnter,
     onMoveUp,
     onMoveDown,
+    onCloseNibpModal: () => dispatch({ type: 'closeNibpModal' }),
     onTwelveLead: () => dispatch({ type: 'enterTwelveLead' }),
     onToggleEtco2: () => dispatch({ type: 'toggleEtco2' }),
     onResetMonitorUi,
