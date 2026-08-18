@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-08-17] [monitor] - Implement two-stage NIBP focus and consistent monitor modal styling
+
+- Added label/value NIBP focus with combined alarm-limit selection, read-only arrow no-ops, bidirectional Mode/Interval changes, Enter/Back focus precedence, and preserved live automatic-cuff scheduling.
+- Added a shared boxed modal-action primitive and standardized Patient Info, NIBP, and Event Log around the Patient Info header, modal surface, centered value cells, selection color, and typography while keeping Vital Log unchanged.
+- Preserved eight-row Event Log density at the minimum desktop viewport; all 730 tests pass, ESLint has no errors (12 pre-existing warnings), the production build passes, and rendered 1024×768/1366×768 physical-control QA completed without console, framework-overlay, clipping, or scrollbar issues.
+
+## [2026-08-17] [monitor] - Define two-stage NIBP focus and consistent monitor modal styling
+
+- Changed every NIBP data row to a Patient Info-style label-to-value hardware focus flow, with directional live editing only for Mode and Auto Mode Interval and read-only alarm/SmartCuf value regions.
+- Standardized Patient Info, NIBP, and Event Log around white title bars, the shared green surface, centered value cells, blue active regions, and a shared boxed modal-action treatment while preserving each modal's geometry and behavior.
+- Expanded the controller, component, monitor-flow, scheduler-integration, and rendered-browser testing contract; mouse interaction and Vital Log styling remain intentionally unchanged.
+
 ## [2026-08-17] [monitor] - Implement NIBP settings modal and automatic cuff mode
 
 - Added a Zoll-style NIBP modal over the waveform column with exact alarm values, Manual/Automatic mode, six automatic intervals, SmartCuf On, cyclic physical navigation, and Back/Exit closure; TurboCuf, the ruler, alarm editing, and pointer interaction remain intentionally absent.

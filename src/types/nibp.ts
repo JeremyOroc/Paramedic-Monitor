@@ -1,5 +1,7 @@
 export type NibpMode = 'manual' | 'automatic'
 
+export type NibpFocusSide = 'label' | 'value'
+
 export const NIBP_AUTO_INTERVALS = [1, 2, 5, 15, 30, 60] as const
 
 export type NibpAutoInterval = (typeof NIBP_AUTO_INTERVALS)[number]

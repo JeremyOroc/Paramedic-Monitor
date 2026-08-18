@@ -61,7 +61,7 @@ describe('useNibpAutoMode', () => {
           readingActive: false,
           onTrigger,
         }),
-      { initialProps: { intervalMinutes: 1 as const } },
+      { initialProps: { intervalMinutes: 1 as 1 | 2 } },
     )
 
     act(() => { vi.advanceTimersByTime(30_000) })

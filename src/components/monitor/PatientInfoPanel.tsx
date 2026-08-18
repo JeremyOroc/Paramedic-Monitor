@@ -3,6 +3,8 @@
 import { cn } from '@/lib/utils'
 import type { PatientSex } from '@/types/patientInfo'
 
+import { MonitorModalAction } from './MonitorModalAction'
+
 export type PatientInfoField = 'age' | 'sex' | 'exit'
 
 type PatientInfoPanelProps = {
@@ -43,7 +45,7 @@ export function PatientInfoPanel({
       <header className="bg-white px-5 py-2 text-black">
         <h2 className="text-lg font-bold">Patient Info</h2>
       </header>
-      <div className="flex-1 overflow-hidden bg-[#8ba88c] px-5 pt-6 pb-4 flex flex-col justify-between">
+      <div className="flex flex-1 flex-col justify-between overflow-hidden bg-[var(--color-modal-surface)] px-5 pb-4 pt-6">
         <ul className="flex flex-col gap-1.5">
           {DATA_ROWS.map(({ field, label }) => {
             const selected = field === selectedField
@@ -58,7 +60,9 @@ export function PatientInfoPanel({
                 <span
                   className={cn(
                     'px-3 py-2 text-lg font-bold',
-                    selected && !editing ? 'bg-[#2f6df6] text-white' : 'text-black',
+                    selected && !editing
+                      ? 'bg-[var(--color-selection-blue)] text-white'
+                      : 'text-black',
                   )}
                 >
                   {label}
@@ -66,7 +70,7 @@ export function PatientInfoPanel({
                 <span
                   className={cn(
                     'flex items-center justify-center px-3 py-2 text-lg font-bold text-white',
-                    isEditing ? 'bg-[#2f6df6]' : 'bg-black',
+                    isEditing ? 'bg-[var(--color-selection-blue)]' : 'bg-black',
                   )}
                 >
                   <span>{values[field]}</span>
@@ -77,16 +81,13 @@ export function PatientInfoPanel({
         </ul>
         {/* Exit is part of the right-cluster navigation sequence. */}
         <div className="mt-4">
-          <div
-            aria-label="Exit"
-            aria-current={selectedField === 'exit' ? 'true' : undefined}
-            className={cn(
-              'inline-flex items-center justify-center px-4 py-2 border-2 border-white font-bold text-white text-lg',
-              selectedField === 'exit' ? 'bg-[#2f6df6]' : 'bg-black',
-            )}
+          <MonitorModalAction
+            selected={selectedField === 'exit'}
+            ariaLabel="Exit"
+            className="text-lg"
           >
             Exit
-          </div>
+          </MonitorModalAction>
         </div>
       </div>
     </section>

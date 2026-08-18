@@ -659,7 +659,7 @@ describe('useMonitorController', () => {
     expect(result.current.patientModeHighlightedIndex).not.toBe(before)
   })
 
-  it('opens NIBP from the selected PNI vital with read-only alarm rows', () => {
+  it('opens NIBP on the Systolic label and enters/exits every right-side value', () => {
     const { result } = setup()
 
     for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
@@ -670,20 +670,46 @@ describe('useMonitorController', () => {
     act(() => result.current.onEnter())
     expect(result.current.nibpModalOpen).toBe(true)
     expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpFocusSide).toBe('label')
     expect(result.current.nibpMode).toBe('manual')
     expect(result.current.nibpAutoInterval).toBe(2)
 
-    act(() => result.current.onEnter())
-    expect(result.current.nibpMode).toBe('manual')
-    expect(result.current.nibpAutoInterval).toBe(2)
+    const rows = [
+      'systolicAlarm',
+      'diastolicAlarm',
+      'mapAlarm',
+      'mode',
+      'autoInterval',
+      'smartCuf',
+    ] as const
+    const readOnlyRows = new Set(['systolicAlarm', 'diastolicAlarm', 'mapAlarm', 'smartCuf'])
 
-    act(() => result.current.onMoveDown())
-    act(() => result.current.onEnter())
-    expect(result.current.nibpHighlightedRow).toBe('diastolicAlarm')
-    expect(result.current.nibpMode).toBe('manual')
+    rows.forEach((row, index) => {
+      expect(result.current.nibpHighlightedRow).toBe(row)
+      expect(result.current.nibpFocusSide).toBe('label')
+      act(() => result.current.onEnter())
+      expect(result.current.nibpFocusSide).toBe('value')
+
+      if (readOnlyRows.has(row)) {
+        const before = {
+          row: result.current.nibpHighlightedRow,
+          mode: result.current.nibpMode,
+          interval: result.current.nibpAutoInterval,
+        }
+        act(() => result.current.onMoveUp())
+        act(() => result.current.onMoveDown())
+        expect(result.current.nibpHighlightedRow).toBe(before.row)
+        expect(result.current.nibpMode).toBe(before.mode)
+        expect(result.current.nibpAutoInterval).toBe(before.interval)
+      }
+
+      act(() => result.current.onEnter())
+      expect(result.current.nibpFocusSide).toBe('label')
+      if (index < rows.length - 1) act(() => result.current.onMoveDown())
+    })
   })
 
-  it('cycles NIBP rows, Mode, and all automatic interval values', () => {
+  it('cycles NIBP labels and edits Mode with either arrow', () => {
     const { result } = setup()
 
     for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
@@ -701,25 +727,53 @@ describe('useMonitorController', () => {
     act(() => result.current.onMoveDown())
     expect(result.current.nibpHighlightedRow).toBe('mode')
     act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('value')
+    act(() => result.current.onMoveUp())
     expect(result.current.nibpMode).toBe('automatic')
-    act(() => result.current.onEnter())
-    expect(result.current.nibpMode).toBe('manual')
-
     act(() => result.current.onMoveDown())
-    expect(result.current.nibpHighlightedRow).toBe('autoInterval')
-    for (const expected of [5, 15, 30, 60, 1, 2] as const) {
-      act(() => result.current.onEnter())
-      expect(result.current.nibpAutoInterval).toBe(expected)
-    }
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpHighlightedRow).toBe('mode')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('label')
   })
 
-  it('closes NIBP with Exit or Back and starts each open on Systolic', () => {
+  it('edits the automatic interval directionally with wrap-around', () => {
     const { result } = setup()
 
     for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
       act(() => result.current.onMoveUp())
     }
     act(() => result.current.onEnter())
+    for (let i = 0; i < 4; i += 1) act(() => result.current.onMoveDown())
+    expect(result.current.nibpHighlightedRow).toBe('autoInterval')
+    act(() => result.current.onEnter())
+
+    for (const expected of [5, 15, 30, 60, 1, 2] as const) {
+      act(() => result.current.onMoveUp())
+      expect(result.current.nibpAutoInterval).toBe(expected)
+    }
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpAutoInterval).toBe(1)
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpAutoInterval).toBe(60)
+  })
+
+  it('gives value-focused Enter/Back precedence, then closes with Exit or Back', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    act(() => result.current.onEnter())
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('value')
+    act(() => result.current.onBack())
+    expect(result.current.nibpModalOpen).toBe(true)
+    expect(result.current.nibpFocusSide).toBe('label')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('value')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('label')
     act(() => result.current.onMoveUp())
     expect(result.current.nibpHighlightedRow).toBe('exit')
     act(() => result.current.onEnter())
@@ -727,12 +781,14 @@ describe('useMonitorController', () => {
 
     act(() => result.current.onEnter())
     expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpFocusSide).toBe('label')
     act(() => result.current.onMoveDown())
     act(() => result.current.onBack())
     expect(result.current.nibpModalOpen).toBe(false)
 
     act(() => result.current.onEnter())
     expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpFocusSide).toBe('label')
   })
 
   it('makes NIBP modal exclusive with competing monitor menus and navigation', () => {
@@ -774,7 +830,11 @@ describe('useMonitorController', () => {
       act(() => result.current.onMoveDown())
       act(() => result.current.onMoveDown())
       act(() => result.current.onEnter())
+      act(() => result.current.onMoveUp())
+      act(() => result.current.onEnter())
       act(() => result.current.onMoveDown())
+      act(() => result.current.onEnter())
+      act(() => result.current.onMoveUp())
       act(() => result.current.onEnter())
     }
 
@@ -783,6 +843,7 @@ describe('useMonitorController', () => {
     expect(result.current.nibpAutoInterval).toBe(5)
     act(() => result.current.onResetMonitorUi())
     expect(result.current.nibpModalOpen).toBe(false)
+    expect(result.current.nibpFocusSide).toBe('label')
     expect(result.current.nibpMode).toBe('manual')
     expect(result.current.nibpAutoInterval).toBe(2)
 
@@ -790,6 +851,7 @@ describe('useMonitorController', () => {
     act(() => result.current.onPowerOff())
     expect(result.current.nibpModalOpen).toBe(false)
     expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpFocusSide).toBe('label')
     expect(result.current.nibpMode).toBe('manual')
     expect(result.current.nibpAutoInterval).toBe(2)
   })

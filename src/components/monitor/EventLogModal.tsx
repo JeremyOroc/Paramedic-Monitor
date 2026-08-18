@@ -1,7 +1,6 @@
-'use client'
-
-import { cn } from '@/lib/utils'
 import type { EventLogEntry } from '@/types/eventLog'
+
+import { MonitorModalAction } from './MonitorModalAction'
 
 export type { EventLogEntry } from '@/types/eventLog'
 
@@ -39,19 +38,19 @@ export function EventLogModal({
       className="absolute left-[56px] top-[56px] bottom-[110px] z-30 flex flex-col font-mono shadow-[0_-8px_24px_rgba(0,0,0,0.55)]"
       style={{ right: rightOffset }}
     >
-      <header className="bg-white px-4 py-1.5 text-black">
-        <h2 className="text-base font-bold">Event Log</h2>
+      <header className="bg-white px-5 py-2 text-black">
+        <h2 className="text-lg font-bold">Event Log</h2>
       </header>
-      <div className="flex-1 overflow-hidden bg-[#8ba88c] px-4 py-2">
+      <div className="flex-1 overflow-hidden bg-[var(--color-modal-surface)] px-4 py-2">
         {log.length > 0 ? (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-px">
             {pageEntries.map((entry, i) => (
               <li
                 key={(page - 1) * EVENT_LOG_ITEMS_PER_PAGE + i}
                 className="grid grid-cols-[1fr_1fr] items-stretch"
               >
-                <span className="px-2 py-1 text-xs font-bold text-black">{entry.name}</span>
-                <span className="flex items-center justify-center bg-black px-2 py-1 text-xs font-bold tabular-nums text-white text-center">
+                <span className="px-2 py-0 text-xs font-bold leading-4 text-black">{entry.name}</span>
+                <span className="flex items-center justify-center bg-black px-2 py-0 text-center text-xs font-bold leading-4 tabular-nums text-white">
                   {entry.time}
                 </span>
               </li>
@@ -63,52 +62,38 @@ export function EventLogModal({
       </div>
       <div
         data-testid="event-log-actions"
-        className="border-t border-black/20 bg-[#8ba88c] px-4 py-1.5 font-mono text-xs"
+        className="border-t border-black/20 bg-[var(--color-modal-surface)] px-4 py-1.5 font-mono text-xs"
       >
         <div className="flex justify-start">
-          <span
-            aria-current={highlightedButton === 'exit' ? 'true' : undefined}
-            className={cn(
-              'px-2 py-1 font-bold',
-              highlightedButton === 'exit'
-                ? 'bg-[#2f6df6] text-white'
-                : 'text-black opacity-50',
-            )}
+          <MonitorModalAction
+            selected={highlightedButton === 'exit'}
+            ariaLabel="Exit"
+            className="px-2 py-1"
           >
             Exit
-          </span>
+          </MonitorModalAction>
         </div>
         {showPagination && (
           <div className="mt-1 flex items-center justify-between">
-            <span
-              aria-current={highlightedButton === 'prev' ? 'true' : undefined}
-              aria-disabled={page === 1}
-              className={cn(
-                'px-2 py-1 font-bold',
-                highlightedButton === 'prev'
-                  ? 'bg-[#2f6df6] text-white'
-                  : 'text-black opacity-50',
-                page === 1 && 'opacity-30',
-              )}
+            <MonitorModalAction
+              selected={highlightedButton === 'prev'}
+              disabled={page === 1}
+              ariaLabel="Previous page"
+              className="px-2 py-1"
             >
               &#8592; Prev
-            </span>
+            </MonitorModalAction>
             <span className="text-black/70">
               Page {page} of {totalPages}
             </span>
-            <span
-              aria-current={highlightedButton === 'next' ? 'true' : undefined}
-              aria-disabled={page === totalPages}
-              className={cn(
-                'px-2 py-1 font-bold',
-                highlightedButton === 'next'
-                  ? 'bg-[#2f6df6] text-white'
-                  : 'text-black opacity-50',
-                page === totalPages && 'opacity-30',
-              )}
+            <MonitorModalAction
+              selected={highlightedButton === 'next'}
+              disabled={page === totalPages}
+              ariaLabel="Next page"
+              className="px-2 py-1"
             >
               Next &#8594;
-            </span>
+            </MonitorModalAction>
           </div>
         )}
       </div>

@@ -530,13 +530,15 @@ describe('MonitorPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
     }
     fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Move up' }))
     expect(screen.getByText('Automatic')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
-    for (let i = 0; i < 5; i += 1) {
-      fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
-    }
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
     expect(screen.getByText('1 min')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(screen.queryByRole('dialog', { name: 'NIBP settings' })).toBeNull()
 

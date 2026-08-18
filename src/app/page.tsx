@@ -575,6 +575,7 @@ export function MonitorPage({
             <NibpModal
               open={controller.nibpModalOpen}
               highlightedRow={controller.nibpHighlightedRow}
+              focusSide={controller.nibpFocusSide}
               mode={controller.nibpMode}
               autoInterval={controller.nibpAutoInterval}
             />

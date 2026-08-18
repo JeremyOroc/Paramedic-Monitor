@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Two-stage NIBP focus and consistent monitor modal styling — COMPLETE:**
+  - [x] Every NIBP data row moves from its label to a combined right-side value focus; Enter/Back returns to the label before Back can close the modal
+  - [x] Alarm limits and SmartCuf remain read-only, Mode toggles with either arrow, and Interval moves larger/smaller with wrapping while scheduler changes stay live
+  - [x] Patient Info, NIBP, and Event Log share white headers, the green modal surface, centered value cells, blue focus, and boxed Exit/pagination actions without changing Vital Log
+  - [x] All 730 tests, ESLint, production build, and rendered 1024×768/1366×768 physical-control and visual QA pass; all eight Event Log rows remain visible at the minimum viewport
 - [x] **NIBP settings modal and automatic cuff mode — COMPLETE:**
   - [x] Selecting PNI with the outer-shell navigation cluster and pressing Enter opens a reference-matched NIBP modal with cyclic physical navigation and Back/Exit closure
   - [x] SYS/DIA/MAP limits and SmartCuf On are read-only; Mode cycles Manual/Automatic and Interval cycles 1, 2, 5, 15, 30, and 60 minutes

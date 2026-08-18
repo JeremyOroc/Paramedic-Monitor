@@ -22,6 +22,7 @@ import {
   NIBP_AUTO_INTERVALS,
   NIBP_MODAL_ROWS,
   type NibpAutoInterval,
+  type NibpFocusSide,
   type NibpModalRow,
   type NibpMode,
 } from '@/types/nibp'
@@ -63,6 +64,7 @@ type MonitorControllerState = {
   patientModeHighlightedIndex: number
   nibpModalOpen: boolean
   nibpHighlightedRow: NibpModalRow
+  nibpFocusSide: NibpFocusSide
   nibpMode: NibpMode
   nibpAutoInterval: NibpAutoInterval
   callerInfoOpen: boolean
@@ -138,6 +140,7 @@ type Action =
   | { type: 'movePatientModeHighlight'; direction: 1 | -1 }
   | { type: 'closeNibpModal' }
   | { type: 'moveNibpHighlight'; direction: 1 | -1 }
+  | { type: 'adjustNibpValue'; direction: 1 | -1 }
   | { type: 'selectionEnter'; activeSelectedControl: MonitorSelection }
   | { type: 'moveSelectedControl'; direction: 1 | -1 }
   | { type: 'toggleBottomStatus' }
@@ -193,6 +196,7 @@ const initialState: MonitorControllerState = {
   patientModeHighlightedIndex: 0,
   nibpModalOpen: false,
   nibpHighlightedRow: 'systolicAlarm',
+  nibpFocusSide: 'label',
   nibpMode: 'manual',
   nibpAutoInterval: 2,
   callerInfoOpen: false,
@@ -263,8 +267,9 @@ function reducer(
           ) % PATIENT_MODE_OPTIONS.length,
       }
     case 'closeNibpModal':
-      return { ...state, nibpModalOpen: false }
+      return { ...state, nibpModalOpen: false, nibpFocusSide: 'label' }
     case 'moveNibpHighlight': {
+      if (state.nibpFocusSide === 'value') return state
       const currentIndex = NIBP_MODAL_ROWS.indexOf(state.nibpHighlightedRow)
       const safeIndex = currentIndex === -1 ? 0 : currentIndex
       return {
@@ -275,27 +280,37 @@ function reducer(
           ],
       }
     }
+    case 'adjustNibpValue': {
+      if (!state.nibpModalOpen || state.nibpFocusSide !== 'value') return state
+      if (state.nibpHighlightedRow === 'mode') {
+        return {
+          ...state,
+          nibpMode: state.nibpMode === 'manual' ? 'automatic' : 'manual',
+        }
+      }
+      if (state.nibpHighlightedRow === 'autoInterval') {
+        const currentIndex = NIBP_AUTO_INTERVALS.indexOf(state.nibpAutoInterval)
+        const safeIndex = currentIndex === -1 ? 0 : currentIndex
+        return {
+          ...state,
+          nibpAutoInterval:
+            NIBP_AUTO_INTERVALS[
+              (safeIndex + action.direction + NIBP_AUTO_INTERVALS.length) %
+                NIBP_AUTO_INTERVALS.length
+            ],
+        }
+      }
+      return state
+    }
     case 'selectionEnter': {
       if (state.nibpModalOpen) {
-        if (state.nibpHighlightedRow === 'mode') {
-          return {
-            ...state,
-            nibpMode: state.nibpMode === 'manual' ? 'automatic' : 'manual',
-          }
-        }
-        if (state.nibpHighlightedRow === 'autoInterval') {
-          const currentIndex = NIBP_AUTO_INTERVALS.indexOf(state.nibpAutoInterval)
-          const safeIndex = currentIndex === -1 ? 0 : currentIndex
-          return {
-            ...state,
-            nibpAutoInterval:
-              NIBP_AUTO_INTERVALS[(safeIndex + 1) % NIBP_AUTO_INTERVALS.length],
-          }
+        if (state.nibpFocusSide === 'value') {
+          return { ...state, nibpFocusSide: 'label' }
         }
         if (state.nibpHighlightedRow === 'exit') {
-          return { ...state, nibpModalOpen: false }
+          return { ...state, nibpModalOpen: false, nibpFocusSide: 'label' }
         }
-        return state
+        return { ...state, nibpFocusSide: 'value' }
       }
       if (state.patientModalOpen) {
         const mode = PATIENT_MODE_OPTIONS[state.patientModeHighlightedIndex].value
@@ -322,6 +337,7 @@ function reducer(
           ...state,
           nibpModalOpen: true,
           nibpHighlightedRow: 'systolicAlarm',
+          nibpFocusSide: 'label',
         }
       }
       return state
@@ -529,7 +545,11 @@ function reducer(
     case 'back':
       if (state.vitalLogOpen) return { ...state, vitalLogOpen: false }
       if (state.callerInfoOpen) return { ...state, callerInfoOpen: false }
-      if (state.nibpModalOpen) return { ...state, nibpModalOpen: false }
+      if (state.nibpModalOpen) {
+        return state.nibpFocusSide === 'value'
+          ? { ...state, nibpFocusSide: 'label' }
+          : { ...state, nibpModalOpen: false }
+      }
       if (state.patientModalOpen) return { ...state, patientModalOpen: false }
       if (state.printPreviewOpen) return { ...state, printPreviewOpen: false }
       if (state.editing) return { ...state, editing: false, editValue: null }
@@ -556,6 +576,7 @@ function reducer(
         patientModalOpen: false,
         nibpModalOpen: false,
         nibpHighlightedRow: 'systolicAlarm',
+        nibpFocusSide: 'label',
         nibpMode: 'manual',
         nibpAutoInterval: 2,
         callerInfoOpen: false,
@@ -711,7 +732,11 @@ export function useMonitorController({
     }
     if (blockingOverlay) return
     if (state.nibpModalOpen) {
-      dispatch({ type: 'moveNibpHighlight', direction: -1 })
+      dispatch(
+        state.nibpFocusSide === 'value'
+          ? { type: 'adjustNibpValue', direction: 1 }
+          : { type: 'moveNibpHighlight', direction: -1 },
+      )
     } else if (state.patientModalOpen) {
       dispatch({ type: 'movePatientModeHighlight', direction: -1 })
     } else if (state.patientInfoOpen) {
@@ -727,6 +752,7 @@ export function useMonitorController({
     state.patientInfoOpen,
     state.patientModalOpen,
     state.nibpModalOpen,
+    state.nibpFocusSide,
     state.vitalLogOpen,
   ])
 
@@ -749,7 +775,11 @@ export function useMonitorController({
     }
     if (blockingOverlay) return
     if (state.nibpModalOpen) {
-      dispatch({ type: 'moveNibpHighlight', direction: 1 })
+      dispatch(
+        state.nibpFocusSide === 'value'
+          ? { type: 'adjustNibpValue', direction: -1 }
+          : { type: 'moveNibpHighlight', direction: 1 },
+      )
     } else if (state.patientModalOpen) {
       dispatch({ type: 'movePatientModeHighlight', direction: 1 })
     } else if (state.patientInfoOpen) {
@@ -765,6 +795,7 @@ export function useMonitorController({
     state.patientInfoOpen,
     state.patientModalOpen,
     state.nibpModalOpen,
+    state.nibpFocusSide,
     state.vitalLogOpen,
   ])
 

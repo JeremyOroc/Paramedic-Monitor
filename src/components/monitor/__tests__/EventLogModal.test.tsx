@@ -47,7 +47,12 @@ describe('EventLogModal', () => {
     expect(screen.getByText('Exit')).not.toHaveAttribute('aria-current')
     expect(screen.getByText(/Prev/)).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByText(/Prev/)).toHaveAttribute('aria-current', 'true')
-    expect(screen.getByText(/Prev/)).toHaveClass('bg-[#2f6df6]', 'opacity-30')
+    expect(screen.getByText(/Prev/)).toHaveClass(
+      'bg-[var(--color-selection-blue)]',
+      'border-2',
+      'border-white',
+      'opacity-30',
+    )
     expect(screen.getByText(/Next/)).toHaveAttribute('aria-disabled', 'false')
 
     rerender(<EventLogModal open log={log} page={2} highlightedButton="next" />)
@@ -58,6 +63,30 @@ describe('EventLogModal', () => {
     expect(screen.getByText(/Prev/)).toHaveAttribute('aria-disabled', 'false')
     expect(screen.getByText(/Next/)).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByText(/Next/)).toHaveAttribute('aria-current', 'true')
-    expect(screen.getByText(/Next/)).toHaveClass('bg-[#2f6df6]', 'opacity-30')
+    expect(screen.getByText(/Next/)).toHaveClass(
+      'bg-[var(--color-selection-blue)]',
+      'opacity-30',
+    )
+    expect(screen.getByText('Event 9').closest('ul')).toHaveClass('gap-px')
+    expect(screen.getByText('Event 9')).toHaveClass('py-0', 'leading-4')
+  })
+
+  it('uses the Patient Info title and surface with boxed actions', () => {
+    render(<EventLogModal open log={makeLog(9)} />)
+
+    const title = screen.getByRole('heading', { name: 'Event Log' })
+    expect(title.parentElement).toHaveClass('bg-white', 'px-5', 'py-2')
+    expect(title.parentElement?.nextElementSibling).toHaveClass(
+      'bg-[var(--color-modal-surface)]',
+    )
+    expect(screen.getByText('Exit')).toHaveClass(
+      'bg-[var(--color-selection-blue)]',
+      'border-2',
+      'border-white',
+      'text-white',
+    )
+    for (const action of [screen.getByText(/Prev/), screen.getByText(/Next/)]) {
+      expect(action).toHaveClass('bg-black', 'border-2', 'border-white', 'text-white')
+    }
   })
 })

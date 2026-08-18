@@ -419,6 +419,36 @@ existing close-panel and exit-12-lead precedence.
 
 **Milestone:** Clicking Adult label shows mode picker. BP animation plays before numbers appear.
 
+**Requirement change (2026-08-17) — Two-stage NIBP focus and consistent monitor modal styling:**
+- Every NIBP data row now uses a two-stage hardware cursor. Opening starts on
+  the Systolic label; Enter moves from a selected label to its combined
+  right-side value region, and Enter or Back returns to the same label. Back
+  closes NIBP only while label-focused. Mouse hover and clicks remain inert.
+- Label-focused Up/Down cycles through all six data rows and Exit. Value-focused
+  alarm limits and SmartCuf ignore arrows, Mode toggles with either arrow, and
+  Interval uses Up for the next larger value and Down for the previous value
+  across 1, 2, 5, 15, 30, and 60 minutes with wrap-around. Live setting changes
+  retain the existing automatic-cuff scheduling behavior.
+- Patient Info, NIBP, and Event Log share the Patient Info visual language:
+  white title bars, the common green modal surface, centered black value cells,
+  blue active label/value regions, bold monospace typography, and boxed modal
+  actions. NIBP keeps its geometry and responsive row text; Event Log keeps its
+  content density and pagination behavior. Vital Log remains unchanged.
+- The shared Exit/Prev/Next action style uses a black surface, white rectangular
+  border and text, and a blue selected state. Disabled Event Log pagination
+  actions remain selectable no-ops with reduced opacity.
+
+**Testing:**
+- Controller and monitor-flow coverage verifies every NIBP label/value
+  transition, cyclic label navigation, read-only arrow no-ops, directional
+  setting changes and wrapping, Enter/Back precedence, Exit, reopen/reset
+  defaults, and live automatic scheduling after interval changes.
+- Component regressions verify left-versus-right selection, combined alarm
+  focus, centered limits, shared title/surface/action styling, pointer-inert
+  NIBP markup, and unchanged Patient Info/Event Log behavior.
+- Complete Vitest, ESLint, production-build, and rendered 1024×768 and
+  1366×768 browser checks cover all three restyled modals.
+
 **Requirement change (2026-08-17) — NIBP settings modal and automatic cuff mode:**
 - Selecting the PNI vital with the outer-shell navigation cluster and pressing
   Enter opens a Zoll-style NIBP modal over the waveform column. The modal owns
