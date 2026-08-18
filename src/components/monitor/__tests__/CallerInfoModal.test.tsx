@@ -111,6 +111,9 @@ describe('CallerInfoModal', () => {
       expect(row).not.toHaveClass('grid-cols-[32px_1fr]')
       expect(row.querySelector('svg')).toBeNull()
     }
+    expect(screen.getByTestId('assignment-info-callNumber').closest('ul')).toHaveClass(
+      'gap-3',
+    )
   })
 
   it('uses the clarified white and blue assignment dashboard text colors', () => {
@@ -118,13 +121,15 @@ describe('CallerInfoModal', () => {
       responseFormatted: '01:12',
       info: {
         ...DEFAULT_CALLER_INFO,
-        callNumber: 'C-2026-15',
+        callNumber: '2026-0613-1318',
         priority: 'P1 / DELTA',
         mpdsCode: '28-D-1',
-        address: '315 Boulevard Brunswick',
-        problem: 'Sudden weakness',
-        information: 'Caller reports slurred speech',
-        update: 'Unable to lift left arm',
+        address: '315 Boulevard Brunswick, Pointe-Claire, QC',
+        problem: 'Male, 72 years old, sudden weakness and speech difficulty',
+        information:
+          'Sudden onset left-sided weakness Slurred speech Symptoms began 25 minutes ago Wife reports patient was normal before lunch No trauma reported UNITS ASSIGNED: 2231 2232 PR-451',
+        update:
+          'Significant neurological deterioration, unable to lift left arm, severe dysarthria.',
         time: '13:18',
         extra1Label: 'Access Notes',
         extra1: 'Use side entrance',
@@ -139,24 +144,64 @@ describe('CallerInfoModal', () => {
     expect(screen.getByText('P1 / DELTA')).toHaveClass('text-white')
     expect(screen.getByText('Lights & Sirens')).toHaveClass('text-white')
 
-    const expectedLabels = [
-      ['callNumber', 'Call #'],
-      ['mpdsCode', 'MPDS Code'],
-      ['address', 'Address'],
-      ['problem', 'Nature of Call'],
-      ['information', 'Caller Info'],
-      ['update', 'Updates'],
-      ['time', 'Call Received'],
+    const largeRows = [
+      ['callNumber', 'Call #', '2026-0613-1318'],
+      ['mpdsCode', 'MPDS Code', '28-D-1'],
+      ['address', 'Address', '315 Boulevard Brunswick, Pointe-Claire, QC'],
+      [
+        'problem',
+        'Nature of Call',
+        'Male, 72 years old, sudden weakness and speech difficulty',
+      ],
+      [
+        'information',
+        'Caller Info',
+        'Sudden onset left-sided weakness Slurred speech Symptoms began 25 minutes ago Wife reports patient was normal before lunch No trauma reported UNITS ASSIGNED: 2231 2232 PR-451',
+      ],
+      [
+        'update',
+        'Updates',
+        'Significant neurological deterioration, unable to lift left arm, severe dysarthria.',
+      ],
+      ['time', 'Call Received', '13:18'],
+    ] as const
+    const compactExtraLabels = [
       ['extra1', 'Access Notes'],
       ['extra2', 'Hazards / Alerts'],
       ['extra3', 'Additional Info'],
     ] as const
 
-    for (const [field, label] of expectedLabels) {
-      expect(
-        within(screen.getByTestId(`assignment-info-${field}`)).getByText(label),
-      ).toHaveClass('text-dispatch-blue')
+    for (const [field, label, value] of largeRows) {
+      const row = within(screen.getByTestId(`assignment-info-${field}`))
+      const labelElement = row.getByText(label)
+      const valueElement = row.getByText(value)
+      expect(labelElement).toHaveClass(
+        'text-dispatch-blue',
+        'text-lg',
+        'leading-none',
+        'assignment-detail-label-emphasis',
+      )
+      expect(labelElement).not.toHaveClass('text-[10px]')
+      expect(valueElement).toHaveClass('text-neutral-100', 'text-lg')
+      expect(valueElement).not.toHaveClass('text-xs')
     }
+
+    for (const [field, label] of compactExtraLabels) {
+      const labelElement = within(
+        screen.getByTestId(`assignment-info-${field}`),
+      ).getByText(label)
+      expect(labelElement).toHaveClass('text-dispatch-blue', 'text-[10px]')
+      expect(labelElement).not.toHaveClass('text-lg')
+      expect(labelElement).not.toHaveClass('assignment-detail-label-emphasis')
+    }
+
+    expect(screen.getByText('Use side entrance')).toHaveClass('text-xs')
+    expect(screen.getByText('Scene hazard')).toHaveClass('text-xs')
+    expect(screen.getByText('Additional context')).toHaveClass('text-xs')
+    expect(screen.getByTestId('assignment-info-callNumber').closest('ul')).toHaveClass(
+      'gap-3',
+    )
+    expect(screen.getByText('Call Assignment').closest('.grid')).toHaveClass('mb-2')
   })
 
   it('keeps classic caller-info label colors unchanged', () => {

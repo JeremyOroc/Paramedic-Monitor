@@ -108,6 +108,16 @@ const ASSIGNMENT_FIELD_META: Partial<Record<CallerInfoField, {
   },
 }
 
+const LARGE_ASSIGNMENT_FIELDS: ReadonlySet<CallerInfoField> = new Set([
+  'callNumber',
+  'mpdsCode',
+  'address',
+  'problem',
+  'information',
+  'update',
+  'time',
+])
+
 export function CallerInfoModal({
   open,
   info,
@@ -331,6 +341,7 @@ function AssignmentCallerInfoContent({
 }: CallerInfoContentProps) {
   const priority = info.priority.trim() || 'Priority Pending'
   const assignmentDisplayFields = displayFields.filter(({ field }) => field !== 'priority')
+  const hasExtraFields = assignmentDisplayFields.some(({ field }) => field.startsWith('extra'))
   const location = info.address.trim() || '-'
   const receivedTime = info.time.trim() || '--:--'
 
@@ -370,7 +381,7 @@ function AssignmentCallerInfoContent({
       </div>
       <div className="grid min-h-0 flex-1 grid-cols-[1.08fr_minmax(210px,0.92fr)] overflow-hidden">
         <div className="min-h-0 overflow-hidden border-r border-neutral-700 px-4 py-3">
-          <div className="mb-3 grid grid-cols-[1fr_auto] gap-4 border-b border-neutral-700 pb-3">
+          <div className="mb-2 grid grid-cols-[1fr_auto] gap-4 border-b border-neutral-700 pb-3">
             <div>
               <p className="text-lg font-black text-white">
                 Call Assignment
@@ -384,7 +395,7 @@ function AssignmentCallerInfoContent({
             </div>
           </div>
           {hasInfo ? (
-            <ul className="grid gap-1">
+            <ul className={cn('grid', hasExtraFields ? 'gap-3' : 'gap-3')}>
               {assignmentDisplayFields.map(({ field, label, labelField }) => {
                 const meta = ASSIGNMENT_FIELD_META[field]
                 const resolvedLabel =
@@ -399,11 +410,22 @@ function AssignmentCallerInfoContent({
                   >
                     <span className="min-w-0">
                       <span
-                        className="block text-[10px] font-black uppercase tracking-[0.12em] text-dispatch-blue"
+                        className={cn(
+                          'block font-black uppercase tracking-[0.12em] text-dispatch-blue',
+                          LARGE_ASSIGNMENT_FIELDS.has(field)
+                            ? 'assignment-detail-label-emphasis text-lg'
+                            : 'text-[10px]',
+                          'leading-none',
+                        )}
                       >
                         {resolvedLabel}
                       </span>
-                      <span className="block overflow-hidden break-words text-xs font-bold leading-tight text-neutral-100">
+                      <span
+                        className={cn(
+                          'block overflow-hidden break-words font-bold leading-tight text-neutral-100',
+                          LARGE_ASSIGNMENT_FIELDS.has(field) ? 'text-lg' : 'text-xs',
+                        )}
+                      >
                         {info[field] || '-'}
                       </span>
                     </span>

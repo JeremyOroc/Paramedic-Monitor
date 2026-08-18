@@ -485,10 +485,22 @@ existing close-panel and exit-12-lead precedence.
   standard caller fields and all optional or custom extra-field labels. Detail
   values, layout, timer behavior, and the classic caller-info variant remain
   unchanged.
+- The seven standard assignment-detail labels (Call #, MPDS Code, Address,
+  Nature of Call, Caller Info, Updates, and Call Received) and their values use
+  the same `text-lg` size as Call Assignment. Optional/custom extra labels and
+  values keep their existing compact sizes.
+- Detail labels use a compact line-height with slightly tighter title-to-list
+  spacing. All assignment-detail lists use `gap-3` between header/value groups,
+  including assignments with optional extra rows. Existing row separators and
+  padding remain.
+- The seven standard labels receive a subtle text stroke in addition to their
+  existing black font weight for stronger visual emphasis.
 
 **Testing:**
 - Component coverage verifies the white timer/assignment/priority treatment,
-  blue standard and custom detail labels, and an unchanged classic variant.
+  blue standard and custom detail labels, larger standard-row label/value
+  sizing, stronger standard-label emphasis, uniform `gap-3` row spacing, unchanged
+  extra-row sizing, and an unchanged classic variant.
 - Rendered desktop coverage compares the assignment dashboard with the supplied
   reference and checks console/framework health without adding mobile scope.
 
