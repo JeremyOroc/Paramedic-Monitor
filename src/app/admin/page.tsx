@@ -36,7 +36,7 @@ import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
-import type { NumericVitalField } from '@/types/vitals'
+import type { CprMode, NumericVitalField } from '@/types/vitals'
 import type { StudentEvent } from '@/types/session'
 
 type AdminTab = 'monitor' | 'caller' | 'patient' | 'physical'
@@ -223,21 +223,21 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // CPR override and Reset bypass Save → Send, so in a session they must push
   // shared state themselves — the Send button stays disabled without pending
   // Save → Send changes and would otherwise strand these on the admin screen.
-  const cprOverrideActive = useMonitorStore((s) => s.cprOverrideActive)
+  const cprMode = useMonitorStore((s) => s.cprMode)
   const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
-  const immediatePushRef = useRef<{ cpr: boolean; resetVersion: number } | null>(null)
+  const immediatePushRef = useRef<{ cprMode: CprMode; resetVersion: number } | null>(null)
   useEffect(() => {
     if (!session) return
     const prev = immediatePushRef.current
-    immediatePushRef.current = { cpr: cprOverrideActive, resetVersion: monitorResetVersion }
+    immediatePushRef.current = { cprMode, resetVersion: monitorResetVersion }
     if (!prev) return
-    if (prev.cpr === cprOverrideActive && prev.resetVersion === monitorResetVersion) return
+    if (prev.cprMode === cprMode && prev.resetVersion === monitorResetVersion) return
     void sendSessionState().catch((caught) => {
       setSessionError(
         caught instanceof Error ? caught.message : 'Unable to send session state',
       )
     })
-  }, [cprOverrideActive, monitorResetVersion, sendSessionState, session])
+  }, [cprMode, monitorResetVersion, sendSessionState, session])
   const resetPatientInformation = () => {
     setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
     setPatientText(EMPTY_PATIENT_INFORMATION_TEXT())

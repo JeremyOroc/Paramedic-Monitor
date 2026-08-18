@@ -75,7 +75,14 @@ function LiveSecondaryCanvas({
     [isEtco2],
   )
 
-  return <canvas ref={canvasRef} className="block h-full w-full" />
+  return (
+    <canvas
+      ref={canvasRef}
+      data-testid={`${channel}-waveform-canvas`}
+      data-heart-rate={isEtco2 ? undefined : hr}
+      className="block h-full w-full"
+    />
+  )
 }
 
 export function SecondaryChannel({

@@ -585,29 +585,55 @@ describe('MonitorPage', () => {
     expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
   })
 
-  it('temporarily overrides FC and ECG graph while admin CPR override is active', () => {
+  it('uses Regular and Weak CPR FC values without changing the saved rhythm or FC', () => {
     act(() => {
-      useMonitorStore.getState().setDraft('hr', 82)
+      useMonitorStore.getState().setDraft('hr', 150)
       useMonitorStore.getState().setDraft('rhythm', 'nsr')
+      useMonitorStore.getState().setDraft('spo2', 98)
       useMonitorStore.getState().setDraftVitalActive('hr', true)
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
     })
 
     render(<MonitorPage />)
 
-    expect(screen.getByText('82')).toBeInTheDocument()
+    expect(screen.getByText('150')).toBeInTheDocument()
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'true',
+    )
     expect(screen.getByText('live-ecg')).toBeInTheDocument()
 
-    act(() => useMonitorStore.getState().setCprOverrideActive(true))
+    act(() => useMonitorStore.getState().setCprMode('regular'))
 
     expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'false',
+    )
     expect(screen.getByText('cpr-ecg-canvas')).toBeInTheDocument()
-    expect(screen.queryByText('82')).not.toBeInTheDocument()
+    expect(screen.queryByText('150')).not.toBeInTheDocument()
 
-    act(() => useMonitorStore.getState().setCprOverrideActive(false))
+    act(() => useMonitorStore.getState().setCprMode('weak'))
 
-    expect(screen.getByText('82')).toBeInTheDocument()
+    expect(screen.getByText('90')).toBeInTheDocument()
+    expect(screen.getByTestId('spo2-pulse-bar')).toHaveAttribute('data-heart-rate', '90')
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'false',
+    )
+    expect(screen.queryByText('120')).not.toBeInTheDocument()
+    expect(useMonitorStore.getState().confirmed.hr).toBe(150)
+    expect(useMonitorStore.getState().confirmed.rhythm).toBe('nsr')
+
+    act(() => useMonitorStore.getState().setCprMode('off'))
+
+    expect(screen.getByText('150')).toBeInTheDocument()
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'true',
+    )
     expect(screen.getByText('live-ecg')).toBeInTheDocument()
     expect(screen.queryByText('cpr-ecg-canvas')).not.toBeInTheDocument()
   })
@@ -1163,7 +1189,7 @@ describe('MonitorPage', () => {
       )
       store.startEtco2Calibration()
       store.completeEtco2Calibration()
-      store.setCprOverrideActive(true)
+      store.setCprMode('weak')
     })
 
     render(<MonitorPage />)
@@ -1175,7 +1201,7 @@ describe('MonitorPage', () => {
     const vitalLog = screen.getByRole('region', { name: 'Vital Log' })
     expect(screen.getByRole('heading', { name: 'Vital Log' })).toBeInTheDocument()
     expect(vitalLog).toHaveTextContent('00:05:00')
-    expect(vitalLog).toHaveTextContent('120')
+    expect(vitalLog).toHaveTextContent('90')
     expect(vitalLog).toHaveTextContent('118')
     expect(vitalLog).toHaveTextContent('36')
     expect(vitalLog).toHaveTextContent('97')

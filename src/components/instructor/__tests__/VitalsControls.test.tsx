@@ -209,24 +209,36 @@ describe('VitalsControls', () => {
     )
   })
 
-  it('toggles the CPR override immediately from the ECG column', async () => {
+  it('toggles and directly switches mutually exclusive CPR modes', async () => {
     const user = userEvent.setup()
     render(<VitalsControls autoSortText="" />)
 
-    const cpr = screen.getByRole('button', { name: 'CPR' })
-    expect(cpr).toHaveAttribute('aria-pressed', 'false')
-    expect(useMonitorStore.getState().cprOverrideActive).toBe(false)
+    const group = screen.getByRole('group', { name: 'CPR mode' })
+    const regular = within(group).getByRole('button', { name: 'Regular CPR' })
+    const weak = within(group).getByRole('button', { name: 'Weak CPR' })
+    expect(group).toHaveClass('grid-cols-2')
+    expect(regular).toHaveAttribute('aria-pressed', 'false')
+    expect(weak).toHaveAttribute('aria-pressed', 'false')
+    expect(useMonitorStore.getState().cprMode).toBe('off')
 
-    await user.click(cpr)
+    await user.click(regular)
 
-    expect(cpr).toHaveAttribute('aria-pressed', 'true')
-    expect(cpr).toHaveClass('border-ecg-green')
-    expect(useMonitorStore.getState().cprOverrideActive).toBe(true)
+    expect(regular).toHaveAttribute('aria-pressed', 'true')
+    expect(weak).toHaveAttribute('aria-pressed', 'false')
+    expect(regular).toHaveClass('border-ecg-green')
+    expect(useMonitorStore.getState().cprMode).toBe('regular')
 
-    await user.click(cpr)
+    await user.click(weak)
 
-    expect(cpr).toHaveAttribute('aria-pressed', 'false')
-    expect(useMonitorStore.getState().cprOverrideActive).toBe(false)
+    expect(regular).toHaveAttribute('aria-pressed', 'false')
+    expect(weak).toHaveAttribute('aria-pressed', 'true')
+    expect(useMonitorStore.getState().cprMode).toBe('weak')
+
+    await user.click(weak)
+
+    expect(regular).toHaveAttribute('aria-pressed', 'false')
+    expect(weak).toHaveAttribute('aria-pressed', 'false')
+    expect(useMonitorStore.getState().cprMode).toBe('off')
   })
 
   it('stages T1 timed vital numbers without turning initially off vitals on', async () => {

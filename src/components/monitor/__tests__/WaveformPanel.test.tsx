@@ -36,6 +36,32 @@ describe('WaveformPanel', () => {
     expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
   })
 
+  it('drives CPR ECG and SpO2 canvases from the selected effective FC', () => {
+    const { rerender } = render(
+      <WaveformPanel {...baseProps} hr={120} cprOverride />,
+    )
+
+    expect(screen.getByTestId('cpr-ecg-canvas')).toHaveAttribute(
+      'data-heart-rate',
+      '120',
+    )
+    expect(screen.getByTestId('spo2-waveform-canvas')).toHaveAttribute(
+      'data-heart-rate',
+      '120',
+    )
+
+    rerender(<WaveformPanel {...baseProps} hr={90} cprOverride />)
+
+    expect(screen.getByTestId('cpr-ecg-canvas')).toHaveAttribute(
+      'data-heart-rate',
+      '90',
+    )
+    expect(screen.getByTestId('spo2-waveform-canvas')).toHaveAttribute(
+      'data-heart-rate',
+      '90',
+    )
+  })
+
   it('keeps the same ECG canvas mounted when CPR toggles on and off', () => {
     const { rerender } = render(<WaveformPanel {...baseProps} />)
 

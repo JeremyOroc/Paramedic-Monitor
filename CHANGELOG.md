@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-08-18] [monitor] — Add Regular and Weak CPR override modes
+
+- Replaced the single admin CPR toggle with mutually exclusive side-by-side Regular CPR and Weak CPR controls that switch directly and turn off when the active mode is pressed again.
+- Regular CPR preserves FC/trace cadence at 120, while Weak CPR uses FC/trace cadence 90 with the same compression shape and amplitude; both drive monitor FC, alarms, ECG, SpO2 graph/pulse bar, and vital-log snapshots without changing saved vitals or EtCO2/defibrillator behavior.
+- Added typed, persisted, and session-synchronized CPR modes with migration from the legacy boolean and mixed-version shared-state compatibility.
+- Added store, instructor, monitor, waveform, persistence, and session regressions; all 737 tests pass, the production build succeeds, ESLint has no errors (12 pre-existing warnings), and rendered 1280×720 Browser QA confirmed layout, direct switching, Off behavior, FC 90, ECG/SpO2/pulse-bar HR 90, and clean console/framework state.
+
 ## [2026-08-18] [monitor] — Increase call-info row spacing
 
 - Adopted the preferred uniform `gap-3` spacing for every assignment-detail header/value group, including lists with optional/custom fields.

@@ -5,6 +5,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import { nanoid } from 'nanoid'
 import {
   DEFAULT_VITALS,
+  type CprMode,
   type Etco2Waveform,
   type NumericVitalField,
   type Rhythm,
@@ -95,6 +96,12 @@ type BpDisplay = Pick<Vitals, 'bp_sys' | 'bp_dia'>
 type BpActiveState = Pick<VitalActiveState, 'bp_sys' | 'bp_dia'>
 export type Etco2CalibrationStatus = 'idle' | 'calibrating' | 'calibrated'
 
+function normalizeCprMode(value: unknown, legacyActive?: unknown): CprMode {
+  if (value === 'regular' || value === 'weak') return value
+  if (value === 'off') return 'off'
+  return legacyActive === true ? 'regular' : 'off'
+}
+
 // Instructor-authoritative state pushed to session monitors. Student-local
 // progress (patient info edits, dispatch Acknowledge/Arrival/Transport, EtCO2
 // calibration, and the accepted-BP reading layer) is intentionally excluded so
@@ -108,6 +115,8 @@ export type SharedMonitorState = {
   dispatchRouteConfirmed: DispatchRoute
   dispatch: DispatchState
   dispatchConfirmedSeconds: number
+  cprMode?: CprMode
+  /** Legacy compatibility for clients that predate the three-state CPR mode. */
   cprOverrideActive: boolean
   monitorResetVersion: number
 }
@@ -269,7 +278,7 @@ export type MonitorState = {
   dispatchConfirmedSeconds: number
   monitorResetVersion: number
   etco2CalibrationStatus: Etco2CalibrationStatus
-  cprOverrideActive: boolean
+  cprMode: CprMode
   acceptedBp: BpDisplay
   acceptedBpActive: BpActiveState
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
@@ -288,7 +297,7 @@ export type MonitorState = {
   startEtco2Calibration: () => void
   cancelEtco2Calibration: () => void
   completeEtco2Calibration: () => void
-  setCprOverrideActive: (active: boolean) => void
+  setCprMode: (mode: CprMode) => void
   acceptBpReading: (bp: BpDisplay, active: BpActiveState) => void
   resetMonitorVitals: () => void
   resetVitalsToNormal: () => void
@@ -329,7 +338,7 @@ export const useMonitorStore = create<MonitorState>()(
       dispatchConfirmedSeconds: 0,
       monitorResetVersion: 0,
       etco2CalibrationStatus: 'idle',
-      cprOverrideActive: false,
+      cprMode: 'off',
       acceptedBp: initialBpDisplay,
       acceptedBpActive: inactiveBpActive,
       setDraft: (field, value) =>
@@ -469,8 +478,8 @@ export const useMonitorStore = create<MonitorState>()(
             ? { etco2CalibrationStatus: 'calibrated' }
             : s,
         ),
-      setCprOverrideActive: (active) =>
-        set({ cprOverrideActive: active }),
+      setCprMode: (mode) =>
+        set({ cprMode: normalizeCprMode(mode) }),
       acceptBpReading: (bp, active) =>
         set({
           acceptedBp: { bp_sys: bp.bp_sys, bp_dia: bp.bp_dia },
@@ -489,7 +498,7 @@ export const useMonitorStore = create<MonitorState>()(
           confirmedVitalActive: inactiveVitals,
           monitorResetVersion: s.monitorResetVersion + 1,
           etco2CalibrationStatus: 'idle',
-          cprOverrideActive: false,
+          cprMode: 'off',
           acceptedBp: initialBpDisplay,
           acceptedBpActive: inactiveBpActive,
         })),
@@ -606,7 +615,8 @@ export const useMonitorStore = create<MonitorState>()(
             callerEvents: [...s.dispatch.callerEvents],
           },
           dispatchConfirmedSeconds: s.dispatchConfirmedSeconds,
-          cprOverrideActive: s.cprOverrideActive,
+          cprMode: s.cprMode,
+          cprOverrideActive: s.cprMode !== 'off',
           monitorResetVersion: s.monitorResetVersion,
         }
       },
@@ -674,7 +684,7 @@ export const useMonitorStore = create<MonitorState>()(
               typeof shared.dispatchConfirmedSeconds === 'number'
                 ? shared.dispatchConfirmedSeconds
                 : s.dispatchConfirmedSeconds,
-            cprOverrideActive: shared.cprOverrideActive === true,
+            cprMode: normalizeCprMode(shared.cprMode, shared.cprOverrideActive),
             ...resetSideEffects,
           }
         }),
@@ -704,14 +714,14 @@ export const useMonitorStore = create<MonitorState>()(
           dispatchConfirmedSeconds: 0,
           monitorResetVersion: s.monitorResetVersion + 1,
           etco2CalibrationStatus: 'idle',
-          cprOverrideActive: false,
+          cprMode: 'off',
           acceptedBp: initialBpDisplay,
           acceptedBpActive: inactiveBpActive,
         })),
     }),
     {
       name: STORAGE_KEY,
-      version: 8,
+      version: 9,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist
@@ -719,7 +729,13 @@ export const useMonitorStore = create<MonitorState>()(
       // Passthrough is enough — `merge` below fills/normalizes new fields.
       migrate: (persistedState) => persistedState as MonitorState,
       merge: (persisted, current) => {
-        const persistedState = persisted as Partial<MonitorState> | undefined
+        const persistedState = persisted as
+          | (Partial<MonitorState> & { cprOverrideActive?: unknown })
+          | undefined
+        const {
+          cprOverrideActive: legacyCprOverrideActive,
+          ...persistedWithoutLegacyCpr
+        } = persistedState ?? {}
         const draftVitalActive = normalizeVitalActive(
           persistedState?.draftVitalActive,
           persistedState?.draftVitalsActive,
@@ -752,7 +768,7 @@ export const useMonitorStore = create<MonitorState>()(
 
         return {
           ...current,
-          ...persistedState,
+          ...persistedWithoutLegacyCpr,
           draft: normalizeVitals(persistedState?.draft),
           saved: normalizeVitals(persistedState?.saved),
           confirmed,
@@ -792,7 +808,10 @@ export const useMonitorStore = create<MonitorState>()(
             persistedState?.etco2CalibrationStatus === 'calibrated'
               ? persistedState.etco2CalibrationStatus
               : 'idle',
-          cprOverrideActive: persistedState?.cprOverrideActive === true,
+          cprMode: normalizeCprMode(
+            persistedState?.cprMode,
+            legacyCprOverrideActive,
+          ),
           acceptedBp: normalizeBpDisplay(persistedState?.acceptedBp, confirmed),
           acceptedBpActive: normalizeBpActive(
             persistedState?.acceptedBpActive,

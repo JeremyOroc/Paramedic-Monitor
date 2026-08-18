@@ -60,7 +60,7 @@ describe('monitorStore', () => {
     expect(s.dispatchRouteSaved).toEqual(DEFAULT_DISPATCH_ROUTE)
     expect(s.dispatchRouteConfirmed).toEqual(DEFAULT_DISPATCH_ROUTE)
     expect(s.etco2CalibrationStatus).toBe('idle')
-    expect(s.cprOverrideActive).toBe(false)
+    expect(s.cprMode).toBe('off')
   })
 
   it('setDraft updates only draft', () => {
@@ -93,6 +93,7 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setDraft('hr', 200)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
+    useMonitorStore.getState().setCprMode('weak')
     useMonitorStore.getState().reset()
     const s = useMonitorStore.getState()
     const def = defaultsAsVitals()
@@ -111,6 +112,7 @@ describe('monitorStore', () => {
     expect(s.dispatchRouteDraft).toEqual(DEFAULT_DISPATCH_ROUTE)
     expect(s.dispatchRouteSaved).toEqual(DEFAULT_DISPATCH_ROUTE)
     expect(s.dispatchRouteConfirmed).toEqual(DEFAULT_DISPATCH_ROUTE)
+    expect(s.cprMode).toBe('off')
   })
 
   it('caller info flows through the same draft → save → send pipeline', () => {
@@ -533,7 +535,7 @@ describe('monitorStore', () => {
     expect(s.acceptedBp).toEqual({ bp_sys: 0, bp_dia: 0 })
     expect(s.acceptedBpActive).toEqual({ bp_sys: false, bp_dia: false })
     expect(s.etco2CalibrationStatus).toBe('idle')
-    expect(s.cprOverrideActive).toBe(false)
+    expect(s.cprMode).toBe('off')
     expect(s.monitorResetVersion).toBe(resetVersion + 1)
     expect(s.callerInfoConfirmed.address).toBe('123 Rue Principale')
     expect(s.dispatch.armed).toBe(true)
@@ -570,21 +572,24 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().etco2CalibrationStatus).toBe('calibrated')
   })
 
-  it('tracks CPR override independently from saved vitals and clears it on reset', () => {
+  it('tracks mutually exclusive CPR modes independently from saved vitals and clears on reset', () => {
     useMonitorStore.getState().setDraft('hr', 80)
     useMonitorStore.getState().setDraft('rhythm', 'nsr')
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
 
-    useMonitorStore.getState().setCprOverrideActive(true)
+    useMonitorStore.getState().setCprMode('regular')
 
-    expect(useMonitorStore.getState().cprOverrideActive).toBe(true)
+    expect(useMonitorStore.getState().cprMode).toBe('regular')
     expect(useMonitorStore.getState().confirmed.hr).toBe(80)
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('nsr')
 
+    useMonitorStore.getState().setCprMode('weak')
+    expect(useMonitorStore.getState().cprMode).toBe('weak')
+
     useMonitorStore.getState().resetMonitorVitals()
 
-    expect(useMonitorStore.getState().cprOverrideActive).toBe(false)
+    expect(useMonitorStore.getState().cprMode).toBe('off')
   })
 
   it('keeps accepted BP unchanged on send until a completed reading commits it', () => {
@@ -981,6 +986,20 @@ describe('persist migration', () => {
     expect(s.callerInfoConfirmed.address).toBe('5 Rue Test')
     expect(s.patientInfo).toEqual(DEFAULT_PATIENT_INFO) // seeded by merge
     expect(s.confirmedVitalsActive).toBe(false)
+  })
+
+  it('maps the legacy CPR boolean to the three-state mode', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 8,
+        state: { cprOverrideActive: true },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    expect(useMonitorStore.getState().cprMode).toBe('regular')
   })
 
   it('normalizes removed PEA rhythms in persisted vitals', async () => {

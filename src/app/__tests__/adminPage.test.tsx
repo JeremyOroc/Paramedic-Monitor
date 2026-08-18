@@ -252,8 +252,10 @@ describe('AdminPage', () => {
       useMonitorStore.getState().setDraft('rhythm', 'vf')
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
+      useMonitorStore.getState().setCprMode('weak')
     })
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('vf')
+    expect(useMonitorStore.getState().cprMode).toBe('weak')
     const versionBefore = useMonitorStore.getState().monitorResetVersion
 
     await user.click(screen.getByRole('button', { name: 'New Attempt' }))
@@ -264,11 +266,12 @@ describe('AdminPage', () => {
       expect(useMonitorStore.getState().confirmed.rhythm).toBe('off')
     })
     expect(useMonitorStore.getState().draft.rhythm).toBe('off')
+    expect(useMonitorStore.getState().cprMode).toBe('off')
     // The bumped reset version is what propagates the clear to students.
     expect(useMonitorStore.getState().monitorResetVersion).toBeGreaterThan(versionBefore)
   })
 
-  it('pushes session state immediately when CPR override toggles', async () => {
+  it('pushes every CPR mode transition to the session immediately', async () => {
     const user = userEvent.setup()
     const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
@@ -290,11 +293,26 @@ describe('AdminPage', () => {
       )
     expect(statePosts()).toHaveLength(0)
 
-    await user.click(screen.getByRole('button', { name: 'CPR' }))
+    await user.click(screen.getByRole('button', { name: 'Regular CPR' }))
 
     await waitFor(() => expect(statePosts()).toHaveLength(1))
-    const posted = JSON.parse(String(statePosts()[0][1]?.body))
-    expect(posted.state.cprOverrideActive).toBe(true)
+    const regularPost = JSON.parse(String(statePosts()[0][1]?.body))
+    expect(regularPost.state.cprMode).toBe('regular')
+    expect(regularPost.state.cprOverrideActive).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: 'Weak CPR' }))
+
+    await waitFor(() => expect(statePosts()).toHaveLength(2))
+    const weakPost = JSON.parse(String(statePosts()[1][1]?.body))
+    expect(weakPost.state.cprMode).toBe('weak')
+    expect(weakPost.state.cprOverrideActive).toBe(true)
+
+    await user.click(screen.getByRole('button', { name: 'Weak CPR' }))
+
+    await waitFor(() => expect(statePosts()).toHaveLength(3))
+    const offPost = JSON.parse(String(statePosts()[2][1]?.body))
+    expect(offPost.state.cprMode).toBe('off')
+    expect(offPost.state.cprOverrideActive).toBe(false)
   })
 
   it('pushes session state immediately when Reset is clicked', async () => {
