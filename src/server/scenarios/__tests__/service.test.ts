@@ -8,7 +8,6 @@ import {
   listSavedScenarios,
   listScenarioFolders,
   renameScenarioFolder,
-  ScenarioLibraryError,
   updateSavedScenario,
 } from '../service'
 
@@ -102,7 +101,7 @@ describe('scenario library service', () => {
     })
     mockClient([insert])
 
-    await expect(createScenarioFolder('  GENERAL  ')).rejects.toMatchObject<ScenarioLibraryError>({
+    await expect(createScenarioFolder('  GENERAL  ')).rejects.toMatchObject({
       status: 409,
       message: 'A folder with that name already exists',
     })

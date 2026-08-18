@@ -13,6 +13,9 @@
 ---
 
 ## Completed
+- [x] **Vercel scenario-service test type fix — COMPLETE:**
+  - [x] Removed the unsupported explicit generic from Vitest's `toMatchObject` matcher and the now-unused test import
+  - [x] Focused service tests, `tsc --noEmit`, and the complete Next.js production build pass
 - [x] **Folder-based Supabase scenario library — COMPLETE:**
   - [x] Renamed Caller Info to the default Scenarios tab and added the fixed-height folder accordion above the preserved Caller Info editor
   - [x] Added immutable General behavior, custom folder CRUD, updated-first rows, drag/drop plus accessible moves, and atomic move-to-General folder deletion

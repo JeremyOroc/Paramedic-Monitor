@@ -5,6 +5,11 @@
 
 ---
 
+## [2026-08-18] [scenarios] — Fix Vercel TypeScript build failure
+
+- Removed the unsupported explicit type argument from the scenario-service test's Vitest `toMatchObject` assertion and cleaned up its unused import.
+- Verified all six focused service tests, `tsc --noEmit`, and the full Next.js production build, including the scenario API routes.
+
 ## [2026-08-18] [scenarios] — Deploy and verify scenario-library migrations
 
 - Reconciled the existing remote schema with local migration history by recording migrations `001` and `002`, then deployed migrations `003`, `004`, and `005` to the configured Supabase project.
