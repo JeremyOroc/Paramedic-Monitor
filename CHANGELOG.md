@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-08-18] [monitor] — Increase call-info row spacing
+
+- Adopted the preferred uniform `gap-3` spacing for every assignment-detail header/value group, including lists with optional/custom fields.
+- Updated the documented layout requirement and component regressions to match; the focused CallerInfoModal suite passes all 22 tests.
+
+## [2026-08-18] [monitor] — Strengthen and space call-info rows
+
+- Made the seven standard assignment-detail headers visibly heavier with a subtle 0.35px text stroke and added a 4px gap between each standard header/value group.
+- Kept optional/custom assignments compact so extra rows continue to fit the fixed, non-scrolling desktop panel; values, classic caller info, and all behavior remain unchanged.
+- Added focused emphasis and adaptive-spacing regressions; all 732 tests pass, ESLint has no errors (12 pre-existing warnings), and rendered 1280×720 Browser QA confirmed the computed stroke and gap, full panel containment, no page overflow, and correct Back/reopen behavior.
+
+## [2026-08-18] [monitor] — Enlarge complete standard call-info rows
+
+- Extended the 18px Call Assignment sizing from the seven standard labels to their values, including long Nature of Call, Caller Info, and Updates content; optional/custom rows remain compact.
+- Tightened label line-height, removed redundant row gaps, and reduced title-to-list spacing so the enlarged wrapping content remains fully visible without adding scrolling or changing the classic variant.
+- Updated regressions with the full supplied scenario text; all 732 tests pass, ESLint has no errors (12 pre-existing warnings), and rendered 1280×720 Browser QA confirmed exact 18px row text, 3.5px panel clearance, no horizontal overflow, Back/reopen behavior, and clean console/framework state.
+
+## [2026-08-18] [monitor] — Enlarge standard call-info assignment labels
+
+- Increased Call #, MPDS Code, Address, Nature of Call, Caller Info, Updates, and Call Received to the same 18px size as Call Assignment.
+- Kept field values at 12px and optional/custom extra labels at 10px so the requested sizing change does not alter unrelated content or the classic variant.
+- Expanded palette regressions with sizing boundaries; all 732 tests pass, ESLint has no errors (12 pre-existing warnings), and rendered 1280×720 Browser QA confirmed every label size, full panel fit, Back/reopen behavior, and clean console/framework state.
+
 ## [2026-08-18] [monitor] — Normalize call-info assignment label colors
 
 - Changed the assignment dashboard Response Timer, Call Assignment, dynamic priority, and Lights & Sirens text to the same white treatment as New Assignment.

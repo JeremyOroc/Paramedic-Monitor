@@ -267,6 +267,7 @@
   - [x] Caller-info A/B test added: default icon-led `assignment` dashboard for fast parsing, with the previous tablet layout available via `?callerInfoVariant=classic`
   - [x] Assignment dashboard icon/action colors now follow the reference palette, and all three action buttons stay visible on the monitor
   - [x] Assignment dashboard Response Timer, Call Assignment, and priority block now use white text, while all standard and custom detail labels consistently use dispatch blue; the classic variant remains unchanged
+  - [x] The seven standard assignment-detail labels and values now match the 18px Call Assignment size; headers have stronger 900-weight/stroke emphasis and all assignment-detail lists use the preferred uniform `gap-3` spacing, including optional/custom rows
   - [x] Completed caller action buttons gray out after they are clicked/logged
   - [x] Caller info now renders outside the Zoll shell: pre-Arrival it owns the full page, after Arrival the Zoll appears powered off, and in-monitor CALL INFO opens a full-page iPad surface with Back
   - [x] Arrival now only enables Go to Monitor; every dispatch run, including after admin Reset, must be entered explicitly before the Zoll appears

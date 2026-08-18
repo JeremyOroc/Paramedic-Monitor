@@ -98,6 +98,10 @@ body {
   animation: caller-info-alert-flash 0.58s ease-in-out 4;
 }
 
+.assignment-detail-label-emphasis {
+  -webkit-text-stroke: 0.35px currentColor;
+}
+
 /* Calibration progress bar: fills left to right, starting as a thin hairline and
    thickening as it completes. animation-duration is set inline from
    ETCO2_CALIBRATION_MS so the bar and the timer that ends calibration cannot
