@@ -30,6 +30,7 @@ vi.mock('@/lib/audio', () => ({
 vi.mock('@/components/monitor/DeviceShell', () => ({
   DeviceShell: ({
     screen,
+    screenModal,
     defib,
     softKeys,
     nav,
@@ -37,6 +38,7 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
     audio,
   }: {
     screen: ReactNode
+    screenModal?: ReactNode
     defib: { onAnalyse: () => void }
     softKeys: {
       onLeftAnalyse: () => void
@@ -59,6 +61,7 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
   }) => (
     <div data-testid="device-shell">
       {screen}
+      {screenModal}
       <button type="button" onClick={defib.onAnalyse}>
         Analyze rhythm
       </button>
@@ -492,6 +495,62 @@ describe('MonitorPage', () => {
     expect(screen.getByText('110')).toBeInTheDocument()
     expect(screen.getByText('70')).toBeInTheDocument()
     expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 110, bp_dia: 70 })
+    vi.useRealTimers()
+  })
+
+  it('opens NIBP with physical navigation and completes a recurring automatic reading', () => {
+    vi.useFakeTimers()
+    act(() => {
+      useMonitorStore.getState().acceptBpReading(
+        { bp_sys: 120, bp_dia: 80 },
+        { bp_sys: true, bp_dia: true },
+      )
+      useMonitorStore.getState().setDraft('bp_sys', 110)
+      useMonitorStore.getState().setDraft('bp_dia', 70)
+      useMonitorStore.getState().setDraftVitalActive('bp_sys', true)
+      useMonitorStore.getState().setDraftVitalActive('bp_dia', true)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    for (let i = 0; i < 5; i += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Move up' }))
+    }
+    expect(screen.getByText('PNI').closest('[data-selected]')).toHaveAttribute(
+      'data-selected',
+      'true',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+    expect(screen.getByRole('dialog', { name: 'NIBP settings' })).toBeInTheDocument()
+    expect(screen.getByText('NIBP Systolic Alarm')).toHaveAttribute('aria-current', 'true')
+
+    for (let i = 0; i < 3; i += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Move up' }))
+    expect(screen.getByText('Automatic')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Move down' }))
+    expect(screen.getByText('1 min')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Enter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.queryByRole('dialog', { name: 'NIBP settings' })).toBeNull()
+
+    act(() => { vi.advanceTimersByTime(59_999) })
+    expect(screen.queryByText('Please Wait')).toBeNull()
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(screen.getByText('Please Wait')).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+    expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 110, bp_dia: 70 })
+    expect(screen.getByText('110')).toBeInTheDocument()
+    expect(screen.getByText('70')).toBeInTheDocument()
     vi.useRealTimers()
   })
 

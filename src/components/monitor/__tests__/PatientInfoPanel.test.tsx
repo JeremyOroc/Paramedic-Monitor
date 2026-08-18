@@ -36,7 +36,11 @@ describe('PatientInfoPanel', () => {
     setup({ selectedField: 'exit' })
 
     expect(screen.getByText('Exit')).toHaveAttribute('aria-current', 'true')
-    expect(screen.getByText('Exit')).toHaveClass('bg-[#2f6df6]')
+    expect(screen.getByText('Exit')).toHaveClass(
+      'bg-[var(--color-selection-blue)]',
+      'border-2',
+      'border-white',
+    )
   })
 
   it('marks the selected field as current', () => {
@@ -57,8 +61,8 @@ describe('PatientInfoPanel', () => {
     setup({ selectedField: 'age', editing: false })
     const label = screen.getByText('Patient Age')
     const valueCell = screen.getByText('63').parentElement as HTMLElement
-    expect(label).toHaveClass('bg-[#2f6df6]')
-    expect(valueCell).not.toHaveClass('bg-[#2f6df6]')
+    expect(label).toHaveClass('bg-[var(--color-selection-blue)]')
+    expect(valueCell).not.toHaveClass('bg-[var(--color-selection-blue)]')
     expect(valueCell).toHaveClass('bg-black')
   })
 
@@ -66,8 +70,8 @@ describe('PatientInfoPanel', () => {
     setup({ selectedField: 'age', editing: true })
     const label = screen.getByText('Patient Age')
     const valueCell = screen.getByText('63').parentElement as HTMLElement
-    expect(valueCell).toHaveClass('bg-[#2f6df6]')
-    expect(label).not.toHaveClass('bg-[#2f6df6]')
+    expect(valueCell).toHaveClass('bg-[var(--color-selection-blue)]')
+    expect(label).not.toHaveClass('bg-[var(--color-selection-blue)]')
   })
 
   it('never gives a label cell a black background', () => {
@@ -86,5 +90,15 @@ describe('PatientInfoPanel', () => {
     const panel = screen.getByRole('region', { name: 'Patient Info' })
     expect(panel).toHaveClass('left-[56px]')
     expect(panel).not.toHaveClass('inset-x-0')
+  })
+
+  it('uses the shared Patient Info title, surface, and boxed action styling', () => {
+    setup()
+    const title = screen.getByRole('heading', { name: 'Patient Info' })
+    expect(title.parentElement).toHaveClass('bg-white', 'text-black')
+    expect(title.parentElement?.nextElementSibling).toHaveClass(
+      'bg-[var(--color-modal-surface)]',
+    )
+    expect(screen.getByText('Exit')).toHaveClass('bg-black', 'border-white', 'text-white')
   })
 })

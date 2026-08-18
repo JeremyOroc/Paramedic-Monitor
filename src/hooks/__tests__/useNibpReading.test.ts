@@ -95,6 +95,20 @@ describe('useNibpReading', () => {
     expect(onComplete).not.toHaveBeenCalled()
   })
 
+  it('exposes cancellation for power-off cleanup', () => {
+    const onComplete = vi.fn()
+    const { result } = renderHook(() => useNibpReading(110, onComplete))
+
+    act(() => result.current.handlePatientEvent())
+    act(() => { vi.advanceTimersByTime(3000 + 500 + 1000) })
+    act(() => result.current.cancelReading())
+    act(() => { vi.advanceTimersByTime(10_000) })
+
+    expect(result.current.phase).toBe('idle')
+    expect(result.current.displayValue).toBe('')
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+
   it('commits an inactive BP snapshot by returning to idle with blank display', () => {
     const onComplete = vi.fn()
     const { result } = renderHook(() =>

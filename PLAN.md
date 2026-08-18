@@ -419,6 +419,64 @@ existing close-panel and exit-12-lead precedence.
 
 **Milestone:** Clicking Adult label shows mode picker. BP animation plays before numbers appear.
 
+**Requirement change (2026-08-17) — Two-stage NIBP focus and consistent monitor modal styling:**
+- Every NIBP data row now uses a two-stage hardware cursor. Opening starts on
+  the Systolic label; Enter moves from a selected label to its combined
+  right-side value region, and Enter or Back returns to the same label. Back
+  closes NIBP only while label-focused. Mouse hover and clicks remain inert.
+- Label-focused Up/Down cycles through all six data rows and Exit. Value-focused
+  alarm limits and SmartCuf ignore arrows, Mode toggles with either arrow, and
+  Interval uses Up for the next larger value and Down for the previous value
+  across 1, 2, 5, 15, 30, and 60 minutes with wrap-around. Live setting changes
+  retain the existing automatic-cuff scheduling behavior.
+- Patient Info, NIBP, and Event Log share the Patient Info visual language:
+  white title bars, the common green modal surface, centered black value cells,
+  blue active label/value regions, bold monospace typography, and boxed modal
+  actions. NIBP keeps its geometry and responsive row text; Event Log keeps its
+  content density and pagination behavior. Vital Log remains unchanged.
+- The shared Exit/Prev/Next action style uses a black surface, white rectangular
+  border and text, and a blue selected state. Disabled Event Log pagination
+  actions remain selectable no-ops with reduced opacity.
+
+**Testing:**
+- Controller and monitor-flow coverage verifies every NIBP label/value
+  transition, cyclic label navigation, read-only arrow no-ops, directional
+  setting changes and wrapping, Enter/Back precedence, Exit, reopen/reset
+  defaults, and live automatic scheduling after interval changes.
+- Component regressions verify left-versus-right selection, combined alarm
+  focus, centered limits, shared title/surface/action styling, pointer-inert
+  NIBP markup, and unchanged Patient Info/Event Log behavior.
+- Complete Vitest, ESLint, production-build, and rendered 1024×768 and
+  1366×768 browser checks cover all three restyled modals.
+
+**Requirement change (2026-08-17) — NIBP settings modal and automatic cuff mode:**
+- Selecting the PNI vital with the outer-shell navigation cluster and pressing
+  Enter opens a Zoll-style NIBP modal over the waveform column. The modal owns
+  Up/Down/Enter navigation until Exit or the physical Back key closes it.
+- The cyclic row order is NIBP Systolic Alarm → NIBP Diastolic Alarm → NIBP
+  MAP Alarm → NIBP Mode → NIBP Auto Mode Interval → SmartCuf On/Off → Exit.
+  Alarm values and SmartCuf are read-only; Mode cycles Manual/Automatic and the
+  interval cycles 1, 2, 5, 15, 30, and 60 minutes.
+- Displayed limits are SYS 90–200, DIA 25–225, and MAP 46–216. SYS/DIA reuse
+  the active alarm constants; MAP is reference-only and does not add MAP alarm
+  evaluation. SmartCuf remains On. Start TurboCuf and the reference ruler are
+  intentionally omitted.
+- Automatic mode waits one full selected interval before starting the existing
+  Patient event cuff sequence, then repeats start-to-start. A manual Patient
+  event press keeps the existing start/cancel behavior and restarts the
+  automatic deadline. Busy automatic ticks skip rather than cancel an active
+  reading. Power-off/reset restores Manual, 2 min, and SmartCuf On.
+
+**Testing:**
+- Component coverage verifies reference rows, values, styling, geometry,
+  pointer-inert content, Exit, and omitted TurboCuf/ruler content.
+- Controller coverage verifies PNI opening, cyclic row navigation, read-only
+  no-ops, setting cycles, modal exclusion, Back/Exit, and power/reset defaults.
+- Scheduler coverage uses fake timers for delayed/recurring triggers, manual
+  deadline resets, interval changes, busy skips, dormant BP, and cleanup.
+- Full monitor-flow coverage operates the physical shell controls and verifies
+  an automatic reading enters and completes the existing cuff sequence.
+
 **Requirement change (2026-05-31) — Dispatch lock + countdown startup gate:**
 Supersedes the earlier "power button is local only / never gates the monitor UI"
 note (Phase 3). Normal users now boot the monitor **locked-off**; the power

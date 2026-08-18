@@ -658,4 +658,201 @@ describe('useMonitorController', () => {
     act(() => result.current.onMoveDown())
     expect(result.current.patientModeHighlightedIndex).not.toBe(before)
   })
+
+  it('opens NIBP on the Systolic label and enters/exits every right-side value', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    expect(result.current.selectedControl).toBe('nibpVital')
+
+    act(() => result.current.onEnter())
+    expect(result.current.nibpModalOpen).toBe(true)
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpFocusSide).toBe('label')
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpAutoInterval).toBe(2)
+
+    const rows = [
+      'systolicAlarm',
+      'diastolicAlarm',
+      'mapAlarm',
+      'mode',
+      'autoInterval',
+      'smartCuf',
+    ] as const
+    const readOnlyRows = new Set(['systolicAlarm', 'diastolicAlarm', 'mapAlarm', 'smartCuf'])
+
+    rows.forEach((row, index) => {
+      expect(result.current.nibpHighlightedRow).toBe(row)
+      expect(result.current.nibpFocusSide).toBe('label')
+      act(() => result.current.onEnter())
+      expect(result.current.nibpFocusSide).toBe('value')
+
+      if (readOnlyRows.has(row)) {
+        const before = {
+          row: result.current.nibpHighlightedRow,
+          mode: result.current.nibpMode,
+          interval: result.current.nibpAutoInterval,
+        }
+        act(() => result.current.onMoveUp())
+        act(() => result.current.onMoveDown())
+        expect(result.current.nibpHighlightedRow).toBe(before.row)
+        expect(result.current.nibpMode).toBe(before.mode)
+        expect(result.current.nibpAutoInterval).toBe(before.interval)
+      }
+
+      act(() => result.current.onEnter())
+      expect(result.current.nibpFocusSide).toBe('label')
+      if (index < rows.length - 1) act(() => result.current.onMoveDown())
+    })
+  })
+
+  it('cycles NIBP labels and edits Mode with either arrow', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    act(() => result.current.onEnter())
+
+    act(() => result.current.onMoveUp())
+    expect(result.current.nibpHighlightedRow).toBe('exit')
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpHighlightedRow).toBe('mode')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('value')
+    act(() => result.current.onMoveUp())
+    expect(result.current.nibpMode).toBe('automatic')
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpHighlightedRow).toBe('mode')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('label')
+  })
+
+  it('edits the automatic interval directionally with wrap-around', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    act(() => result.current.onEnter())
+    for (let i = 0; i < 4; i += 1) act(() => result.current.onMoveDown())
+    expect(result.current.nibpHighlightedRow).toBe('autoInterval')
+    act(() => result.current.onEnter())
+
+    for (const expected of [5, 15, 30, 60, 1, 2] as const) {
+      act(() => result.current.onMoveUp())
+      expect(result.current.nibpAutoInterval).toBe(expected)
+    }
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpAutoInterval).toBe(1)
+    act(() => result.current.onMoveDown())
+    expect(result.current.nibpAutoInterval).toBe(60)
+  })
+
+  it('gives value-focused Enter/Back precedence, then closes with Exit or Back', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    act(() => result.current.onEnter())
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('value')
+    act(() => result.current.onBack())
+    expect(result.current.nibpModalOpen).toBe(true)
+    expect(result.current.nibpFocusSide).toBe('label')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('value')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpFocusSide).toBe('label')
+    act(() => result.current.onMoveUp())
+    expect(result.current.nibpHighlightedRow).toBe('exit')
+    act(() => result.current.onEnter())
+    expect(result.current.nibpModalOpen).toBe(false)
+
+    act(() => result.current.onEnter())
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpFocusSide).toBe('label')
+    act(() => result.current.onMoveDown())
+    act(() => result.current.onBack())
+    expect(result.current.nibpModalOpen).toBe(false)
+
+    act(() => result.current.onEnter())
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpFocusSide).toBe('label')
+  })
+
+  it('makes NIBP modal exclusive with competing monitor menus and navigation', () => {
+    const { result } = setup()
+
+    for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+      act(() => result.current.onMoveUp())
+    }
+    act(() => result.current.onEnter())
+    const beforeBottomStatus = result.current.bottomStatusVisible
+
+    act(() => result.current.onHome())
+    act(() => result.current.onPatientInfo())
+    act(() => result.current.onLeftAnalyse())
+    act(() => result.current.onTreatment())
+    act(() => result.current.onTwelveLead())
+    act(() => result.current.onToggleEtco2())
+    act(() => result.current.onToggleBottomStatus())
+
+    expect(result.current.nibpModalOpen).toBe(true)
+    expect(result.current.vitalLogOpen).toBe(false)
+    expect(result.current.patientInfoOpen).toBe(false)
+    expect(result.current.callerInfoOpen).toBe(false)
+    expect(result.current.medicationMode).toBe(false)
+    expect(result.current.view).toBe('main')
+    expect(result.current.secondary).toBe('spo2')
+    expect(result.current.bottomStatusVisible).toBe(beforeBottomStatus)
+  })
+
+  it('restores NIBP defaults on monitor reset and power-off', () => {
+    const { result } = setup()
+
+    const configureAutomatic = () => {
+      for (let i = 0; i < 12 && result.current.selectedControl !== 'nibpVital'; i += 1) {
+        act(() => result.current.onMoveUp())
+      }
+      act(() => result.current.onEnter())
+      act(() => result.current.onMoveDown())
+      act(() => result.current.onMoveDown())
+      act(() => result.current.onMoveDown())
+      act(() => result.current.onEnter())
+      act(() => result.current.onMoveUp())
+      act(() => result.current.onEnter())
+      act(() => result.current.onMoveDown())
+      act(() => result.current.onEnter())
+      act(() => result.current.onMoveUp())
+      act(() => result.current.onEnter())
+    }
+
+    configureAutomatic()
+    expect(result.current.nibpMode).toBe('automatic')
+    expect(result.current.nibpAutoInterval).toBe(5)
+    act(() => result.current.onResetMonitorUi())
+    expect(result.current.nibpModalOpen).toBe(false)
+    expect(result.current.nibpFocusSide).toBe('label')
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpAutoInterval).toBe(2)
+
+    configureAutomatic()
+    act(() => result.current.onPowerOff())
+    expect(result.current.nibpModalOpen).toBe(false)
+    expect(result.current.nibpHighlightedRow).toBe('systolicAlarm')
+    expect(result.current.nibpFocusSide).toBe('label')
+    expect(result.current.nibpMode).toBe('manual')
+    expect(result.current.nibpAutoInterval).toBe(2)
+  })
 })
