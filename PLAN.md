@@ -477,6 +477,21 @@ existing close-panel and exit-12-lead precedence.
 - Full monitor-flow coverage operates the physical shell controls and verifies
   an automatic reading enters and completes the existing cuff sequence.
 
+**Requirement change (2026-08-18) — Assignment dashboard label colors:**
+- On the assignment caller-info dashboard only, Response Timer and its value,
+  Call Assignment, the dynamic priority value, and Lights & Sirens use the same
+  white text treatment as New Assignment.
+- Every assignment-detail label uses the existing dispatch blue, including the
+  standard caller fields and all optional or custom extra-field labels. Detail
+  values, layout, timer behavior, and the classic caller-info variant remain
+  unchanged.
+
+**Testing:**
+- Component coverage verifies the white timer/assignment/priority treatment,
+  blue standard and custom detail labels, and an unchanged classic variant.
+- Rendered desktop coverage compares the assignment dashboard with the supplied
+  reference and checks console/framework health without adding mobile scope.
+
 **Requirement change (2026-05-31) — Dispatch lock + countdown startup gate:**
 Supersedes the earlier "power button is local only / never gates the monitor UI"
 note (Phase 3). Normal users now boot the monitor **locked-off**; the power

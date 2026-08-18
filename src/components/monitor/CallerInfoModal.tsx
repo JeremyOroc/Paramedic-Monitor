@@ -72,51 +72,39 @@ type AssignmentIconName =
 
 const ASSIGNMENT_FIELD_META: Partial<Record<CallerInfoField, {
   label: string
-  colorClassName: string
 }>> = {
   callNumber: {
     label: 'Call #',
-    colorClassName: 'text-dispatch-blue',
   },
   priority: {
     label: 'Priority',
-    colorClassName: 'text-dispatch-red',
   },
   mpdsCode: {
     label: 'MPDS Code',
-    colorClassName: 'text-dispatch-yellow',
   },
   address: {
     label: 'Address',
-    colorClassName: 'text-dispatch-blue',
   },
   problem: {
     label: 'Nature of Call',
-    colorClassName: 'text-dispatch-yellow',
   },
   time: {
     label: 'Call Received',
-    colorClassName: 'text-dispatch-green',
   },
   information: {
     label: 'Caller Info',
-    colorClassName: 'text-dispatch-purple',
   },
   update: {
     label: 'Updates',
-    colorClassName: 'text-dispatch-blue',
   },
   extra1: {
     label: 'Notes',
-    colorClassName: 'text-dispatch-yellow',
   },
   extra2: {
     label: 'Hazards / Alerts',
-    colorClassName: 'text-dispatch-red',
   },
   extra3: {
     label: 'Additional Info',
-    colorClassName: 'text-dispatch-orange',
   },
 }
 
@@ -372,12 +360,10 @@ function AssignmentCallerInfoContent({
           </h2>
         </div>
         <div aria-label="Response timer" className="border-l border-neutral-700 px-4 py-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-neutral-400">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white">
             Response Timer
           </p>
-          <p
-            className="font-mono text-2xl font-black tabular-nums text-dispatch-red"
-          >
+          <p className="font-mono text-2xl font-black tabular-nums text-white">
             {responseFormatted}
           </p>
         </div>
@@ -386,15 +372,15 @@ function AssignmentCallerInfoContent({
         <div className="min-h-0 overflow-hidden border-r border-neutral-700 px-4 py-3">
           <div className="mb-3 grid grid-cols-[1fr_auto] gap-4 border-b border-neutral-700 pb-3">
             <div>
-              <p className="text-lg font-black text-dispatch-blue">
+              <p className="text-lg font-black text-white">
                 Call Assignment
               </p>
             </div>
             <div className="border-l border-neutral-600 pl-4">
-              <p className="text-lg font-black uppercase leading-tight text-dispatch-red">
+              <p className="text-lg font-black uppercase leading-tight text-white">
                 {priority}
               </p>
-              <p className="text-xs font-bold text-dispatch-red">Lights & Sirens</p>
+              <p className="text-xs font-bold text-white">Lights & Sirens</p>
             </div>
           </div>
           {hasInfo ? (
@@ -413,10 +399,7 @@ function AssignmentCallerInfoContent({
                   >
                     <span className="min-w-0">
                       <span
-                        className={cn(
-                          'block text-[10px] font-black uppercase tracking-[0.12em]',
-                          meta?.colorClassName ?? 'text-dispatch-blue',
-                        )}
+                        className="block text-[10px] font-black uppercase tracking-[0.12em] text-dispatch-blue"
                       >
                         {resolvedLabel}
                       </span>

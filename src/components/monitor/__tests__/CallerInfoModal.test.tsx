@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 
 import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
 import { DEFAULT_DISPATCH_ROUTE } from '@/types/dispatchRoute'
@@ -111,6 +111,65 @@ describe('CallerInfoModal', () => {
       expect(row).not.toHaveClass('grid-cols-[32px_1fr]')
       expect(row.querySelector('svg')).toBeNull()
     }
+  })
+
+  it('uses the clarified white and blue assignment dashboard text colors', () => {
+    renderModal({
+      responseFormatted: '01:12',
+      info: {
+        ...DEFAULT_CALLER_INFO,
+        callNumber: 'C-2026-15',
+        priority: 'P1 / DELTA',
+        mpdsCode: '28-D-1',
+        address: '315 Boulevard Brunswick',
+        problem: 'Sudden weakness',
+        information: 'Caller reports slurred speech',
+        update: 'Unable to lift left arm',
+        time: '13:18',
+        extra1Label: 'Access Notes',
+        extra1: 'Use side entrance',
+        extra2: 'Scene hazard',
+        extra3: 'Additional context',
+      },
+    })
+
+    expect(screen.getByText('Response Timer')).toHaveClass('text-white')
+    expect(screen.getByText('01:12')).toHaveClass('text-white')
+    expect(screen.getByText('Call Assignment')).toHaveClass('text-white')
+    expect(screen.getByText('P1 / DELTA')).toHaveClass('text-white')
+    expect(screen.getByText('Lights & Sirens')).toHaveClass('text-white')
+
+    const expectedLabels = [
+      ['callNumber', 'Call #'],
+      ['mpdsCode', 'MPDS Code'],
+      ['address', 'Address'],
+      ['problem', 'Nature of Call'],
+      ['information', 'Caller Info'],
+      ['update', 'Updates'],
+      ['time', 'Call Received'],
+      ['extra1', 'Access Notes'],
+      ['extra2', 'Hazards / Alerts'],
+      ['extra3', 'Additional Info'],
+    ] as const
+
+    for (const [field, label] of expectedLabels) {
+      expect(
+        within(screen.getByTestId(`assignment-info-${field}`)).getByText(label),
+      ).toHaveClass('text-dispatch-blue')
+    }
+  })
+
+  it('keeps classic caller-info label colors unchanged', () => {
+    renderModal({
+      variant: 'classic',
+      info: {
+        ...DEFAULT_CALLER_INFO,
+        callNumber: 'C-2026-15',
+      },
+    })
+
+    expect(screen.getByText('Call #')).toHaveClass('text-dispatch-muted')
+    expect(screen.getByText('Call #')).not.toHaveClass('text-dispatch-blue')
   })
 
   it('renders the caller assignment alert flash overlay only when requested', () => {
