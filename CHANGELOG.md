@@ -5,6 +5,25 @@
 
 ---
 
+## [2026-08-18] [scenarios] — Deploy and verify scenario-library migrations
+
+- Reconciled the existing remote schema with local migration history by recording migrations `001` and `002`, then deployed migrations `003`, `004`, and `005` to the configured Supabase project.
+- Verified matching local/remote versions `001`–`005`, no pending dry-run migrations, the participant token index, removed public-read policies, both RLS-enabled scenario tables, the single General seed row, all three triggers, and service-role-only scenario RPC access.
+- Confirmed the service role has complete CRUD privileges on both scenario tables. Supabase advisors report two non-blocking mutable-search-path warnings on the trigger functions for follow-up hardening.
+
+## [2026-08-18] [scenarios] — Implement folder-based Supabase scenario library
+
+- Made Scenarios the default first admin tab, preserved the full Caller Info editor, and added the Title field, fixed-height folder accordion, inline folder management, highlighted updated-first scenario rows, drag/drop and accessible moves, and green Save/red Delete actions.
+- Added versioned full-authoring snapshots with direct stage-only restoration across monitor, caller info, patient information, and patient physical drafts; manual edits, dirty/reverted disabling, discard confirmation, blank-title numbering, and delete-retain-draft behavior are covered.
+- Added RLS-protected folder/scenario tables, protected General behavior, transactional number allocation and folder deletion, typed service-role APIs, and a centralized future authorization boundary while leaving the legacy timed-state table unchanged.
+- Added snapshot, store, service, API, component, and admin integration coverage; all 757 tests pass, Supabase schema lint reports no errors, ESLint has no errors (12 pre-existing warnings), the production build succeeds, and rendered 1024px QA confirms the new layout and tab interactions. Migration `005` remains to be deployed to the configured live Supabase project.
+
+## [2026-08-18] [scenarios] — Define folder-based Supabase scenario library
+
+- Replaced the deferred timed-state scenario-builder requirement with a global folder library for reusable full-draft scenario snapshots.
+- Defined immutable General-folder behavior, custom folder CRUD, updated-first scenario rows, drag/drop moves with an accessible fallback, smallest-unused fallback numbering, and stage-only loading.
+- Defined the snapshot boundary, typed server API and RLS architecture, dirty-state behavior, deletion behavior, and the required unit, integration, API, and rendered-browser coverage.
+
 ## [2026-08-18] [monitor] — Add Regular and Weak CPR override modes
 
 - Replaced the single admin CPR toggle with mutually exclusive side-by-side Regular CPR and Weak CPR controls that switch directly and turn off when the active mode is pressed again.

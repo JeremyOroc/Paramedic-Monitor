@@ -19,6 +19,10 @@ vi.mock('next/navigation', () => ({
   usePathname: () => window.location.pathname,
 }))
 
+vi.mock('@/components/instructor/ScenarioLibraryPanel', () => ({
+  ScenarioLibraryPanel: () => <section aria-label="Scenarios library">Scenario library</section>,
+}))
+
 describe('AdminPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -147,6 +151,7 @@ describe('AdminPage', () => {
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
 
     await user.click(screen.getByRole('button', { name: 'New Attempt' }))
 
@@ -286,6 +291,7 @@ describe('AdminPage', () => {
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
 
     const statePosts = () =>
       fetchMock.mock.calls.filter(
@@ -344,14 +350,22 @@ describe('AdminPage', () => {
     })
   })
 
-  it('shows monitor controls by default and keeps caller info in its own tab', async () => {
+  it('shows Scenarios first and by default, with Monitor in the next tab', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    expect(screen.getByRole('button', { name: 'Monitor' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Scenarios' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Patient Information' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Patient Physical' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Scenarios library')).toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
+    expect(screen.getByLabelText('Auto-sort scenario')).toBeInTheDocument()
+    expect(screen.getByLabelText('Adresse')).toBeInTheDocument()
+    expect(screen.queryByText('Vitals')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+
+    expect(screen.getByRole('button', { name: 'Monitor' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Vitals')).toBeInTheDocument()
     expect(screen.queryByLabelText('Auto-sort vitals')).toBeNull()
     expect(within(screen.getByTestId('admin-graph-row-ecg')).getByRole('button', { name: 'ECG off' })).toBeInTheDocument()
@@ -364,20 +378,13 @@ describe('AdminPage', () => {
       'false',
     )
     expect(screen.queryByLabelText('Adresse')).toBeNull()
-
-    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
-
-    expect(screen.getByRole('button', { name: 'Caller Info' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByLabelText('Auto-sort scenario')).toBeInTheDocument()
-    expect(screen.getByLabelText('Adresse')).toBeInTheDocument()
-    expect(screen.queryByText('Vitals')).toBeNull()
   })
 
   it('uses the Caller Info auto-sort scenario box to populate all admin sections', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -486,7 +493,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -538,7 +545,7 @@ describe('AdminPage', () => {
     useMonitorStore.getState().setDraftVitalActive('etco2', true)
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -571,7 +578,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -779,7 +786,7 @@ describe('AdminPage', () => {
 
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -881,7 +888,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     await user.type(
       screen.getByLabelText('Auto-sort scenario'),
       [
@@ -919,6 +926,7 @@ describe('AdminPage', () => {
     })
 
     render(<AdminPage />)
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
     expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
       'data-calibrated',
       'true',
@@ -945,7 +953,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
 
     render(<AdminPage />)
-    await user.click(screen.getByRole('button', { name: 'Caller Info' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -987,6 +995,7 @@ describe('AdminPage', () => {
   it('stages SpO2 and EtCO2 graph state through the left vital toggles', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
 
     await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Rhythm Options' }))
     await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Cardiac Arrest' }))
@@ -1008,6 +1017,7 @@ describe('AdminPage', () => {
   it('sends SpO2 and EtCO2 graph on/off state from the left vital toggles', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
+    await user.click(screen.getByRole('button', { name: 'Monitor' }))
 
     await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
     await user.click(screen.getByRole('button', { name: 'EtCO2 off' }))

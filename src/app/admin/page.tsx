@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
 import { CallerInfoForm } from '@/components/instructor/CallerInfoForm'
+import { ScenarioLibraryPanel } from '@/components/instructor/ScenarioLibraryPanel'
 import {
   PatientInformationPanel,
   type PatientInfoChecklist,
@@ -32,14 +33,20 @@ import {
   type PatientPhysicalFindings,
 } from '@/lib/patientPhysicalAutoSort'
 import { anyoneCalibratedEtco2, isConnected, participantProgress } from '@/lib/sessionRoster'
+import {
+  createScenarioSnapshot,
+  hasMeaningfulScenarioContent,
+  scenarioSnapshotsEqual,
+} from '@/lib/scenarioSnapshot'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
 import type { CprMode, NumericVitalField } from '@/types/vitals'
 import type { StudentEvent } from '@/types/session'
+import type { SavedScenario, ScenarioSnapshotV1 } from '@/types/savedScenario'
 
-type AdminTab = 'monitor' | 'caller' | 'patient' | 'physical'
+type AdminTab = 'scenarios' | 'monitor' | 'patient' | 'physical'
 type PatientPhysicalIconGroupId =
   | 'respiratory'
   | 'pulse'
@@ -75,10 +82,27 @@ type ReviewParticipant = {
   last_seen_at: string | null
 }
 
+type ScenarioBaseline = {
+  title: string
+  snapshot: ScenarioSnapshotV1
+}
+
+function getResponseError(data: unknown, fallback: string): string {
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'error' in data &&
+    typeof data.error === 'string'
+  ) {
+    return data.error
+  }
+  return fallback
+}
+
 export default function AdminPage({ session }: SessionAdminProps = {}) {
   const router = useRouter()
   useStoreHydration()
-  const [tab, setTab] = useState<AdminTab>('monitor')
+  const [tab, setTab] = useState<AdminTab>('scenarios')
   const [patientSelections, setPatientSelections] = useState<PatientInformationSelections>(
     EMPTY_PATIENT_INFORMATION_SELECTIONS,
   )
@@ -93,12 +117,28 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     useState<PatientPhysicalFindings>({})
   const [patientPhysicalActiveIconGroup, setPatientPhysicalActiveIconGroup] =
     useState<PatientPhysicalIconGroupId | null>(null)
+  const [scenarioTitle, setScenarioTitle] = useState('')
+  const [selectedScenarioFolderId, setSelectedScenarioFolderId] = useState('')
+  const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
+  const [scenarioBaseline, setScenarioBaseline] = useState<ScenarioBaseline | null>(null)
+  const [scenarioRefreshVersion, setScenarioRefreshVersion] = useState(0)
+  const [scenarioEditorVersion, setScenarioEditorVersion] = useState(0)
+  const [scenarioAction, setScenarioAction] = useState<'idle' | 'saving' | 'deleting'>('idle')
+  const [scenarioError, setScenarioError] = useState('')
   const reset = useMonitorStore((s) => s.reset)
   const resetMonitorVitals = useMonitorStore((s) => s.resetMonitorVitals)
   const setDraftVitalValues = useMonitorStore((s) => s.setDraftVitalValues)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
+  const applyScenarioDraft = useMonitorStore((s) => s.applyScenarioDraft)
   const getSharedState = useMonitorStore((s) => s.getSharedState)
   const startDispatchClock = useMonitorStore((s) => s.startDispatchClock)
+  const scenarioVitalsDraft = useMonitorStore((s) => s.draft)
+  const scenarioVitalActive = useMonitorStore((s) => s.draftVitalActive)
+  const scenarioLastRhythm = useMonitorStore((s) => s.lastRhythm)
+  const scenarioCallerInfo = useMonitorStore((s) => s.callerInfoDraft)
+  const scenarioDispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
+  const scenarioDispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
+  const scenarioDispatchOrigin = useMonitorStore((s) => s.dispatchRouteDraft.originAddress)
   // Flips true on the first Send. Used to gate Start: the call has to be staged
   // before the room can open, so opening it is what begins the scenario.
   const dispatchArmed = useMonitorStore((s) => s.dispatch.armed)
@@ -238,6 +278,38 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       )
     })
   }, [cprMode, monitorResetVersion, sendSessionState, session])
+
+  const currentScenarioSnapshot = createScenarioSnapshot({
+    autoSortText: universalAutoSortText,
+    monitor: {
+      draft: scenarioVitalsDraft,
+      draftVitalActive: scenarioVitalActive,
+      lastRhythm: scenarioLastRhythm,
+    },
+    callerInfo: scenarioCallerInfo,
+    dispatch: {
+      minutes: scenarioDispatchMinutes,
+      seconds: scenarioDispatchSeconds,
+      originAddress: scenarioDispatchOrigin,
+    },
+    patientInformation: {
+      selected: patientSelections,
+      values: patientText,
+    },
+    patientPhysical: {
+      selected: patientPhysicalSelections,
+      findings: patientPhysicalFindings,
+    },
+  })
+  const scenarioHasContent = hasMeaningfulScenarioContent(currentScenarioSnapshot)
+  const scenarioIsDirty = scenarioBaseline
+    ? scenarioTitle !== scenarioBaseline.title ||
+      !scenarioSnapshotsEqual(currentScenarioSnapshot, scenarioBaseline.snapshot)
+    : scenarioTitle.trim() !== '' || scenarioHasContent
+  const saveScenarioDisabled = loadedScenarioId
+    ? !scenarioIsDirty
+    : !scenarioHasContent || !selectedScenarioFolderId
+
   const resetPatientInformation = () => {
     setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
     setPatientText(EMPTY_PATIENT_INFORMATION_TEXT())
@@ -255,15 +327,114 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setUniversalAutoSortText('')
     resetPatientInformation()
     resetPatientPhysical()
+    setScenarioTitle('')
+    setLoadedScenarioId(null)
+    setScenarioBaseline(null)
+    setScenarioError('')
+    setScenarioEditorVersion((version) => version + 1)
   }
   const handleReset =
     tab === 'monitor'
       ? resetMonitorVitals
-      : tab === 'caller'
+      : tab === 'scenarios'
         ? resetAllInstructorState
         : tab === 'patient'
           ? resetPatientInformation
           : resetPatientPhysical
+
+  const handleLoadScenario = (scenario: SavedScenario) => {
+    if (
+      scenarioIsDirty &&
+      !window.confirm('Discard unsaved scenario changes and load this scenario?')
+    ) {
+      return
+    }
+
+    applyScenarioDraft(scenario.snapshot)
+    setUniversalAutoSortText(scenario.snapshot.autoSortText)
+    setPatientSelections({
+      sample: new Set(scenario.snapshot.patientInformation.selected.sample),
+      opqrst: new Set(scenario.snapshot.patientInformation.selected.opqrst),
+    })
+    setPatientText({
+      sample: { ...scenario.snapshot.patientInformation.values.sample },
+      opqrst: { ...scenario.snapshot.patientInformation.values.opqrst },
+    })
+    setPatientPhysicalSelections(new Set(scenario.snapshot.patientPhysical.selected))
+    setPatientPhysicalFindings({ ...scenario.snapshot.patientPhysical.findings })
+    setPatientPhysicalActiveIconGroup(null)
+    setScenarioTitle(scenario.title)
+    setLoadedScenarioId(scenario.id)
+    setScenarioBaseline({ title: scenario.title, snapshot: scenario.snapshot })
+    setScenarioError('')
+    setScenarioEditorVersion((version) => version + 1)
+  }
+
+  const handleSaveScenario = async () => {
+    if (saveScenarioDisabled || scenarioAction !== 'idle') return
+    setScenarioAction('saving')
+    setScenarioError('')
+    try {
+      const endpoint = loadedScenarioId
+        ? `/api/scenarios/${loadedScenarioId}`
+        : '/api/scenarios'
+      const response = await fetch(endpoint, {
+        method: loadedScenarioId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          loadedScenarioId
+            ? { title: scenarioTitle, snapshot: currentScenarioSnapshot }
+            : {
+                folderId: selectedScenarioFolderId,
+                title: scenarioTitle,
+                snapshot: currentScenarioSnapshot,
+              },
+        ),
+      })
+      const data = await response.json() as unknown
+      if (!response.ok) throw new Error(getResponseError(data, 'Unable to save scenario'))
+      if (
+        typeof data !== 'object' ||
+        data === null ||
+        !('scenario' in data)
+      ) {
+        throw new Error('Scenario save returned an invalid response')
+      }
+      const scenario = data.scenario as SavedScenario
+      setScenarioTitle(scenario.title)
+      setLoadedScenarioId(scenario.id)
+      setScenarioBaseline({ title: scenario.title, snapshot: scenario.snapshot })
+      setScenarioRefreshVersion((version) => version + 1)
+    } catch (caught) {
+      setScenarioError(caught instanceof Error ? caught.message : 'Unable to save scenario')
+    } finally {
+      setScenarioAction('idle')
+    }
+  }
+
+  const handleDeleteScenario = async () => {
+    if (!loadedScenarioId || scenarioAction !== 'idle') return
+    if (!window.confirm(`Delete "${scenarioTitle}"? The current editor values will be kept.`)) {
+      return
+    }
+
+    setScenarioAction('deleting')
+    setScenarioError('')
+    try {
+      const response = await fetch(`/api/scenarios/${loadedScenarioId}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const data = await response.json() as unknown
+        throw new Error(getResponseError(data, 'Unable to delete scenario'))
+      }
+      setLoadedScenarioId(null)
+      setScenarioBaseline(null)
+      setScenarioRefreshVersion((version) => version + 1)
+    } catch (caught) {
+      setScenarioError(caught instanceof Error ? caught.message : 'Unable to delete scenario')
+    } finally {
+      setScenarioAction('idle')
+    }
+  }
 
   const togglePatientSelection = (checklist: PatientInfoChecklist, letter: string) => {
     setPatientSelections((current) => {
@@ -473,6 +644,19 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       <div className="grid grid-cols-2 border border-neutral-800 bg-neutral-950 p-1 md:grid-cols-4">
         <button
           type="button"
+          onClick={() => setTab('scenarios')}
+          aria-pressed={tab === 'scenarios'}
+          className={cn(
+            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            tab === 'scenarios'
+              ? 'bg-cyan-bp text-black'
+              : 'text-neutral-400 hover:bg-neutral-900',
+          )}
+        >
+          Scenarios
+        </button>
+        <button
+          type="button"
           onClick={() => setTab('monitor')}
           aria-pressed={tab === 'monitor'}
           className={cn(
@@ -483,19 +667,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           )}
         >
           Monitor
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('caller')}
-          aria-pressed={tab === 'caller'}
-          className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
-            tab === 'caller'
-              ? 'bg-cyan-bp text-black'
-              : 'text-neutral-400 hover:bg-neutral-900',
-          )}
-        >
-          Caller Info
         </button>
         <button
           type="button"
@@ -548,10 +719,28 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onIconGroupClick={handlePatientPhysicalIconGroupClick}
         />
       ) : (
-        <CallerInfoForm
-          autoSortText={universalAutoSortText}
-          onAutoSortChange={handleUniversalAutoSortChange}
-        />
+        <div className="grid gap-4">
+          <ScenarioLibraryPanel
+            selectedFolderId={selectedScenarioFolderId}
+            loadedScenarioId={loadedScenarioId}
+            refreshVersion={scenarioRefreshVersion}
+            onSelectedFolderChange={setSelectedScenarioFolderId}
+            onLoadScenario={handleLoadScenario}
+          />
+          <CallerInfoForm
+            key={scenarioEditorVersion}
+            autoSortText={universalAutoSortText}
+            onAutoSortChange={handleUniversalAutoSortChange}
+            scenarioTitle={scenarioTitle}
+            onScenarioTitleChange={setScenarioTitle}
+            onSaveScenario={() => void handleSaveScenario()}
+            onDeleteScenario={() => void handleDeleteScenario()}
+            saveScenarioDisabled={saveScenarioDisabled}
+            deleteScenarioDisabled={!loadedScenarioId}
+            scenarioAction={scenarioAction}
+            scenarioError={scenarioError}
+          />
+        </div>
       )}
       <div className="flex items-center gap-3">
         <SaveButton />

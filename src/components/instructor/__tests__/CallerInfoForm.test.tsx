@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -23,7 +23,20 @@ function renderCallerInfoForm() {
     }
   }
 
-  return render(<CallerInfoForm autoSortText="" onAutoSortChange={handleAutoSortChange} />)
+  return render(
+    <CallerInfoForm
+      autoSortText=""
+      onAutoSortChange={handleAutoSortChange}
+      scenarioTitle=""
+      onScenarioTitleChange={vi.fn()}
+      onSaveScenario={vi.fn()}
+      onDeleteScenario={vi.fn()}
+      saveScenarioDisabled
+      deleteScenarioDisabled
+      scenarioAction="idle"
+      scenarioError=""
+    />,
+  )
 }
 
 describe('CallerInfoForm', () => {
@@ -35,6 +48,7 @@ describe('CallerInfoForm', () => {
     renderCallerInfoForm()
 
     expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
     expect(screen.getByLabelText('Auto-sort scenario')).toBeInTheDocument()
     expect(screen.getByText('Call / Priority / MPDS')).toBeInTheDocument()
     expect(screen.getByLabelText('Call #')).toBeInTheDocument()
@@ -48,6 +62,8 @@ describe('CallerInfoForm', () => {
     expect(screen.getByLabelText('Heure')).toBeInTheDocument()
     expect(screen.queryByLabelText('Extra 1 title')).toBeNull()
     expect(screen.getByRole('button', { name: 'Add extra' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete Scenario' })).toBeDisabled()
   })
 
   it('renders dispatch countdown before Call / Priority / MPDS', () => {

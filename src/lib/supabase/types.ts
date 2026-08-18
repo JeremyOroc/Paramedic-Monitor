@@ -30,6 +30,7 @@ export type Database = {
           expires_at?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       session_hosts: {
         Row: {
@@ -45,6 +46,7 @@ export type Database = {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['session_hosts']['Insert']>
+        Relationships: []
       }
       session_state: {
         Row: {
@@ -60,6 +62,7 @@ export type Database = {
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['session_state']['Insert']>
+        Relationships: []
       }
       participants: {
         Row: {
@@ -79,6 +82,7 @@ export type Database = {
           last_seen_at?: string | null
         }
         Update: Partial<Database['public']['Tables']['participants']['Insert']>
+        Relationships: []
       }
       participant_attempts: {
         Row: {
@@ -98,6 +102,7 @@ export type Database = {
           completed_at?: string | null
         }
         Update: Partial<Database['public']['Tables']['participant_attempts']['Insert']>
+        Relationships: []
       }
       student_events: {
         Row: {
@@ -121,6 +126,7 @@ export type Database = {
           occurred_at?: string
         }
         Update: Partial<Database['public']['Tables']['student_events']['Insert']>
+        Relationships: []
       }
       vitals_snapshots: {
         Row: {
@@ -156,6 +162,7 @@ export type Database = {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['vitals_snapshots']['Insert']>
+        Relationships: []
       }
       scenarios: {
         Row: {
@@ -175,7 +182,65 @@ export type Database = {
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['scenarios']['Insert']>
+        Relationships: []
+      }
+      scenario_folders: {
+        Row: {
+          id: string
+          name: string
+          is_general: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          is_general?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['scenario_folders']['Insert']>
+        Relationships: []
+      }
+      saved_scenarios: {
+        Row: {
+          id: string
+          folder_id: string
+          scenario_number: number
+          title: string
+          snapshot: unknown
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          folder_id: string
+          scenario_number: number
+          title: string
+          snapshot: unknown
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['saved_scenarios']['Insert']>
+        Relationships: []
       }
     }
+    Views: Record<never, never>
+    Functions: {
+      create_saved_scenario: {
+        Args: {
+          folder_id: string
+          requested_title: string
+          scenario_snapshot: unknown
+        }
+        Returns: Database['public']['Tables']['saved_scenarios']['Row']
+      }
+      delete_scenario_folder: {
+        Args: { folder_to_delete: string }
+        Returns: string
+      }
+    }
+    Enums: Record<never, never>
+    CompositeTypes: Record<never, never>
   }
 }

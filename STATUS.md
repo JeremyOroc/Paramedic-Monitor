@@ -6,13 +6,19 @@
 ---
 
 ## Current Phase
-**Monitor base UI + menu navigation — COMPLETE.** Next up: instructor/admin dashboard.
+**Folder-based Supabase scenario library — COMPLETE AND DEPLOYED.** The schema migration, typed server APIs, full-draft snapshot workflow, folder UI, and automated coverage are complete. Migrations `001`–`005` are synchronized with the configured Supabase project.
 
 > Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
 
 ---
 
 ## Completed
+- [x] **Folder-based Supabase scenario library — COMPLETE:**
+  - [x] Renamed Caller Info to the default Scenarios tab and added the fixed-height folder accordion above the preserved Caller Info editor
+  - [x] Added immutable General behavior, custom folder CRUD, updated-first rows, drag/drop plus accessible moves, and atomic move-to-General folder deletion
+  - [x] Added versioned full-authoring snapshots, direct stage-only restoration across all four tabs, dirty/reverted comparisons, and green Save/red Delete scenario actions
+  - [x] Added RLS-protected `scenario_folders` and `saved_scenarios` tables, concurrency-safe number allocation, typed server-only CRUD APIs, and a centralized future authorization gate
+  - [x] All 757 tests, Supabase schema lint, ESLint, production build, and rendered 1024px admin QA pass; migration `005` is deployed and verified remotely
 - [x] **Two-stage NIBP focus and consistent monitor modal styling — COMPLETE:**
   - [x] Every NIBP data row moves from its label to a combined right-side value focus; Enter/Back returns to the label before Back can close the modal
   - [x] Alarm limits and SmartCuf remain read-only, Mode toggles with either arrow, and Interval moves larger/smaller with wrapping while scheduler changes stay live

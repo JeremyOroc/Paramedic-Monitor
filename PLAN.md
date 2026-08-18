@@ -772,19 +772,27 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 
 ---
 
-### Phase 10 — Scenario Builder
-**Goal:** Instructor can build, save, and run named scenarios.
+### Phase 10 — Folder-Based Scenario Library
+**Goal:** Instructors can save, organize, reload, edit, move, and delete complete reusable scenario drafts from Supabase.
+
+**Status:** Complete and deployed to the configured Supabase project on 2026-08-18. Migrations `001`–`005` are synchronized locally and remotely.
 
 **Steps:**
-1. `ScenarioBuilder` — form: scenario name, add/remove/reorder states
-2. Each state: name, HR, BP sys/dia, EtCO2, SpO2, rhythm, patient mode, duration_s (if timed)
-3. Timing mode toggle: Manual (Next State button) | Timed (auto-advance after `duration_s`)
-4. Save → inserts into `scenarios` table in DB
-5. `ScenarioRunner` — load scenario, show current state name, Manual: "Next State" button, Timed: countdown progress bar
-6. Activating a state → broadcasts `scenario_activate` with that state's vitals → same as clicking Send
-7. Scenario list — load existing scenarios for this session
+1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a fixed-height folder accordion above the unchanged caller-info editor.
+2. Provide an immutable `General` folder plus create, rename, and delete controls for custom case-insensitively unique folders. Deleting a folder moves its scenarios to General.
+3. Save versioned authoring snapshots containing raw auto-sort text, monitor drafts and channel states, caller/dispatch inputs, SAMPLE/OPQRST state, and Patient Physical state. Runtime dispatch/CPR/calibration and Save/Send history are excluded.
+4. Add a Title field plus green `Save Scenario` and red `Delete Scenario` actions. Blank titles use the smallest available `Scenario X` number.
+5. Load snapshots directly into editable drafts without sending to students. Track the loaded baseline so unchanged or reverted scenarios cannot be saved again.
+6. Order scenarios by most recently updated and support immediate drag/drop folder moves with an accessible Move fallback.
+7. Store folders and saved snapshots in dedicated RLS-protected tables accessed only through typed server APIs, leaving the legacy timed-state `scenarios` table unchanged.
 
-**Milestone:** Instructor builds a 3-state scenario (NSR → VF → Asystole), runs it manually, students see rhythm changes in sequence.
+#### Testing
+- Unit coverage for snapshot normalization, meaningful-content and dirty comparisons, and fallback-number allocation.
+- Service/API coverage for folder/scenario CRUD, General protections, folder deletion moves, validation, and error responses.
+- Component and admin integration coverage for tab order, folder accordion behavior, save/load/update/delete, drag/drop/move fallback, discard confirmation, and four-tab restoration.
+- Full Vitest, ESLint, production build, and rendered desktop overflow/interaction QA.
+
+**Milestone — COMPLETE (2026-08-18):** An instructor can manage a global folder library, reload a complete editable scenario draft, modify it, and persist the update without bypassing the normal Save → Send workflow.
 
 ---
 
