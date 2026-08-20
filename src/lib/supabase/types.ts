@@ -188,14 +188,12 @@ export type Database = {
         Row: {
           id: string
           name: string
-          is_general: boolean
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           name: string
-          is_general?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -209,6 +207,7 @@ export type Database = {
           scenario_number: number
           title: string
           snapshot: unknown
+          position: number
           created_at: string
           updated_at: string
         }
@@ -218,6 +217,7 @@ export type Database = {
           scenario_number: number
           title: string
           snapshot: unknown
+          position: number
           created_at?: string
           updated_at?: string
         }
@@ -235,9 +235,26 @@ export type Database = {
         }
         Returns: Database['public']['Tables']['saved_scenarios']['Row']
       }
-      delete_scenario_folder: {
-        Args: { folder_to_delete: string }
-        Returns: string
+      create_saved_scenario_with_auto_folder: {
+        Args: {
+          requested_title: string
+          scenario_snapshot: unknown
+        }
+        Returns: Database['public']['Tables']['saved_scenarios']['Row']
+      }
+      move_saved_scenario: {
+        Args: {
+          scenario_to_move: string
+          target_folder: string
+        }
+        Returns: Database['public']['Tables']['saved_scenarios']['Row']
+      }
+      reorder_saved_scenarios: {
+        Args: {
+          folder_to_reorder: string
+          ordered_scenario_ids: string[]
+        }
+        Returns: Database['public']['Tables']['saved_scenarios']['Row'][]
       }
     }
     Enums: Record<never, never>

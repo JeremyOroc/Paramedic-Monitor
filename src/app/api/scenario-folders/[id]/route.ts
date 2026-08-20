@@ -27,7 +27,8 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   try {
     await requireScenarioLibraryAccess(request)
     const { id } = await params
-    return NextResponse.json({ generalFolderId: await deleteScenarioFolder(id) })
+    await deleteScenarioFolder(id)
+    return new NextResponse(null, { status: 204 })
   } catch (error) {
     return scenarioJsonError(error)
   }

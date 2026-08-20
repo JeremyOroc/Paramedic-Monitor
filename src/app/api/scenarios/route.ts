@@ -26,15 +26,31 @@ export async function POST(request: Request) {
     await requireScenarioLibraryAccess(request)
     const body = await request.json() as {
       folderId?: unknown
+      autoCreateFolder?: unknown
       title?: unknown
       snapshot?: unknown
     }
     const snapshot = normalizeScenarioSnapshot(body.snapshot)
-    if (typeof body.folderId !== 'string' || typeof body.title !== 'string' || !snapshot) {
-      return NextResponse.json({ error: 'Valid folder, title, and snapshot are required' }, { status: 400 })
+    const selectedFolder = typeof body.folderId === 'string' && body.autoCreateFolder !== true
+    const autoCreateFolder = body.folderId === undefined && body.autoCreateFolder === true
+    if (
+      (!selectedFolder && !autoCreateFolder) ||
+      typeof body.title !== 'string' ||
+      !snapshot
+    ) {
+      return NextResponse.json(
+        { error: 'Valid folder selection, title, and snapshot are required' },
+        { status: 400 },
+      )
     }
     return NextResponse.json(
-      { scenario: await createSavedScenario(body.folderId, body.title, snapshot) },
+      {
+        scenario: await createSavedScenario(
+          selectedFolder ? body.folderId as string : null,
+          body.title,
+          snapshot,
+        ),
+      },
       { status: 201 },
     )
   } catch (error) {

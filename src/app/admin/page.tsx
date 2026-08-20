@@ -34,6 +34,7 @@ import {
 } from '@/lib/patientPhysicalAutoSort'
 import { anyoneCalibratedEtco2, isConnected, participantProgress } from '@/lib/sessionRoster'
 import {
+  createEmptyScenarioSnapshot,
   createScenarioSnapshot,
   hasMeaningfulScenarioContent,
   scenarioSnapshotsEqual,
@@ -120,6 +121,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const [scenarioTitle, setScenarioTitle] = useState('')
   const [selectedScenarioFolderId, setSelectedScenarioFolderId] = useState('')
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
+  const [loadedScenarioFolderId, setLoadedScenarioFolderId] = useState<string | null>(null)
   const [scenarioBaseline, setScenarioBaseline] = useState<ScenarioBaseline | null>(null)
   const [scenarioRefreshVersion, setScenarioRefreshVersion] = useState(0)
   const [scenarioEditorVersion, setScenarioEditorVersion] = useState(0)
@@ -308,7 +310,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     : scenarioTitle.trim() !== '' || scenarioHasContent
   const saveScenarioDisabled = loadedScenarioId
     ? !scenarioIsDirty
-    : !scenarioHasContent || !selectedScenarioFolderId
+    : !scenarioHasContent
 
   const resetPatientInformation = () => {
     setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
@@ -318,6 +320,19 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setPatientPhysicalSelections(new Set<PatientPhysicalSelection>())
     setPatientPhysicalFindings({})
     setPatientPhysicalActiveIconGroup(null)
+  }
+  const clearScenarioAuthoringState = () => {
+    const empty = createEmptyScenarioSnapshot()
+    applyScenarioDraft(empty)
+    setUniversalAutoSortText(empty.autoSortText)
+    resetPatientInformation()
+    resetPatientPhysical()
+    setScenarioTitle('')
+    setLoadedScenarioId(null)
+    setLoadedScenarioFolderId(null)
+    setScenarioBaseline(null)
+    setScenarioError('')
+    setScenarioEditorVersion((version) => version + 1)
   }
   // Everything on the instructor side: the store (bumping monitorResetVersion,
   // which the effect above picks up to push the cleared state to students) plus
@@ -329,6 +344,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     resetPatientPhysical()
     setScenarioTitle('')
     setLoadedScenarioId(null)
+    setLoadedScenarioFolderId(null)
     setScenarioBaseline(null)
     setScenarioError('')
     setScenarioEditorVersion((version) => version + 1)
@@ -365,9 +381,24 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setPatientPhysicalActiveIconGroup(null)
     setScenarioTitle(scenario.title)
     setLoadedScenarioId(scenario.id)
+    setLoadedScenarioFolderId(scenario.folder_id)
     setScenarioBaseline({ title: scenario.title, snapshot: scenario.snapshot })
     setScenarioError('')
     setScenarioEditorVersion((version) => version + 1)
+  }
+
+  const handleUnloadScenario = () => {
+    if (
+      scenarioIsDirty &&
+      !window.confirm('Discard unsaved scenario changes and unload this scenario?')
+    ) {
+      return
+    }
+    clearScenarioAuthoringState()
+  }
+
+  const handleScenarioFolderDeleted = (folderId: string) => {
+    if (loadedScenarioFolderId === folderId) clearScenarioAuthoringState()
   }
 
   const handleSaveScenario = async () => {
@@ -385,7 +416,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           loadedScenarioId
             ? { title: scenarioTitle, snapshot: currentScenarioSnapshot }
             : {
-                folderId: selectedScenarioFolderId,
+                ...(selectedScenarioFolderId
+                  ? { folderId: selectedScenarioFolderId }
+                  : { autoCreateFolder: true }),
                 title: scenarioTitle,
                 snapshot: currentScenarioSnapshot,
               },
@@ -403,6 +436,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       const scenario = data.scenario as SavedScenario
       setScenarioTitle(scenario.title)
       setLoadedScenarioId(scenario.id)
+      setLoadedScenarioFolderId(scenario.folder_id)
+      setSelectedScenarioFolderId(scenario.folder_id)
       setScenarioBaseline({ title: scenario.title, snapshot: scenario.snapshot })
       setScenarioRefreshVersion((version) => version + 1)
     } catch (caught) {
@@ -427,6 +462,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         throw new Error(getResponseError(data, 'Unable to delete scenario'))
       }
       setLoadedScenarioId(null)
+      setLoadedScenarioFolderId(null)
       setScenarioBaseline(null)
       setScenarioRefreshVersion((version) => version + 1)
     } catch (caught) {
@@ -726,6 +762,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             refreshVersion={scenarioRefreshVersion}
             onSelectedFolderChange={setSelectedScenarioFolderId}
             onLoadScenario={handleLoadScenario}
+            onUnloadScenario={handleUnloadScenario}
+            onFolderDeleted={handleScenarioFolderDeleted}
+            onLoadedScenarioFolderChange={setLoadedScenarioFolderId}
           />
           <CallerInfoForm
             key={scenarioEditorVersion}

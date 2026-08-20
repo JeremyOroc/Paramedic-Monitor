@@ -27,6 +27,7 @@ const saved = {
   folder_id: 'general',
   scenario_number: 1,
   title: 'Scenario 1',
+  position: 1,
   snapshot,
   created_at: '2026-08-18T10:00:00.000Z',
   updated_at: '2026-08-18T10:00:00.000Z',
@@ -53,6 +54,14 @@ describe('saved scenario routes', () => {
     }))
     expect(created.status).toBe(201)
     expect(scenarioService.createSavedScenario).toHaveBeenCalledWith('general', '', snapshot)
+
+    scenarioService.createSavedScenario.mockResolvedValue(saved)
+    const autoCreated = await POST(new Request('http://localhost/api/scenarios', {
+      method: 'POST',
+      body: JSON.stringify({ autoCreateFolder: true, title: '', snapshot }),
+    }))
+    expect(autoCreated.status).toBe(201)
+    expect(scenarioService.createSavedScenario).toHaveBeenLastCalledWith(null, '', snapshot)
 
     const invalid = await POST(new Request('http://localhost/api/scenarios', {
       method: 'POST',

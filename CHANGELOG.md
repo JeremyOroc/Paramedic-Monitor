@@ -5,6 +5,25 @@
 
 ---
 
+## [2026-08-20] [scenarios] — Start Caller Info minimized
+
+- Changed the Caller Info editor to initialize collapsed on every mount/page load while retaining its accessible `+`/`−` toggle and non-persisted state.
+- Updated component and admin integration regressions so editing flows explicitly expand Caller Info and the default-state test verifies hidden Title, auto-sort, fields, and scenario actions.
+- Verified all 22 focused tests and rendered 1280×720 collapsed, expanded, and reload states with no browser console warnings, errors, or framework overlay.
+
+## [2026-08-20] [scenarios] — Fix scenario reorder constraint resolution
+
+- Fixed `reorder_saved_scenarios` failing with `constraint "saved_scenarios_folder_position_key" does not exist` by schema-qualifying the constraint while retaining the function's secure empty search path.
+- Added a forward-only migration and regression assertion, preserved service-role-only execution, and deployed migration `20260820194954` to the configured Supabase project.
+- Verified 14 focused migration/service/API tests, matching local/remote migration history, error-free linked schema lint, no error-level advisor findings, and a live no-op reorder returning 200 with the existing Medical scenario order intact.
+
+## [2026-08-20] [scenarios] — Implement and deploy scenario library organization update
+
+- Removed General's schema and UI protections while preserving its folder and scenarios as ordinary data; all folders are renameable/deletable, non-empty deletion warns once and cascades, and deleting the active scenario clears authoring drafts without changing confirmed student-visible state.
+- Added persisted per-folder positions with atomic service-role-only reorder, append-on-move, and empty-library `Folder X` creation/save operations; exposed typed APIs for auto-create saves and complete folder ordering.
+- Replaced per-row Load buttons with accessible row load/unload toggles, added above/below drag targets and compact Up/Down controls with optimistic rollback, retained cross-folder moves, and made the entire Caller Info editor collapsible.
+- Added migration, service, API, component, and admin integration regressions. All 770 tests, TypeScript, Supabase schema lint/advisors, ESLint, production build, and rendered 1024×768/1366×768 QA pass; migration `20260820192736` is deployed and its columns, constraints, indexes, functions, grants, and preserved data were verified remotely.
+
 ## [2026-08-18] [scenarios] — Fix Vercel TypeScript build failure
 
 - Removed the unsupported explicit type argument from the scenario-service test's Vitest `toMatchObject` assertion and cleaned up its unused import.
