@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-08-20] [ui] — Combine Monitor and Patient SNS controls
+
+- Renamed the admin Monitor tab to Monitor & Patient SNS, removed the Patient Information tab, and moved its preserved SAMPLE/OPQRST editor directly below Vitals.
+- Extracted Pulse, Respiratory, and Skin/Extremities into a dedicated three-column Patient SNS row inside Vitals; Patient Physical now contains only Scene/Environment, the body map, and selected findings.
+- Made an off ECG retain and expose its remembered rhythm as `Rhythm (Off)` with the matching category and option highlighted, while rhythm selection still turns ECG on.
+- Removed the Vitals Normal control and shared admin Reset control without changing stores, realtime payloads, saved-scenario schemas, API formats, or the successful live-session New Attempt reset.
+- Added component and integration regressions. All 76 focused tests and 774 full-suite tests pass; ESLint has no errors, the production build succeeds, and rendered localhost admin QA confirms the layout and interactions with a clean console.
+
 ## [2026-08-20] [scenarios] — Start Caller Info minimized
 
 - Changed the Caller Info editor to initialize collapsed on every mount/page load while retaining its accessible `+`/`−` toggle and non-persisted state.

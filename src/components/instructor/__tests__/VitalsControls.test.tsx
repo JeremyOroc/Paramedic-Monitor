@@ -3,7 +3,6 @@ import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
-import { DEFAULT_VITALS } from '@/types/vitals'
 
 import { VitalsControls } from '../VitalsControls'
 
@@ -39,13 +38,40 @@ describe('VitalsControls', () => {
     useMonitorStore.getState().reset()
   })
 
-  it('renders a Normal button without a local auto-sort textarea', () => {
+  it('renders the Vitals heading without Normal or a local auto-sort textarea', () => {
     render(<VitalsControls autoSortText="" />)
 
-    const heading = screen.getByRole('heading', { name: 'Vitals' })
-    const normal = screen.getByRole('button', { name: 'Set vitals to normal' })
-    expect(heading.compareDocumentPosition(normal) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Vitals' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Set vitals to normal' })).toBeNull()
     expect(screen.queryByLabelText('Auto-sort vitals')).toBeNull()
+  })
+
+  it('renders Pulse, Respiratory, and Skin/Extremities horizontally inside Vitals', () => {
+    render(
+      <VitalsControls
+        autoSortText=""
+        patientSns={{
+          selected: new Set<string>(),
+          findings: {},
+          activeIconGroup: null,
+          onIconGroupClick: vi.fn(),
+        }}
+      />,
+    )
+
+    const controls = screen.getByTestId('patient-sns-controls')
+    const pulse = within(controls).getByRole('button', { name: 'Pulse' })
+    const respiratory = within(controls).getByRole('button', { name: 'Respiratory' })
+    const skinExtremities = within(controls).getByRole('button', {
+      name: 'Skin/Extremities',
+    })
+
+    expect(controls).toHaveClass('grid', 'grid-cols-3')
+    expect(pulse.compareDocumentPosition(respiratory)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(respiratory.compareDocumentPosition(skinExtremities)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+    expect(within(controls).queryByRole('button', { name: 'Scene/Environment' })).toBeNull()
   })
 
   it('orders admin vitals as FC, SpO2, BP, EtCO2', () => {
@@ -354,33 +380,4 @@ describe('VitalsControls', () => {
     expect(state.draft.etco2).toBe(beforeClick.etco2)
   })
 
-  it('resets draft vital numbers to normal defaults without sending them', async () => {
-    const user = userEvent.setup()
-    useMonitorStore.getState().setDraft('hr', 180)
-    useMonitorStore.getState().setDraft('bp_sys', 230)
-    useMonitorStore.getState().setDraft('bp_dia', 240)
-    useMonitorStore.getState().setDraft('spo2', 82)
-    useMonitorStore.getState().save()
-    useMonitorStore.getState().send()
-    useMonitorStore.getState().setDraft('hr', 185)
-
-    render(<VitalsControls autoSortText="" />)
-    await user.click(screen.getByRole('button', { name: 'Set vitals to normal' }))
-
-    const state = useMonitorStore.getState()
-    expect(state.draft.hr).toBe(DEFAULT_VITALS.hr)
-    expect(state.draft.bp_sys).toBe(DEFAULT_VITALS.bp_sys)
-    expect(state.draft.bp_dia).toBe(DEFAULT_VITALS.bp_dia)
-    expect(state.draft.spo2).toBe(DEFAULT_VITALS.spo2)
-    expect(state.draftVitalActive).toEqual({
-      hr: true,
-      bp_sys: true,
-      bp_dia: true,
-      etco2: true,
-      spo2: true,
-    })
-    expect(state.draft.spo2_waveform).toBe('normal')
-    expect(state.draft.etco2_waveform).toBe('normal')
-    expect(state.confirmed.hr).toBe(180)
-  })
 })

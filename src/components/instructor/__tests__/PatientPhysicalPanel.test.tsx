@@ -4,16 +4,11 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import type { PatientPhysicalFindings } from '@/lib/patientPhysicalAutoSort'
+import type { PatientPhysicalIconGroupId } from '@/types/patientPhysical'
 import {
   PatientPhysicalPanel,
   type PatientPhysicalSelection,
 } from '../PatientPhysicalPanel'
-
-type PatientPhysicalIconGroupId =
-  | 'respiratory'
-  | 'pulse'
-  | 'skin-extremities'
-  | 'scene-environment'
 
 function renderPanel({ findings = {} }: { findings?: PatientPhysicalFindings } = {}) {
   function PanelHarness() {
@@ -126,41 +121,17 @@ describe('PatientPhysicalPanel', () => {
     )
   })
 
-  it('renders pulse, respiratory, skin extremities, and scene environment icon toggle cards on the left', () => {
+  it('keeps only Scene/Environment beside the body map', () => {
     renderPanel()
 
-    expect(screen.getByRole('region', { name: 'Pulse icon findings' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Respiratory icon findings' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Skin/Extremities icon findings' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Scene/Environment icon findings' })).toBeInTheDocument()
-    expect(screen.getByAltText('Pulse findings')).toHaveAttribute(
-      'src',
-      '/images/patient-physical-pulse.png',
-    )
-    expect(screen.getByAltText('Respiratory findings')).toHaveAttribute(
-      'src',
-      '/images/patient-physical-lung.png',
-    )
-    expect(screen.getByAltText('Skin and extremities findings')).toHaveAttribute(
-      'src',
-      '/images/patient-physical-skin-extremities.png',
-    )
     expect(screen.getByAltText('Scene and environment findings')).toHaveAttribute(
       'src',
       '/images/patient-physical-scene-environment.png',
     )
-    const pulse = screen.getByRole('button', { name: 'Pulse' })
-    const respiratory = screen.getByRole('button', { name: 'Respiratory' })
-    const skinExtremities = screen.getByRole('button', { name: 'Skin/Extremities' })
-    const sceneEnvironment = screen.getByRole('button', { name: 'Scene/Environment' })
-
-    expect(pulse.compareDocumentPosition(respiratory)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
-    expect(respiratory.compareDocumentPosition(skinExtremities)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    )
-    expect(skinExtremities.compareDocumentPosition(sceneEnvironment)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    )
+    expect(screen.queryByRole('button', { name: 'Pulse' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Respiratory' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Skin/Extremities' })).toBeNull()
   })
 
   it('toggles selected body regions with green highlighting and click order', async () => {
@@ -247,59 +218,17 @@ describe('PatientPhysicalPanel', () => {
     )
   })
 
-  it('clicks icon cards to turn them green and open combined sliders', async () => {
+  it('shows Scene/Environment as a one-note slider without a missing-field warning', async () => {
     const user = userEvent.setup()
     renderPanel({
       findings: {
-        'respiratory-rate': '24 breaths/min',
-        'respiratory-rhythm': 'Regular',
-        'pulse-rate': '112 bpm',
-      },
-    })
-
-    const respiratory = screen.getByRole('button', { name: 'Respiratory' })
-    const pulse = screen.getByRole('button', { name: 'Pulse' })
-
-    expect(respiratory).toHaveClass('border-pending-amber')
-    await user.click(respiratory)
-
-    expect(respiratory).toHaveAttribute('aria-pressed', 'true')
-    expect(respiratory).toHaveClass('border-ecg-green', 'bg-ecg-green')
-    const respiratorySlider = screen.getByRole('region', { name: 'Respiratory finding slider' })
-    expect(respiratorySlider).toHaveTextContent('Rate: 24 breaths/min')
-    expect(respiratorySlider).toHaveTextContent('Rhythm: Regular')
-    expect(respiratorySlider).toHaveTextContent('Missing: Strength')
-
-    await user.click(respiratory)
-    expect(screen.queryByRole('region', { name: 'Respiratory finding slider' })).toBeNull()
-
-    await user.click(pulse)
-    const pulseSlider = screen.getByRole('region', { name: 'Pulse finding slider' })
-    expect(pulseSlider).toHaveTextContent('Rate: 112 bpm')
-    expect(pulseSlider).toHaveTextContent('Missing: Rhythm, Strength')
-  })
-
-  it('shows skin and scene icon findings as one-note sliders without missing-field warnings', async () => {
-    const user = userEvent.setup()
-    renderPanel({
-      findings: {
-        'skin-extremities-note': 'Pale\nCool',
         'scene-environment-note': 'Witnessed fall\nNo environmental hazards',
       },
     })
 
-    const skinExtremities = screen.getByRole('button', { name: 'Skin/Extremities' })
     const sceneEnvironment = screen.getByRole('button', { name: 'Scene/Environment' })
 
-    expect(skinExtremities).toHaveClass('border-pending-amber')
     expect(sceneEnvironment).toHaveClass('border-pending-amber')
-
-    await user.click(skinExtremities)
-    const skinSlider = screen.getByRole('region', { name: 'Skin/Extremities finding slider' })
-    expect(skinSlider).toHaveTextContent('Pale')
-    expect(skinSlider).toHaveTextContent('Cool')
-    expect(skinSlider).not.toHaveTextContent('Missing:')
-    expect(skinSlider).not.toHaveTextContent('Skin/Extremities:')
 
     await user.click(sceneEnvironment)
     const sceneSlider = screen.getByRole('region', { name: 'Scene/Environment finding slider' })

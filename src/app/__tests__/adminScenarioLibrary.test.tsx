@@ -115,7 +115,7 @@ describe('AdminPage scenario library integration', () => {
     await user.type(title, 'Chest Pain')
     expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
 
-    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
     expect(
       within(screen.getByRole('region', { name: 'Sample' })).getByRole('button', { name: 'S' }),
@@ -124,7 +124,7 @@ describe('AdminPage scenario library integration', () => {
     await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
     expect(screen.getByRole('button', { name: 'Front chest' })).toHaveAttribute('aria-pressed', 'true')
 
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     const fc = screen.getByLabelText('FC')
     await user.clear(fc)
     await user.type(fc, '160')
@@ -137,7 +137,7 @@ describe('AdminPage scenario library integration', () => {
     await waitFor(() => expect(confirmDiscard).toHaveBeenCalledWith(
       'Discard unsaved scenario changes and unload this scenario?',
     ))
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     expect(screen.getByLabelText('FC')).toHaveValue(160)
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))

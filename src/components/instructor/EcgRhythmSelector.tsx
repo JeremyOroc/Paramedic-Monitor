@@ -81,9 +81,12 @@ export function EcgRhythmSelector() {
 
   const current = draft.rhythm
   const connected = current !== 'off'
+  const displayedRhythm = connected ? current : lastRhythm
   const status = fieldStatus('rhythm', draft, saved, confirmed)
   const displayStatus = status === 'dirty' ? 'clean' : status
-  const rhythmButtonLabel = connected ? RHYTHM_LABELS[current] : 'Rhythm Options'
+  const rhythmButtonLabel = connected
+    ? RHYTHM_LABELS[displayedRhythm]
+    : `${RHYTHM_LABELS[displayedRhythm]} (Off)`
   const optionsId = 'ecg-rhythm-options'
   const selectedCategory =
     ECG_RHYTHM_CATEGORIES.find((category) => category.label === selectedCategoryLabel) ??
@@ -100,7 +103,7 @@ export function EcgRhythmSelector() {
               setOpen((nextOpen) => {
                 const opening = !nextOpen
                 if (opening) {
-                  setSelectedCategoryLabel(getCategoryForRhythm(current).label)
+                  setSelectedCategoryLabel(getCategoryForRhythm(displayedRhythm).label)
                 }
                 return opening
               })
@@ -170,7 +173,7 @@ export function EcgRhythmSelector() {
             {selectedCategory.options.length > 0 ? (
               <div className="grid grid-cols-2 gap-1">
                 {selectedCategory.options.map((option) => {
-                  const selected = current === option.value
+                  const selected = displayedRhythm === option.value
                   return (
                     <button
                       key={option.value}

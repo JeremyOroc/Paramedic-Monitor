@@ -1,10 +1,8 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import type {
-  PatientPhysicalFindings,
-  PatientPhysicalIconFindingId,
-} from '@/lib/patientPhysicalAutoSort'
+import type { PatientPhysicalFindings } from '@/lib/patientPhysicalAutoSort'
+import type { PatientPhysicalIconGroupId } from '@/types/patientPhysical'
 
 export type PatientPhysicalSelection = string
 
@@ -62,89 +60,12 @@ const REGIONS: ReadonlyArray<PhysicalRegion> = [
   { id: 'back-patient-right-foot', label: 'Rear patient right foot', className: 'left-[66.9%] top-[92.3%] h-[4.4%] w-[8.3%] rounded-full' },
 ]
 
-type IconFinding = {
-  id: PatientPhysicalIconFindingId
-  label: string
-}
-
-type PatientPhysicalIconGroupId =
-  | 'respiratory'
-  | 'pulse'
-  | 'skin-extremities'
-  | 'scene-environment'
-
-type IconGroup = {
-  id: PatientPhysicalIconGroupId
-  label: string
-  iconSrc: string
-  iconAlt: string
-  findings: ReadonlyArray<IconFinding>
-  showFindingLabels?: boolean
-  showMissingFields?: boolean
-}
-
-const ICON_GROUPS: ReadonlyArray<IconGroup> = [
-  {
-    id: 'pulse',
-    label: 'Pulse',
-    iconSrc: '/images/patient-physical-pulse.png',
-    iconAlt: 'Pulse findings',
-    findings: [
-      { id: 'pulse-rate', label: 'Rate' },
-      { id: 'pulse-rhythm', label: 'Rhythm' },
-      { id: 'pulse-strength', label: 'Strength' },
-    ],
-    showFindingLabels: true,
-    showMissingFields: true,
-  },
-  {
-    id: 'respiratory',
-    label: 'Respiratory',
-    iconSrc: '/images/patient-physical-lung.png',
-    iconAlt: 'Respiratory findings',
-    findings: [
-      { id: 'respiratory-rate', label: 'Rate' },
-      { id: 'respiratory-rhythm', label: 'Rhythm' },
-      { id: 'respiratory-strength', label: 'Strength' },
-    ],
-    showFindingLabels: true,
-    showMissingFields: true,
-  },
-  {
-    id: 'skin-extremities',
-    label: 'Skin/Extremities',
-    iconSrc: '/images/patient-physical-skin-extremities.png',
-    iconAlt: 'Skin and extremities findings',
-    findings: [
-      { id: 'skin-extremities-note', label: 'Skin/Extremities' },
-    ],
-  },
-  {
-    id: 'scene-environment',
-    label: 'Scene/Environment',
-    iconSrc: '/images/patient-physical-scene-environment.png',
-    iconAlt: 'Scene and environment findings',
-    findings: [
-      { id: 'scene-environment-note', label: 'Scene/Environment' },
-    ],
-  },
-]
-
-function getIconFindingSummary(group: IconGroup, findings: PatientPhysicalFindings) {
-  return group.findings
-    .map((finding) => {
-      const value = findings[finding.id]
-      if (!value) return null
-      return group.showFindingLabels ? `${finding.label}: ${value}` : value
-    })
-    .filter((value): value is string => Boolean(value))
-    .join(' ')
-}
-
-function getMissingIconFindingLabels(group: IconGroup, findings: PatientPhysicalFindings) {
-  return group.findings
-    .filter((finding) => !findings[finding.id])
-    .map((finding) => finding.label)
+const SCENE_GROUP = {
+  id: 'scene-environment' as const,
+  label: 'Scene/Environment',
+  iconSrc: '/images/patient-physical-scene-environment.png',
+  iconAlt: 'Scene and environment findings',
+  findingId: 'scene-environment-note' as const,
 }
 
 export function PatientPhysicalPanel({
@@ -168,77 +89,61 @@ export function PatientPhysicalPanel({
       </div>
       <div className="grid gap-4 lg:grid-cols-[10rem_minmax(0,38rem)_minmax(14rem,1fr)]">
         <div className="grid self-start gap-3">
-          {ICON_GROUPS.map((group) => {
-            const active = selected.has(group.id)
-            const hasFinding = group.findings.some((finding) => Boolean(findings[finding.id]))
-            const showSlider = activeIconGroup === group.id
-            const summary = getIconFindingSummary(group, findings)
-            const missingLabels = group.showMissingFields
-              ? getMissingIconFindingLabels(group, findings)
-              : []
-
-            return (
-              <section
-                key={group.id}
-                aria-label={`${group.label} icon findings`}
+          <section
+            aria-label={`${SCENE_GROUP.label} icon findings`}
+            className={cn(
+              'grid gap-3 border bg-neutral-900/40 p-3',
+              selected.has(SCENE_GROUP.id)
+                ? 'border-ecg-green/60'
+                : 'border-neutral-800',
+            )}
+          >
+            <button
+              type="button"
+              aria-label={SCENE_GROUP.label}
+              aria-pressed={selected.has(SCENE_GROUP.id)}
+              onClick={() => onIconGroupClick(SCENE_GROUP.id)}
+              className={cn(
+                'relative grid justify-items-center gap-2 border p-2 transition-colors',
+                'focus:outline-none focus:ring-2 focus:ring-ecg-green focus:ring-offset-2 focus:ring-offset-black',
+                selected.has(SCENE_GROUP.id)
+                  ? 'border-ecg-green bg-ecg-green text-black'
+                  : findings[SCENE_GROUP.findingId]
+                    ? 'border-pending-amber bg-pending-amber/20 text-pending-amber'
+                    : 'border-neutral-700 bg-black text-neutral-300 hover:border-ecg-green hover:text-ecg-green',
+              )}
+            >
+              {findings[SCENE_GROUP.findingId] && !selected.has(SCENE_GROUP.id) ? (
+                <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center border border-pending-amber bg-black text-[0.65rem] font-black leading-none text-pending-amber">
+                  !
+                </span>
+              ) : null}
+              <img
+                src={SCENE_GROUP.iconSrc}
+                alt={SCENE_GROUP.iconAlt}
                 className={cn(
-                  'grid gap-3 border bg-neutral-900/40 p-3',
-                  active ? 'border-ecg-green/60' : 'border-neutral-800',
+                  'h-14 w-14 object-contain invert transition-opacity',
+                  selected.has(SCENE_GROUP.id) ? 'opacity-100' : 'opacity-70',
                 )}
+              />
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-300">
+                {SCENE_GROUP.label}
+              </h3>
+            </button>
+            {activeIconGroup === SCENE_GROUP.id ? (
+              <div
+                role="region"
+                aria-label={`${SCENE_GROUP.label} finding slider`}
+                className="grid min-w-0 gap-2 border border-ecg-green bg-black p-2 text-xs"
               >
-                <button
-                  type="button"
-                  aria-label={group.label}
-                  aria-pressed={active}
-                  onClick={() => onIconGroupClick(group.id)}
-                  className={cn(
-                    'relative grid justify-items-center gap-2 border p-2 transition-colors',
-                    'focus:outline-none focus:ring-2 focus:ring-ecg-green focus:ring-offset-2 focus:ring-offset-black',
-                    active
-                      ? 'border-ecg-green bg-ecg-green text-black'
-                      : hasFinding
-                        ? 'border-pending-amber bg-pending-amber/20 text-pending-amber'
-                        : 'border-neutral-700 bg-black text-neutral-300 hover:border-ecg-green hover:text-ecg-green',
-                  )}
-                >
-                  {hasFinding && !active ? (
-                    <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center border border-pending-amber bg-black text-[0.65rem] font-black leading-none text-pending-amber">
-                      !
-                    </span>
-                  ) : null}
-                  <img
-                    src={group.iconSrc}
-                    alt={group.iconAlt}
-                    className={cn(
-                      'h-14 w-14 object-contain invert transition-opacity',
-                      active ? 'opacity-100' : 'opacity-70',
-                    )}
-                  />
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-300">
-                    {group.label}
-                  </h3>
-                </button>
-                {showSlider ? (
-                  <div
-                    role="region"
-                    aria-label={`${group.label} finding slider`}
-                    className="grid min-w-0 gap-2 border border-ecg-green bg-black p-2 text-xs"
-                  >
-                    {summary ? (
-                      <p className="whitespace-pre-wrap break-words font-mono text-ecg-green">
-                        {summary}
-                      </p>
-                    ) : null}
-                    {missingLabels.length > 0 ? (
-                      <p className="font-mono text-pending-amber">
-                        Missing: {missingLabels.join(', ')}
-                      </p>
-                    ) : null}
-                  </div>
+                {findings[SCENE_GROUP.findingId] ? (
+                  <p className="whitespace-pre-wrap break-words font-mono text-ecg-green">
+                    {findings[SCENE_GROUP.findingId]}
+                  </p>
                 ) : null}
-              </section>
-            )
-          })}
+              </div>
+            ) : null}
+          </section>
         </div>
         <div className="relative aspect-square self-start overflow-hidden border border-neutral-800 bg-neutral-950">
           <img
