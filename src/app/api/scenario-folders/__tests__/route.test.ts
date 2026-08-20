@@ -46,7 +46,7 @@ describe('scenario folder routes', () => {
     expect(invalid.status).toBe(400)
 
     scenarioService.renameScenarioFolder.mockResolvedValue({ id: 'trauma', name: 'Major Trauma' })
-    scenarioService.deleteScenarioFolder.mockResolvedValue('general')
+    scenarioService.deleteScenarioFolder.mockResolvedValue(undefined)
     const context = { params: Promise.resolve({ id: 'trauma' }) }
     const renamed = await PATCH(new Request('http://localhost/api/scenario-folders/trauma', {
       method: 'PATCH',
@@ -58,6 +58,7 @@ describe('scenario folder routes', () => {
     )
 
     expect(await renamed.json()).toEqual({ folder: { id: 'trauma', name: 'Major Trauma' } })
-    expect(await deleted.json()).toEqual({ generalFolderId: 'general' })
+    expect(deleted.status).toBe(204)
+    expect(scenarioService.deleteScenarioFolder).toHaveBeenCalledWith('trauma')
   })
 })

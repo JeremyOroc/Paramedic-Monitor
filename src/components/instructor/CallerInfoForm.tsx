@@ -89,6 +89,7 @@ export function CallerInfoForm({
   const dispatchRouteDraft = useMonitorStore((s) => s.dispatchRouteDraft)
   const setDispatchRouteDraft = useMonitorStore((s) => s.setDispatchRouteDraft)
   const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
+  const [expanded, setExpanded] = useState(false)
   const visibleExtraFields = EXTRA_FIELDS.slice(0, extraCount)
   const extraLimitReached = extraCount >= EXTRA_FIELDS.length
 
@@ -188,10 +189,23 @@ export function CallerInfoForm({
   return (
     <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm uppercase tracking-wider text-neutral-400">Caller Info</h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setExpanded((current) => !current)}
+            aria-expanded={expanded}
+            aria-controls="caller-info-editor"
+            aria-label={`${expanded ? 'Collapse' : 'Expand'} Caller Info`}
+            className="grid h-6 w-6 place-items-center border border-neutral-700 font-mono text-sm font-bold text-cyan-bp hover:border-cyan-bp focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+          >
+            {expanded ? '−' : '+'}
+          </button>
+          <h2 className="text-sm uppercase tracking-wider text-neutral-400">Caller Info</h2>
+        </div>
         <span className="text-xs uppercase tracking-wider text-neutral-600">Analyse</span>
       </div>
-      <div className="grid gap-3">
+      {expanded ? (
+        <div id="caller-info-editor" className="grid gap-3">
         <label className="grid gap-1">
           <span className="text-xs uppercase tracking-wider text-neutral-400">Title</span>
           <input
@@ -419,7 +433,8 @@ export function CallerInfoForm({
             {scenarioAction === 'deleting' ? 'Deleting Scenario' : 'Delete Scenario'}
           </button>
         </div>
-      </div>
+        </div>
+      ) : null}
     </section>
   )
 }

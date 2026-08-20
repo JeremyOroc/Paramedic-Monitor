@@ -775,24 +775,26 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 ### Phase 10 — Folder-Based Scenario Library
 **Goal:** Instructors can save, organize, reload, edit, move, and delete complete reusable scenario drafts from Supabase.
 
-**Status:** Complete and deployed to the configured Supabase project on 2026-08-18. Migrations `001`–`005` are synchronized locally and remotely.
+**Status:** Complete and deployed on 2026-08-20 through repair migration `20260820194954_qualify_scenario_order_constraint.sql`.
 
 **Steps:**
 1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a fixed-height folder accordion above the unchanged caller-info editor.
-2. Provide an immutable `General` folder plus create, rename, and delete controls for custom case-insensitively unique folders. Deleting a folder moves its scenarios to General.
+2. Preserve the existing `General` data as an ordinary folder and provide create, rename, and delete controls for every case-insensitively unique folder. Deleting a non-empty folder requires confirmation and cascade-deletes its scenarios; the library may contain zero folders.
 3. Save versioned authoring snapshots containing raw auto-sort text, monitor drafts and channel states, caller/dispatch inputs, SAMPLE/OPQRST state, and Patient Physical state. Runtime dispatch/CPR/calibration and Save/Send history are excluded.
 4. Add a Title field plus green `Save Scenario` and red `Delete Scenario` actions. Blank titles use the smallest available `Scenario X` number.
-5. Load snapshots directly into editable drafts without sending to students. Track the loaded baseline so unchanged or reverted scenarios cannot be saved again.
-6. Order scenarios by most recently updated and support immediate drag/drop folder moves with an accessible Move fallback.
+5. Load snapshots directly into editable drafts without sending to students. Track the loaded baseline so unchanged or reverted scenarios cannot be saved again. Scenario rows toggle load/unload, with dirty-discard confirmation and authoring-only clearing on unload.
+6. Persist explicit scenario positions per folder. Support drag/drop and Up/Down ordering within a folder, plus cross-folder drag/drop and an accessible Move fallback that append moved scenarios.
 7. Store folders and saved snapshots in dedicated RLS-protected tables accessed only through typed server APIs, leaving the legacy timed-state `scenarios` table unchanged.
+8. When a meaningful draft is saved while the library has no folders, atomically create the smallest available `Folder X`, select it, and save the scenario there.
+9. Make the full Caller Info editor collapsible from an initially collapsed `−`/`+` header control without persisting the display preference.
 
 #### Testing
 - Unit coverage for snapshot normalization, meaningful-content and dirty comparisons, and fallback-number allocation.
-- Service/API coverage for folder/scenario CRUD, General protections, folder deletion moves, validation, and error responses.
-- Component and admin integration coverage for tab order, folder accordion behavior, save/load/update/delete, drag/drop/move fallback, discard confirmation, and four-tab restoration.
+- Migration/service/API coverage for ordinary General behavior, cascade deletion, empty-library auto-create, persisted ordering, concurrent reorder/move safety, validation, grants, and error responses.
+- Component and admin integration coverage for tab order, folder accordion behavior, row toggle load/unload, save/update/delete, drag/drop and Up/Down ordering, cross-folder append, discard confirmation, empty-library save, Caller Info collapse, and four-tab restoration.
 - Full Vitest, ESLint, production build, and rendered desktop overflow/interaction QA.
 
-**Milestone — COMPLETE (2026-08-18):** An instructor can manage a global folder library, reload a complete editable scenario draft, modify it, and persist the update without bypassing the normal Save → Send workflow.
+**Milestone — COMPLETE (2026-08-20):** An instructor can manage a global folder library, remove any folder, persist custom scenario order, reload or unload complete editable drafts from scenario rows, save into an automatically created folder when the library is empty, and collapse Caller Info without bypassing the normal Save → Send workflow.
 
 ---
 

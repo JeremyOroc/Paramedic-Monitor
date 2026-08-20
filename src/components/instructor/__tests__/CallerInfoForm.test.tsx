@@ -11,7 +11,7 @@ import {
 
 import { CallerInfoForm } from '../CallerInfoForm'
 
-function renderCallerInfoForm() {
+function renderCallerInfoForm({ expand = true }: { expand?: boolean } = {}) {
   const handleAutoSortChange = (value: string) => {
     const parsed = parseCallerInfoAutoSort(value)
 
@@ -23,7 +23,7 @@ function renderCallerInfoForm() {
     }
   }
 
-  return render(
+  const rendered = render(
     <CallerInfoForm
       autoSortText=""
       onAutoSortChange={handleAutoSortChange}
@@ -37,6 +37,12 @@ function renderCallerInfoForm() {
       scenarioError=""
     />,
   )
+
+  if (expand) {
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
+  }
+
+  return rendered
 }
 
 describe('CallerInfoForm', () => {
@@ -64,6 +70,27 @@ describe('CallerInfoForm', () => {
     expect(screen.getByRole('button', { name: 'Add extra' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Delete Scenario' })).toBeDisabled()
+  })
+
+  it('starts collapsed and expands the complete editor from the header control', async () => {
+    const user = userEvent.setup()
+    renderCallerInfoForm({ expand: false })
+
+    const expand = screen.getByRole('button', { name: 'Expand Caller Info' })
+    expect(expand).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
+    expect(screen.queryByLabelText('Scenario title')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Save Scenario' })).toBeNull()
+
+    await user.click(expand)
+    expect(screen.getByRole('button', { name: 'Collapse Caller Info' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeInTheDocument()
   })
 
   it('renders dispatch countdown before Call / Priority / MPDS', () => {

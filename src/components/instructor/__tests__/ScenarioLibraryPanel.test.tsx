@@ -8,37 +8,34 @@ import type { SavedScenario, ScenarioFolder } from '@/types/savedScenario'
 
 import { ScenarioLibraryPanel } from '../ScenarioLibraryPanel'
 
-const general: ScenarioFolder = {
-  id: 'general',
-  name: 'General',
-  is_general: true,
-  scenario_count: 2,
-  created_at: '2026-08-18T10:00:00.000Z',
-  updated_at: '2026-08-18T10:00:00.000Z',
+const timestamp = '2026-08-18T10:00:00.000Z'
+
+function folder(id: string, name: string, scenarioCount: number): ScenarioFolder {
+  return {
+    id,
+    name,
+    scenario_count: scenarioCount,
+    created_at: timestamp,
+    updated_at: timestamp,
+  }
 }
-const trauma: ScenarioFolder = {
-  id: 'trauma',
-  name: 'Trauma',
-  is_general: false,
-  scenario_count: 0,
-  created_at: '2026-08-18T10:00:00.000Z',
-  updated_at: '2026-08-18T10:00:00.000Z',
-}
-const scenario: SavedScenario = {
-  id: 'scenario-1',
-  folder_id: 'general',
-  scenario_number: 1,
-  title: 'Chest Pain',
-  snapshot: createEmptyScenarioSnapshot(),
-  created_at: '2026-08-18T10:00:00.000Z',
-  updated_at: '2026-08-18T12:00:00.000Z',
-}
-const olderScenario: SavedScenario = {
-  ...scenario,
-  id: 'scenario-2',
-  scenario_number: 2,
-  title: 'Older Call',
-  updated_at: '2026-08-18T11:00:00.000Z',
+
+function savedScenario(
+  id: string,
+  folderId: string,
+  title: string,
+  position: number,
+): SavedScenario {
+  return {
+    id,
+    folder_id: folderId,
+    scenario_number: Number(id.replace(/\D/g, '')),
+    title,
+    position,
+    snapshot: createEmptyScenarioSnapshot(),
+    created_at: timestamp,
+    updated_at: timestamp,
+  }
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -48,10 +45,30 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
-function createFetchMock() {
-  const folders = [general, trauma]
-  const scenarios = [scenario, olderScenario]
-  return vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
+function summary(scenario: SavedScenario) {
+  return {
+    id: scenario.id,
+    folder_id: scenario.folder_id,
+    scenario_number: scenario.scenario_number,
+    title: scenario.title,
+    position: scenario.position,
+    created_at: scenario.created_at,
+    updated_at: scenario.updated_at,
+  }
+}
+
+function createFetchMock(options: { empty?: boolean } = {}) {
+  const folders = options.empty
+    ? []
+    : [folder('general', 'General', 2), folder('trauma', 'Trauma', 0)]
+  const scenarios = options.empty
+    ? []
+    : [
+        savedScenario('scenario-1', 'general', 'Chest Pain', 1),
+        savedScenario('scenario-2', 'general', 'Older Call', 2),
+      ]
+
+  const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
     const url = String(input)
     const method = init?.method ?? 'GET'
     if (url === '/api/scenario-folders' && method === 'GET') {
@@ -61,44 +78,70 @@ function createFetchMock() {
       const folderId = new URL(url, 'http://localhost').searchParams.get('folderId')
       return jsonResponse({
         scenarios: scenarios
-          .filter((item) => item.folder_id === folderId)
-          .map((item) => ({
-            id: item.id,
-            folder_id: item.folder_id,
-            scenario_number: item.scenario_number,
-            title: item.title,
-            created_at: item.created_at,
-            updated_at: item.updated_at,
-          })),
+          .filter((scenario) => scenario.folder_id === folderId)
+          .toSorted((left, right) => left.position - right.position)
+          .map(summary),
       })
     }
-    if (url === '/api/scenarios/scenario-1' && method === 'GET') {
+    if (url.startsWith('/api/scenarios/') && method === 'GET') {
+      const scenario = scenarios.find((item) => item.id === url.split('/').at(-1))
+      return scenario ? jsonResponse({ scenario }) : jsonResponse({ error: 'Not found' }, 404)
+    }
+    if (url.startsWith('/api/scenarios/') && method === 'PATCH') {
+      const scenario = scenarios.find((item) => item.id === url.split('/').at(-1))
+      const body = JSON.parse(String(init?.body)) as { folderId: string }
+      if (!scenario) return jsonResponse({ error: 'Not found' }, 404)
+      scenario.folder_id = body.folderId
+      scenario.position = scenarios.filter((item) => item.folder_id === body.folderId).length + 1
       return jsonResponse({ scenario })
     }
-    if (url === '/api/scenarios/scenario-1' && method === 'PATCH') {
-      const body = JSON.parse(String(init?.body)) as { folderId: string }
-      scenario.folder_id = body.folderId
-      return jsonResponse({ scenario })
+    if (url.endsWith('/order') && method === 'PATCH') {
+      const body = JSON.parse(String(init?.body)) as { scenarioIds: string[] }
+      body.scenarioIds.forEach((id, index) => {
+        const scenario = scenarios.find((item) => item.id === id)
+        if (scenario) scenario.position = index + 1
+      })
+      return jsonResponse({
+        scenarios: body.scenarioIds
+          .map((id) => scenarios.find((scenario) => scenario.id === id))
+          .filter((scenario): scenario is SavedScenario => scenario !== undefined)
+          .map(summary),
+      })
     }
     if (url === '/api/scenario-folders' && method === 'POST') {
       const body = JSON.parse(String(init?.body)) as { name: string }
-      const folder = { ...trauma, id: 'new-folder', name: body.name }
-      folders.push(folder)
-      return jsonResponse({ folder }, 201)
+      const created = folder('new-folder', body.name, 0)
+      folders.push(created)
+      return jsonResponse({ folder: created }, 201)
     }
-    if (url === '/api/scenario-folders/trauma' && method === 'PATCH') {
+    if (url === '/api/scenario-folders/general' && method === 'PATCH') {
       const body = JSON.parse(String(init?.body)) as { name: string }
-      trauma.name = body.name
-      return jsonResponse({ folder: trauma })
+      const current = folders.find((item) => item.id === 'general')
+      if (current) current.name = body.name
+      return jsonResponse({ folder: current })
     }
-    if (url === '/api/scenario-folders/trauma' && method === 'DELETE') {
-      return jsonResponse({ generalFolderId: 'general' })
+    if (url.startsWith('/api/scenario-folders/') && method === 'DELETE') {
+      const folderId = url.split('/').at(-1)
+      const folderIndex = folders.findIndex((item) => item.id === folderId)
+      if (folderIndex >= 0) folders.splice(folderIndex, 1)
+      for (let index = scenarios.length - 1; index >= 0; index -= 1) {
+        if (scenarios[index].folder_id === folderId) scenarios.splice(index, 1)
+      }
+      return new Response(null, { status: 204 })
     }
     return jsonResponse({ error: `Unhandled ${method} ${url}` }, 500)
   })
+
+  return { fetchMock, folders, scenarios }
 }
 
-function Harness({ onLoad }: { onLoad: (value: SavedScenario) => void }) {
+type HarnessProps = {
+  onLoad?: (value: SavedScenario) => void
+  onUnload?: () => void
+  onFolderDeleted?: (folderId: string) => void
+}
+
+function Harness({ onLoad = vi.fn(), onUnload = vi.fn(), onFolderDeleted = vi.fn() }: HarnessProps) {
   const [selectedFolderId, setSelectedFolderId] = useState('general')
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
   return (
@@ -111,6 +154,12 @@ function Harness({ onLoad }: { onLoad: (value: SavedScenario) => void }) {
         setLoadedScenarioId(value.id)
         onLoad(value)
       }}
+      onUnloadScenario={() => {
+        setLoadedScenarioId(null)
+        onUnload()
+      }}
+      onFolderDeleted={onFolderDeleted}
+      onLoadedScenarioFolderChange={vi.fn()}
     />
   )
 }
@@ -118,92 +167,122 @@ function Harness({ onLoad }: { onLoad: (value: SavedScenario) => void }) {
 describe('ScenarioLibraryPanel', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    scenario.folder_id = 'general'
-    trauma.name = 'Trauma'
   })
 
-  it('renders General first, locks its controls, orders scenarios, and loads a row', async () => {
+  it('treats General as ordinary and toggles scenario loading from the row', async () => {
+    createFetchMock()
+    const onLoad = vi.fn()
+    const onUnload = vi.fn()
+    const user = userEvent.setup()
+    render(<Harness onLoad={onLoad} onUnload={onUnload} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /General/ })).toHaveAttribute('aria-expanded', 'true'))
+    const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
+    expect(within(generalSection).getByRole('button', { name: 'Rename' })).toBeInTheDocument()
+    expect(within(generalSection).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Load' })).toBeNull()
+
+    const chestPainRow = screen.getByRole('button', { name: 'Load Chest Pain' })
+    await user.click(chestPainRow)
+    await waitFor(() => expect(onLoad).toHaveBeenCalledWith(expect.objectContaining({ id: 'scenario-1' })))
+    expect(screen.getByRole('button', { name: 'Unload Chest Pain' })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(screen.getByRole('button', { name: 'Unload Chest Pain' }))
+    expect(onUnload).toHaveBeenCalledOnce()
+  })
+
+  it('supports keyboard loading and keeps nested order controls from activating the row', async () => {
     createFetchMock()
     const onLoad = vi.fn()
     const user = userEvent.setup()
     render(<Harness onLoad={onLoad} />)
+    const row = await screen.findByRole('button', { name: 'Load Chest Pain' })
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /General/ })).toHaveAttribute('aria-expanded', 'true'))
-    const folderButtons = screen.getAllByRole('button').filter((button) =>
-      /General|Trauma/.test(button.textContent ?? '') && button.hasAttribute('aria-expanded'),
-    )
-    expect(folderButtons.map((button) => button.textContent)).toEqual([
-      expect.stringContaining('General'),
-      expect.stringContaining('Trauma'),
-    ])
-    expect(screen.getByTestId('scenario-folder-scroll')).toHaveClass('max-h-96', 'overflow-y-auto')
-    expect(screen.queryByLabelText('Rename General')).toBeNull()
-    const generalRegion = screen.getByLabelText('General scenarios')
-    expect((generalRegion.textContent ?? '').indexOf('Chest Pain')).toBeLessThan(
-      (generalRegion.textContent ?? '').indexOf('Older Call'),
-    )
+    row.focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(onLoad).toHaveBeenCalledOnce())
 
-    await user.click(within(generalRegion).getAllByRole('button', { name: 'Load' })[0])
-    await waitFor(() => expect(onLoad).toHaveBeenCalledWith(scenario))
+    onLoad.mockClear()
+    await user.click(screen.getByRole('button', { name: 'Move Older Call up' }))
+    expect(onLoad).not.toHaveBeenCalled()
   })
 
-  it('creates, renames, deletes, and moves folders without requiring scenario Save', async () => {
-    const fetchMock = createFetchMock()
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+  it('persists Up/Down and drag ordering optimistically', async () => {
+    const { fetchMock } = createFetchMock()
     const user = userEvent.setup()
-    render(<Harness onLoad={vi.fn()} />)
+    render(<Harness />)
+    await screen.findByText('Chest Pain')
 
-    await waitFor(() => expect(screen.getByText('Chest Pain')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'New Folder' }))
-    await user.type(screen.getByLabelText('New folder name'), 'Cardiac')
-    await user.click(screen.getByRole('button', { name: 'Create' }))
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/scenario-folders', expect.objectContaining({ method: 'POST' })))
-
-    await user.click(screen.getByRole('button', { name: /General/ }))
-    await waitFor(() => expect(screen.getByText('Chest Pain')).toBeInTheDocument())
-    await user.selectOptions(screen.getByLabelText('Move Chest Pain'), 'trauma')
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/scenarios/scenario-1', expect.objectContaining({
+    await user.click(screen.getByRole('button', { name: 'Move Older Call up' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scenario-folders/general/order',
+      expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ folderId: 'trauma' }),
-      }))
-    })
+        body: JSON.stringify({ scenarioIds: ['scenario-2', 'scenario-1'] }),
+      }),
+    ))
 
-    const traumaSection = screen.getByRole('button', { name: /Trauma/ }).closest('section') as HTMLElement
-    await user.click(within(traumaSection).getByRole('button', { name: 'Rename' }))
-    const rename = screen.getByLabelText('Rename Trauma')
-    await user.clear(rename)
-    await user.type(rename, 'Major Trauma')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
-    await waitFor(() => expect(screen.getByRole('button', { name: /Major Trauma/ })).toBeInTheDocument())
-
-    const renamedSection = screen.getByRole('button', { name: /Major Trauma/ }).closest('section') as HTMLElement
-    await user.click(within(renamedSection).getByRole('button', { name: 'Delete' }))
-    expect(window.confirm).toHaveBeenCalledWith(
-      'Delete "Major Trauma"? Its scenarios will move to General.',
-    )
-  })
-
-  it('supports dropping a draggable scenario on a closed folder header', async () => {
-    const fetchMock = createFetchMock()
-    render(<Harness onLoad={vi.fn()} />)
-    await waitFor(() => expect(screen.getByText('Chest Pain')).toBeInTheDocument())
-
-    const row = screen.getByText('Chest Pain').closest('[draggable="true"]') as HTMLElement
-    const target = screen.getByRole('button', { name: /Trauma/ }).closest('section') as HTMLElement
+    const rows = screen.getAllByRole('button', { name: /^(Load|Unload) / })
     const data = new Map<string, string>()
     const dataTransfer = {
       effectAllowed: 'none',
       setData: (type: string, value: string) => data.set(type, value),
       getData: (type: string) => data.get(type) ?? '',
     }
-
-    fireEvent.dragStart(row, { dataTransfer })
-    fireEvent.drop(target, { dataTransfer })
+    fireEvent.dragStart(rows[0], { dataTransfer })
+    fireEvent.dragOver(rows[1], { dataTransfer, clientY: 100 })
+    fireEvent.drop(rows[1], { dataTransfer, clientY: 100 })
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
-      '/api/scenarios/scenario-1',
+      '/api/scenario-folders/general/order',
       expect.objectContaining({ method: 'PATCH' }),
     ))
+  })
+
+  it('moves a scenario to another folder and appends through the existing fallback', async () => {
+    const { fetchMock } = createFetchMock()
+    const user = userEvent.setup()
+    render(<Harness />)
+    await screen.findByText('Chest Pain')
+
+    await user.selectOptions(screen.getByLabelText('Move Chest Pain'), 'trauma')
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scenarios/scenario-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ folderId: 'trauma' }),
+      }),
+    ))
+  })
+
+  it('deletes empty folders without prompting and confirms cascade deletion for non-empty folders', async () => {
+    const { fetchMock } = createFetchMock()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const onFolderDeleted = vi.fn()
+    const user = userEvent.setup()
+    render(<Harness onFolderDeleted={onFolderDeleted} />)
+    await screen.findByText('Chest Pain')
+
+    const traumaSection = screen.getByRole('button', { name: /Trauma/ }).closest('section') as HTMLElement
+    await user.click(within(traumaSection).getByRole('button', { name: 'Delete' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scenario-folders/trauma',
+      { method: 'DELETE' },
+    ))
+    expect(confirm).not.toHaveBeenCalled()
+
+    const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
+    await user.click(within(generalSection).getByRole('button', { name: 'Delete' }))
+    expect(confirm).toHaveBeenCalledWith(
+      'Delete "General" and its 2 scenarios? This cannot be undone.',
+    )
+    await waitFor(() => expect(onFolderDeleted).toHaveBeenCalledWith('general'))
+  })
+
+  it('renders the empty-library save guidance', async () => {
+    createFetchMock({ empty: true })
+    render(<Harness />)
+
+    expect(await screen.findByText('No scenario folders. Saving a scenario will create Folder 1.')).toBeInTheDocument()
   })
 })

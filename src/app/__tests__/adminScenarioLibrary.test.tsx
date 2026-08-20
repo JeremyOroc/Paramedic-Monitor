@@ -17,7 +17,6 @@ vi.mock('next/navigation', () => ({
 const general = {
   id: 'general',
   name: 'General',
-  is_general: true,
   scenario_count: 1,
   created_at: '2026-08-18T10:00:00.000Z',
   updated_at: '2026-08-18T10:00:00.000Z',
@@ -41,6 +40,7 @@ function savedScenario(): SavedScenario {
     folder_id: 'general',
     scenario_number: 1,
     title: 'Chest Pain',
+    position: 1,
     snapshot,
     created_at: '2026-08-18T10:00:00.000Z',
     updated_at: '2026-08-18T12:00:00.000Z',
@@ -60,6 +60,7 @@ function scenarioSummary(scenario: SavedScenario) {
     folder_id: scenario.folder_id,
     scenario_number: scenario.scenario_number,
     title: scenario.title,
+    position: scenario.position,
     created_at: scenario.created_at,
     updated_at: scenario.updated_at,
   }
@@ -96,7 +97,8 @@ describe('AdminPage scenario library integration', () => {
     render(<AdminPage />)
 
     await waitFor(() => expect(screen.getByText('Chest Pain')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'Load' }))
+    await user.click(screen.getByRole('button', { name: 'Load Chest Pain' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
 
     await waitFor(() => expect(screen.getByLabelText('Scenario title')).toHaveValue('Chest Pain'))
     expect(screen.getByLabelText('Auto-sort scenario')).toHaveValue(stored.snapshot.autoSortText)
@@ -127,16 +129,18 @@ describe('AdminPage scenario library integration', () => {
     await user.clear(fc)
     await user.type(fc, '160')
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
 
     const confirmDiscard = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    await user.click(screen.getByRole('button', { name: 'Load' }))
+    await user.click(screen.getByRole('button', { name: 'Unload Chest Pain' }))
     await waitFor(() => expect(confirmDiscard).toHaveBeenCalledWith(
-      'Discard unsaved scenario changes and load this scenario?',
+      'Discard unsaved scenario changes and unload this scenario?',
     ))
     await user.click(screen.getByRole('button', { name: 'Monitor' }))
     expect(screen.getByLabelText('FC')).toHaveValue(160)
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
 
     await user.click(screen.getByRole('button', { name: 'Save Scenario' }))
 
@@ -183,6 +187,7 @@ describe('AdminPage scenario library integration', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
     await waitFor(() => expect(screen.getByRole('button', { name: /General/ })).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
 
     expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
@@ -203,5 +208,108 @@ describe('AdminPage scenario library integration', () => {
     expect(screen.getByLabelText('Auto-sort scenario')).toHaveValue('ADDRESS: 55 Main Street\nHR: 120')
     expect(screen.getByRole('button', { name: 'Delete Scenario' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
+  })
+
+  it('auto-creates Folder 1 and saves when the scenario library is empty', async () => {
+    let created: SavedScenario | null = null
+    const autoFolder = {
+      ...general,
+      id: 'folder-1',
+      name: 'Folder 1',
+      scenario_count: 1,
+    }
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      if (url === '/api/scenario-folders') {
+        return jsonResponse({ folders: created ? [autoFolder] : [] })
+      }
+      if (url === '/api/scenarios?folderId=folder-1') {
+        return jsonResponse({ scenarios: created ? [scenarioSummary(created)] : [] })
+      }
+      if (url === '/api/scenarios' && method === 'POST') {
+        const body = JSON.parse(String(init?.body)) as {
+          autoCreateFolder?: boolean
+          snapshot: SavedScenario['snapshot']
+        }
+        created = {
+          ...savedScenario(),
+          folder_id: 'folder-1',
+          title: 'Scenario 1',
+          snapshot: body.snapshot,
+        }
+        return jsonResponse({ scenario: created }, 201)
+      }
+      return jsonResponse({ error: `Unhandled ${method} ${url}` }, 500)
+    })
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    expect(await screen.findByText('No scenario folders. Saving a scenario will create Folder 1.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
+    fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
+      target: { value: 'ADDRESS: 55 Main Street\nHR: 120' },
+    })
+    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Save Scenario' }))
+
+    await waitFor(() => {
+      const createCall = fetchMock.mock.calls.find(
+        ([url, init]) => String(url) === '/api/scenarios' && init?.method === 'POST',
+      )
+      expect(createCall).toBeDefined()
+      expect(JSON.parse(String(createCall?.[1]?.body))).toMatchObject({
+        autoCreateFolder: true,
+      })
+    })
+    expect(await screen.findByRole('button', { name: /Folder 1/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    )
+    expect(screen.getByLabelText('Scenario title')).toHaveValue('Scenario 1')
+  })
+
+  it('cascade-deleting the loaded folder clears authoring drafts without changing confirmed state', async () => {
+    const stored = savedScenario()
+    let deleted = false
+    vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      if (url === '/api/scenario-folders') {
+        return jsonResponse({ folders: deleted ? [] : [general] })
+      }
+      if (url === '/api/scenarios?folderId=general') {
+        return jsonResponse({ scenarios: deleted ? [] : [scenarioSummary(stored)] })
+      }
+      if (url === '/api/scenarios/scenario-1' && method === 'GET') {
+        return jsonResponse({ scenario: stored })
+      }
+      if (url === '/api/scenario-folders/general' && method === 'DELETE') {
+        deleted = true
+        return new Response(null, { status: 204 })
+      }
+      return jsonResponse({ error: `Unhandled ${method} ${url}` }, 500)
+    })
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    useMonitorStore.getState().setDraftVitalValues({ hr: 99 })
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(await screen.findByRole('button', { name: 'Load Chest Pain' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
+    await waitFor(() => expect(useMonitorStore.getState().draft.hr).toBe(145))
+    expect(useMonitorStore.getState().confirmed.hr).toBe(99)
+
+    const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
+    await user.click(within(generalSection).getByRole('button', { name: 'Delete' }))
+
+    await user.click(await screen.findByRole('button', { name: 'Expand Caller Info' }))
+    await waitFor(() => expect(screen.getByLabelText('Scenario title')).toHaveValue(''))
+    expect(useMonitorStore.getState().draft.hr).toBe(0)
+    expect(useMonitorStore.getState().confirmed.hr).toBe(99)
+    expect(screen.getByLabelText('Auto-sort scenario')).toHaveValue('')
+    expect(await screen.findByText('No scenario folders. Saving a scenario will create Folder 1.')).toBeInTheDocument()
   })
 })

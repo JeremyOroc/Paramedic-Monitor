@@ -49,7 +49,6 @@ export type ScenarioSnapshotV1 = {
 export type ScenarioFolder = {
   id: string
   name: string
-  is_general: boolean
   scenario_count: number
   created_at: string
   updated_at: string
@@ -60,6 +59,7 @@ export type SavedScenarioSummary = {
   folder_id: string
   scenario_number: number
   title: string
+  position: number
   created_at: string
   updated_at: string
 }

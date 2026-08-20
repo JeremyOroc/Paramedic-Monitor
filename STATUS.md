@@ -6,13 +6,26 @@
 ---
 
 ## Current Phase
-**Folder-based Supabase scenario library — COMPLETE AND DEPLOYED.** The schema migration, typed server APIs, full-draft snapshot workflow, folder UI, and automated coverage are complete. Migrations `001`–`005` are synchronized with the configured Supabase project.
+**Scenario library organization update — COMPLETE AND DEPLOYED.** General is ordinary data, every folder is removable with cascade deletion, scenario order persists, rows toggle load state, empty libraries self-create `Folder X`, and Caller Info is collapsible. The configured Supabase project is synchronized through repair migration `20260820194954`.
 
 > Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
 
 ---
 
 ## Completed
+- [x] **Caller Info minimized default — COMPLETE:**
+  - [x] Caller Info now starts collapsed on each mount/page load, expands through the existing accessible `+` control, and remains non-persistent
+  - [x] Component and admin integration regressions cover the collapsed default and explicit expansion before editing
+  - [x] Focused tests and rendered 1280×720 reload/interaction QA pass with a clean browser console
+- [x] **Scenario reorder constraint-resolution hotfix — COMPLETE:**
+  - [x] Schema-qualified the deferrable folder-position constraint inside the empty-search-path reorder RPC
+  - [x] Deployed migration `20260820194954`, verified matching local/remote history, and exercised the real API with a no-op reorder returning 200 and all four positions intact
+  - [x] Focused migration/service/API tests pass; linked schema lint has no errors and Supabase advisors report no error-level issues
+- [x] **Scenario library organization update — COMPLETE:**
+  - [x] Retired General's protected status while preserving its data; every folder can be renamed or deleted, with confirmation for non-empty cascade deletion and an empty-library state
+  - [x] Added atomic, service-role-only reorder, cross-folder append, and empty-library `Folder X` save operations with persisted per-folder positions
+  - [x] Replaced Load buttons with accessible row load/unload toggles, added drag/drop plus Up/Down ordering with optimistic rollback, and made the complete Caller Info editor collapsible
+  - [x] All 770 tests, TypeScript, Supabase schema lint/advisors, ESLint, production build, and rendered 1024×768/1366×768 interaction QA pass; migration `20260820192736` is deployed and verified remotely
 - [x] **Vercel scenario-service test type fix — COMPLETE:**
   - [x] Removed the unsupported explicit generic from Vitest's `toMatchObject` matcher and the now-unused test import
   - [x] Focused service tests, `tsc --noEmit`, and the complete Next.js production build pass

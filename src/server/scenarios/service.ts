@@ -31,6 +31,21 @@ function databaseError(error: { code?: string; message: string } | null, fallbac
   if (error?.code === '23505') {
     throw new ScenarioLibraryError('A folder with that name already exists', 409)
   }
+  if (error?.message.includes('Scenario folder not found')) {
+    throw new ScenarioLibraryError('Scenario folder not found', 404)
+  }
+  if (error?.message.includes('Saved scenario not found')) {
+    throw new ScenarioLibraryError('Saved scenario not found', 404)
+  }
+  if (error?.message.includes('Select a folder before saving')) {
+    throw new ScenarioLibraryError('Select a folder before saving', 409)
+  }
+  if (error?.message.includes('Scenario order must contain')) {
+    throw new ScenarioLibraryError(
+      'Scenario order must contain every scenario in the folder exactly once',
+      409,
+    )
+  }
   throw new ScenarioLibraryError(error?.message ?? fallback, 500)
 }
 
@@ -40,6 +55,7 @@ function toSummary(row: ScenarioRow): SavedScenarioSummary {
     folder_id: row.folder_id,
     scenario_number: row.scenario_number,
     title: row.title,
+    position: row.position,
     created_at: row.created_at,
     updated_at: row.updated_at,
   }
@@ -57,7 +73,7 @@ async function requireFolder(folderId: string): Promise<FolderRow> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('scenario_folders')
-    .select('id, name, is_general, created_at, updated_at')
+    .select('id, name, created_at, updated_at')
     .eq('id', folderId)
     .maybeSingle()
 
@@ -71,8 +87,7 @@ export async function listScenarioFolders(): Promise<ScenarioFolder[]> {
   const [foldersResult, scenariosResult] = await Promise.all([
     supabase
       .from('scenario_folders')
-      .select('id, name, is_general, created_at, updated_at')
-      .order('is_general', { ascending: false })
+      .select('id, name, created_at, updated_at')
       .order('name', { ascending: true }),
     supabase.from('saved_scenarios').select('folder_id'),
   ])
@@ -94,11 +109,9 @@ export async function listScenarioFolders(): Promise<ScenarioFolder[]> {
       ...folder,
       scenario_count: counts.get(folder.id) ?? 0,
     }))
-    .sort((left, right) => {
-      if (left.is_general) return -1
-      if (right.is_general) return 1
-      return left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
-    })
+    .sort((left, right) =>
+      left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
+    )
 }
 
 export async function createScenarioFolder(name: string): Promise<ScenarioFolder> {
@@ -106,7 +119,7 @@ export async function createScenarioFolder(name: string): Promise<ScenarioFolder
   const { data, error } = await supabase
     .from('scenario_folders')
     .insert({ name: normalizeFolderName(name) })
-    .select('id, name, is_general, created_at, updated_at')
+    .select('id, name, created_at, updated_at')
     .single()
 
   if (error || !data) databaseError(error, 'Unable to create scenario folder')
@@ -114,35 +127,31 @@ export async function createScenarioFolder(name: string): Promise<ScenarioFolder
 }
 
 export async function renameScenarioFolder(id: string, name: string): Promise<ScenarioFolder> {
-  const current = await requireFolder(id)
-  if (current.is_general) {
-    throw new ScenarioLibraryError('General folder cannot be renamed', 409)
-  }
+  await requireFolder(id)
 
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('scenario_folders')
     .update({ name: normalizeFolderName(name) })
     .eq('id', id)
-    .select('id, name, is_general, created_at, updated_at')
+    .select('id, name, created_at, updated_at')
     .single()
 
   if (error || !data) databaseError(error, 'Unable to rename scenario folder')
   return { ...data, scenario_count: 0 }
 }
 
-export async function deleteScenarioFolder(id: string): Promise<string> {
-  const current = await requireFolder(id)
-  if (current.is_general) {
-    throw new ScenarioLibraryError('General folder cannot be deleted', 409)
-  }
-
+export async function deleteScenarioFolder(id: string): Promise<void> {
   const supabase = createServiceClient()
-  const { data, error } = await supabase.rpc('delete_scenario_folder', {
-    folder_to_delete: id,
-  })
-  if (error || !data) databaseError(error, 'Unable to delete scenario folder')
-  return data
+  const { data, error } = await supabase
+    .from('scenario_folders')
+    .delete()
+    .eq('id', id)
+    .select('id')
+    .maybeSingle()
+
+  if (error) databaseError(error, 'Unable to delete scenario folder')
+  if (!data) throw new ScenarioLibraryError('Scenario folder not found', 404)
 }
 
 export async function listSavedScenarios(folderId: string): Promise<SavedScenarioSummary[]> {
@@ -150,9 +159,9 @@ export async function listSavedScenarios(folderId: string): Promise<SavedScenari
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('saved_scenarios')
-    .select('id, folder_id, scenario_number, title, snapshot, created_at, updated_at')
+    .select('id, folder_id, scenario_number, title, snapshot, position, created_at, updated_at')
     .eq('folder_id', folderId)
-    .order('updated_at', { ascending: false })
+    .order('position', { ascending: true })
     .order('scenario_number', { ascending: true })
 
   if (error) databaseError(error, 'Unable to list saved scenarios')
@@ -163,7 +172,7 @@ export async function getSavedScenario(id: string): Promise<SavedScenario> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('saved_scenarios')
-    .select('id, folder_id, scenario_number, title, snapshot, created_at, updated_at')
+    .select('id, folder_id, scenario_number, title, snapshot, position, created_at, updated_at')
     .eq('id', id)
     .maybeSingle()
 
@@ -173,17 +182,21 @@ export async function getSavedScenario(id: string): Promise<SavedScenario> {
 }
 
 export async function createSavedScenario(
-  folderId: string,
+  folderId: string | null,
   title: string,
   snapshot: ScenarioSnapshotV1,
 ): Promise<SavedScenario> {
-  await requireFolder(folderId)
   const supabase = createServiceClient()
-  const { data, error } = await supabase.rpc('create_saved_scenario', {
-    folder_id: folderId,
-    requested_title: title,
-    scenario_snapshot: snapshot,
-  })
+  const { data, error } = folderId === null
+    ? await supabase.rpc('create_saved_scenario_with_auto_folder', {
+        requested_title: title,
+        scenario_snapshot: snapshot,
+      })
+    : await supabase.rpc('create_saved_scenario', {
+        folder_id: folderId,
+        requested_title: title,
+        scenario_snapshot: snapshot,
+      })
 
   if (error || !data) databaseError(error, 'Unable to save scenario')
   return toSavedScenario(data)
@@ -199,29 +212,52 @@ export async function updateSavedScenario(
   id: string,
   changes: SavedScenarioChanges,
 ): Promise<SavedScenario> {
-  const current = await getSavedScenario(id)
-  if (changes.folderId !== undefined) await requireFolder(changes.folderId)
+  let current = await getSavedScenario(id)
+
+  if (changes.folderId !== undefined && changes.folderId !== current.folder_id) {
+    const supabase = createServiceClient()
+    const { data, error } = await supabase.rpc('move_saved_scenario', {
+      scenario_to_move: id,
+      target_folder: changes.folderId,
+    })
+    if (error || !data) databaseError(error, 'Unable to move saved scenario')
+    current = toSavedScenario(data)
+  }
 
   const update: Database['public']['Tables']['saved_scenarios']['Update'] = {}
-  if (changes.folderId !== undefined) update.folder_id = changes.folderId
   if (changes.snapshot !== undefined) update.snapshot = changes.snapshot
   if (changes.title !== undefined) {
     update.title = changes.title.trim() || `Scenario ${current.scenario_number}`
   }
-  if (Object.keys(update).length === 0) {
+  if (Object.keys(update).length === 0 && changes.folderId === undefined) {
     throw new ScenarioLibraryError('No scenario changes supplied', 400)
   }
+  if (Object.keys(update).length === 0) return current
 
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('saved_scenarios')
     .update(update)
     .eq('id', id)
-    .select('id, folder_id, scenario_number, title, snapshot, created_at, updated_at')
+    .select('id, folder_id, scenario_number, title, snapshot, position, created_at, updated_at')
     .single()
 
   if (error || !data) databaseError(error, 'Unable to update saved scenario')
   return toSavedScenario(data)
+}
+
+export async function reorderSavedScenarios(
+  folderId: string,
+  orderedScenarioIds: string[],
+): Promise<SavedScenarioSummary[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase.rpc('reorder_saved_scenarios', {
+    folder_to_reorder: folderId,
+    ordered_scenario_ids: orderedScenarioIds,
+  })
+
+  if (error) databaseError(error, 'Unable to reorder saved scenarios')
+  return (data ?? []).map(toSummary)
 }
 
 export async function deleteSavedScenario(id: string): Promise<void> {
