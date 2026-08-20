@@ -337,7 +337,8 @@ existing close-panel and exit-12-lead precedence.
 **Steps:**
 1. `InstructorLayout` — dark panel, responsive columns
 2. `VitalsControls` + `VitalInput` — inputs ordered FC, SpO2, BP sys/dia, EtCO2
-   - Include a top-of-vitals `Normal` button that resets draft vital numbers to normal defaults while preserving rhythm/waveform selections and the Save → Send workflow
+   - The former top-of-vitals `Normal` button is removed from the instructor UI; the underlying store action remains available for compatibility
+   - The `Monitor & Patient SNS` tab places Pulse, Respiratory, and Skin/Extremities in one horizontal row at the bottom of the Vitals box, followed by the existing SAMPLE and OPQRST boxes below Vitals
    - Include `CallerInfoForm` in its own admin tab for dispatch/caller info shown on the monitor after ANALYZE: Dispatch countdown, Call #, Priority, MPDS Code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button that reveals up to three optional title/input extra rows
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
 4. On input change → set `pendingFlags[field] = true` → field turns amber/orange (pending color)
@@ -349,11 +350,11 @@ existing close-panel and exit-12-lead precedence.
 10. `PatientInfoForm` — age, sex, first/last/middle name, patient ID fields
 
 **Testing:**
-- Component tests cover the top-of-vitals `Normal` button and confirm it resets draft vital numbers without bypassing Send.
+- Component tests verify the visible `Normal` control is absent while the compatibility store action remains covered independently.
 - Store tests cover the `resetVitalsToNormal` action and verify it preserves non-vital fields.
 - Component/page tests cover caller-info draft/save/send flow and ANALYZE-triggered monitor display.
 - Caller-info form tests cover adding optional extra rows one at a time and capping the form at three extras.
-- Admin page tests cover tab switching between monitor controls and caller-info form.
+- Admin page tests cover the three-tab layout, combined monitor/SNS/patient-information content, moved icon behavior, and removed shared Reset control.
 
 **Milestone:** Instructor panel fully interactive. Editing vitals turns fields amber. Send confirms them. Defib sequence enforces correct order with progress bars.
 
@@ -615,8 +616,9 @@ button is inert until a drill gate is satisfied.
   Legacy `Intervention prioritaire code` / `Code` labels are ignored. Matching
   fields overwrite immediately in draft state, optional extras are ignored, and
   trainees only see changes after the normal Save → Send flow.
-- The admin dashboard includes a `Patient Information` tab with two
-  square SAMPLE and OPQRST checklist panels. Each letter has a compact
+- The admin dashboard combines monitor controls and patient SNS content in a
+  `Monitor & Patient SNS` tab. The existing square SAMPLE and OPQRST checklist
+  panels render directly below the Vitals box. Each letter has a compact
   left-aligned toggle button plus an auto-growing textarea. The universal
   Caller Info scenario auto-sort parses `Letter: value` lines into those
   textareas, with repeated `S` and `P` labels filling SAMPLE first and OPQRST
@@ -646,8 +648,9 @@ button is inert until a drill gate is satisfied.
   back/spine or thoracic headings stop extremity collection instead of being
   appended to leg findings. Confirmed findings in the Selected panel follow the
   order the instructor clicked body parts.
-- The `Patient Physical` tab includes a left-side icon rail ordered Pulse,
-  Respiratory, Skin/Extremities, then Scene/Environment. Auto-sort still
+- The bottom of the combined tab's Vitals box contains equal-width Pulse,
+  Respiratory, and Skin/Extremities icon cards in one horizontal row. The
+  `Patient Physical` tab retains Scene/Environment beside the body map. Auto-sort still
   extracts Rate, Rhythm, and Strength internally from explicit
   respiratory/pulse labels and clearly classifiable broad Respiratory/Pulse
   section lines. Skin/Extremities and Scene/Environment sections collect their
@@ -672,9 +675,11 @@ button is inert until a drill gate is satisfied.
   buttons use an explicit two-row, three-column grid and fill their entire
   outlined grid-cell rectangles for easier clicking. The ECG selector itself
   stays compact beside FC and does not stretch to the timed vitals button height.
+  The visible top-of-vitals `Normal` button is removed.
 - ECG rhythm selection stays compact by default with one picker button: it shows
-  `Rhythm Options` while ECG is Off and the selected rhythm label once a rhythm
-  is chosen. Opening the picker shows category buttons for `NSR`,
+  the remembered rhythm plus `(Off)` while ECG is Off and the selected rhythm
+  label while ECG is On. Opening the picker while Off lands in the remembered
+  rhythm's category and keeps that rhythm highlighted. Category buttons are `NSR`,
   `Cardiac Arrest`, `Heart Block`, `Bundle Branch Block`, and `MI`, then shows
   only the selected category's options underneath using the same button style as
   SpO2 and EtCO2. Current options are `NSR` under NSR,
@@ -755,12 +760,9 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
   changes keep the same canvas mounted so existing trace history remains behind
   the black sweep line until naturally erased. EtCO2 and the defibrillator CPR
   timer/audio workflow remain independent.
-- Admin Reset is tab-scoped: on the Monitor tab it clears only monitor
-  vitals/rhythm/waveform state back to the disconnected blank startup state; on the
-  Caller Info tab it resets the full drill, including caller info, dispatch gate,
-  countdown, milestone logs, and monitor vitals. On the Patient Information tab,
-  Reset clears only the local SAMPLE/OPQRST checklist selections. On the Patient
-  Physical tab, Reset clears only local body-map selections.
+- The shared bottom admin Reset control is removed from every tab. In live
+  sessions, a successful `New Attempt` remains the full instructor reset path;
+  standalone `/admin` intentionally has no replacement manual reset.
 - Gate state is persisted (store version 9; countdown stored as an absolute
   end-timestamp, response timer stored as an absolute start timestamp, and a
   per-dispatch run id) so a mid-drill refresh resumes and repeated reset/re-arm

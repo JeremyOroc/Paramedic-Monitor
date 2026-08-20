@@ -43,16 +43,12 @@ import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
+import type { PatientPhysicalIconGroupId } from '@/types/patientPhysical'
 import type { CprMode, NumericVitalField } from '@/types/vitals'
 import type { StudentEvent } from '@/types/session'
 import type { SavedScenario, ScenarioSnapshotV1 } from '@/types/savedScenario'
 
-type AdminTab = 'scenarios' | 'monitor' | 'patient' | 'physical'
-type PatientPhysicalIconGroupId =
-  | 'respiratory'
-  | 'pulse'
-  | 'skin-extremities'
-  | 'scene-environment'
+type AdminTab = 'scenarios' | 'monitor' | 'physical'
 
 type PatientInformationSelections = Record<PatientInfoChecklist, Set<string>>
 
@@ -128,7 +124,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const [scenarioAction, setScenarioAction] = useState<'idle' | 'saving' | 'deleting'>('idle')
   const [scenarioError, setScenarioError] = useState('')
   const reset = useMonitorStore((s) => s.reset)
-  const resetMonitorVitals = useMonitorStore((s) => s.resetMonitorVitals)
   const setDraftVitalValues = useMonitorStore((s) => s.setDraftVitalValues)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const applyScenarioDraft = useMonitorStore((s) => s.applyScenarioDraft)
@@ -262,9 +257,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
   }, [getSharedState, session])
 
-  // CPR override and Reset bypass Save → Send, so in a session they must push
-  // shared state themselves — the Send button stays disabled without pending
-  // Save → Send changes and would otherwise strand these on the admin screen.
+  // CPR override and full instructor resets bypass Save → Send, so in a
+  // session they must push shared state themselves — the Send button stays
+  // disabled without pending changes and would otherwise strand these locally.
   const cprMode = useMonitorStore((s) => s.cprMode)
   const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
   const immediatePushRef = useRef<{ cprMode: CprMode; resetVersion: number } | null>(null)
@@ -349,15 +344,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setScenarioError('')
     setScenarioEditorVersion((version) => version + 1)
   }
-  const handleReset =
-    tab === 'monitor'
-      ? resetMonitorVitals
-      : tab === 'scenarios'
-        ? resetAllInstructorState
-        : tab === 'patient'
-          ? resetPatientInformation
-          : resetPatientPhysical
-
   const handleLoadScenario = (scenario: SavedScenario) => {
     if (
       scenarioIsDirty &&
@@ -677,7 +663,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           </div>
         </section>
       )}
-      <div className="grid grid-cols-2 border border-neutral-800 bg-neutral-950 p-1 md:grid-cols-4">
+      <div className="grid grid-cols-3 border border-neutral-800 bg-neutral-950 p-1">
         <button
           type="button"
           onClick={() => setTab('scenarios')}
@@ -702,20 +688,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               : 'text-neutral-400 hover:bg-neutral-900',
           )}
         >
-          Monitor
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('patient')}
-          aria-pressed={tab === 'patient'}
-          className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
-            tab === 'patient'
-              ? 'bg-cyan-bp text-black'
-              : 'text-neutral-400 hover:bg-neutral-900',
-          )}
-        >
-          Patient Information
+          Monitor &amp; Patient SNS
         </button>
         <button
           type="button"
@@ -732,20 +705,27 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         </button>
       </div>
       {tab === 'monitor' ? (
-        <VitalsControls
-          autoSortText={universalAutoSortText}
-          onTimedVitalsClick={handleTimedVitalsPatientPhysicalUpdate}
-          sessionEtco2Calibrated={
-            session ? anyoneCalibratedEtco2(studentEvents, attemptVersion) : undefined
-          }
-        />
-      ) : tab === 'patient' ? (
-        <PatientInformationPanel
-          selected={patientSelections}
-          values={patientText}
-          onTextChange={handlePatientTextChange}
-          onToggle={togglePatientSelection}
-        />
+        <div className="grid gap-4">
+          <VitalsControls
+            autoSortText={universalAutoSortText}
+            patientSns={{
+              selected: patientPhysicalSelections,
+              findings: patientPhysicalFindings,
+              activeIconGroup: patientPhysicalActiveIconGroup,
+              onIconGroupClick: handlePatientPhysicalIconGroupClick,
+            }}
+            onTimedVitalsClick={handleTimedVitalsPatientPhysicalUpdate}
+            sessionEtco2Calibrated={
+              session ? anyoneCalibratedEtco2(studentEvents, attemptVersion) : undefined
+            }
+          />
+          <PatientInformationPanel
+            selected={patientSelections}
+            values={patientText}
+            onTextChange={handlePatientTextChange}
+            onToggle={togglePatientSelection}
+          />
+        </div>
       ) : tab === 'physical' ? (
         <PatientPhysicalPanel
           selected={patientPhysicalSelections}
@@ -784,13 +764,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       <div className="flex items-center gap-3">
         <SaveButton />
         <SendButton onSent={session ? sendSessionState : undefined} />
-        <button
-          type="button"
-          onClick={handleReset}
-          className="ml-auto px-3 py-2 border border-neutral-700 text-neutral-400 font-mono uppercase tracking-wider text-xs hover:bg-neutral-800"
-        >
-          Reset
-        </button>
       </div>
       <p className="text-xs text-neutral-500">
         Open <span className="text-neutral-300">{session ? `/session/${session.code}/waiting` : '/'}</span> in another tab to see the monitor.

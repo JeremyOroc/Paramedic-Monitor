@@ -151,7 +151,7 @@ describe('AdminPage', () => {
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
     await user.click(screen.getByRole('button', { name: 'New Attempt' }))
 
@@ -291,7 +291,7 @@ describe('AdminPage', () => {
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
     const statePosts = () =>
       fetchMock.mock.calls.filter(
@@ -321,51 +321,40 @@ describe('AdminPage', () => {
     expect(offPost.state.cprOverrideActive).toBe(false)
   })
 
-  it('pushes session state immediately when Reset is clicked', async () => {
-    const user = userEvent.setup()
-    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
-      const url = String(input)
-      const body = url.includes('/review')
-        ? { session: { status: 'active' }, participants: [], events: [] }
-        : { session: { status: 'active' }, state: { version: 1 } }
+  it('removes the shared Reset control from live sessions', async () => {
+    vi.spyOn(window, 'fetch').mockImplementation(async () => {
+      const body = { session: { status: 'active' }, participants: [], events: [] }
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       })
     })
-    const versionBefore = useMonitorStore.getState().monitorResetVersion
 
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }))
-
-    await waitFor(() => {
-      const statePosts = fetchMock.mock.calls.filter(
-        ([url, init]) => String(url).endsWith('/state') && init?.method === 'POST',
-      )
-      expect(statePosts).toHaveLength(1)
-      const posted = JSON.parse(String(statePosts[0][1]?.body))
-      expect(posted.state.monitorResetVersion).toBe(versionBefore + 1)
-    })
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'New Attempt' })).toBeInTheDocument()
   })
 
-  it('shows Scenarios first and by default, with Monitor in the next tab', async () => {
+  it('shows the three-tab layout and combines Vitals, SNS, and Patient Information', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
     expect(screen.getByRole('button', { name: 'Scenarios' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: 'Patient Information' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Monitor & Patient SNS' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Patient Information' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Patient Physical' })).toBeInTheDocument()
     expect(screen.getByLabelText('Scenarios library')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
     expect(screen.getByLabelText('Auto-sort scenario')).toBeInTheDocument()
     expect(screen.getByLabelText('Adresse')).toBeInTheDocument()
     expect(screen.queryByText('Vitals')).toBeNull()
 
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
-    expect(screen.getByRole('button', { name: 'Monitor' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Monitor & Patient SNS' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('Vitals')).toBeInTheDocument()
     expect(screen.queryByLabelText('Auto-sort vitals')).toBeNull()
     expect(within(screen.getByTestId('admin-graph-row-ecg')).getByRole('button', { name: 'ECG off' })).toBeInTheDocument()
@@ -373,10 +362,19 @@ describe('AdminPage', () => {
     expect(screen.queryByTestId('admin-graph-row-etco2')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'SpO2 off' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'EtCO2 off' })).toBeInTheDocument()
+    expect(screen.getByTestId('patient-sns-controls')).toHaveClass('grid-cols-3')
+    expect(screen.getByRole('button', { name: 'Pulse' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Respiratory' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Skin/Extremities' })).toBeInTheDocument()
+    const vitals = screen.getByRole('heading', { name: 'Vitals' }).closest('section')
+    const sample = screen.getByRole('region', { name: 'Sample' })
+    expect(vitals?.compareDocumentPosition(sample)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
       'data-calibrated',
       'false',
     )
+    expect(screen.queryByRole('button', { name: 'Set vitals to normal' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
     expect(screen.queryByLabelText('Adresse')).toBeNull()
   })
 
@@ -385,6 +383,7 @@ describe('AdminPage', () => {
     render(<AdminPage />)
 
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -467,11 +466,14 @@ describe('AdminPage', () => {
     expect(state.callerInfoConfirmed.address).toBe('')
     expect(state.confirmed.hr).toBe(0)
 
-    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     expect(screen.getByLabelText('Sample S information')).toHaveValue('Opioid use disorder')
     expect(screen.getByLabelText('Sample M information')).toHaveValue('Methadone, Sertraline')
     expect(screen.getByLabelText('OPQRST O information')).toHaveValue(
       'Gradual decline after opioid use',
+    )
+    expect(screen.getByRole('button', { name: 'Skin/Extremities' })).toHaveClass(
+      'border-pending-amber',
     )
 
     await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
@@ -479,9 +481,6 @@ describe('AdminPage', () => {
       'border-pending-amber',
     )
     expect(screen.getByRole('button', { name: 'Front abdomen' })).toHaveClass(
-      'border-pending-amber',
-    )
-    expect(screen.getByRole('button', { name: 'Skin/Extremities' })).toHaveClass(
       'border-pending-amber',
     )
     expect(screen.getByRole('button', { name: 'Scene/Environment' })).toHaveClass(
@@ -494,6 +493,7 @@ describe('AdminPage', () => {
     render(<AdminPage />)
 
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -520,7 +520,7 @@ describe('AdminPage', () => {
     expect(state.confirmed.spo2_waveform).toBe('off')
     expect(state.confirmed.etco2_waveform).toBe('off')
 
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     await user.click(screen.getByRole('button', { name: 'FC off' }))
     await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
     await user.click(screen.getByRole('button', { name: 'EtCO2 off' }))
@@ -546,6 +546,7 @@ describe('AdminPage', () => {
     render(<AdminPage />)
 
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -579,6 +580,7 @@ describe('AdminPage', () => {
     render(<AdminPage />)
 
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -607,15 +609,13 @@ describe('AdminPage', () => {
     await user.click(abdomen)
     expect(abdomen).toHaveAttribute('aria-pressed', 'true')
 
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     await user.click(screen.getByRole('button', { name: 'T1' }))
 
-    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
     const pulse = screen.getByRole('button', { name: 'Pulse' })
     const respiratory = screen.getByRole('button', { name: 'Respiratory' })
     expect(pulse).toHaveClass('border-pending-amber')
     expect(respiratory).toHaveClass('border-pending-amber')
-    expect(abdomen).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(pulse)
     expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
@@ -632,9 +632,7 @@ describe('AdminPage', () => {
       'Strength: Unlabored',
     )
 
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
     await user.click(screen.getByRole('button', { name: 'U3' }))
-    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
 
     expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
       'Rate: 30 breaths/min',
@@ -649,6 +647,7 @@ describe('AdminPage', () => {
     expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
       'Strength: Thready',
     )
+    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
     expect(screen.getByRole('button', { name: 'Front abdomen' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -659,9 +658,9 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
-    expect(screen.getByRole('button', { name: 'Patient Information' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Monitor & Patient SNS' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -694,7 +693,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     const sampleS = within(screen.getByRole('region', { name: 'Sample' })).getByRole(
       'button',
       { name: 'S' },
@@ -703,8 +702,8 @@ describe('AdminPage', () => {
     await user.type(screen.getByLabelText('Sample S information'), 'Chest pain')
     await user.type(screen.getByLabelText('OPQRST O information'), '20 minutes')
 
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
-    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
     expect(
       within(screen.getByRole('region', { name: 'Sample' })).getByRole('button', {
@@ -715,30 +714,15 @@ describe('AdminPage', () => {
     expect(screen.getByLabelText('OPQRST O information')).toHaveValue('20 minutes')
   })
 
-  it('uses the Patient Information tab Reset to clear only local checklist selections and text', async () => {
+  it('does not render the shared Reset control on any standalone admin tab', async () => {
     const user = userEvent.setup()
-    act(() => {
-      useMonitorStore.getState().setDraft('hr', 180)
-      useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
-    })
-
     render(<AdminPage />)
-    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
-    const sampleS = within(screen.getByRole('region', { name: 'Sample' })).getByRole(
-      'button',
-      { name: 'S' },
-    )
-    await user.click(sampleS)
-    await user.type(screen.getByLabelText('Sample S information'), 'Chest pain')
-    await user.type(screen.getByLabelText('OPQRST O information'), '20 minutes')
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }))
-
-    expect(sampleS).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.getByLabelText('Sample S information')).toHaveValue('')
-    expect(screen.getByLabelText('OPQRST O information')).toHaveValue('')
-    expect(useMonitorStore.getState().draft.hr).toBe(180)
-    expect(useMonitorStore.getState().callerInfoDraft.address).toBe('123 Rue Principale')
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
   })
 
   it('shows Patient Physical with selectable front and rear body regions', async () => {
@@ -778,77 +762,67 @@ describe('AdminPage', () => {
     expect(frontRightShoulder).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('keeps and resets Patient Physical selections locally', async () => {
+  it('keeps Patient Physical and moved SNS selections while switching tabs', async () => {
     const user = userEvent.setup()
-    act(() => {
-      useMonitorStore.getState().setDraft('hr', 180)
-    })
-
     render(<AdminPage />)
 
-    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
-        'Chest / Respiratory',
-        'Left anterior chest tenderness',
-        'Respiratory Rate: 24 breaths/min',
-        'Pulse Rate: 112 bpm',
-        'Skin / Extremities',
-        'Pale',
-        'Cool',
-        'Scene / Environment',
-        'Witnessed fall',
-        'Approximately 12 wooden stairs',
+          'Chest / Respiratory',
+          'Left anterior chest tenderness',
+          'Respiratory Rate: 24 breaths/min',
+          'Pulse Rate: 112 bpm',
+          'Skin / Extremities',
+          'Pale',
+          'Cool',
+          'Scene / Environment',
+          'Witnessed fall',
+          'Approximately 12 wooden stairs',
         ].join('\n'),
       },
     })
     await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
     await user.click(screen.getByRole('button', { name: 'Front patient left upper arm' }))
     await user.click(screen.getByRole('button', { name: 'Rear back' }))
-
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
-    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
-
     const frontChest = screen.getByRole('button', { name: 'Front chest' })
-    const respiratory = screen.getByRole('button', { name: 'Respiratory' })
-    const skinExtremities = screen.getByRole('button', { name: 'Skin/Extremities' })
     const sceneEnvironment = screen.getByRole('button', { name: 'Scene/Environment' })
 
-    expect(screen.queryByLabelText('Auto-sort patient physical')).toBeNull()
     expect(frontChest).toHaveClass('border-pending-amber')
+    expect(sceneEnvironment).toHaveClass('border-pending-amber')
+    expect(screen.queryByRole('button', { name: 'Respiratory' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Skin/Extremities' })).toBeNull()
+    await user.click(frontChest)
+    await user.click(sceneEnvironment)
+
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+    const respiratory = screen.getByRole('button', { name: 'Respiratory' })
+    const skinExtremities = screen.getByRole('button', { name: 'Skin/Extremities' })
     expect(respiratory).toHaveClass('border-pending-amber')
     expect(skinExtremities).toHaveClass('border-pending-amber')
-    expect(sceneEnvironment).toHaveClass('border-pending-amber')
-    expect(screen.getByLabelText('Selected body parts')).not.toHaveTextContent(
-      'Left anterior chest tenderness',
-    )
-    await user.click(frontChest)
-    expect(frontChest).toHaveClass('border-ecg-green')
-    expect(screen.getByLabelText('Selected body parts')).toHaveTextContent(
-      'Left anterior chest tenderness',
-    )
     await user.click(respiratory)
-    expect(respiratory).toHaveClass('border-ecg-green')
     expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
       'Rate: 24 breaths/min',
     )
     await user.click(skinExtremities)
-    expect(skinExtremities).toHaveClass('border-ecg-green')
     expect(screen.getByRole('region', { name: 'Skin/Extremities finding slider' })).toHaveTextContent(
       'Pale',
     )
-    expect(screen.getByRole('region', { name: 'Skin/Extremities finding slider' })).toHaveTextContent(
-      'Cool',
+
+    await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
+    expect(screen.getByRole('button', { name: 'Front chest' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
     )
-    await user.click(sceneEnvironment)
-    expect(sceneEnvironment).toHaveClass('border-ecg-green')
+    expect(screen.getByRole('button', { name: 'Scene/Environment' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await user.click(screen.getByRole('button', { name: 'Scene/Environment' }))
     expect(screen.getByRole('region', { name: 'Scene/Environment finding slider' })).toHaveTextContent(
       'Witnessed fall',
     )
-    expect(screen.getByRole('region', { name: 'Scene/Environment finding slider' })).toHaveTextContent(
-      'Approximately 12 wooden stairs',
-    )
     expect(screen.getByRole('button', { name: 'Front patient left upper arm' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -857,31 +831,6 @@ describe('AdminPage', () => {
       'aria-pressed',
       'true',
     )
-
-    await user.click(screen.getByRole('button', { name: 'Reset' }))
-
-    expect(screen.getByRole('button', { name: 'Front patient left upper arm' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
-    expect(screen.getByRole('button', { name: 'Rear back' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    )
-    expect(frontChest).not.toHaveClass('border-pending-amber')
-    expect(respiratory).not.toHaveClass('border-pending-amber')
-    expect(skinExtremities).not.toHaveClass('border-pending-amber')
-    expect(sceneEnvironment).not.toHaveClass('border-pending-amber')
-    expect(respiratory).toHaveAttribute('aria-pressed', 'false')
-    expect(skinExtremities).toHaveAttribute('aria-pressed', 'false')
-    expect(sceneEnvironment).toHaveAttribute('aria-pressed', 'false')
-    expect(screen.queryByRole('region', { name: 'Respiratory finding slider' })).toBeNull()
-    expect(screen.queryByRole('region', { name: 'Skin/Extremities finding slider' })).toBeNull()
-    expect(screen.queryByRole('region', { name: 'Scene/Environment finding slider' })).toBeNull()
-    expect(screen.getByLabelText('Selected body parts')).not.toHaveTextContent(
-      'Left anterior chest tenderness',
-    )
-    expect(useMonitorStore.getState().draft.hr).toBe(112)
   })
 
   it('auto-sorts Patient Information text without changing green selections', async () => {
@@ -889,6 +838,7 @@ describe('AdminPage', () => {
     render(<AdminPage />)
 
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     await user.type(
       screen.getByLabelText('Auto-sort scenario'),
       [
@@ -899,7 +849,7 @@ describe('AdminPage', () => {
         'S: 8/10',
       ].join('\n'),
     )
-    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
     expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
     expect(screen.getByLabelText('Sample P information')).toHaveValue('Asthma')
@@ -913,7 +863,7 @@ describe('AdminPage', () => {
     ).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('uses the Monitor tab Reset to clear only monitor vitals', async () => {
+  it('preserves monitor state because the combined tab has no Reset control', async () => {
     const user = userEvent.setup()
     act(() => {
       useMonitorStore.getState().setDraft('hr', 180)
@@ -926,34 +876,30 @@ describe('AdminPage', () => {
     })
 
     render(<AdminPage />)
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
       'data-calibrated',
       'true',
     )
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }))
-
     const s = useMonitorStore.getState()
-    expect(s.confirmedVitalsActive).toBe(false)
-    expect(s.confirmed.hr).toBe(0)
-    expect(s.confirmed.rhythm).toBe('off')
-    expect(s.confirmed.spo2_waveform).toBe('off')
-    expect(s.confirmed.etco2_waveform).toBe('off')
-    expect(s.etco2CalibrationStatus).toBe('idle')
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
+    expect(s.confirmed.hr).toBe(180)
+    expect(s.etco2CalibrationStatus).toBe('calibrated')
     expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
       'data-calibrated',
-      'false',
+      'true',
     )
     expect(s.callerInfoConfirmed.address).toBe('123 Rue Principale')
     expect(s.dispatch.armed).toBe(true)
   })
 
-  it('uses the Caller Info tab Reset to clear the full drill and universal auto-sort state', async () => {
+  it('preserves scenario authoring state because Scenarios has no Reset control', async () => {
     const user = userEvent.setup()
 
     render(<AdminPage />)
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     fireEvent.change(screen.getByLabelText('Auto-sort scenario'), {
       target: {
         value: [
@@ -973,21 +919,18 @@ describe('AdminPage', () => {
       useMonitorStore.getState().completeEtco2Calibration()
     })
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }))
-
     const s = useMonitorStore.getState()
-    expect(s.confirmedVitalsActive).toBe(false)
-    expect(s.confirmed.rhythm).toBe('off')
-    expect(s.callerInfoConfirmed.address).toBe('')
-    expect(s.dispatch.armed).toBe(false)
-    expect(s.etco2CalibrationStatus).toBe('idle')
-    expect(screen.getByLabelText('Auto-sort scenario')).toHaveValue('')
+    expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
+    expect(s.draft.hr).toBe(180)
+    expect(s.callerInfoDraft.address).toBe('123 Rue Principale')
+    expect(s.etco2CalibrationStatus).toBe('calibrated')
+    expect(screen.getByLabelText('Auto-sort scenario')).not.toHaveValue('')
 
-    await user.click(screen.getByRole('button', { name: 'Patient Information' }))
-    expect(screen.getByLabelText('Sample S information')).toHaveValue('')
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+    expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
 
     await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
-    expect(screen.getByRole('button', { name: 'Front chest' })).not.toHaveClass(
+    expect(screen.getByRole('button', { name: 'Front chest' })).toHaveClass(
       'border-pending-amber',
     )
   })
@@ -995,9 +938,9 @@ describe('AdminPage', () => {
   it('stages SpO2 and EtCO2 graph state through the left vital toggles', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
-    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'NSR (Off)' }))
     await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'Cardiac Arrest' }))
     await user.click(within(screen.getByRole('heading', { name: 'ECG' }).closest('section')!).getByRole('button', { name: 'VF' }))
     await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
@@ -1017,7 +960,7 @@ describe('AdminPage', () => {
   it('sends SpO2 and EtCO2 graph on/off state from the left vital toggles', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
-    await user.click(screen.getByRole('button', { name: 'Monitor' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
     await user.click(screen.getByRole('button', { name: 'SpO2 off' }))
     await user.click(screen.getByRole('button', { name: 'EtCO2 off' }))

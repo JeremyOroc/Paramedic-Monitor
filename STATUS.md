@@ -13,6 +13,11 @@
 ---
 
 ## Completed
+- [x] **Combined Monitor & Patient SNS admin tab — COMPLETE:**
+  - [x] Renamed Monitor to Monitor & Patient SNS, removed the Patient Information tab, and placed SAMPLE/OPQRST immediately below Vitals
+  - [x] Moved Pulse, Respiratory, and Skin/Extremities into an equal-width horizontal row inside Vitals while retaining Scene/Environment with the body map
+  - [x] Preserved the remembered ECG rhythm and menu highlight while off, removed Normal and the shared Reset control, and retained New Attempt as the full live-session reset
+  - [x] All 76 focused tests and 774 full-suite tests, ESLint, production build, and rendered admin interaction QA pass with a clean browser console
 - [x] **Caller Info minimized default — COMPLETE:**
   - [x] Caller Info now starts collapsed on each mount/page load, expands through the existing accessible `+` control, and remains non-persistent
   - [x] Component and admin integration regressions cover the collapsed default and explicit expansion before editing

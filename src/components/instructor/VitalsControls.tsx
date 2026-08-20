@@ -8,6 +8,10 @@ import { useMonitorStore } from '@/store/monitorStore'
 import type { CprMode, NumericVitalField } from '@/types/vitals'
 
 import { EcgRhythmSelector } from './EcgRhythmSelector'
+import {
+  PatientSnsControls,
+  type PatientSnsControlsProps,
+} from './PatientSnsControls'
 import { VitalInput } from './VitalInput'
 
 const AUTO_SORT_FIELDS: ReadonlyArray<NumericVitalField> = [
@@ -27,6 +31,7 @@ const CPR_MODES: ReadonlyArray<{ mode: Exclude<CprMode, 'off'>; label: string }>
 
 type VitalsControlsProps = {
   autoSortText: string
+  patientSns?: PatientSnsControlsProps
   onTimedVitalsClick?: (slot: TimedVitalsSlot) => void
   /**
    * Set in a session, where calibration happens on a trainee's monitor and only
@@ -39,10 +44,10 @@ type VitalsControlsProps = {
 
 export function VitalsControls({
   autoSortText,
+  patientSns,
   onTimedVitalsClick,
   sessionEtco2Calibrated,
 }: VitalsControlsProps) {
-  const resetVitalsToNormal = useMonitorStore((s) => s.resetVitalsToNormal)
   const setTimedDraftVitals = useMonitorStore((s) => s.setTimedDraftVitals)
   const etco2CalibrationStatus = useMonitorStore((s) => s.etco2CalibrationStatus)
   const cprMode = useMonitorStore((s) => s.cprMode)
@@ -66,17 +71,7 @@ export function VitalsControls({
 
   return (
     <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm uppercase tracking-wider text-neutral-400">Vitals</h2>
-        <button
-          type="button"
-          onClick={resetVitalsToNormal}
-          aria-label="Set vitals to normal"
-          className="shrink-0 border border-ecg-green/70 bg-ecg-green/10 px-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-ecg-green hover:bg-ecg-green/20 focus:outline-none focus:ring-2 focus:ring-ecg-green"
-        >
-          Normal
-        </button>
-      </div>
+      <h2 className="text-sm uppercase tracking-wider text-neutral-400">Vitals</h2>
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(21rem,1fr)] items-start gap-3">
         <div className="flex flex-col gap-3" data-testid="admin-vitals-column">
           <div className="flex items-center" data-testid="admin-vital-row-fc">
@@ -162,6 +157,7 @@ export function VitalsControls({
           </div>
         </div>
       </div>
+      {patientSns ? <PatientSnsControls {...patientSns} /> : null}
     </section>
   )
 }

@@ -65,7 +65,7 @@ describe('specialized selector wrappers', () => {
       'aria-pressed',
       'false',
     )
-    expect(screen.getByRole('button', { name: 'Rhythm Options' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'NSR (Off)' })).toHaveAttribute(
       'aria-expanded',
       'false',
     )
@@ -79,7 +79,7 @@ describe('specialized selector wrappers', () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)
 
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
 
     expect(screen.getByTestId('ecg-rhythm-options')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'NSR' })).toHaveLength(2)
@@ -118,7 +118,7 @@ describe('specialized selector wrappers', () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)
 
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
     await user.click(screen.getByRole('button', { name: 'Cardiac Arrest' }))
     await user.click(screen.getByRole('button', { name: 'Torsades' }))
 
@@ -136,14 +136,25 @@ describe('specialized selector wrappers', () => {
     render(<EcgRhythmSelector />)
 
     // Choosing a rhythm while ECG is off switches it on.
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
     await user.click(screen.getByRole('button', { name: 'Cardiac Arrest' }))
     await user.click(screen.getByRole('button', { name: 'Torsades' }))
     expect(useMonitorStore.getState().draft.rhythm).toBe('torsades')
 
     await user.click(screen.getByRole('button', { name: 'ECG on' }))
     expect(useMonitorStore.getState().draft.rhythm).toBe('off')
-    expect(screen.getByRole('button', { name: 'Rhythm Options' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Torsades (Off)' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Torsades (Off)' }))
+    expect(screen.getByRole('button', { name: 'Cardiac Arrest' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Torsades' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await user.click(screen.getByRole('button', { name: 'Torsades (Off)' }))
 
     // Switching back on used to snap to NSR, discarding the selection.
     await user.click(screen.getByRole('button', { name: 'ECG off' }))
@@ -163,7 +174,7 @@ describe('specialized selector wrappers', () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)
 
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
     await user.click(screen.getByRole('button', { name: 'MI' }))
     await user.click(screen.getByRole('button', { name: 'Anterior MI' }))
 
@@ -179,7 +190,7 @@ describe('specialized selector wrappers', () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)
 
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
     await user.click(screen.getByRole('button', { name: 'MI' }))
     await user.click(screen.getByRole('button', { name: 'Inferior MI' }))
 
@@ -195,7 +206,7 @@ describe('specialized selector wrappers', () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)
 
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
     await user.click(screen.getByRole('button', { name: 'Heart Block' }))
     await user.click(screen.getByRole('button', { name: '1st Degree' }))
 
@@ -211,7 +222,7 @@ describe('specialized selector wrappers', () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)
 
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
     await user.click(screen.getByRole('button', { name: 'Heart Block' }))
     await user.click(screen.getByRole('button', { name: '2nd Degree Type 1' }))
 
@@ -227,7 +238,7 @@ describe('specialized selector wrappers', () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)
 
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
     await user.click(screen.getByRole('button', { name: 'Heart Block' }))
     await user.click(screen.getByRole('button', { name: '2nd Degree Type 2' }))
 
@@ -243,7 +254,7 @@ describe('specialized selector wrappers', () => {
     const user = userEvent.setup()
     render(<EcgRhythmSelector />)
 
-    await user.click(screen.getByRole('button', { name: 'Rhythm Options' }))
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
     await user.click(screen.getByRole('button', { name: 'Heart Block' }))
     await user.click(screen.getByRole('button', { name: '3rd Degree' }))
 
