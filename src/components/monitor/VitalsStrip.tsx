@@ -11,6 +11,7 @@ import { Spo2PulseBar } from './Spo2PulseBar'
 
 type VitalsStripProps = {
   hr: number | string
+  pulseHeartRate?: number
   bpSys: number | string
   bpDia: number | string
   etco2: number | string
@@ -31,6 +32,7 @@ function toNumber(value: number | string): number {
 
 export function VitalsStrip({
   hr,
+  pulseHeartRate,
   bpSys,
   bpDia,
   etco2,
@@ -45,9 +47,10 @@ export function VitalsStrip({
 }: VitalsStripProps) {
   const spo2ValueClassName = typeof spo2 === 'string' ? 'text-[1.25rem]' : 'text-[2.35rem]'
   const hrNumber = toNumber(hr)
+  const pulseHeartRateNumber = pulseHeartRate ?? hrNumber
   const showSpo2PulseBar =
     typeof spo2 === 'number' &&
-    Number.isFinite(hrNumber) &&
+    Number.isFinite(pulseHeartRateNumber) &&
     spo2Waveform !== 'off'
   const alarms = activeAlarms ?? getActiveAlarms({
     hr: hrNumber,
@@ -135,7 +138,7 @@ export function VitalsStrip({
         valueAccessory={
           showSpo2PulseBar ? (
             <Spo2PulseBar
-              hr={hrNumber}
+              hr={pulseHeartRateNumber}
               spo2={spo2}
               spo2Waveform={spo2Waveform}
             />

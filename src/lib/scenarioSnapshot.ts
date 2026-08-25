@@ -5,6 +5,10 @@ import {
 import type { PatientPhysicalFindings } from '@/lib/patientPhysicalAutoSort'
 import { DEFAULT_CALLER_INFO, normalizeCallerInfo } from '@/types/callerInfo'
 import { JOHN_ABBOTT_ADDRESS } from '@/types/dispatchRoute'
+import {
+  getAutomaticHeartRate,
+  isAutomaticHeartRateRhythm,
+} from '@/lib/automaticHeartRate'
 import type {
   ScenarioSnapshotV1,
   ScenarioVitalsDraft,
@@ -129,12 +133,18 @@ export function createEmptyScenarioSnapshot(): ScenarioSnapshotV1 {
 }
 
 export function createScenarioSnapshot(input: ScenarioSnapshotInput): ScenarioSnapshotV1 {
+  const draft = { ...input.monitor.draft }
+  const draftVitalActive = { ...input.monitor.draftVitalActive }
+  const automaticHeartRate = getAutomaticHeartRate(draft.rhythm)
+  if (automaticHeartRate !== null) draft.hr = automaticHeartRate
+  if (isAutomaticHeartRateRhythm(draft.rhythm)) draftVitalActive.hr = true
+
   return {
     version: 1,
     autoSortText: input.autoSortText,
     monitor: {
-      draft: { ...input.monitor.draft },
-      draftVitalActive: { ...input.monitor.draftVitalActive },
+      draft,
+      draftVitalActive,
       lastRhythm: input.monitor.lastRhythm,
     },
     callerInfo: { ...input.callerInfo },

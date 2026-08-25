@@ -6,6 +6,7 @@ import { useMonitorStore } from '@/store/monitorStore'
 import { vitalStatus } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
 import type { NumericVitalField } from '@/types/vitals'
+import { isAutomaticHeartRateRhythm } from '@/lib/automaticHeartRate'
 
 import { OnOffToggle } from './OnOffToggle'
 
@@ -34,6 +35,7 @@ export function VitalInput({ field, label, unit, min, max }: VitalInputProps) {
   const confirmedVitalActive = useMonitorStore((s) => s.confirmedVitalActive)
   const setDraft = useMonitorStore((s) => s.setDraft)
   const setDraftVitalActive = useMonitorStore((s) => s.setDraftVitalActive)
+  const rhythm = useMonitorStore((s) => s.draft.rhythm)
 
   const status = vitalStatus(
     field,
@@ -46,6 +48,12 @@ export function VitalInput({ field, label, unit, min, max }: VitalInputProps) {
   )
   const value = draft[field] as number
   const active = draftVitalActive[field]
+  const automaticHeartRate = field === 'hr' && isAutomaticHeartRateRhythm(rhythm)
+  const automaticDisplay = automaticHeartRate
+    ? rhythm === 'vf'
+      ? 'AUTO 190–220'
+      : '220'
+    : null
 
   // Local text mirrors what's typed so the field can sit empty mid-edit instead of
   // snapping back to a leading "0" (which made entries read like "020"). The store
@@ -67,6 +75,7 @@ export function VitalInput({ field, label, unit, min, max }: VitalInputProps) {
       <div
         className={cn(
           'group relative flex w-24 shrink-0 items-center border border-b',
+          automaticDisplay === 'AUTO 190–220' && 'w-32',
           'transition-[border-color,box-shadow,background-color] duration-150',
           'focus-within:border-transparent focus-within:border-b-cyan-bp focus-within:bg-cyan-bp/5',
           'focus-within:shadow-[0_8px_18px_-18px_rgba(0,255,255,0.9)]',
@@ -75,13 +84,14 @@ export function VitalInput({ field, label, unit, min, max }: VitalInputProps) {
         data-testid={`vital-input-shell-${field}`}
       >
         <input
-          type="number"
+          type={automaticHeartRate ? 'text' : 'number'}
           inputMode="numeric"
-          min={min}
-          max={max}
-          value={text}
+          min={automaticHeartRate ? undefined : min}
+          max={automaticHeartRate ? undefined : max}
+          value={automaticDisplay ?? text}
+          disabled={automaticHeartRate}
           onFocus={() => {
-            if (value === 0) setText('')
+            if (!automaticHeartRate && value === 0) setText('')
           }}
           onChange={(e) => {
             // Strip leading zeros ("020" → "20") but keep a single "0"; allow empty.
@@ -95,10 +105,12 @@ export function VitalInput({ field, label, unit, min, max }: VitalInputProps) {
             'h-8 min-w-0 flex-1 bg-transparent py-1 pl-1 pr-8 text-right',
             'font-mono text-base font-semibold text-white tabular-nums outline-none',
             'placeholder:text-neutral-700 [appearance:textfield]',
+            'disabled:cursor-not-allowed disabled:text-neutral-400 disabled:opacity-100',
+            automaticDisplay === 'AUTO 190–220' && 'pr-1 text-center text-xs',
             '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
           )}
         />
-        {unit && (
+        {unit && automaticDisplay !== 'AUTO 190–220' && (
           <span className="pointer-events-none absolute right-2 text-[9px] font-bold uppercase tracking-wider text-neutral-500 group-focus-within:text-cyan-bp">
             {unit}
           </span>

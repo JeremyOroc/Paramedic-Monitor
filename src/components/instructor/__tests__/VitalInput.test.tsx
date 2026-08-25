@@ -59,6 +59,25 @@ describe('VitalInput', () => {
     )
   })
 
+  it('shows locked automatic FC controls for VF and VT', () => {
+    render(<VitalInput field="hr" label="FC" unit="bpm" />)
+
+    act(() => useMonitorStore.getState().setDraft('rhythm', 'vf'))
+    const vfInput = screen.getByLabelText('FC') as HTMLInputElement
+    expect(vfInput).toBeDisabled()
+    expect(vfInput).toHaveValue('AUTO 190–220')
+    expect(screen.queryByText('bpm')).toBeNull()
+
+    act(() => useMonitorStore.getState().setDraft('rhythm', 'vt'))
+    expect(screen.getByLabelText('FC')).toBeDisabled()
+    expect(screen.getByLabelText('FC')).toHaveValue('220')
+    expect(screen.getByText('bpm')).toBeInTheDocument()
+
+    act(() => useMonitorStore.getState().setDraft('rhythm', 'nsr'))
+    expect(screen.getByLabelText('FC')).toBeEnabled()
+    expect(screen.getByLabelText('FC')).toHaveValue(0)
+  })
+
   it('typing SpO2 keeps the SpO2 graph disconnected while Off', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="spo2" label="SpO2" unit="%" />)

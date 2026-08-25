@@ -6,7 +6,13 @@ import { useMonitorStore } from '@/store/monitorStore'
 
 const statePayload = (version: number, status = 'active', attemptVersion = 1) => ({
   session: { status, active_attempt_version: attemptVersion },
-  state: { state: { cprOverrideActive: true }, version },
+  state: {
+    state: { cprOverrideActive: true },
+    version,
+    updated_at: '2026-08-25T12:00:00.000Z',
+  },
+  serverReceivedAt: Date.now(),
+  serverNow: Date.now(),
 })
 
 const okJson = (body: unknown) =>
@@ -42,6 +48,18 @@ describe('useSessionMonitorSync', () => {
     fetchMock.mockImplementation(() => okJson(statePayload(2)))
     await vi.waitFor(() => expect(applySpy).toHaveBeenCalledTimes(2))
     expect(applySpy).toHaveBeenLastCalledWith({ cprOverrideActive: true })
+    unmount()
+  })
+
+  it('returns server-aligned VF display metadata for the applied state version', async () => {
+    fetchMock.mockImplementation(() => okJson(statePayload(7)))
+    const { result, unmount } = renderHook(() =>
+      useSessionMonitorSync({ code: 'ABC123', intervalMs: 10 }),
+    )
+
+    await vi.waitFor(() => expect(result.current?.seed).toBe(7))
+    expect(result.current?.epochMs).toBe(Date.parse('2026-08-25T12:00:00.000Z'))
+    expect(result.current?.serverOffsetMs).toEqual(expect.any(Number))
     unmount()
   })
 

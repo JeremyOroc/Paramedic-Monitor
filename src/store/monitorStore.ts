@@ -33,6 +33,10 @@ import {
 } from '@/types/dispatchRoute'
 import { dispatchCountdownSeconds } from '@/store/fieldState'
 import { buildEventLogEntry } from '@/lib/eventLog'
+import {
+  getAutomaticHeartRate,
+  isAutomaticHeartRateRhythm,
+} from '@/lib/automaticHeartRate'
 import type { EventLogEntry } from '@/components/monitor/EventLogModal'
 import type { EventLogStamp } from '@/types/eventLog'
 import type { ScenarioSnapshotV1 } from '@/types/savedScenario'
@@ -155,11 +159,15 @@ function normalizeRhythm(value: unknown): Rhythm {
 }
 
 function normalizeVitals(vitals: Partial<Vitals> | undefined): Vitals {
-  return {
+  const normalized = {
     ...initial,
     ...vitals,
     rhythm: normalizeRhythm(vitals?.rhythm),
   }
+  const automaticHeartRate = getAutomaticHeartRate(normalized.rhythm)
+  return automaticHeartRate === null
+    ? normalized
+    : { ...normalized, hr: automaticHeartRate }
 }
 
 function normalizeBpDisplay(
@@ -267,6 +275,8 @@ export type MonitorState = {
   confirmedVitalActive: VitalActiveState
   /** Last rhythm chosen while ECG was on; restored when it is switched back on. */
   lastRhythm: ActiveRhythm
+  /** Runtime-only FC restored after leaving VF/VT; hydration/scenario loading clears it. */
+  manualHrBeforeAuto: number | null
   callerInfoDraft: CallerInfo
   callerInfoSaved: CallerInfo
   callerInfoConfirmed: CallerInfo
@@ -328,6 +338,7 @@ export const useMonitorStore = create<MonitorState>()(
       savedVitalActive: inactiveVitals,
       confirmedVitalActive: inactiveVitals,
       lastRhythm: DEFAULT_ACTIVE_RHYTHM,
+      manualHrBeforeAuto: null,
       callerInfoDraft: DEFAULT_CALLER_INFO,
       callerInfoSaved: DEFAULT_CALLER_INFO,
       callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -347,7 +358,26 @@ export const useMonitorStore = create<MonitorState>()(
       acceptedBpActive: inactiveBpActive,
       setDraft: (field, value) =>
         set((s) => {
+          if (field === 'hr' && isAutomaticHeartRateRhythm(s.draft.rhythm)) return s
+
+          const previousRhythm = s.draft.rhythm
+          const nextRhythm = field === 'rhythm' ? (value as Rhythm) : previousRhythm
+          const wasAutomatic = isAutomaticHeartRateRhythm(previousRhythm)
+          const isAutomatic = isAutomaticHeartRateRhythm(nextRhythm)
+          let manualHrBeforeAuto = s.manualHrBeforeAuto
+          let draftVitalActive = s.draftVitalActive
           const draft: Vitals = { ...s.draft, [field]: value }
+
+          if (field === 'rhythm') {
+            if (isAutomatic) {
+              if (!wasAutomatic) manualHrBeforeAuto = s.draft.hr
+              draft.hr = getAutomaticHeartRate(nextRhythm) ?? draft.hr
+              draftVitalActive = { ...s.draftVitalActive, hr: true }
+            } else if (wasAutomatic) {
+              draft.hr = manualHrBeforeAuto ?? DEFAULT_VITALS.hr
+              manualHrBeforeAuto = null
+            }
+          }
           if (field === 'spo2') {
             draft.spo2_waveform = s.draftVitalActive.spo2 ? 'normal' : 'off'
           }
@@ -362,14 +392,17 @@ export const useMonitorStore = create<MonitorState>()(
               : s.lastRhythm
           return {
             draft,
-            draftVitalActive: s.draftVitalActive,
-            draftVitalsActive: anyVitalActive(s.draftVitalActive),
+            draftVitalActive,
+            draftVitalsActive: anyVitalActive(draftVitalActive),
             lastRhythm,
+            manualHrBeforeAuto,
           }
         }),
       setTimedDraftVitals: (vitals) =>
         set((s) => {
           const draft: Vitals = { ...s.draft, ...vitals }
+          const automaticHeartRate = getAutomaticHeartRate(s.draft.rhythm)
+          if (automaticHeartRate !== null) draft.hr = automaticHeartRate
           if (vitals.spo2 !== undefined) {
             draft.spo2_waveform = s.draftVitalActive.spo2 ? 'normal' : 'off'
           }
@@ -384,6 +417,8 @@ export const useMonitorStore = create<MonitorState>()(
       setDraftVitalValues: (vitals) =>
         set((s) => {
           const draft: Vitals = { ...s.draft, ...vitals }
+          const automaticHeartRate = getAutomaticHeartRate(s.draft.rhythm)
+          if (automaticHeartRate !== null) draft.hr = automaticHeartRate
           if (vitals.spo2 !== undefined) {
             draft.spo2_waveform = s.draftVitalActive.spo2 ? 'normal' : 'off'
           }
@@ -426,6 +461,7 @@ export const useMonitorStore = create<MonitorState>()(
             snapshot.monitor.draftVitalActive,
             undefined,
           )
+          if (isAutomaticHeartRateRhythm(draft.rhythm)) draftVitalActive.hr = true
           const originAddress = snapshot.dispatch.originAddress.trim() || JOHN_ABBOTT_ADDRESS
 
           return {
@@ -433,6 +469,7 @@ export const useMonitorStore = create<MonitorState>()(
             draftVitalActive,
             draftVitalsActive: anyVitalActive(draftVitalActive),
             lastRhythm: normalizeActiveRhythm(snapshot.monitor.lastRhythm),
+            manualHrBeforeAuto: null,
             callerInfoDraft: normalizeCallerInfo(snapshot.callerInfo),
             dispatchMinutes: Math.max(0, Math.floor(snapshot.dispatch.minutes) || 0),
             dispatchSeconds: Math.min(
@@ -531,6 +568,7 @@ export const useMonitorStore = create<MonitorState>()(
           draftVitalActive: inactiveVitals,
           savedVitalActive: inactiveVitals,
           confirmedVitalActive: inactiveVitals,
+          manualHrBeforeAuto: null,
           monitorResetVersion: s.monitorResetVersion + 1,
           etco2CalibrationStatus: 'idle',
           cprMode: 'off',
@@ -538,20 +576,23 @@ export const useMonitorStore = create<MonitorState>()(
           acceptedBpActive: inactiveBpActive,
         })),
       resetVitalsToNormal: () =>
-        set((s) => ({
-          draft: {
-            ...s.draft,
-            hr: DEFAULT_VITALS.hr,
-            bp_sys: DEFAULT_VITALS.bp_sys,
-            bp_dia: DEFAULT_VITALS.bp_dia,
-            etco2: DEFAULT_VITALS.etco2,
-            spo2: DEFAULT_VITALS.spo2,
-            etco2_waveform: 'normal',
-            spo2_waveform: 'normal',
-          },
-          draftVitalActive: activeVitals,
-          draftVitalsActive: true,
-        })),
+        set((s) => {
+          const automaticHeartRate = getAutomaticHeartRate(s.draft.rhythm)
+          return {
+            draft: {
+              ...s.draft,
+              hr: automaticHeartRate ?? DEFAULT_VITALS.hr,
+              bp_sys: DEFAULT_VITALS.bp_sys,
+              bp_dia: DEFAULT_VITALS.bp_dia,
+              etco2: DEFAULT_VITALS.etco2,
+              spo2: DEFAULT_VITALS.spo2,
+              etco2_waveform: 'normal',
+              spo2_waveform: 'normal',
+            },
+            draftVitalActive: activeVitals,
+            draftVitalsActive: true,
+          }
+        }),
       save: () =>
         set((s) => ({
           saved: { ...s.draft },
@@ -735,6 +776,7 @@ export const useMonitorStore = create<MonitorState>()(
           savedVitalActive: inactiveVitals,
           confirmedVitalActive: inactiveVitals,
           lastRhythm: DEFAULT_ACTIVE_RHYTHM,
+          manualHrBeforeAuto: null,
           callerInfoDraft: DEFAULT_CALLER_INFO,
           callerInfoSaved: DEFAULT_CALLER_INFO,
           callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -771,6 +813,8 @@ export const useMonitorStore = create<MonitorState>()(
           cprOverrideActive: legacyCprOverrideActive,
           ...persistedWithoutLegacyCpr
         } = persistedState ?? {}
+        const draft = normalizeVitals(persistedState?.draft)
+        const saved = normalizeVitals(persistedState?.saved)
         const draftVitalActive = normalizeVitalActive(
           persistedState?.draftVitalActive,
           persistedState?.draftVitalsActive,
@@ -804,8 +848,8 @@ export const useMonitorStore = create<MonitorState>()(
         return {
           ...current,
           ...persistedWithoutLegacyCpr,
-          draft: normalizeVitals(persistedState?.draft),
-          saved: normalizeVitals(persistedState?.saved),
+          draft,
+          saved,
           confirmed,
           draftVitalActive,
           savedVitalActive,
@@ -814,6 +858,7 @@ export const useMonitorStore = create<MonitorState>()(
           savedVitalsActive: anyVitalActive(savedVitalActive),
           confirmedVitalsActive: anyVitalActive(confirmedVitalActive),
           lastRhythm: normalizeActiveRhythm(persistedState?.lastRhythm),
+          manualHrBeforeAuto: null,
           callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
           callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
           callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),
