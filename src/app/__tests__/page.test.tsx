@@ -10,7 +10,7 @@ import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 import MonitorPage from '../page'
 // The default export is the route wrapper and renders MonitorPage without
 // props; the session monitor page uses this named export to pass onStudentEvent.
-import { MonitorPage as MonitorPageWithProps } from '../page'
+import { MonitorPage as MonitorPageWithProps } from '@/components/monitor/MonitorPage'
 
 vi.mock('@/lib/audio', () => ({
   pauseAlarm: vi.fn(),
@@ -636,6 +636,29 @@ describe('MonitorPage', () => {
     )
     expect(screen.getByText('live-ecg')).toBeInTheDocument()
     expect(screen.queryByText('cpr-ecg-canvas')).not.toBeInTheDocument()
+  })
+
+  it('randomizes only the visible VF FC digits and lets CPR take precedence', async () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(1)
+    act(() => {
+      useMonitorStore.getState().setDraft('spo2', 98)
+      useMonitorStore.getState().setDraftVitalActive('spo2', true)
+      useMonitorStore.getState().setDraft('rhythm', 'vf')
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+    })
+
+    render(<MonitorPage />)
+
+    await vi.waitFor(() => expect(screen.getByText('220')).toBeInTheDocument())
+    expect(screen.getByTestId('spo2-pulse-bar')).toHaveAttribute('data-heart-rate', '190')
+    expect(useMonitorStore.getState().confirmed.hr).toBe(190)
+
+    act(() => useMonitorStore.getState().setCprMode('regular'))
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByTestId('spo2-pulse-bar')).toHaveAttribute('data-heart-rate', '120')
+    expect(screen.queryByText('220')).toBeNull()
+    randomSpy.mockRestore()
   })
 
   it('shows both BP numbers after a completed partial-active NIBP reading', () => {

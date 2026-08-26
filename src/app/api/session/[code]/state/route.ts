@@ -13,9 +13,10 @@ type RouteContext = {
 
 export async function GET(request: Request, { params }: RouteContext) {
   try {
+    const serverReceivedAt = Date.now()
     const { code } = await params
     const result = await getSessionStatus(code, participantTokenFromRequest(request))
-    return NextResponse.json(result)
+    return NextResponse.json({ ...result, serverReceivedAt, serverNow: Date.now() })
   } catch (error) {
     return jsonError(error)
   }

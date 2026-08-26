@@ -73,6 +73,22 @@ describe('scenario snapshots', () => {
     expect(snapshot?.patientPhysical).not.toHaveProperty('activeIconGroup')
   })
 
+  it('normalizes scenario VF and VT values and activates FC', () => {
+    const vf = createEmptyScenarioSnapshot()
+    vf.monitor.draft.hr = 70
+    vf.monitor.draft.rhythm = 'vf'
+    const normalizedVf = normalizeScenarioSnapshot(vf)
+    expect(normalizedVf?.monitor.draft.hr).toBe(190)
+    expect(normalizedVf?.monitor.draftVitalActive.hr).toBe(true)
+
+    const vt = createEmptyScenarioSnapshot()
+    vt.monitor.draft.hr = 70
+    vt.monitor.draft.rhythm = 'vt'
+    const normalizedVt = normalizeScenarioSnapshot(vt)
+    expect(normalizedVt?.monitor.draft.hr).toBe(220)
+    expect(normalizedVt?.monitor.draftVitalActive.hr).toBe(true)
+  })
+
   it('rejects unsupported or malformed snapshots', () => {
     expect(normalizeScenarioSnapshot({ version: 2 })).toBeNull()
     expect(normalizeScenarioSnapshot({ version: 1, monitor: null })).toBeNull()

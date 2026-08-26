@@ -32,7 +32,7 @@ describe('monitorStore scenario drafts', () => {
     useMonitorStore.getState().applyScenarioDraft(snapshot)
     const state = useMonitorStore.getState()
 
-    expect(state.draft.hr).toBe(155)
+    expect(state.draft.hr).toBe(190)
     expect(state.draft.rhythm).toBe('vf')
     expect(state.draftVitalActive.hr).toBe(true)
     expect(state.lastRhythm).toBe('vf')
@@ -44,5 +44,8 @@ describe('monitorStore scenario drafts', () => {
     expect(state.dispatch).toEqual(dispatchBefore)
     expect(state.cprMode).toBe('weak')
     expect(state.etco2CalibrationStatus).toBe('calibrated')
+
+    useMonitorStore.getState().setDraft('rhythm', 'nsr')
+    expect(useMonitorStore.getState().draft.hr).toBe(80)
   })
 })

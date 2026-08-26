@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 
-import AdminPage from '@/app/admin/page'
+import AdminPage from '@/components/instructor/AdminPage'
 
 function hostStorageKey(code: string) {
   return `paramedic-monitor.host.${code.toUpperCase()}`

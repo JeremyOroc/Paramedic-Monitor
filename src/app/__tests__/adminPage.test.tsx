@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
 
-import AdminPage from '../admin/page'
+import AdminPage from '@/components/instructor/AdminPage'
 
 const routerReplace = vi.hoisted(() => vi.fn())
 
@@ -376,6 +376,16 @@ describe('AdminPage', () => {
     expect(screen.queryByRole('button', { name: 'Set vitals to normal' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
     expect(screen.queryByLabelText('Adresse')).toBeNull()
+  })
+
+  it('places the shared Save and Send actions immediately above the tab list', () => {
+    render(<AdminPage />)
+
+    const actions = screen.getByTestId('admin-save-send-actions')
+    const tabs = screen.getByTestId('admin-tab-list')
+    expect(actions.compareDocumentPosition(tabs)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(actions).toContainElement(screen.getByRole('button', { name: 'Save' }))
+    expect(actions).toContainElement(screen.getByRole('button', { name: 'Send' }))
   })
 
   it('uses the Caller Info auto-sort scenario box to populate all admin sections', async () => {

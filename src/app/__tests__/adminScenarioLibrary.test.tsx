@@ -6,7 +6,7 @@ import { createEmptyScenarioSnapshot } from '@/lib/scenarioSnapshot'
 import { useMonitorStore } from '@/store/monitorStore'
 import type { SavedScenario } from '@/types/savedScenario'
 
-import AdminPage from '../admin/page'
+import AdminPage from '@/components/instructor/AdminPage'
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }),

@@ -6,13 +6,18 @@
 ---
 
 ## Current Phase
-**Scenario library organization update — COMPLETE AND DEPLOYED.** General is ordinary data, every folder is removable with cascade deletion, scenario order persists, rows toggle load state, empty libraries self-create `Folder X`, and Caller Info is collapsible. The configured Supabase project is synchronized through repair migration `20260820194954`.
+**Dev console actions and automatic VF/VT heart rate — COMPLETE.** Save/Send now sits above the admin tabs; VF locks underlying FC at 190 with synchronized 190–220 display digits, VT locks FC at 220, automatic rhythms preserve/restore manual FC state, and CPR remains authoritative.
 
 > Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
 
 ---
 
 ## Completed
+- [x] **Dev console actions and automatic VF/VT heart rate — COMPLETE:**
+  - [x] Moved the shared Save/Send row immediately above the three-tab strip and preserved the existing staged Save → Send workflow
+  - [x] Centralized VF/VT enforcement across direct, batch, timed, scenario, reset, and hydration paths, including FC activation, locked controls, interaction-scoped manual restoration, and 80 fallback
+  - [x] Added visible-only inclusive VF randomization on the 1.9-second flash cadence, deterministic room synchronization from version/server time, fixed underlying consumers, CPR precedence, and fixed VT 220 behavior
+  - [x] All 791 tests, TypeScript, ESLint (0 errors; 13 pre-existing warnings), the Next.js 16.3 webpack production build, and rendered desktop browser QA pass with clean admin/monitor consoles and no framework overlays
 - [x] **Combined Monitor & Patient SNS admin tab — COMPLETE:**
   - [x] Renamed Monitor to Monitor & Patient SNS, removed the Patient Information tab, and placed SAMPLE/OPQRST immediately below Vitals
   - [x] Moved Pulse, Respiratory, and Skin/Extremities into an equal-width horizontal row inside Vitals while retaining Scene/Environment with the body map

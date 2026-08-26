@@ -74,6 +74,43 @@ describe('monitorStore', () => {
     expect(s.confirmedVitalActive.hr).toBe(false)
   })
 
+  it('locks VF and VT FC across direct and batch entry paths', () => {
+    const store = useMonitorStore.getState()
+    store.setDraft('hr', 88)
+    store.setDraft('rhythm', 'vf')
+    expect(useMonitorStore.getState().draft).toMatchObject({ hr: 190, rhythm: 'vf' })
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+
+    store.setDraft('hr', 205)
+    store.setTimedDraftVitals({ hr: 210 })
+    store.setDraftVitalValues({ hr: 215 })
+    expect(useMonitorStore.getState().draft.hr).toBe(190)
+
+    store.setDraft('rhythm', 'vt')
+    expect(useMonitorStore.getState().draft.hr).toBe(220)
+    store.setDraftVitalValues({ hr: 199 })
+    expect(useMonitorStore.getState().draft.hr).toBe(220)
+  })
+
+  it('restores the current interaction manual FC after leaving VF or VT', () => {
+    const store = useMonitorStore.getState()
+    store.setDraft('hr', 88)
+    store.setDraft('rhythm', 'vf')
+    store.setDraft('rhythm', 'vt')
+    store.setDraft('rhythm', 'off')
+
+    expect(useMonitorStore.getState().draft.hr).toBe(88)
+    expect(useMonitorStore.getState().manualHrBeforeAuto).toBeNull()
+  })
+
+  it('allows FC to be turned Off after VF automatically turns it On', () => {
+    const store = useMonitorStore.getState()
+    store.setDraft('rhythm', 'vf')
+    store.setDraftVitalActive('hr', false)
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
+    expect(useMonitorStore.getState().draft.hr).toBe(190)
+  })
+
   it('save copies draft to saved without touching confirmed', () => {
     useMonitorStore.getState().setDraft('hr', 160)
     useMonitorStore.getState().save()
@@ -485,7 +522,7 @@ describe('monitorStore', () => {
 
     const s = useMonitorStore.getState()
     expect(s.draft).toMatchObject({
-      hr: DEFAULT_VITALS.hr,
+      hr: 220,
       bp_sys: DEFAULT_VITALS.bp_sys,
       bp_dia: DEFAULT_VITALS.bp_dia,
       etco2: DEFAULT_VITALS.etco2,
@@ -500,8 +537,8 @@ describe('monitorStore', () => {
       etco2: true,
       spo2: true,
     })
-    expect(s.saved.hr).toBe(180)
-    expect(s.confirmed.hr).toBe(180)
+    expect(s.saved.hr).toBe(190)
+    expect(s.confirmed.hr).toBe(190)
   })
 
   it('resetMonitorVitals clears only monitor vitals back to inactive disconnected state', () => {
@@ -1000,6 +1037,32 @@ describe('persist migration', () => {
     await useMonitorStore.persist.rehydrate()
 
     expect(useMonitorStore.getState().cprMode).toBe('regular')
+  })
+
+  it('coerces hydrated automatic rhythms and clears the runtime FC backup', async () => {
+    const def = defaultsAsVitals()
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 9,
+        state: {
+          draft: { ...def, hr: 70, rhythm: 'vf' },
+          saved: { ...def, hr: 70, rhythm: 'vf' },
+          confirmed: { ...def, hr: 70, rhythm: 'vf' },
+          manualHrBeforeAuto: 70,
+        },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const state = useMonitorStore.getState()
+    expect(state.draft.hr).toBe(190)
+    expect(state.saved.hr).toBe(190)
+    expect(state.confirmed.hr).toBe(190)
+    expect(state.manualHrBeforeAuto).toBeNull()
+    state.setDraft('rhythm', 'nsr')
+    expect(useMonitorStore.getState().draft.hr).toBe(80)
   })
 
   it('normalizes removed PEA rhythms in persisted vitals', async () => {

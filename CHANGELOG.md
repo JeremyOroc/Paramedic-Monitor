@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-08-25] [instructor/monitor] — Move actions and automate VF/VT heart rate
+
+- Moved the shared Save/Send controls into a left-aligned row immediately above the admin tab strip while preserving staged Save → Send behavior.
+- Centralized automatic rhythm handling: VF activates and locks underlying FC at 190 while showing `AUTO 190–220`; VT activates and locks FC at 220. Direct, batch, timed-vitals, scenario, reset, and hydration paths cannot overwrite these values, and leaving an automatic rhythm restores the interaction's previous manual FC or the 80 fallback.
+- Added visible-only inclusive VF digit changes on the existing 1.9-second flash cadence, deterministic room alignment from the shared state version and server timestamps, fixed underlying cadence/alarm/log/capture consumers, CPR precedence, and fixed VT 220 display behavior without changing shared payloads or scenario schema version.
+- Added server-time metadata to session-state GET responses, synchronization timing output, Next.js 16-compatible route wrappers, and store/component/page/hook/API regressions. All 791 tests, TypeScript, ESLint (0 errors; 13 pre-existing warnings), and the webpack production build pass; desktop browser QA confirmed placement, locking, Save/Send, VF cycling, CPR suppression, VT stability, clean consoles, and no framework overlays.
+
 ## [2026-08-20] [ui] — Combine Monitor and Patient SNS controls
 
 - Renamed the admin Monitor tab to Monitor & Patient SNS, removed the Patient Information tab, and moved its preserved SAMPLE/OPQRST editor directly below Vitals.

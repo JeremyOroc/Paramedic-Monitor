@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
-import { MonitorPage, type StudentEventRecord } from '@/app/page'
+import { MonitorPage, type StudentEventRecord } from '@/components/monitor/MonitorPage'
 import { useSessionMonitorSync } from '@/hooks/useSessionMonitorSync'
 import { useMonitorStore } from '@/store/monitorStore'
 
@@ -41,7 +41,7 @@ export default function SessionMonitorPage() {
   // and remount the monitor so controller state (power, capture, etc.) resets.
   const [attemptVersion, setAttemptVersion] = useState(1)
   const resetStore = useMonitorStore((s) => s.reset)
-  useSessionMonitorSync({
+  const vfDisplaySync = useSessionMonitorSync({
     code,
     participantToken,
     onSessionInactive: () => router.replace(`/session/${code}/waiting`),
@@ -66,5 +66,11 @@ export default function SessionMonitorPage() {
     [code, participantToken],
   )
 
-  return <MonitorPage key={attemptVersion} onStudentEvent={recordStudentEvent} />
+  return (
+    <MonitorPage
+      key={attemptVersion}
+      onStudentEvent={recordStudentEvent}
+      vfDisplaySync={vfDisplaySync}
+    />
+  )
 }

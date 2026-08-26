@@ -1,14 +1,21 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import type { VfDisplaySync } from '@/lib/automaticHeartRate'
 import { useMonitorStore, type SharedMonitorState } from '@/store/monitorStore'
 
 export const SESSION_SYNC_INTERVAL_MS = 1500
 
 type SessionStatePayload = {
   session?: { status?: string; active_attempt_version?: number }
-  state?: { state?: Partial<SharedMonitorState>; version?: number } | null
+  state?: {
+    state?: Partial<SharedMonitorState>
+    version?: number
+    updated_at?: string
+  } | null
+  serverReceivedAt?: number
+  serverNow?: number
 }
 
 type UseSessionMonitorSyncOptions = {
@@ -35,6 +42,7 @@ export function useSessionMonitorSync({
   onNewAttempt,
 }: UseSessionMonitorSyncOptions) {
   const applySharedState = useMonitorStore((s) => s.applySharedState)
+  const [vfDisplaySync, setVfDisplaySync] = useState<VfDisplaySync | null>(null)
   const lastVersionRef = useRef<number | null>(null)
   const lastAttemptRef = useRef<number | null>(null)
   const onSessionInactiveRef = useRef(onSessionInactive)
@@ -49,6 +57,7 @@ export function useSessionMonitorSync({
 
     async function pollState() {
       try {
+        const requestStartedAt = Date.now()
         const response = await fetch(`/api/session/${code}/state`, {
           headers: participantToken
             ? { 'x-session-participant-token': participantToken }
@@ -56,6 +65,7 @@ export function useSessionMonitorSync({
         })
         if (!response.ok) return
         const data = (await response.json()) as SessionStatePayload
+        const responseReceivedAt = Date.now()
         if (cancelled) return
 
         // Read the attempt before the status gate. A new attempt also drops the
@@ -84,6 +94,24 @@ export function useSessionMonitorSync({
         if (lastVersionRef.current === version) return
         lastVersionRef.current = version
         applySharedState(shared)
+        const epochMs = Date.parse(data.state?.updated_at ?? '')
+        if (
+          Number.isFinite(epochMs) &&
+          typeof data.serverReceivedAt === 'number' &&
+          typeof data.serverNow === 'number'
+        ) {
+          const serverOffsetMs =
+            ((data.serverReceivedAt - requestStartedAt) +
+              (data.serverNow - responseReceivedAt)) /
+            2
+          setVfDisplaySync({
+            seed: version,
+            epochMs,
+            serverOffsetMs,
+          })
+        } else {
+          setVfDisplaySync(null)
+        }
       } catch {
         // Network blip — keep polling; the next tick retries.
       }
@@ -96,4 +124,6 @@ export function useSessionMonitorSync({
       window.clearInterval(interval)
     }
   }, [applySharedState, code, intervalMs, participantToken])
+
+  return vfDisplaySync
 }

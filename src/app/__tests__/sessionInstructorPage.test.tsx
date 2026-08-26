@@ -17,7 +17,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => searchParamsRef.current,
 }))
 
-vi.mock('@/app/admin/page', () => ({
+vi.mock('@/components/instructor/AdminPage', () => ({
   default: ({ session }: { session?: { code: string; hostToken: string } }) => (
     <div data-testid="admin-stub">
       {session?.code}:{session?.hostToken}

@@ -8,6 +8,7 @@
 
 ## Current Requirement Updates
 
+- The shared instructor Save/Send actions must render in a left-aligned row immediately above the three-tab strip instead of below the forms. Selecting VF or VT locks the FC editor and turns FC On: VF shows `AUTO 190–220`, saves an underlying FC of 190, and displays a synchronized inclusive 190–220 integer on each 1.9-second FC alarm-flash cycle; VT shows and saves exactly 220. Automatic-rhythm values cannot be overwritten by direct, auto-sort, timed, scenario, or hydration paths. Leaving VF/VT restores the current interaction's prior manual FC, with 80 as the fallback for loaded/rehydrated automatic rhythms. VF randomness affects only the visible FC digits; waveform cadence, alarms, logs, and captures keep the underlying FC, CPR takes precedence, and room participants use server-timestamped deterministic display timing so they see the same sequence.
 - Default entry point is now a Kahoot-style session lobby: instructors create rooms, students join with code + nickname, and `/?dev=1` remains the local monitor shortcut.
 - Session room codes must be selectable and copyable from instructor and student waiting-room views.
 - Room creators must be able to end their room from the instructor view; ending redirects the instructor home and stops student participation.
@@ -340,6 +341,7 @@ existing close-panel and exit-12-lead precedence.
    - The former top-of-vitals `Normal` button is removed from the instructor UI; the underlying store action remains available for compatibility
    - The `Monitor & Patient SNS` tab places Pulse, Respiratory, and Skin/Extremities in one horizontal row at the bottom of the Vitals box, followed by the existing SAMPLE and OPQRST boxes below Vitals
    - Include `CallerInfoForm` in its own admin tab for dispatch/caller info shown on the monitor after ANALYZE: Dispatch countdown, Call #, Priority, MPDS Code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button that reveals up to three optional title/input extra rows
+   - Shared Save/Send actions sit immediately above the tab strip. VF/VT use locked automatic FC controls, automatically activate FC on selection, and restore the prior manual FC when the rhythm is left; VF display-only randomness is synchronized across room monitors while VT remains fixed at 220.
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
 4. On input change → set `pendingFlags[field] = true` → field turns amber/orange (pending color)
 5. `SendButton` — sets `pendingFlags` all false, sets `confirmedVitals = draftVitals`
@@ -355,6 +357,7 @@ existing close-panel and exit-12-lead precedence.
 - Component/page tests cover caller-info draft/save/send flow and ANALYZE-triggered monitor display.
 - Caller-info form tests cover adding optional extra rows one at a time and capping the form at three extras.
 - Admin page tests cover the three-tab layout, combined monitor/SNS/patient-information content, moved icon behavior, and removed shared Reset control.
+- Store, component, monitor, route, and synchronization tests cover automatic VF/VT FC locking across every input path, manual-value restoration and scenario/hydration fallback, synchronized inclusive VF flash values, CPR precedence, fixed underlying consumers, fixed VT 220, and the Save/Send action row above the tabs.
 
 **Milestone:** Instructor panel fully interactive. Editing vitals turns fields amber. Send confirms them. Defib sequence enforces correct order with progress bars.
 
