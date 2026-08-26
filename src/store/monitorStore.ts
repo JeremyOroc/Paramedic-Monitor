@@ -40,6 +40,11 @@ import {
 import type { EventLogEntry } from '@/components/monitor/EventLogModal'
 import type { EventLogStamp } from '@/types/eventLog'
 import type { ScenarioSnapshotV1 } from '@/types/savedScenario'
+import {
+  DEFAULT_DEFIBRILLATOR_MODEL,
+  normalizeDefibrillatorModel,
+  type DefibrillatorModel,
+} from '@/types/defibrillator'
 
 export type Vitals = {
   hr: number
@@ -116,6 +121,7 @@ function normalizeCprMode(value: unknown, legacyActive?: unknown): CprMode {
 // monitor. `monitorResetVersion` propagates instructor resets: monitors clear
 // their local progress when it changes.
 export type SharedMonitorState = {
+  defibrillatorModelConfirmed: DefibrillatorModel
   confirmed: Vitals
   confirmedVitalActive: VitalActiveState
   callerInfoConfirmed: CallerInfo
@@ -264,6 +270,9 @@ function normalizeDispatch(
 }
 
 export type MonitorState = {
+  defibrillatorModelDraft: DefibrillatorModel
+  defibrillatorModelSaved: DefibrillatorModel
+  defibrillatorModelConfirmed: DefibrillatorModel
   draft: Vitals
   saved: Vitals
   confirmed: Vitals
@@ -295,6 +304,7 @@ export type MonitorState = {
   acceptedBp: BpDisplay
   acceptedBpActive: BpActiveState
   setDraft: <K extends keyof Vitals>(field: K, value: Vitals[K]) => void
+  setDefibrillatorModelDraft: (model: DefibrillatorModel) => void
   setTimedDraftVitals: (vitals: TimedDraftVitals) => void
   setDraftVitalValues: (vitals: DraftVitalValues) => void
   setDraftVitalActive: (field: NumericVitalField, active: boolean) => void
@@ -320,6 +330,7 @@ export type MonitorState = {
   startDispatchClock: () => void
   getSharedState: () => SharedMonitorState
   applySharedState: (shared: Partial<SharedMonitorState>) => void
+  resetForNewAttempt: () => void
   reset: () => void
 }
 
@@ -328,6 +339,9 @@ export const STORAGE_KEY = 'paramedic-monitor.v1'
 export const useMonitorStore = create<MonitorState>()(
   persist(
     (set, get) => ({
+      defibrillatorModelDraft: DEFAULT_DEFIBRILLATOR_MODEL,
+      defibrillatorModelSaved: DEFAULT_DEFIBRILLATOR_MODEL,
+      defibrillatorModelConfirmed: DEFAULT_DEFIBRILLATOR_MODEL,
       draft: initial,
       saved: initial,
       confirmed: initial,
@@ -356,6 +370,8 @@ export const useMonitorStore = create<MonitorState>()(
       cprMode: 'off',
       acceptedBp: initialBpDisplay,
       acceptedBpActive: inactiveBpActive,
+      setDefibrillatorModelDraft: (model) =>
+        set({ defibrillatorModelDraft: normalizeDefibrillatorModel(model) }),
       setDraft: (field, value) =>
         set((s) => {
           if (field === 'hr' && isAutomaticHeartRateRhythm(s.draft.rhythm)) return s
@@ -465,6 +481,9 @@ export const useMonitorStore = create<MonitorState>()(
           const originAddress = snapshot.dispatch.originAddress.trim() || JOHN_ABBOTT_ADDRESS
 
           return {
+            defibrillatorModelDraft: normalizeDefibrillatorModel(
+              snapshot.defibrillatorModel,
+            ),
             draft,
             draftVitalActive,
             draftVitalsActive: anyVitalActive(draftVitalActive),
@@ -595,6 +614,7 @@ export const useMonitorStore = create<MonitorState>()(
         }),
       save: () =>
         set((s) => ({
+          defibrillatorModelSaved: s.defibrillatorModelDraft,
           saved: { ...s.draft },
           savedVitalActive: { ...s.draftVitalActive },
           savedVitalsActive: anyVitalActive(s.draftVitalActive),
@@ -648,6 +668,7 @@ export const useMonitorStore = create<MonitorState>()(
               : s.dispatchRouteSaved.durationSeconds,
           }
           const base = {
+            defibrillatorModelConfirmed: s.defibrillatorModelSaved,
             confirmed: { ...s.saved },
             confirmedVitalActive: { ...s.savedVitalActive },
             confirmedVitalsActive: anyVitalActive(s.savedVitalActive),
@@ -682,6 +703,7 @@ export const useMonitorStore = create<MonitorState>()(
       getSharedState: (): SharedMonitorState => {
         const s = get()
         return {
+          defibrillatorModelConfirmed: s.defibrillatorModelConfirmed,
           confirmed: { ...s.confirmed },
           confirmedVitalActive: { ...s.confirmedVitalActive },
           callerInfoConfirmed: { ...s.callerInfoConfirmed },
@@ -750,6 +772,9 @@ export const useMonitorStore = create<MonitorState>()(
               : {}
 
           return {
+            defibrillatorModelConfirmed: normalizeDefibrillatorModel(
+              shared.defibrillatorModelConfirmed,
+            ),
             confirmed,
             confirmedVitalActive,
             confirmedVitalsActive: anyVitalActive(confirmedVitalActive),
@@ -764,8 +789,48 @@ export const useMonitorStore = create<MonitorState>()(
             ...resetSideEffects,
           }
         }),
+      resetForNewAttempt: () =>
+        set((s) => {
+          const model = normalizeDefibrillatorModel(s.defibrillatorModelConfirmed)
+          return {
+            defibrillatorModelDraft: model,
+            defibrillatorModelSaved: model,
+            defibrillatorModelConfirmed: model,
+            draft: initial,
+            saved: initial,
+            confirmed: initial,
+            draftVitalsActive: false,
+            savedVitalsActive: false,
+            confirmedVitalsActive: false,
+            draftVitalActive: inactiveVitals,
+            savedVitalActive: inactiveVitals,
+            confirmedVitalActive: inactiveVitals,
+            lastRhythm: DEFAULT_ACTIVE_RHYTHM,
+            manualHrBeforeAuto: null,
+            callerInfoDraft: DEFAULT_CALLER_INFO,
+            callerInfoSaved: DEFAULT_CALLER_INFO,
+            callerInfoConfirmed: DEFAULT_CALLER_INFO,
+            dispatchRouteDraft: DEFAULT_DISPATCH_ROUTE,
+            dispatchRouteSaved: DEFAULT_DISPATCH_ROUTE,
+            dispatchRouteConfirmed: DEFAULT_DISPATCH_ROUTE,
+            patientInfo: DEFAULT_PATIENT_INFO,
+            dispatch: DEFAULT_DISPATCH,
+            dispatchMinutes: 0,
+            dispatchSeconds: 0,
+            dispatchSavedSeconds: 0,
+            dispatchConfirmedSeconds: 0,
+            monitorResetVersion: s.monitorResetVersion + 1,
+            etco2CalibrationStatus: 'idle' as Etco2CalibrationStatus,
+            cprMode: 'off' as CprMode,
+            acceptedBp: initialBpDisplay,
+            acceptedBpActive: inactiveBpActive,
+          }
+        }),
       reset: () =>
         set((s) => ({
+          defibrillatorModelDraft: DEFAULT_DEFIBRILLATOR_MODEL,
+          defibrillatorModelSaved: DEFAULT_DEFIBRILLATOR_MODEL,
+          defibrillatorModelConfirmed: DEFAULT_DEFIBRILLATOR_MODEL,
           draft: initial,
           saved: initial,
           confirmed: initial,
@@ -798,7 +863,7 @@ export const useMonitorStore = create<MonitorState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 9,
+      version: 10,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist
@@ -848,6 +913,15 @@ export const useMonitorStore = create<MonitorState>()(
         return {
           ...current,
           ...persistedWithoutLegacyCpr,
+          defibrillatorModelDraft: normalizeDefibrillatorModel(
+            persistedState?.defibrillatorModelDraft,
+          ),
+          defibrillatorModelSaved: normalizeDefibrillatorModel(
+            persistedState?.defibrillatorModelSaved,
+          ),
+          defibrillatorModelConfirmed: normalizeDefibrillatorModel(
+            persistedState?.defibrillatorModelConfirmed,
+          ),
           draft,
           saved,
           confirmed,

@@ -44,6 +44,22 @@ describe('SendButton', () => {
     expect(screen.getByRole('button', { name: 'Send' })).not.toBeDisabled()
   })
 
+  it('enables once a defibrillator model change has been saved', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setDefibrillatorModelDraft('wagamiZ')
+      useMonitorStore.getState().save()
+    })
+    render(<SendButton />)
+    const button = screen.getByRole('button', { name: 'Send' })
+    expect(button).toBeEnabled()
+
+    await user.click(button)
+
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiZ')
+    expect(button).toBeDisabled()
+  })
+
   it('fires send and disables again afterward', async () => {
     const user = userEvent.setup()
     act(() => {

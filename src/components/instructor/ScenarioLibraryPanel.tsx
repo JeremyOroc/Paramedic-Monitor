@@ -28,6 +28,7 @@ type ScenarioLibraryPanelProps = {
   onUnloadScenario: () => void
   onFolderDeleted: (folderId: string) => void
   onLoadedScenarioFolderChange: (folderId: string) => void
+  scenarioSelectionDisabled?: boolean
 }
 
 type MutationStatus = 'idle' | 'working'
@@ -93,6 +94,7 @@ export function ScenarioLibraryPanel({
   onUnloadScenario,
   onFolderDeleted,
   onLoadedScenarioFolderChange,
+  scenarioSelectionDisabled = false,
 }: ScenarioLibraryPanelProps) {
   const [folders, setFolders] = useState<ScenarioFolder[]>([])
   const [scenariosByFolderId, setScenariosByFolderId] = useState<
@@ -313,6 +315,7 @@ export function ScenarioLibraryPanel({
   }
 
   const loadScenario = async (scenarioId: string) => {
+    if (scenarioSelectionDisabled) return
     if (loadedScenarioId === scenarioId) {
       onUnloadScenario()
       return
@@ -326,6 +329,7 @@ export function ScenarioLibraryPanel({
   const activateScenario = (event: KeyboardEvent<HTMLDivElement>, scenarioId: string) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
     event.preventDefault()
+    if (scenarioSelectionDisabled) return
     void loadScenario(scenarioId)
   }
 
@@ -540,6 +544,7 @@ export function ScenarioLibraryPanel({
                             role="button"
                             tabIndex={0}
                             aria-pressed={selected}
+                            aria-disabled={scenarioSelectionDisabled}
                             aria-label={`${selected ? 'Unload' : 'Load'} ${scenario.title}`}
                             draggable={status === 'idle'}
                             onClick={() => void loadScenario(scenario.id)}
@@ -561,6 +566,7 @@ export function ScenarioLibraryPanel({
                               selected
                                 ? 'border-ecg-green bg-ecg-green/10'
                                 : 'border-neutral-800 bg-neutral-950 hover:border-cyan-bp/60',
+                              scenarioSelectionDisabled && 'cursor-not-allowed opacity-60',
                               showBefore && 'before:absolute before:inset-x-0 before:-top-1 before:h-0.5 before:bg-cyan-bp',
                               showAfter && 'after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:bg-cyan-bp',
                             )}

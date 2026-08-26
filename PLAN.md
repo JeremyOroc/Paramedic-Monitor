@@ -806,6 +806,29 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 
 ---
 
+### Wagami Defibrillator Model Selection
+**Goal:** Let instructors choose the monitor model used for a room attempt while preserving the existing dispatch workflow.
+
+**Status:** Complete on 2026-08-26.
+
+**Requirements:**
+1. Add a fourth Dev Console tab named `Defibrillators` after Patient Physical. It contains staged `Wagami X` and `Wagami Z` choices, defaults to Wagami X, and participates in Save → Send.
+2. Keep Start / Dispatch disabled while the model choice is dirty or pending. A successful Start locks both choices while leaving the tab available and the confirmed model highlighted; New Attempt preserves and unlocks that model.
+3. Save the draft model in version-1 scenario snapshots. Legacy snapshots default to Wagami X, Wagami Z alone is meaningful scenario content, and active attempts disable scenario load/unload controls.
+4. Share the confirmed model with student monitors. Wagami X renders the existing monitor. Wagami Z retains caller info, acknowledgement, countdown, arrival, and Go to Monitor, then renders only a black full-screen `Work In Progress` placeholder.
+5. Keep `/?dev=1` as the direct Wagami X shortcut and add `/?dev=2` as the direct Wagami Z placeholder shortcut. The normal `/` route remains the session lobby.
+
+#### Testing
+- Store coverage for model draft/saved/confirmed transitions, shared state, reset preservation, and legacy hydration.
+- Scenario coverage for round-tripping, legacy Wagami X fallback, model-only meaningful content, and active load/unload locking.
+- Admin coverage for the fourth tab, selection styling, Start gating, successful-start locking, failed-start behavior, and New Attempt preservation.
+- Monitor coverage for unchanged Wagami X dispatch entry, Wagami Z dispatch-to-placeholder behavior, and both direct development shortcuts.
+- Full Vitest, TypeScript, ESLint, production build, and rendered desktop interaction QA.
+
+**Milestone — COMPLETE (2026-08-26):** Instructors can stage, save, send, and lock a Wagami model per attempt; saved scenarios and shared sessions retain the choice; Wagami Z preserves dispatch before entering its WIP placeholder; and both direct development shortcuts select their intended model.
+
+---
+
 ### Phase 11 — STATUS.md / CHANGELOG.md Workflow + Polish
 **Goal:** Team coordination files up to date; app polished.
 

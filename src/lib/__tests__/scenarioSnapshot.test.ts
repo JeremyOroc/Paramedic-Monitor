@@ -73,6 +73,29 @@ describe('scenario snapshots', () => {
     expect(snapshot?.patientPhysical).not.toHaveProperty('activeIconGroup')
   })
 
+  it('treats Wagami Z alone as meaningful scenario content', () => {
+    const snapshot = createEmptyScenarioSnapshot()
+    snapshot.defibrillatorModel = 'wagamiZ'
+
+    expect(hasMeaningfulScenarioContent(snapshot)).toBe(true)
+  })
+
+  it('defaults legacy version-one snapshots without a model to Wagami X', () => {
+    const legacy = createEmptyScenarioSnapshot() as Partial<ReturnType<
+      typeof createEmptyScenarioSnapshot
+    >>
+    delete legacy.defibrillatorModel
+
+    expect(normalizeScenarioSnapshot(legacy)?.defibrillatorModel).toBe('wagamiX')
+  })
+
+  it('round-trips a Wagami Z scenario selection', () => {
+    const input = createEmptyScenarioSnapshot()
+    input.defibrillatorModel = 'wagamiZ'
+
+    expect(normalizeScenarioSnapshot(input)?.defibrillatorModel).toBe('wagamiZ')
+  })
+
   it('normalizes scenario VF and VT values and activates FC', () => {
     const vf = createEmptyScenarioSnapshot()
     vf.monitor.draft.hr = 70

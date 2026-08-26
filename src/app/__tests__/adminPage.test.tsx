@@ -190,6 +190,118 @@ describe('AdminPage', () => {
     })
 
     expect(start).toBeEnabled()
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
+    await user.click(screen.getByRole('button', { name: 'Wagami Z' }))
+    expect(start).toBeDisabled()
+    expect(start).toHaveAttribute(
+      'title',
+      'Save and Send the defibrillator model before starting',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(start).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+    expect(start).toBeEnabled()
+  })
+
+  it('locks the confirmed model after Start and keeps the selected button highlighted', async () => {
+    let started = false
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/start')) {
+        started = true
+        return new Response(
+          JSON.stringify({ session: { status: 'active', active_attempt_version: 1 } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      const body = url.endsWith('/review')
+        ? {
+            session: {
+              status: started ? 'active' : 'waiting',
+              active_attempt_version: 1,
+            },
+            participants: [],
+            events: [],
+          }
+        : { session: { status: started ? 'active' : 'waiting' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '123 Rue Principale')
+      store.save()
+      store.send()
+    })
+
+    const user = userEvent.setup()
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
+    await user.click(screen.getByRole('button', { name: 'Wagami Z' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+    await user.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
+
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Defibrillators' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Wagami X' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Wagami Z' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Wagami Z' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Wagami Z' })).toHaveClass('bg-ecg-green')
+  })
+
+  it('keeps the model selector unlocked when Start fails', async () => {
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/start')) {
+        return new Response(JSON.stringify({ error: 'Unable to open room' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      const body = url.endsWith('/review')
+        ? {
+            session: { status: 'waiting', active_attempt_version: 1 },
+            participants: [],
+            events: [],
+          }
+        : { session: { status: 'waiting' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '123 Rue Principale')
+      store.setDefibrillatorModelDraft('wagamiZ')
+      store.save()
+      store.send()
+    })
+
+    const user = userEvent.setup()
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
+    await user.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
+
+    await waitFor(() => expect(screen.getByText('Unable to open room')).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Wagami X' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Wagami Z' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Wagami Z' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 
   it('stamps the dispatch clock from when the room opens, not from Send', async () => {
@@ -234,15 +346,24 @@ describe('AdminPage', () => {
 
   it('clears the instructor panel when a new attempt starts', async () => {
     const user = userEvent.setup()
+    let newAttemptStarted = false
     vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
-      const body = url.endsWith('/attempt')
-        ? { session: { status: 'active', active_attempt_version: 2 } }
-        : {
-            session: { status: 'active', active_attempt_version: 1 },
-            participants: [],
-            events: [],
-          }
+      if (url.endsWith('/attempt')) {
+        newAttemptStarted = true
+        return new Response(
+          JSON.stringify({ session: { status: 'waiting', active_attempt_version: 2 } }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      const body = {
+        session: {
+          status: newAttemptStarted ? 'waiting' : 'active',
+          active_attempt_version: newAttemptStarted ? 2 : 1,
+        },
+        participants: [],
+        events: [],
+      }
       return new Response(JSON.stringify(body), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
@@ -255,12 +376,14 @@ describe('AdminPage', () => {
     // Load the previous run's scenario onto the instructor side.
     act(() => {
       useMonitorStore.getState().setDraft('rhythm', 'vf')
+      useMonitorStore.getState().setDefibrillatorModelDraft('wagamiZ')
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
       useMonitorStore.getState().setCprMode('weak')
     })
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('vf')
     expect(useMonitorStore.getState().cprMode).toBe('weak')
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiZ')
     const versionBefore = useMonitorStore.getState().monitorResetVersion
 
     await user.click(screen.getByRole('button', { name: 'New Attempt' }))
@@ -272,8 +395,14 @@ describe('AdminPage', () => {
     })
     expect(useMonitorStore.getState().draft.rhythm).toBe('off')
     expect(useMonitorStore.getState().cprMode).toBe('off')
+    expect(useMonitorStore.getState().defibrillatorModelDraft).toBe('wagamiZ')
+    expect(useMonitorStore.getState().defibrillatorModelSaved).toBe('wagamiZ')
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiZ')
     // The bumped reset version is what propagates the clear to students.
     expect(useMonitorStore.getState().monitorResetVersion).toBeGreaterThan(versionBefore)
+    await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
+    expect(screen.getByRole('button', { name: 'Wagami X' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Wagami Z' })).toBeEnabled()
   })
 
   it('pushes every CPR mode transition to the session immediately', async () => {
@@ -337,7 +466,7 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'New Attempt' })).toBeInTheDocument()
   })
 
-  it('shows the three-tab layout and combines Vitals, SNS, and Patient Information', async () => {
+  it('shows the four-tab layout and combines Vitals, SNS, and Patient Information', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
@@ -345,6 +474,7 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'Monitor & Patient SNS' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Patient Information' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Patient Physical' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Defibrillators' })).toBeInTheDocument()
     expect(screen.getByLabelText('Scenarios library')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
@@ -376,6 +506,25 @@ describe('AdminPage', () => {
     expect(screen.queryByRole('button', { name: 'Set vitals to normal' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
     expect(screen.queryByLabelText('Adresse')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
+    expect(screen.getByRole('button', { name: 'Defibrillators' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Wagami X' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Wagami Z' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Wagami Z' }))
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
+    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
   })
 
   it('places the shared Save and Send actions immediately above the tab list', () => {

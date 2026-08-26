@@ -44,6 +44,7 @@ import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { playCallerInfoAlert, setAudioMuted, stopAllAudio } from '@/lib/audio'
 import { SessionLandingPage } from '@/components/session/SessionLandingPage'
+import { WorkInProgressScreen } from '@/components/monitor/WorkInProgressScreen'
 import { getCprHeartRate } from '@/types/vitals'
 import { useVfDisplayHeartRate } from '@/hooks/useVfDisplayHeartRate'
 import type { VfDisplaySync } from '@/lib/automaticHeartRate'
@@ -67,6 +68,9 @@ export function MonitorPage({
 
   useStoreHydration()
   const confirmed = useMonitorStore((s) => s.confirmed)
+  const defibrillatorModelConfirmed = useMonitorStore(
+    (s) => s.defibrillatorModelConfirmed,
+  )
   const confirmedVitalActive = useMonitorStore((s) => s.confirmedVitalActive)
   const acceptedBp = useMonitorStore((s) => s.acceptedBp)
   const acceptedBpActive = useMonitorStore((s) => s.acceptedBpActive)
@@ -571,6 +575,10 @@ export function MonitorPage({
     )
   }
 
+  if (!devBypass && defibrillatorModelConfirmed === 'wagamiZ') {
+    return <WorkInProgressScreen />
+  }
+
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       <DeviceShell
@@ -705,6 +713,7 @@ export default function MonitorPageRoute() {
 
 function MonitorPageOrLanding() {
   const searchParams = useSearchParams()
+  if (searchParams.get('dev') === '2') return <WorkInProgressScreen />
   if (process.env.NODE_ENV === 'test') return <MonitorPage />
   if (searchParams.get('dev') === '1') return <MonitorPage />
   return <SessionLandingPage />

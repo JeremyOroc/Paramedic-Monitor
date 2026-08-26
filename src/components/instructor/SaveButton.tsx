@@ -6,6 +6,7 @@ import {
   hasDirty,
   hasDispatchCountdownDirty,
   hasDispatchRouteChanged,
+  hasDefibrillatorModelDirty,
   hasVitalActiveDirty,
 } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
@@ -22,13 +23,16 @@ export function SaveButton() {
   const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
   const dispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
   const dispatchSavedSeconds = useMonitorStore((s) => s.dispatchSavedSeconds)
+  const defibrillatorModelDraft = useMonitorStore((s) => s.defibrillatorModelDraft)
+  const defibrillatorModelSaved = useMonitorStore((s) => s.defibrillatorModelSaved)
   const save = useMonitorStore((s) => s.save)
   const disabled =
     !hasDirty(draft, saved) &&
     !hasVitalActiveDirty(draftVitalActive, savedVitalActive) &&
     !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved) &&
     !hasDispatchRouteChanged(dispatchRouteDraft, dispatchRouteSaved) &&
-    !hasDispatchCountdownDirty(dispatchMinutes, dispatchSeconds, dispatchSavedSeconds)
+    !hasDispatchCountdownDirty(dispatchMinutes, dispatchSeconds, dispatchSavedSeconds) &&
+    !hasDefibrillatorModelDirty(defibrillatorModelDraft, defibrillatorModelSaved)
 
   return (
     <button

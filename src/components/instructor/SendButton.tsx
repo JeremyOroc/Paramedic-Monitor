@@ -7,6 +7,7 @@ import {
   hasCallerInfoPending,
   hasDispatchRouteDurationPending,
   hasDispatchRouteChanged,
+  hasDefibrillatorModelPending,
   hasPending,
   hasVitalActivePending,
 } from '@/store/fieldState'
@@ -27,6 +28,8 @@ export function SendButton({ onSent }: SendButtonProps) {
   const dispatchRouteConfirmed = useMonitorStore((s) => s.dispatchRouteConfirmed)
   const dispatchSavedSeconds = useMonitorStore((s) => s.dispatchSavedSeconds)
   const dispatchConfirmedSeconds = useMonitorStore((s) => s.dispatchConfirmedSeconds)
+  const defibrillatorModelSaved = useMonitorStore((s) => s.defibrillatorModelSaved)
+  const defibrillatorModelConfirmed = useMonitorStore((s) => s.defibrillatorModelConfirmed)
   const send = useMonitorStore((s) => s.send)
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const disabled =
@@ -34,7 +37,8 @@ export function SendButton({ onSent }: SendButtonProps) {
     !hasVitalActivePending(savedVitalActive, confirmedVitalActive) &&
     !hasCallerInfoPending(callerInfoSaved, callerInfoConfirmed) &&
     !hasDispatchRouteChanged(dispatchRouteSaved, dispatchRouteConfirmed) &&
-    !hasDispatchRouteDurationPending(dispatchSavedSeconds, dispatchConfirmedSeconds)
+    !hasDispatchRouteDurationPending(dispatchSavedSeconds, dispatchConfirmedSeconds) &&
+    !hasDefibrillatorModelPending(defibrillatorModelSaved, defibrillatorModelConfirmed)
 
   return (
     <button

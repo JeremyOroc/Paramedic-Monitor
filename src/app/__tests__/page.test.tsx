@@ -336,6 +336,51 @@ describe('MonitorPage', () => {
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
+  it('keeps the Wagami Z dispatch flow and shows Work In Progress after entry', async () => {
+    const user = userEvent.setup()
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDefibrillatorModelDraft('wagamiZ')
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+      store.acknowledgeCall('14:05:00')
+      store.arriveCall('14:06:00')
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
+    expect(screen.queryByText('Work In Progress')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Go to monitor' }))
+
+    expect(screen.getByRole('heading', { name: 'Work In Progress' })).toBeInTheDocument()
+    expect(screen.queryByTestId('device-shell')).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).toBeNull()
+  })
+
+  it('uses explicit development shortcuts for Wagami X and Wagami Z', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDefibrillatorModelDraft('wagamiZ')
+      store.save()
+      store.send()
+    })
+    window.history.pushState({}, '', '/?dev=1')
+
+    const { rerender } = render(<MonitorPage />)
+    expect(screen.getByTestId('device-shell')).toBeInTheDocument()
+    expect(screen.queryByText('Work In Progress')).toBeNull()
+
+    window.history.pushState({}, '', '/?dev=2')
+    rerender(<MonitorPage />)
+
+    expect(screen.getByRole('heading', { name: 'Work In Progress' })).toBeInTheDocument()
+    expect(screen.queryByTestId('device-shell')).toBeNull()
+  })
+
   it('requires Go to Monitor again after a full drill reset', async () => {
     const user = userEvent.setup()
     window.history.pushState({}, '', '/')

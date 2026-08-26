@@ -1,6 +1,7 @@
 import type { PatientInformationTextState } from '@/lib/patientInformationAutoSort'
 import type { PatientPhysicalFindings } from '@/lib/patientPhysicalAutoSort'
 import type { CallerInfo } from '@/types/callerInfo'
+import type { DefibrillatorModel } from '@/types/defibrillator'
 import type {
   Etco2Waveform,
   Rhythm,
@@ -21,6 +22,7 @@ export type ScenarioVitalsDraft = {
 
 export type ScenarioSnapshotV1 = {
   version: 1
+  defibrillatorModel: DefibrillatorModel
   autoSortText: string
   monitor: {
     draft: ScenarioVitalsDraft
