@@ -96,8 +96,24 @@ describe('PatientSnsControls', () => {
     await user.click(pulse)
 
     expect(pulse).toHaveAttribute('aria-pressed', 'true')
-    expect(pulse).toHaveClass('border-ecg-green', 'bg-ecg-green')
+    expect(pulse).toHaveClass('border-ecg-green', 'bg-black', 'text-ecg-green')
+    expect(pulse).not.toHaveClass('bg-ecg-green')
     expect(screen.queryByRole('region', { name: 'Pulse finding slider' })).toBeNull()
+  })
+
+  it('uses green icons and labels on black for every confirmed SNS control', async () => {
+    const user = userEvent.setup()
+    renderControls()
+
+    for (const name of ['Pulse', 'Respiratory', 'Skin/Extremities']) {
+      const control = screen.getByRole('button', { name })
+      await user.click(control)
+
+      expect(control).toHaveClass('border-ecg-green', 'bg-black', 'text-ecg-green')
+      expect(control).not.toHaveClass('bg-ecg-green')
+      expect(within(control).getByRole('img')).toHaveClass('bg-current', 'text-ecg-green')
+      expect(within(control).getByRole('heading', { name })).toHaveClass('text-ecg-green')
+    }
   })
 
   it('shows Skin/Extremities as a one-note slider without field labels', async () => {

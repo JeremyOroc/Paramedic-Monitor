@@ -18,7 +18,7 @@ type IconFinding = {
 type PatientSnsGroup = {
   id: PatientSnsIconGroupId
   label: string
-  iconSrc: string
+  iconMaskClass: string
   iconAlt: string
   findings: ReadonlyArray<IconFinding>
   showFindingLabels?: boolean
@@ -36,7 +36,7 @@ const PATIENT_SNS_GROUPS: ReadonlyArray<PatientSnsGroup> = [
   {
     id: 'pulse',
     label: 'Pulse',
-    iconSrc: '/images/patient-physical-pulse.png',
+    iconMaskClass: "[mask-image:url('/images/patient-physical-pulse.png')]",
     iconAlt: 'Pulse findings',
     findings: [
       { id: 'pulse-rate', label: 'Rate' },
@@ -49,7 +49,7 @@ const PATIENT_SNS_GROUPS: ReadonlyArray<PatientSnsGroup> = [
   {
     id: 'respiratory',
     label: 'Respiratory',
-    iconSrc: '/images/patient-physical-lung.png',
+    iconMaskClass: "[mask-image:url('/images/patient-physical-lung.png')]",
     iconAlt: 'Respiratory findings',
     findings: [
       { id: 'respiratory-rate', label: 'Rate' },
@@ -62,7 +62,7 @@ const PATIENT_SNS_GROUPS: ReadonlyArray<PatientSnsGroup> = [
   {
     id: 'skin-extremities',
     label: 'Skin/Extremities',
-    iconSrc: '/images/patient-physical-skin-extremities.png',
+    iconMaskClass: "[mask-image:url('/images/patient-physical-skin-extremities.png')]",
     iconAlt: 'Skin and extremities findings',
     findings: [{ id: 'skin-extremities-note', label: 'Skin/Extremities' }],
   },
@@ -125,7 +125,7 @@ export function PatientSnsControls({
                 'relative grid justify-items-center gap-2 border p-2 transition-colors',
                 'focus:outline-none focus:ring-2 focus:ring-ecg-green focus:ring-offset-2 focus:ring-offset-black',
                 active
-                  ? 'border-ecg-green bg-ecg-green text-black'
+                  ? 'border-ecg-green bg-black text-ecg-green'
                   : hasFinding
                     ? 'border-pending-amber bg-pending-amber/20 text-pending-amber'
                     : 'border-neutral-700 bg-black text-neutral-300 hover:border-ecg-green hover:text-ecg-green',
@@ -136,15 +136,19 @@ export function PatientSnsControls({
                   !
                 </span>
               ) : null}
-              <img
-                src={group.iconSrc}
-                alt={group.iconAlt}
+              <span
+                role="img"
+                aria-label={group.iconAlt}
                 className={cn(
-                  'h-14 w-14 object-contain invert transition-opacity',
-                  active ? 'opacity-100' : 'opacity-70',
+                  'h-14 w-14 bg-current [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] transition-opacity',
+                  group.iconMaskClass,
+                  active ? 'text-ecg-green opacity-100' : 'text-neutral-300 opacity-70',
                 )}
               />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-300">
+              <h3 className={cn(
+                'text-xs font-semibold uppercase tracking-wider',
+                active ? 'text-ecg-green' : 'text-neutral-300',
+              )}>
                 {group.label}
               </h3>
             </button>
