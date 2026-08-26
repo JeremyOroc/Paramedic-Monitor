@@ -143,13 +143,23 @@ type HarnessProps = {
 
 function Harness({ onLoad = vi.fn(), onUnload = vi.fn(), onFolderDeleted = vi.fn() }: HarnessProps) {
   const [selectedFolderId, setSelectedFolderId] = useState('general')
+  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(() => new Set())
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
   return (
     <ScenarioLibraryPanel
       selectedFolderId={selectedFolderId}
+      expandedFolderIds={expandedFolderIds}
       loadedScenarioId={loadedScenarioId}
       refreshVersion={0}
       onSelectedFolderChange={setSelectedFolderId}
+      onExpandedFolderChange={(folderId, expanded) => {
+        setExpandedFolderIds((current) => {
+          const next = new Set(current)
+          if (expanded) next.add(folderId)
+          else next.delete(folderId)
+          return next
+        })
+      }}
       onLoadScenario={(value) => {
         setLoadedScenarioId(value.id)
         onLoad(value)
@@ -176,7 +186,11 @@ describe('ScenarioLibraryPanel', () => {
     const user = userEvent.setup()
     render(<Harness onLoad={onLoad} onUnload={onUnload} />)
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /General/ })).toHaveAttribute('aria-expanded', 'true'))
+    const generalButton = await screen.findByRole('button', { name: /General/ })
+    expect(generalButton).toHaveAttribute('aria-expanded', 'false')
+    expect(generalButton).toHaveAttribute('aria-current', 'true')
+    await user.click(generalButton)
+    await waitFor(() => expect(generalButton).toHaveAttribute('aria-expanded', 'true'))
     const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
     expect(within(generalSection).getByRole('button', { name: 'Rename' })).toBeInTheDocument()
     expect(within(generalSection).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
@@ -196,6 +210,7 @@ describe('ScenarioLibraryPanel', () => {
     const onLoad = vi.fn()
     const user = userEvent.setup()
     render(<Harness onLoad={onLoad} />)
+    await user.click(await screen.findByRole('button', { name: /General/ }))
     const row = await screen.findByRole('button', { name: 'Load Chest Pain' })
 
     row.focus()
@@ -207,10 +222,55 @@ describe('ScenarioLibraryPanel', () => {
     expect(onLoad).not.toHaveBeenCalled()
   })
 
+  it('opens folders independently and allows every folder to be closed', async () => {
+    createFetchMock()
+    const user = userEvent.setup()
+    render(<Harness />)
+
+    const general = await screen.findByRole('button', { name: /General/ })
+    const trauma = screen.getByRole('button', { name: /Trauma/ })
+    expect(general).toHaveAttribute('aria-expanded', 'false')
+    expect(trauma).toHaveAttribute('aria-expanded', 'false')
+
+    await user.click(general)
+    await screen.findByRole('region', { name: 'General scenarios' })
+    await user.click(trauma)
+
+    expect(general).toHaveAttribute('aria-expanded', 'true')
+    expect(trauma).toHaveAttribute('aria-expanded', 'true')
+    expect(general).not.toHaveAttribute('aria-current')
+    expect(trauma).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('region', { name: 'General scenarios' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Trauma scenarios' })).toBeInTheDocument()
+
+    await user.click(trauma)
+    await user.click(general)
+    expect(general).toHaveAttribute('aria-expanded', 'false')
+    expect(trauma).toHaveAttribute('aria-expanded', 'false')
+    expect(trauma).toHaveAttribute('aria-current', 'true')
+    expect(screen.queryByRole('region', { name: /scenarios$/ })).toBeNull()
+  })
+
+  it('opens and selects a newly created folder', async () => {
+    createFetchMock()
+    const user = userEvent.setup()
+    render(<Harness />)
+
+    await user.click(await screen.findByRole('button', { name: 'New Folder' }))
+    await user.type(screen.getByLabelText('New folder name'), 'Airway')
+    await user.click(screen.getByRole('button', { name: 'Create' }))
+
+    const airway = await screen.findByRole('button', { name: /Airway/ })
+    expect(airway).toHaveAttribute('aria-expanded', 'true')
+    expect(airway).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('region', { name: 'Airway scenarios' })).toBeInTheDocument()
+  })
+
   it('persists Up/Down and drag ordering optimistically', async () => {
     const { fetchMock } = createFetchMock()
     const user = userEvent.setup()
     render(<Harness />)
+    await user.click(await screen.findByRole('button', { name: /General/ }))
     await screen.findByText('Chest Pain')
 
     await user.click(screen.getByRole('button', { name: 'Move Older Call up' }))
@@ -243,7 +303,9 @@ describe('ScenarioLibraryPanel', () => {
     const { fetchMock } = createFetchMock()
     const user = userEvent.setup()
     render(<Harness />)
+    await user.click(await screen.findByRole('button', { name: /General/ }))
     await screen.findByText('Chest Pain')
+    await user.click(screen.getByRole('button', { name: /Trauma/ }))
 
     await user.selectOptions(screen.getByLabelText('Move Chest Pain'), 'trauma')
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
@@ -253,6 +315,13 @@ describe('ScenarioLibraryPanel', () => {
         body: JSON.stringify({ folderId: 'trauma' }),
       }),
     ))
+    const traumaSection = screen.getByRole('button', { name: /Trauma/ })
+      .closest('section') as HTMLElement
+    expect(await within(traumaSection).findByRole('button', { name: 'Load Chest Pain' }))
+      .toBeInTheDocument()
+    const generalSection = screen.getByRole('button', { name: /General/ })
+      .closest('section') as HTMLElement
+    expect(within(generalSection).queryByRole('button', { name: 'Load Chest Pain' })).toBeNull()
   })
 
   it('deletes empty folders without prompting and confirms cascade deletion for non-empty folders', async () => {
@@ -261,7 +330,20 @@ describe('ScenarioLibraryPanel', () => {
     const onFolderDeleted = vi.fn()
     const user = userEvent.setup()
     render(<Harness onFolderDeleted={onFolderDeleted} />)
+    await user.click(await screen.findByRole('button', { name: /General/ }))
     await screen.findByText('Chest Pain')
+
+    const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
+    await user.click(within(generalSection).getByRole('button', { name: 'Delete' }))
+    expect(confirm).toHaveBeenCalledWith(
+      'Delete "General" and its 2 scenarios? This cannot be undone.',
+    )
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scenario-folders/general',
+      { method: 'DELETE' },
+    ))
+    await waitFor(() => expect(onFolderDeleted).toHaveBeenCalledWith('general'))
+    expect(screen.getByRole('button', { name: /Trauma/ })).toHaveAttribute('aria-current', 'true')
 
     const traumaSection = screen.getByRole('button', { name: /Trauma/ }).closest('section') as HTMLElement
     await user.click(within(traumaSection).getByRole('button', { name: 'Delete' }))
@@ -269,14 +351,7 @@ describe('ScenarioLibraryPanel', () => {
       '/api/scenario-folders/trauma',
       { method: 'DELETE' },
     ))
-    expect(confirm).not.toHaveBeenCalled()
-
-    const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
-    await user.click(within(generalSection).getByRole('button', { name: 'Delete' }))
-    expect(confirm).toHaveBeenCalledWith(
-      'Delete "General" and its 2 scenarios? This cannot be undone.',
-    )
-    await waitFor(() => expect(onFolderDeleted).toHaveBeenCalledWith('general'))
+    expect(confirm).toHaveBeenCalledOnce()
   })
 
   it('renders the empty-library save guidance', async () => {

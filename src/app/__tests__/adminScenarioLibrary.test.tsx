@@ -96,6 +96,9 @@ describe('AdminPage scenario library integration', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
+    const generalFolderButton = await screen.findByRole('button', { name: /General/ })
+    expect(generalFolderButton).toHaveAttribute('aria-expanded', 'false')
+    await user.click(generalFolderButton)
     await waitFor(() => expect(screen.getByText('Chest Pain')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Load Chest Pain' }))
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
@@ -129,6 +132,7 @@ describe('AdminPage scenario library integration', () => {
     await user.clear(fc)
     await user.type(fc, '160')
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    expect(screen.getByRole('button', { name: /General/ })).toHaveAttribute('aria-expanded', 'true')
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
 
@@ -197,6 +201,14 @@ describe('AdminPage scenario library integration', () => {
     await user.click(screen.getByRole('button', { name: 'Save Scenario' }))
 
     await waitFor(() => expect(screen.getByLabelText('Scenario title')).toHaveValue('Scenario 1'))
+    const createCall = fetchMock.mock.calls.find(
+      ([url, init]) => String(url) === '/api/scenarios' && init?.method === 'POST',
+    )
+    expect(JSON.parse(String(createCall?.[1]?.body))).toMatchObject({ folderId: 'general' })
+    expect(screen.getByRole('button', { name: /General/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    )
     expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Delete Scenario' })).toBeEnabled()
 
@@ -297,6 +309,7 @@ describe('AdminPage scenario library integration', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
+    await user.click(await screen.findByRole('button', { name: /General/ }))
     await user.click(await screen.findByRole('button', { name: 'Load Chest Pain' }))
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     await waitFor(() => expect(useMonitorStore.getState().draft.hr).toBe(145))

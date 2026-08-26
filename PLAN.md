@@ -661,7 +661,9 @@ button is inert until a drill gate is satisfied.
   is the only toggle: auto-sort places an amber `!` on the whole icon when any
   matching finding exists, clicking the icon turns it ECG-green and opens a
   combined slider, and clicking it again closes the slider while keeping the
-  icon confirmed. Pulse/Respiratory sliders list missing Rate/Rhythm/Strength
+  icon confirmed. Confirmed controls keep a black button surface while their
+  border, icon, and label turn ECG green; the surrounding active-card cue remains.
+  Pulse/Respiratory sliders list missing Rate/Rhythm/Strength
   fields in amber. Comma-separated summaries such as `Pulse: 136 bpm, Regular,
   Weak` and `Respirations: 30 breaths/min, Regular, Labored` fill rate, rhythm,
   and strength in order.
@@ -783,7 +785,7 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 **Status:** Complete and deployed on 2026-08-20 through repair migration `20260820194954_qualify_scenario_order_constraint.sql`.
 
 **Steps:**
-1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a fixed-height folder accordion above the unchanged caller-info editor.
+1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a fixed-height folder accordion above the unchanged caller-info editor. Folder expansion is independent from the selected save destination: every folder starts collapsed on page load, zero or many folders may be open, expansion survives admin-tab switches, opening a folder selects it without closing others, and closing it does not clear its save destination. The first existing folder remains the initial highlighted save target, and newly created folders open and become selected.
 2. Preserve the existing `General` data as an ordinary folder and provide create, rename, and delete controls for every case-insensitively unique folder. Deleting a non-empty folder requires confirmation and cascade-deletes its scenarios; the library may contain zero folders.
 3. Save versioned authoring snapshots containing raw auto-sort text, monitor drafts and channel states, caller/dispatch inputs, SAMPLE/OPQRST state, and Patient Physical state. Runtime dispatch/CPR/calibration and Save/Send history are excluded.
 4. Add a Title field plus green `Save Scenario` and red `Delete Scenario` actions. Blank titles use the smallest available `Scenario X` number.
@@ -796,7 +798,8 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 #### Testing
 - Unit coverage for snapshot normalization, meaningful-content and dirty comparisons, and fallback-number allocation.
 - Migration/service/API coverage for ordinary General behavior, cascade deletion, empty-library auto-create, persisted ordering, concurrent reorder/move safety, validation, grants, and error responses.
-- Component and admin integration coverage for tab order, folder accordion behavior, row toggle load/unload, save/update/delete, drag/drop and Up/Down ordering, cross-folder append, discard confirmation, empty-library save, Caller Info collapse, and four-tab restoration.
+- Component and admin integration coverage for tab order, initially collapsed independent folder expansion, multiple/all-closed states, selected closed-folder save targeting, expansion across tab switches, new-folder opening, deletion fallback, row toggle load/unload, save/update/delete, per-folder drag/drop and Up/Down ordering, cross-folder append, discard confirmation, empty-library save, Caller Info collapse, and four-tab restoration.
+- Patient SNS component coverage verifies confirmed Pulse, Respiratory, and Skin/Extremities controls retain black fills with green borders, icons, and labels while inactive, pending, and slider behavior remains unchanged.
 - Full Vitest, ESLint, production build, and rendered desktop overflow/interaction QA.
 
 **Milestone — COMPLETE (2026-08-20):** An instructor can manage a global folder library, remove any folder, persist custom scenario order, reload or unload complete editable drafts from scenario rows, save into an automatically created folder when the library is empty, and collapse Caller Info without bypassing the normal Save → Send workflow.

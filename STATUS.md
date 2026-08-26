@@ -6,13 +6,18 @@
 ---
 
 ## Current Phase
-**Dev console actions and automatic VF/VT heart rate — COMPLETE.** Save/Send now sits above the admin tabs; VF locks underlying FC at 190 with synchronized 190–220 display digits, VT locks FC at 220, automatic rhythms preserve/restore manual FC state, and CPR remains authoritative.
+**Independent scenario folders and SNS active styling — COMPLETE.** Scenario folders now start collapsed, support zero or many simultaneous expansions while retaining a separate save target, and confirmed Pulse/Respiratory/Skin controls stay black with green borders, icons, and labels.
 
 > Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
 
 ---
 
 ## Completed
+- [x] **Independent scenario folders and SNS active styling — COMPLETE:**
+  - [x] Decoupled folder expansion from the selected save destination, with all-collapsed startup, independent multi-open toggles, closed-target highlighting, tab-switch persistence, new-folder opening, and deletion fallback
+  - [x] Isolated scenario lists and reorder/move operations per folder so simultaneous expansions remain consistent without API, database, snapshot, or realtime changes
+  - [x] Replaced confirmed SNS solid-green fills with black surfaces and exact ECG-green borders, masked icons, and labels while preserving inactive, amber pending, and slider behavior
+  - [x] All 794 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), the Next.js 16.3 webpack production build, and rendered 1366×768 browser QA pass with clean console/framework state
 - [x] **Dev console actions and automatic VF/VT heart rate — COMPLETE:**
   - [x] Moved the shared Save/Send row immediately above the three-tab strip and preserved the existing staged Save → Send workflow
   - [x] Centralized VF/VT enforcement across direct, batch, timed, scenario, reset, and hydration paths, including FC activation, locked controls, interaction-scoped manual restoration, and 80 fallback

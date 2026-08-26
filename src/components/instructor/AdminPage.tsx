@@ -116,6 +116,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     useState<PatientPhysicalIconGroupId | null>(null)
   const [scenarioTitle, setScenarioTitle] = useState('')
   const [selectedScenarioFolderId, setSelectedScenarioFolderId] = useState('')
+  const [expandedScenarioFolderIds, setExpandedScenarioFolderIds] = useState<Set<string>>(
+    () => new Set(),
+  )
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
   const [loadedScenarioFolderId, setLoadedScenarioFolderId] = useState<string | null>(null)
   const [scenarioBaseline, setScenarioBaseline] = useState<ScenarioBaseline | null>(null)
@@ -387,10 +390,23 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     if (loadedScenarioFolderId === folderId) clearScenarioAuthoringState()
   }
 
+  const handleScenarioFolderExpansionChange = (folderId: string, expanded: boolean) => {
+    setExpandedScenarioFolderIds((current) => {
+      const next = new Set(current)
+      if (expanded) {
+        next.add(folderId)
+      } else {
+        next.delete(folderId)
+      }
+      return next
+    })
+  }
+
   const handleSaveScenario = async () => {
     if (saveScenarioDisabled || scenarioAction !== 'idle') return
     setScenarioAction('saving')
     setScenarioError('')
+    const autoCreatingFolder = !loadedScenarioId && !selectedScenarioFolderId
     try {
       const endpoint = loadedScenarioId
         ? `/api/scenarios/${loadedScenarioId}`
@@ -424,6 +440,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       setLoadedScenarioId(scenario.id)
       setLoadedScenarioFolderId(scenario.folder_id)
       setSelectedScenarioFolderId(scenario.folder_id)
+      if (autoCreatingFolder) {
+        handleScenarioFolderExpansionChange(scenario.folder_id, true)
+      }
       setScenarioBaseline({ title: scenario.title, snapshot: scenario.snapshot })
       setScenarioRefreshVersion((version) => version + 1)
     } catch (caught) {
@@ -745,9 +764,11 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         <div className="grid gap-4">
           <ScenarioLibraryPanel
             selectedFolderId={selectedScenarioFolderId}
+            expandedFolderIds={expandedScenarioFolderIds}
             loadedScenarioId={loadedScenarioId}
             refreshVersion={scenarioRefreshVersion}
             onSelectedFolderChange={setSelectedScenarioFolderId}
+            onExpandedFolderChange={handleScenarioFolderExpansionChange}
             onLoadScenario={handleLoadScenario}
             onUnloadScenario={handleUnloadScenario}
             onFolderDeleted={handleScenarioFolderDeleted}

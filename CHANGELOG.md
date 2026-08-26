@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-08-26] [scenarios/ui] — Support independent folders and black SNS active controls
+
+- Decoupled scenario-folder expansion from the selected save destination: all folders start closed, any number can remain open, all can be closed, expansion survives admin-tab switches, and closed save targets remain highlighted. New folders open automatically and selected-folder deletion falls back without disturbing other expansions.
+- Reworked the scenario panel around per-folder lists so simultaneous folders retain correct row loading, accessible regions, ordering, drag/drop, and cross-folder updates without changing APIs, database schema, saved snapshots, or realtime state.
+- Changed confirmed Pulse, Respiratory, and Skin/Extremities controls from solid green to black fills with ECG-green borders, exact-color masked icons, and green labels while preserving pending amber states and slider confirmation behavior.
+- Added component and admin integration regressions. All 794 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the Next.js 16.3 webpack production build pass; rendered 1366×768 in-app browser QA verified initial/multiple/all-closed folder states, tab persistence, computed SNS colors, clean console output, and no framework overlay.
+
 ## [2026-08-25] [instructor/monitor] — Move actions and automate VF/VT heart rate
 
 - Moved the shared Save/Send controls into a left-aligned row immediately above the admin tab strip while preserving staged Save → Send behavior.

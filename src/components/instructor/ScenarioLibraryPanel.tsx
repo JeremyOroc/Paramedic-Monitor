@@ -19,9 +19,11 @@ import type {
 
 type ScenarioLibraryPanelProps = {
   selectedFolderId: string
+  expandedFolderIds: ReadonlySet<string>
   loadedScenarioId: string | null
   refreshVersion: number
   onSelectedFolderChange: (folderId: string) => void
+  onExpandedFolderChange: (folderId: string, expanded: boolean) => void
   onLoadScenario: (scenario: SavedScenario) => void
   onUnloadScenario: () => void
   onFolderDeleted: (folderId: string) => void
@@ -82,16 +84,21 @@ function reorderScenarioList(
 
 export function ScenarioLibraryPanel({
   selectedFolderId,
+  expandedFolderIds,
   loadedScenarioId,
   refreshVersion,
   onSelectedFolderChange,
+  onExpandedFolderChange,
   onLoadScenario,
   onUnloadScenario,
   onFolderDeleted,
   onLoadedScenarioFolderChange,
 }: ScenarioLibraryPanelProps) {
   const [folders, setFolders] = useState<ScenarioFolder[]>([])
-  const [scenarios, setScenarios] = useState<SavedScenarioListResponse['scenarios']>([])
+  const [scenariosByFolderId, setScenariosByFolderId] = useState<
+    Record<string, SavedScenarioListResponse['scenarios']>
+  >({})
+  const [loadingFolderIds, setLoadingFolderIds] = useState<Set<string>>(() => new Set())
   const [newFolderName, setNewFolderName] = useState('')
   const [creatingFolder, setCreatingFolder] = useState(false)
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null)
@@ -109,23 +116,31 @@ export function ScenarioLibraryPanel({
     return data.folders
   }, [onSelectedFolderChange, selectedFolderId])
 
-  const loadScenarios = useCallback(async () => {
-    if (!selectedFolderId) {
-      setScenarios([])
-      return
+  const loadScenarios = useCallback(async (folderId: string) => {
+    setLoadingFolderIds((current) => new Set(current).add(folderId))
+    try {
+      const data = await requestJson<SavedScenarioListResponse>(
+        `/api/scenarios?folderId=${encodeURIComponent(folderId)}`,
+      )
+      setScenariosByFolderId((current) => ({
+        ...current,
+        [folderId]: data.scenarios,
+      }))
+    } finally {
+      setLoadingFolderIds((current) => {
+        const next = new Set(current)
+        next.delete(folderId)
+        return next
+      })
     }
-    const data = await requestJson<SavedScenarioListResponse>(
-      `/api/scenarios?folderId=${encodeURIComponent(selectedFolderId)}`,
-    )
-    setScenarios(data.scenarios)
-  }, [selectedFolderId])
+  }, [])
 
   // Folder and scenario lists are external server resources. These effects only
-  // synchronize that resource when selection or an explicit refresh changes.
+  // synchronize them when expansion or an explicit refresh changes.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     let cancelled = false
-    Promise.all([loadFolders(), loadScenarios()])
+    loadFolders()
       .then(() => {
         if (!cancelled) setError('')
       })
@@ -140,7 +155,23 @@ export function ScenarioLibraryPanel({
     return () => {
       cancelled = true
     }
-  }, [loadFolders, loadScenarios, refreshVersion])
+  }, [loadFolders, refreshVersion])
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([...expandedFolderIds].map((folderId) => loadScenarios(folderId)))
+      .then(() => {
+        if (!cancelled) setError('')
+      })
+      .catch((caught: unknown) => {
+        if (!cancelled) {
+          setError(caught instanceof Error ? caught.message : 'Unable to load scenarios')
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [expandedFolderIds, loadScenarios, refreshVersion])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const runMutation = async (mutation: () => Promise<void>) => {
@@ -165,6 +196,8 @@ export function ScenarioLibraryPanel({
       setNewFolderName('')
       setCreatingFolder(false)
       onSelectedFolderChange(data.folder.id)
+      onExpandedFolderChange(data.folder.id, true)
+      setScenariosByFolderId((current) => ({ ...current, [data.folder.id]: [] }))
       await loadFolders()
     })
   }
@@ -195,55 +228,78 @@ export function ScenarioLibraryPanel({
     await runMutation(async () => {
       await requestEmpty(`/api/scenario-folders/${folder.id}`, { method: 'DELETE' })
       onFolderDeleted(folder.id)
+      onExpandedFolderChange(folder.id, false)
+      setScenariosByFolderId((current) => {
+        const next = { ...current }
+        delete next[folder.id]
+        return next
+      })
       const remainingFolders = await loadFolders()
       if (selectedFolderId === folder.id) {
         onSelectedFolderChange(remainingFolders[0]?.id ?? '')
-        setScenarios([])
       }
     })
   }
 
-  const moveScenario = async (scenarioId: string, folderId: string) => {
-    if (!folderId || folderId === selectedFolderId) return
+  const moveScenario = async (
+    scenarioId: string,
+    sourceFolderId: string,
+    targetFolderId: string,
+  ) => {
+    if (!targetFolderId || targetFolderId === sourceFolderId) return
     await runMutation(async () => {
-      await requestJson(`/api/scenarios/${scenarioId}`, {
+      const data = await requestJson<{ scenario: SavedScenario }>(`/api/scenarios/${scenarioId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folderId }),
+        body: JSON.stringify({ folderId: targetFolderId }),
       })
-      setScenarios((current) => current.filter((scenario) => scenario.id !== scenarioId))
-      if (loadedScenarioId === scenarioId) onLoadedScenarioFolderChange(folderId)
+      setScenariosByFolderId((current) => {
+        const next = {
+          ...current,
+          [sourceFolderId]: (current[sourceFolderId] ?? [])
+            .filter((scenario) => scenario.id !== scenarioId)
+            .map((scenario, index) => ({ ...scenario, position: index + 1 })),
+        }
+        if (expandedFolderIds.has(targetFolderId)) {
+          next[targetFolderId] = [...(current[targetFolderId] ?? []), data.scenario]
+            .toSorted((left, right) => left.position - right.position)
+        }
+        return next
+      })
+      if (loadedScenarioId === scenarioId) onLoadedScenarioFolderChange(targetFolderId)
       await loadFolders()
     })
   }
 
   const persistScenarioOrder = async (
+    folderId: string,
     previous: SavedScenarioListResponse['scenarios'],
     next: SavedScenarioListResponse['scenarios'],
   ) => {
-    setScenarios(next)
+    setScenariosByFolderId((current) => ({ ...current, [folderId]: next }))
     setStatus('working')
     setError('')
     try {
       const data = await requestJson<SavedScenarioListResponse>(
-        `/api/scenario-folders/${selectedFolderId}/order`,
+        `/api/scenario-folders/${folderId}/order`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ scenarioIds: next.map((scenario) => scenario.id) }),
         },
       )
-      setScenarios(data.scenarios)
+      setScenariosByFolderId((current) => ({ ...current, [folderId]: data.scenarios }))
     } catch (caught) {
-      setScenarios(previous)
+      setScenariosByFolderId((current) => ({ ...current, [folderId]: previous }))
       setError(caught instanceof Error ? caught.message : 'Unable to reorder scenarios')
     } finally {
       setStatus('idle')
     }
   }
 
-  const moveScenarioBy = (scenarioId: string, delta: -1 | 1) => {
+  const moveScenarioBy = (folderId: string, scenarioId: string, delta: -1 | 1) => {
     if (status === 'working') return
+    const scenarios = scenariosByFolderId[folderId] ?? []
     const currentIndex = scenarios.findIndex((scenario) => scenario.id === scenarioId)
     const target = scenarios[currentIndex + delta]
     if (currentIndex < 0 || !target) return
@@ -253,7 +309,7 @@ export function ScenarioLibraryPanel({
       target.id,
       delta < 0 ? 'before' : 'after',
     )
-    void persistScenarioOrder(scenarios, next)
+    void persistScenarioOrder(folderId, scenarios, next)
   }
 
   const loadScenario = async (scenarioId: string) => {
@@ -283,7 +339,13 @@ export function ScenarioLibraryPanel({
   const handleFolderDrop = (event: DragEvent<HTMLElement>, folderId: string) => {
     event.preventDefault()
     const scenarioId = event.dataTransfer.getData('text/scenario-id')
-    if (scenarioId) void moveScenario(scenarioId, folderId)
+    const sourceFolderId = [...expandedFolderIds].find((expandedFolderId) =>
+      (scenariosByFolderId[expandedFolderId] ?? [])
+        .some((scenario) => scenario.id === scenarioId),
+    )
+    if (scenarioId && sourceFolderId) {
+      void moveScenario(scenarioId, sourceFolderId, folderId)
+    }
   }
 
   const handleScenarioDragOver = (
@@ -299,6 +361,7 @@ export function ScenarioLibraryPanel({
 
   const handleScenarioDrop = (
     event: DragEvent<HTMLDivElement>,
+    folderId: string,
     targetScenarioId: string,
   ) => {
     event.preventDefault()
@@ -309,13 +372,14 @@ export function ScenarioLibraryPanel({
     if (!draggedScenarioId || draggedScenarioId === targetScenarioId || status === 'working') {
       return
     }
+    const scenarios = scenariosByFolderId[folderId] ?? []
     const next = reorderScenarioList(
       scenarios,
       draggedScenarioId,
       targetScenarioId,
       edge,
     )
-    void persistScenarioOrder(scenarios, next)
+    void persistScenarioOrder(folderId, scenarios, next)
   }
 
   return (
@@ -379,7 +443,10 @@ export function ScenarioLibraryPanel({
           <p className="p-4 text-sm text-neutral-500">No scenario folders. Saving a scenario will create Folder 1.</p>
         ) : (
           folders.map((folder) => {
-            const expanded = folder.id === selectedFolderId
+            const selectedFolder = folder.id === selectedFolderId
+            const expanded = expandedFolderIds.has(folder.id)
+            const scenarios = scenariosByFolderId[folder.id] ?? []
+            const loadingScenarios = loadingFolderIds.has(folder.id)
             const renaming = renamingFolderId === folder.id
             return (
               <section
@@ -388,7 +455,7 @@ export function ScenarioLibraryPanel({
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => handleFolderDrop(event, folder.id)}
               >
-                <div className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-2', expanded ? 'bg-cyan-bp/10' : 'bg-neutral-900/50')}>
+                <div className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2 py-2', selectedFolder ? 'bg-cyan-bp/10' : 'bg-neutral-900/50')}>
                   {renaming ? (
                     <form
                       className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2"
@@ -410,8 +477,16 @@ export function ScenarioLibraryPanel({
                   ) : (
                     <button
                       type="button"
-                      onClick={() => onSelectedFolderChange(folder.id)}
+                      onClick={() => {
+                        if (expanded) {
+                          onExpandedFolderChange(folder.id, false)
+                        } else {
+                          onSelectedFolderChange(folder.id)
+                          onExpandedFolderChange(folder.id, true)
+                        }
+                      }}
                       aria-expanded={expanded}
+                      aria-current={selectedFolder ? 'true' : undefined}
                       className="flex min-w-0 items-center gap-2 text-left"
                     >
                       <span aria-hidden="true" className="font-mono text-cyan-bp">{expanded ? '−' : '+'}</span>
@@ -445,8 +520,14 @@ export function ScenarioLibraryPanel({
                 </div>
 
                 {expanded ? (
-                  <div className="grid gap-2 bg-black/40 p-2" aria-label={`${folder.name} scenarios`}>
-                    {scenarios.length === 0 ? (
+                  <div
+                    role="region"
+                    className="grid gap-2 bg-black/40 p-2"
+                    aria-label={`${folder.name} scenarios`}
+                  >
+                    {loadingScenarios && scenariosByFolderId[folder.id] === undefined ? (
+                      <p className="px-2 py-3 text-sm text-neutral-600">Loading scenarios…</p>
+                    ) : scenarios.length === 0 ? (
                       <p className="px-2 py-3 text-sm text-neutral-600">No scenarios in this folder.</p>
                     ) : (
                       scenarios.map((scenario, index) => {
@@ -473,7 +554,7 @@ export function ScenarioLibraryPanel({
                                 setDropTarget(null)
                               }
                             }}
-                            onDrop={(event) => handleScenarioDrop(event, scenario.id)}
+                            onDrop={(event) => handleScenarioDrop(event, folder.id, scenario.id)}
                             onDragEnd={() => setDropTarget(null)}
                             className={cn(
                               'relative grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto_minmax(8rem,auto)] items-center gap-2 border p-2 focus:outline-none focus:ring-2 focus:ring-cyan-bp',
@@ -496,7 +577,7 @@ export function ScenarioLibraryPanel({
                               <button
                                 type="button"
                                 aria-label={`Move ${scenario.title} up`}
-                                onClick={() => moveScenarioBy(scenario.id, -1)}
+                                onClick={() => moveScenarioBy(folder.id, scenario.id, -1)}
                                 disabled={index === 0 || status === 'working'}
                                 className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
                               >
@@ -505,7 +586,7 @@ export function ScenarioLibraryPanel({
                               <button
                                 type="button"
                                 aria-label={`Move ${scenario.title} down`}
-                                onClick={() => moveScenarioBy(scenario.id, 1)}
+                                onClick={() => moveScenarioBy(folder.id, scenario.id, 1)}
                                 disabled={index === scenarios.length - 1 || status === 'working'}
                                 className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
                               >
@@ -521,7 +602,11 @@ export function ScenarioLibraryPanel({
                               <select
                                 aria-label={`Move ${scenario.title}`}
                                 value={folder.id}
-                                onChange={(event) => void moveScenario(scenario.id, event.target.value)}
+                                onChange={(event) => void moveScenario(
+                                  scenario.id,
+                                  folder.id,
+                                  event.target.value,
+                                )}
                                 disabled={status === 'working'}
                                 className="min-w-0 border border-neutral-700 bg-neutral-900 px-2 py-2 text-xs text-neutral-200 disabled:opacity-40"
                               >
