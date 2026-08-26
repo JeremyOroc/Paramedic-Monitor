@@ -41,6 +41,7 @@ const armedDispatch = (runId: string): DispatchState => ({
 
 function makeShared(overrides: Partial<SharedMonitorState> = {}): SharedMonitorState {
   return {
+    defibrillatorModelConfirmed: 'wagamiX',
     confirmed: sharedVitals(),
     confirmedVitalActive: { ...allActive },
     callerInfoConfirmed: { ...DEFAULT_CALLER_INFO },
@@ -70,6 +71,7 @@ describe('monitorStore shared session state', () => {
     )
     expect(shared.cprMode).toBe('off')
     expect(shared.cprOverrideActive).toBe(false)
+    expect(shared.defibrillatorModelConfirmed).toBe('wagamiX')
   })
 
   it('keeps trainee dispatch progress when the same run is re-applied', () => {
@@ -169,6 +171,18 @@ describe('monitorStore shared session state', () => {
     expect(after.confirmedVitalActive).toEqual(allActive)
     expect(after.dispatchConfirmedSeconds).toBe(60)
     expect(after.cprMode).toBe('weak')
+  })
+
+  it('applies the confirmed defibrillator model and defaults missing legacy values', () => {
+    useMonitorStore.getState().applySharedState(
+      makeShared({ defibrillatorModelConfirmed: 'wagamiZ' }),
+    )
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiZ')
+
+    const legacy: Partial<SharedMonitorState> = makeShared()
+    delete legacy.defibrillatorModelConfirmed
+    useMonitorStore.getState().applySharedState(legacy)
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiX')
   })
 
   it('maps a legacy active CPR snapshot to Regular CPR', () => {

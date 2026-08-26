@@ -139,9 +139,15 @@ type HarnessProps = {
   onLoad?: (value: SavedScenario) => void
   onUnload?: () => void
   onFolderDeleted?: (folderId: string) => void
+  scenarioSelectionDisabled?: boolean
 }
 
-function Harness({ onLoad = vi.fn(), onUnload = vi.fn(), onFolderDeleted = vi.fn() }: HarnessProps) {
+function Harness({
+  onLoad = vi.fn(),
+  onUnload = vi.fn(),
+  onFolderDeleted = vi.fn(),
+  scenarioSelectionDisabled = false,
+}: HarnessProps) {
   const [selectedFolderId, setSelectedFolderId] = useState('general')
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(() => new Set())
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
@@ -170,6 +176,7 @@ function Harness({ onLoad = vi.fn(), onUnload = vi.fn(), onFolderDeleted = vi.fn
       }}
       onFolderDeleted={onFolderDeleted}
       onLoadedScenarioFolderChange={vi.fn()}
+      scenarioSelectionDisabled={scenarioSelectionDisabled}
     />
   )
 }
@@ -177,6 +184,23 @@ function Harness({ onLoad = vi.fn(), onUnload = vi.fn(), onFolderDeleted = vi.fn
 describe('ScenarioLibraryPanel', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it('blocks scenario load activation while selection is disabled', async () => {
+    createFetchMock()
+    const onLoad = vi.fn()
+    const user = userEvent.setup()
+    render(<Harness onLoad={onLoad} scenarioSelectionDisabled />)
+
+    await user.click(await screen.findByRole('button', { name: /General/ }))
+    const row = await screen.findByRole('button', { name: 'Load Chest Pain' })
+    expect(row).toHaveAttribute('aria-disabled', 'true')
+
+    await user.click(row)
+    fireEvent.keyDown(row, { key: 'Enter' })
+
+    expect(onLoad).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: 'Unload Chest Pain' })).toBeNull()
   })
 
   it('treats General as ordinary and toggles scenario loading from the row', async () => {

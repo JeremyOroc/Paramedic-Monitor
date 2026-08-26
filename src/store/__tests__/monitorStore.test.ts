@@ -61,6 +61,9 @@ describe('monitorStore', () => {
     expect(s.dispatchRouteConfirmed).toEqual(DEFAULT_DISPATCH_ROUTE)
     expect(s.etco2CalibrationStatus).toBe('idle')
     expect(s.cprMode).toBe('off')
+    expect(s.defibrillatorModelDraft).toBe('wagamiX')
+    expect(s.defibrillatorModelSaved).toBe('wagamiX')
+    expect(s.defibrillatorModelConfirmed).toBe('wagamiX')
   })
 
   it('setDraft updates only draft', () => {
@@ -124,6 +127,39 @@ describe('monitorStore', () => {
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
     expect(useMonitorStore.getState().confirmed.hr).toBe(160)
+  })
+
+  it('stages the defibrillator model through draft, save, and send', () => {
+    const store = useMonitorStore.getState()
+    store.setDefibrillatorModelDraft('wagamiZ')
+    expect(useMonitorStore.getState().defibrillatorModelSaved).toBe('wagamiX')
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiX')
+
+    store.save()
+    expect(useMonitorStore.getState().defibrillatorModelSaved).toBe('wagamiZ')
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiX')
+
+    store.send()
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiZ')
+  })
+
+  it('preserves the confirmed model for a new attempt but resets it for a fresh room', () => {
+    const store = useMonitorStore.getState()
+    store.setDefibrillatorModelDraft('wagamiZ')
+    store.save()
+    store.send()
+
+    useMonitorStore.getState().resetForNewAttempt()
+    let state = useMonitorStore.getState()
+    expect(state.defibrillatorModelDraft).toBe('wagamiZ')
+    expect(state.defibrillatorModelSaved).toBe('wagamiZ')
+    expect(state.defibrillatorModelConfirmed).toBe('wagamiZ')
+
+    useMonitorStore.getState().reset()
+    state = useMonitorStore.getState()
+    expect(state.defibrillatorModelDraft).toBe('wagamiX')
+    expect(state.defibrillatorModelSaved).toBe('wagamiX')
+    expect(state.defibrillatorModelConfirmed).toBe('wagamiX')
   })
 
   it('reset returns all three slices to inactive vitals and disconnected waveforms', () => {
@@ -1037,6 +1073,20 @@ describe('persist migration', () => {
     await useMonitorStore.persist.rehydrate()
 
     expect(useMonitorStore.getState().cprMode).toBe('regular')
+  })
+
+  it('defaults legacy persisted state without model fields to Wagami X', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: 9, state: { confirmed: defaultsAsVitals() } }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const state = useMonitorStore.getState()
+    expect(state.defibrillatorModelDraft).toBe('wagamiX')
+    expect(state.defibrillatorModelSaved).toBe('wagamiX')
+    expect(state.defibrillatorModelConfirmed).toBe('wagamiX')
   })
 
   it('coerces hydrated automatic rhythms and clears the runtime FC backup', async () => {

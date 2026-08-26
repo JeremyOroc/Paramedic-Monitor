@@ -24,6 +24,14 @@ describe('SaveButton', () => {
     expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled()
   })
 
+  it('enables when the defibrillator model changes', () => {
+    act(() => {
+      useMonitorStore.getState().setDefibrillatorModelDraft('wagamiZ')
+    })
+    render(<SaveButton />)
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+  })
+
   it('enables when normal vitals are activated from the inactive blank start state', () => {
     act(() => {
       useMonitorStore.getState().resetVitalsToNormal()

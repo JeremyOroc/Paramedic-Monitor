@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-08-26] [instructor/monitor] — Add Wagami defibrillator model selection
+
+- Added a fourth Defibrillators tab with staged Wagami X/Z selection, Wagami X defaults, Save → Send integration, Start gating, active-attempt locking, and New Attempt preservation.
+- Extended version-1 scenario snapshots and shared session state with backward-compatible model normalization; Wagami Z alone is saveable scenario content and scenario load/unload is blocked during active attempts.
+- Kept the existing student caller-info, acknowledgement, countdown, arrival, and Go to Monitor flow for Wagami Z, then replaced the device with a centered black Work In Progress screen. Added `/?dev=2` for the placeholder while preserving `/?dev=1` as Wagami X.
+- Added store, scenario, component, admin, and monitor regressions. All 811 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the Next.js 16.3 webpack production build pass; rendered 1366×768 in-app browser QA verified the selector stages and both development shortcuts with clean consoles and no framework overlays.
+
 ## [2026-08-26] [scenarios/ui] — Support independent folders and black SNS active controls
 
 - Decoupled scenario-folder expansion from the selected save destination: all folders start closed, any number can remain open, all can be closed, expansion survives admin-tab switches, and closed save targets remain highlighted. New folders open automatically and selected-folder deletion falls back without disturbing other expansions.

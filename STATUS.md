@@ -6,13 +6,18 @@
 ---
 
 ## Current Phase
-**Independent scenario folders and SNS active styling — COMPLETE.** Scenario folders now start collapsed, support zero or many simultaneous expansions while retaining a separate save target, and confirmed Pulse/Respiratory/Skin controls stay black with green borders, icons, and labels.
+**Wagami defibrillator model selection — COMPLETE.** The Dev Console now stages Wagami X/Z through Save → Send, locks the confirmed model per active attempt, persists it in scenarios and session state, and routes Wagami Z trainees from the unchanged dispatch flow to a full-screen Work In Progress placeholder.
 
 > Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
 
 ---
 
 ## Completed
+- [x] **Wagami defibrillator model selection — COMPLETE:**
+  - [x] Added a fourth Defibrillators tab with accessible Wagami X/Z choices, Wagami X defaults, dirty/pending/confirmed styling, Start gating, active-attempt locking, and New Attempt preservation
+  - [x] Added backward-compatible scenario and shared-session model state without a database migration; Wagami Z alone is meaningful scenario content and active attempts block scenario load/unload
+  - [x] Preserved the full caller-info dispatch flow for Wagami Z before its centered black Work In Progress screen, while `/?dev=1` remains Wagami X and `/?dev=2` opens Wagami Z directly
+  - [x] All 811 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), the Next.js 16.3 webpack production build, and rendered 1366×768 browser QA pass with clean consoles and no framework overlays
 - [x] **Independent scenario folders and SNS active styling — COMPLETE:**
   - [x] Decoupled folder expansion from the selected save destination, with all-collapsed startup, independent multi-open toggles, closed-target highlighting, tab-switch persistence, new-folder opening, and deletion fallback
   - [x] Isolated scenario lists and reorder/move operations per folder so simultaneous expansions remain consistent without API, database, snapshot, or realtime changes

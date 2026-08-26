@@ -4,6 +4,10 @@ import {
 } from '@/lib/patientInformationAutoSort'
 import type { PatientPhysicalFindings } from '@/lib/patientPhysicalAutoSort'
 import { DEFAULT_CALLER_INFO, normalizeCallerInfo } from '@/types/callerInfo'
+import {
+  DEFAULT_DEFIBRILLATOR_MODEL,
+  normalizeDefibrillatorModel,
+} from '@/types/defibrillator'
 import { JOHN_ABBOTT_ADDRESS } from '@/types/dispatchRoute'
 import {
   getAutomaticHeartRate,
@@ -60,6 +64,7 @@ const INACTIVE_VITALS: VitalActiveState = {
 }
 
 type ScenarioSnapshotInput = {
+  defibrillatorModel: ScenarioSnapshotV1['defibrillatorModel']
   autoSortText: string
   monitor: ScenarioSnapshotV1['monitor']
   callerInfo: ScenarioSnapshotV1['callerInfo']
@@ -109,6 +114,7 @@ function normalizePatientInformation(value: unknown): PatientInformationTextStat
 export function createEmptyScenarioSnapshot(): ScenarioSnapshotV1 {
   return {
     version: 1,
+    defibrillatorModel: DEFAULT_DEFIBRILLATOR_MODEL,
     autoSortText: '',
     monitor: {
       draft: { ...EMPTY_VITALS },
@@ -141,6 +147,7 @@ export function createScenarioSnapshot(input: ScenarioSnapshotInput): ScenarioSn
 
   return {
     version: 1,
+    defibrillatorModel: normalizeDefibrillatorModel(input.defibrillatorModel),
     autoSortText: input.autoSortText,
     monitor: {
       draft,
@@ -206,6 +213,7 @@ export function normalizeScenarioSnapshot(value: unknown): ScenarioSnapshotV1 | 
     : {}
 
   return createScenarioSnapshot({
+    defibrillatorModel: normalizeDefibrillatorModel(value.defibrillatorModel),
     autoSortText: typeof value.autoSortText === 'string' ? value.autoSortText : '',
     monitor: {
       draft: {

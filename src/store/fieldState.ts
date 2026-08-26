@@ -1,10 +1,31 @@
 import { CALLER_INFO_FIELDS, type CallerInfo } from '@/types/callerInfo'
 import type { DispatchRoute, LatLng } from '@/types/dispatchRoute'
+import type { DefibrillatorModel } from '@/types/defibrillator'
 import type { NumericVitalField, VitalActiveState } from '@/types/vitals'
 
 import type { Vitals } from './monitorStore'
 
 export type FieldStatus = 'clean' | 'dirty' | 'pending'
+
+export function stagedValueStatus<T>(draft: T, saved: T, confirmed: T): FieldStatus {
+  if (draft !== saved) return 'dirty'
+  if (saved !== confirmed) return 'pending'
+  return 'clean'
+}
+
+export function hasDefibrillatorModelDirty(
+  draft: DefibrillatorModel,
+  saved: DefibrillatorModel,
+): boolean {
+  return draft !== saved
+}
+
+export function hasDefibrillatorModelPending(
+  saved: DefibrillatorModel,
+  confirmed: DefibrillatorModel,
+): boolean {
+  return saved !== confirmed
+}
 
 export function fieldStatus<K extends keyof Vitals>(
   field: K,

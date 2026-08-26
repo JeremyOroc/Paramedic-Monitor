@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
+import { DefibrillatorPanel } from '@/components/instructor/DefibrillatorPanel'
 import { CallerInfoForm } from '@/components/instructor/CallerInfoForm'
 import { ScenarioLibraryPanel } from '@/components/instructor/ScenarioLibraryPanel'
 import {
@@ -43,12 +44,16 @@ import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
+import {
+  hasDefibrillatorModelDirty,
+  hasDefibrillatorModelPending,
+} from '@/store/fieldState'
 import type { PatientPhysicalIconGroupId } from '@/types/patientPhysical'
 import type { CprMode, NumericVitalField } from '@/types/vitals'
 import type { StudentEvent } from '@/types/session'
 import type { SavedScenario, ScenarioSnapshotV1 } from '@/types/savedScenario'
 
-type AdminTab = 'scenarios' | 'monitor' | 'physical'
+type AdminTab = 'scenarios' | 'monitor' | 'physical' | 'defibrillators'
 
 type PatientInformationSelections = Record<PatientInfoChecklist, Set<string>>
 
@@ -126,7 +131,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const [scenarioEditorVersion, setScenarioEditorVersion] = useState(0)
   const [scenarioAction, setScenarioAction] = useState<'idle' | 'saving' | 'deleting'>('idle')
   const [scenarioError, setScenarioError] = useState('')
-  const reset = useMonitorStore((s) => s.reset)
+  const resetForNewAttempt = useMonitorStore((s) => s.resetForNewAttempt)
   const setDraftVitalValues = useMonitorStore((s) => s.setDraftVitalValues)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const applyScenarioDraft = useMonitorStore((s) => s.applyScenarioDraft)
@@ -139,9 +144,21 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const scenarioDispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
   const scenarioDispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
   const scenarioDispatchOrigin = useMonitorStore((s) => s.dispatchRouteDraft.originAddress)
+  const defibrillatorModelDraft = useMonitorStore((s) => s.defibrillatorModelDraft)
+  const defibrillatorModelSaved = useMonitorStore((s) => s.defibrillatorModelSaved)
+  const defibrillatorModelConfirmed = useMonitorStore((s) => s.defibrillatorModelConfirmed)
   // Flips true on the first Send. Used to gate Start: the call has to be staged
   // before the room can open, so opening it is what begins the scenario.
   const dispatchArmed = useMonitorStore((s) => s.dispatch.armed)
+  const defibrillatorModelDirty = hasDefibrillatorModelDirty(
+    defibrillatorModelDraft,
+    defibrillatorModelSaved,
+  )
+  const defibrillatorModelPending = hasDefibrillatorModelPending(
+    defibrillatorModelSaved,
+    defibrillatorModelConfirmed,
+  )
+  const defibrillatorModelReady = !defibrillatorModelDirty && !defibrillatorModelPending
   const [sessionStatus, setSessionStatus] = useState<'waiting' | 'active' | 'ended' | 'error'>(
     'waiting',
   )
@@ -280,6 +297,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   }, [cprMode, monitorResetVersion, sendSessionState, session])
 
   const currentScenarioSnapshot = createScenarioSnapshot({
+    defibrillatorModel: defibrillatorModelDraft,
     autoSortText: universalAutoSortText,
     monitor: {
       draft: scenarioVitalsDraft,
@@ -336,7 +354,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // which the effect above picks up to push the cleared state to students) plus
   // the panel state that lives in local component state rather than the store.
   const resetAllInstructorState = () => {
-    reset()
+    resetForNewAttempt()
     setUniversalAutoSortText('')
     resetPatientInformation()
     resetPatientPhysical()
@@ -580,10 +598,17 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               type="button"
               onClick={startSession}
               title={
-                dispatchArmed ? undefined : 'Save and Send the call info before starting'
+                !dispatchArmed
+                  ? 'Save and Send the call info before starting'
+                  : !defibrillatorModelReady
+                    ? 'Save and Send the defibrillator model before starting'
+                    : undefined
               }
               disabled={
-                sessionStatus === 'active' || sessionStatus === 'ended' || !dispatchArmed
+                sessionStatus === 'active' ||
+                sessionStatus === 'ended' ||
+                !dispatchArmed ||
+                !defibrillatorModelReady
               }
               className="ml-auto border border-ecg-green bg-ecg-green px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
@@ -687,7 +712,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         <SendButton onSent={session ? sendSessionState : undefined} />
       </div>
       <div
-        className="grid grid-cols-3 border border-neutral-800 bg-neutral-950 p-1"
+        className="grid grid-cols-4 border border-neutral-800 bg-neutral-950 p-1"
         data-testid="admin-tab-list"
       >
         <button
@@ -729,6 +754,19 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         >
           Patient Physical
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('defibrillators')}
+          aria-pressed={tab === 'defibrillators'}
+          className={cn(
+            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            tab === 'defibrillators'
+              ? 'bg-cyan-bp text-black'
+              : 'text-neutral-400 hover:bg-neutral-900',
+          )}
+        >
+          Defibrillators
+        </button>
       </div>
       {tab === 'monitor' ? (
         <div className="grid gap-4">
@@ -760,6 +798,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onToggle={togglePatientPhysicalSelection}
           onIconGroupClick={handlePatientPhysicalIconGroupClick}
         />
+      ) : tab === 'defibrillators' ? (
+        <DefibrillatorPanel disabled={sessionStatus === 'active'} />
       ) : (
         <div className="grid gap-4">
           <ScenarioLibraryPanel
@@ -773,6 +813,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             onUnloadScenario={handleUnloadScenario}
             onFolderDeleted={handleScenarioFolderDeleted}
             onLoadedScenarioFolderChange={setLoadedScenarioFolderId}
+            scenarioSelectionDisabled={sessionStatus === 'active'}
           />
           <CallerInfoForm
             key={scenarioEditorVersion}
