@@ -28,6 +28,7 @@ import {
   VITAL_LOG_ITEMS_PER_PAGE,
 } from '@/components/monitor/VitalLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
+import { energyDown, energyUp } from '@/lib/defib/defibMachine'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
@@ -257,6 +258,11 @@ export function MonitorPage({
 
   const handleToggleEtco2 = useCallback(() => {
     const willShowEtco2 = controller.secondary !== 'etco2'
+    onStudentEvent?.({
+      kind: 'etco2_toggle',
+      label: willShowEtco2 ? 'EtCO2 On' : 'EtCO2 Off',
+      payload: { on: willShowEtco2 },
+    })
     controller.onToggleEtco2()
     if (willShowEtco2 && !etco2Loaded) {
       startEtco2Loading()
@@ -270,6 +276,7 @@ export function MonitorPage({
     controller,
     etco2Loaded,
     etco2Loading,
+    onStudentEvent,
     startEtco2Loading,
   ])
 
@@ -316,6 +323,11 @@ export function MonitorPage({
         { bp_sys: snapshot.bpSys, bp_dia: snapshot.bpDia },
         snapshot.active,
       )
+      onStudentEvent?.({
+        kind: 'nibp_result',
+        label: `NIBP ${snapshot.bpSys}/${snapshot.bpDia}`,
+        payload: { bp_sys: snapshot.bpSys, bp_dia: snapshot.bpDia },
+      })
     },
   )
   const isNibpReadingActive =
@@ -348,6 +360,29 @@ export function MonitorPage({
     readingActive: isNibpReadingActive,
     onTrigger: handlePatientEvent,
   })
+  /**
+   * The BP button press, logged separately from the reading it produces.
+   * The evaluator grades ordering, so *when the trainee reached for it* is the
+   * fact that matters -- the result lands ~11s later, after the cuff cycle.
+   */
+  const handleBpButtonPress = useCallback(() => {
+    onStudentEvent?.({
+      kind: 'nibp_start',
+      label: 'NIBP Start',
+      payload: {
+        mode: controller.nibpMode,
+        intervalMinutes:
+          controller.nibpMode === 'automatic' ? controller.nibpAutoInterval : null,
+      },
+    })
+    handleScheduledPatientEvent()
+  }, [
+    controller.nibpAutoInterval,
+    controller.nibpMode,
+    handleScheduledPatientEvent,
+    onStudentEvent,
+  ])
+
   const acceptedBpDisplayActive = acceptedBpActive.bp_sys || acceptedBpActive.bp_dia
   const etco2DisplayActive = confirmedVitalActive.etco2 && etco2Loaded
   const displayedHr = cprHeartRate ?? confirmed.hr
@@ -633,18 +668,62 @@ export function MonitorPage({
             })
             defib.onShock()
           },
-          onEnergyUp: defib.onEnergyUp,
-          onEnergyDown: defib.onEnergyDown,
+          onEnergyUp: () => {
+            onStudentEvent?.({
+              kind: 'energy_change',
+              label: 'Energy Up',
+              payload: {
+                from: defib.energy,
+                to: energyUp(
+                  { patientMode: controller.patientMode, energy: defib.energy },
+                  controller.patientMode,
+                ).energy,
+              },
+            })
+            defib.onEnergyUp()
+          },
+          onEnergyDown: () => {
+            onStudentEvent?.({
+              kind: 'energy_change',
+              label: 'Energy Down',
+              payload: {
+                from: defib.energy,
+                to: energyDown(
+                  { patientMode: controller.patientMode, energy: defib.energy },
+                  controller.patientMode,
+                ).energy,
+              },
+            })
+            defib.onEnergyDown()
+          },
         }}
         softKeys={{
-          onTwelveLead: controller.onTwelveLead,
+          onTwelveLead: () => {
+            onStudentEvent?.({ kind: 'twelve_lead', label: '12-Lead' })
+            controller.onTwelveLead()
+          },
           onToggleEtco2: handleToggleEtco2,
-          onTreatment: controller.onTreatment,
+          onTreatment: () => {
+            onStudentEvent?.({ kind: 'treatment_menu', label: 'Treatment' })
+            controller.onTreatment()
+          },
           onLeftAnalyse: controller.onLeftAnalyse,
           onBack: controller.onBack,
-          onPatientInfo: controller.onPatientInfo,
-          onCaptureTwelveLead: controller.onCaptureTwelveLead,
-          onPrint: controller.onPrint,
+          onPatientInfo: () => {
+            onStudentEvent?.({ kind: 'patient_info', label: 'Patient Info' })
+            controller.onPatientInfo()
+          },
+          onCaptureTwelveLead: () => {
+            onStudentEvent?.({
+              kind: 'twelve_lead_capture',
+              label: '12-Lead Capture',
+            })
+            controller.onCaptureTwelveLead()
+          },
+          onPrint: () => {
+            onStudentEvent?.({ kind: 'print', label: 'Print' })
+            controller.onPrint()
+          },
         }}
         nav={{
           onHome: controller.onHome,
@@ -669,8 +748,12 @@ export function MonitorPage({
           onMedBack: controller.onMedBack,
         }}
         power={{
-          onPowerOn: controller.onPowerOn,
+          onPowerOn: () => {
+            onStudentEvent?.({ kind: 'power_on', label: 'Power On' })
+            controller.onPowerOn()
+          },
           onPowerOff: () => {
+            onStudentEvent?.({ kind: 'power_off', label: 'Power Off' })
             if (etco2Loading) cancelEtco2Loading()
             cancelNibpReading()
             controller.onPowerOff()
@@ -681,7 +764,7 @@ export function MonitorPage({
         audio={{
           isMuted: controller.isMuted,
           onToggleMute: controller.onToggleMute,
-          onPatientEvent: bpButtonEnabled ? handleScheduledPatientEvent : undefined,
+          onPatientEvent: bpButtonEnabled ? handleBpButtonPress : undefined,
         }}
       />
       <CallerInfoModal

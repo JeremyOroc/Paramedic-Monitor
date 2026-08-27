@@ -20,6 +20,7 @@ function makeEvent(overrides: Partial<StudentEvent>): StudentEvent {
     label: 'Acknowledge',
     payload: {},
     occurred_at: '2026-07-04T11:59:00.000Z',
+    state_version: null,
     ...overrides,
   }
 }

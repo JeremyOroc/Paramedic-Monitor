@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-08-27] [session/db] — Store the drill evaluation record and close legacy anon access
+
+- Added `session_state_history`: an append-only row per instructor Send carrying the attempt, version, and full shared state. `session_state` is still upserted unchanged, so the 1.5s student poll never reads history — it is written beside the hot path, not on it, and a failed history write logs rather than costing the room a Send.
+- Stamped `student_events.state_version` at insert from the live state version, so every trainee action joins back to the exact patient state it was taken against. An evaluator can now answer whether a shock matched the rhythm on screen, which no stored data supported before.
+- Instrumented the remaining trainee controls: `nibp_start`, `nibp_result`, `power_on`, `power_off`, `twelve_lead`, `twelve_lead_capture`, `print`, `etco2_toggle`, `energy_change`, `treatment_menu`, `patient_info`. The BP button previously wrote only to the trainee's local store and never reached the server. CPR stays out — it is instructor-driven and captured by state history. `kind` is now pinned by a DB check constraint and validated server-side; it was free text taken straight from the request body.
+- Collapsed duplicate participants and added `unique (session_id, lower(nickname))`; `joinSession` now reclaims an existing row by nickname instead of inserting a second one. A cleared `localStorage` or a second device used to split a trainee's events across two ids. Accepted trade-off recorded in PLAN.md 12e: room code plus nickname is now enough to assume an identity.
+- Scoped `getReview` to a single attempt (`?attempt=N` or `all`), added an explicit limit that reports truncation instead of hiding it, and indexed `(session_id, attempt_version, occurred_at)`. The old unscoped ascending query let PostgREST's 1000-row cap silently drop the newest rows, so the instructor's live roster could stop updating with no error. Also began writing `participant_attempts.completed_at`, which nothing had ever set.
+- Dropped the seven RLS policies migration 001 left open to the anon key and dropped the unused `vitals_snapshots` table. `sessions: public read` exposed every room code, and a room code is the entire join credential. Repointed the health check off `scenarios` onto `sessions`.
+- Added a recording Supabase query stub plus 40 regressions across the service, review route, and monitor instrumentation. All 851 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the Next.js production build pass. Migrations 006 and 007 have not been applied to a live project yet.
+
 ## [2026-08-26] [instructor/monitor] — Add Wagami defibrillator model selection
 
 - Added a fourth Defibrillators tab with staged Wagami X/Z selection, Wagami X defaults, Save → Send integration, Start gating, active-attempt locking, and New Attempt preservation.

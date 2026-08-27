@@ -1,6 +1,16 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateSessionCode, isValidSessionCode } from '@/lib/session'
+import { isStudentEventKind } from '@/types/session'
 import { createSessionToken, hashSessionToken, verifySessionToken } from './tokens'
+
+/**
+ * Ceiling on the events one review response will carry. PostgREST caps at 1000
+ * by default and silently truncates, which used to drop the NEWEST rows -- the
+ * instructor's live roster would stop updating with no error anywhere. Reviews
+ * are now scoped to a single attempt and ask for one row more than the cap, so
+ * hitting it is reported instead of hidden.
+ */
+export const REVIEW_EVENT_LIMIT = 2000
 
 export type SessionRecord = {
   id: string
@@ -24,6 +34,22 @@ export type StudentEventInput = {
   kind: string
   label: string
   payload?: unknown
+}
+
+/**
+ * The trainee's own drill window. `completed_at` closes on New Attempt and on
+ * End Session so an evaluator can compute how long the run actually took.
+ */
+async function closeAttempts(sessionId: string, attemptVersion: number) {
+  const supabase = createServiceClient()
+  // Best-effort: failing to stamp a completion time must not block ending a
+  // room or starting the next attempt.
+  await supabase
+    .from('participant_attempts')
+    .update({ completed_at: new Date().toISOString() })
+    .eq('session_id', sessionId)
+    .eq('attempt_version', attemptVersion)
+    .is('completed_at', null)
 }
 
 export class SessionError extends Error {
@@ -86,6 +112,26 @@ async function findParticipantByToken(
     .select('id, session_id, nickname, joined_at, last_seen_at')
     .eq('session_id', sessionId)
     .eq('token_hash', hashSessionToken(participantToken))
+    .maybeSingle()
+
+  if (error) throw new SessionError(error.message, 500)
+  return (data as ParticipantRecord | null) ?? null
+}
+
+/**
+ * Case-insensitive, matching the `participants_session_nickname_idx` unique
+ * index from migration 007.
+ */
+async function findParticipantByNickname(
+  sessionId: string,
+  nickname: string,
+): Promise<ParticipantRecord | null> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('participants')
+    .select('id, session_id, nickname, joined_at, last_seen_at')
+    .eq('session_id', sessionId)
+    .ilike('nickname', nickname)
     .maybeSingle()
 
   if (error) throw new SessionError(error.message, 500)
@@ -186,6 +232,42 @@ export async function joinSession(
   }
 
   const nextParticipantToken = createSessionToken('participant')
+
+  // Identity is a localStorage token, so a cleared store or a second device
+  // used to create a SECOND participants row under the same nickname -- which
+  // split that trainee's events across two ids and quietly corrupted their
+  // evaluation record. A nickname already in this room is treated as the same
+  // person: re-issue the token onto the existing row instead of inserting.
+  //
+  // Trade-off (PLAN.md 12e): room code + nickname is now enough to assume an
+  // identity. Accepted for a supervised classroom, where a correct roster
+  // matters more than impersonation resistance.
+  const existingByNickname = await findParticipantByNickname(
+    session.id,
+    normalizedNickname,
+  )
+  if (existingByNickname) {
+    const { data: reclaimed, error: reclaimError } = await supabase
+      .from('participants')
+      .update({
+        nickname: normalizedNickname,
+        token_hash: hashSessionToken(nextParticipantToken),
+        last_seen_at: new Date().toISOString(),
+      })
+      .eq('id', existingByNickname.id)
+      .select('id, session_id, nickname, joined_at, last_seen_at')
+      .single()
+    if (reclaimError || !reclaimed) {
+      throw new SessionError(reclaimError?.message ?? 'Unable to rejoin session', 500)
+    }
+    await ensureAttempt(session.id, reclaimed.id, session.active_attempt_version)
+    return {
+      session,
+      participant: reclaimed as ParticipantRecord,
+      participantToken: nextParticipantToken,
+    }
+  }
+
   const { data: participant, error } = await supabase
     .from('participants')
     .insert({
@@ -260,6 +342,8 @@ export async function startNewAttempt(code: string, hostToken: string) {
     throw new SessionError('Session has ended', 410)
   }
   const supabase = createServiceClient()
+  // Close the outgoing attempt before bumping, so its duration is recoverable.
+  await closeAttempts(session.id, session.active_attempt_version)
   // Back to 'waiting' as well as bumping the attempt: a new attempt is a fresh
   // drill, so trainees return to the waiting room and the instructor arms the
   // next run with Start / Dispatch deliberately. Leaving the room 'active' kept
@@ -284,6 +368,7 @@ export async function startNewAttempt(code: string, hostToken: string) {
 export async function endSession(code: string, hostToken: string) {
   const session = await verifyHost(code, hostToken)
   const supabase = createServiceClient()
+  await closeAttempts(session.id, session.active_attempt_version)
   const { data, error } = await supabase
     .from('sessions')
     .update({ status: 'ended' })
@@ -349,6 +434,26 @@ export async function updateSessionState(
   if (error || !data) {
     throw new SessionError(error?.message ?? 'Unable to update session state', 500)
   }
+
+  // The evaluator's second axis: session_state is overwritten in place, so
+  // without this row there is no record of what the patient was when a trainee
+  // acted. Written after the upsert and never read by the 1.5s student poll --
+  // history sits beside the hot path, not on it.
+  //
+  // Best-effort by design: a failed history write must not cost the room a
+  // Send. It costs the debrief one frame, which is the cheaper loss.
+  const { error: historyError } = await supabase
+    .from('session_state_history')
+    .insert({
+      session_id: session.id,
+      attempt_version: session.active_attempt_version,
+      version: nextVersion,
+      state,
+    })
+  if (historyError) {
+    console.error('[session] state history write failed:', historyError.message)
+  }
+
   return { session, state: data }
 }
 
@@ -362,7 +467,27 @@ export async function recordStudentEvent(
   const kind = input.kind.trim()
   if (!kind || !label) throw new SessionError('Event kind and label are required', 400)
 
+  // `kind` arrives from the request body. It used to go straight into a plain
+  // text column, so anyone with devtools could write arbitrary kinds into the
+  // evaluation record. Migration 007 constrains the column; this rejects the
+  // same set with a 400 instead of a 500 from the constraint.
+  if (!isStudentEventKind(kind)) {
+    throw new SessionError(`Unknown event kind: ${kind}`, 400)
+  }
+
   const supabase = createServiceClient()
+
+  // Pin the action to the patient state it was taken against. Read rather than
+  // joined later because session_state is overwritten on the next Send -- by
+  // debrief time the live row no longer says what was on screen just now.
+  const { data: currentState } = await supabase
+    .from('session_state')
+    .select('version')
+    .eq('session_id', session.id)
+    .maybeSingle()
+  const stateVersion =
+    typeof currentState?.version === 'number' ? currentState.version : null
+
   const { data, error } = await supabase
     .from('student_events')
     .insert({
@@ -372,17 +497,42 @@ export async function recordStudentEvent(
       kind,
       label,
       payload: input.payload ?? {},
+      state_version: stateVersion,
     })
-    .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at')
+    .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at, state_version')
     .single()
 
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to record event', 500)
   return { session, participant, event: data }
 }
 
-export async function getReview(code: string, hostToken: string) {
+/**
+ * The evaluation record for one drill run.
+ *
+ * Scoped to a single attempt by default. The old unscoped query ordered
+ * `occurred_at` ascending with no limit, so PostgREST's 1000-row cap truncated
+ * the newest rows -- on a long session the roster the instructor was watching
+ * live silently stopped updating. Pass `attemptVersion: 'all'` for a
+ * whole-session export, where truncation is visible rather than surprising.
+ *
+ * `stateHistory` carries the instructor side of the timeline: join it to each
+ * event on `state_version` -> `version` to recover the patient state behind
+ * the action.
+ */
+export async function getReview(
+  code: string,
+  hostToken: string,
+  attemptVersion: number | 'all' = -1,
+) {
   const session = await verifyHost(code, hostToken)
   const supabase = createServiceClient()
+  const attempt =
+    attemptVersion === 'all'
+      ? 'all'
+      : attemptVersion >= 1
+        ? attemptVersion
+        : session.active_attempt_version
+
   const { data: participants, error: participantsError } = await supabase
     .from('participants')
     .select('id, session_id, nickname, joined_at, last_seen_at')
@@ -390,16 +540,46 @@ export async function getReview(code: string, hostToken: string) {
     .order('joined_at', { ascending: true })
   if (participantsError) throw new SessionError(participantsError.message, 500)
 
-  const { data: events, error: eventsError } = await supabase
+  let eventsQuery = supabase
     .from('student_events')
-    .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at')
+    .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at, state_version')
     .eq('session_id', session.id)
+  if (attempt !== 'all') eventsQuery = eventsQuery.eq('attempt_version', attempt)
+
+  // One over the cap: if the extra row comes back, the client is looking at a
+  // partial record and gets told so instead of quietly believing it is whole.
+  const { data: events, error: eventsError } = await eventsQuery
     .order('occurred_at', { ascending: true })
+    .limit(REVIEW_EVENT_LIMIT + 1)
   if (eventsError) throw new SessionError(eventsError.message, 500)
+
+  const allEvents = events ?? []
+  const truncated = allEvents.length > REVIEW_EVENT_LIMIT
+
+  let historyQuery = supabase
+    .from('session_state_history')
+    .select('version, attempt_version, state, applied_at')
+    .eq('session_id', session.id)
+  if (attempt !== 'all') historyQuery = historyQuery.eq('attempt_version', attempt)
+
+  const { data: stateHistory, error: historyError } = await historyQuery
+    .order('version', { ascending: true })
+    .limit(REVIEW_EVENT_LIMIT)
+  if (historyError) throw new SessionError(historyError.message, 500)
+
+  const { data: attempts, error: attemptsError } = await supabase
+    .from('participant_attempts')
+    .select('participant_id, attempt_version, started_at, completed_at')
+    .eq('session_id', session.id)
+  if (attemptsError) throw new SessionError(attemptsError.message, 500)
 
   return {
     session,
+    attemptVersion: attempt,
     participants: participants ?? [],
-    events: events ?? [],
+    events: truncated ? allEvents.slice(0, REVIEW_EVENT_LIMIT) : allEvents,
+    truncated,
+    stateHistory: stateHistory ?? [],
+    attempts: attempts ?? [],
   }
 }
