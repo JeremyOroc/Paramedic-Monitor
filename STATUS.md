@@ -6,6 +6,16 @@
 ---
 
 ## Current Phase
+**Phase 12 — Evaluation record & database hardening — CODE COMPLETE, MIGRATIONS NOT YET APPLIED.**
+Drills now store a reviewable per-trainee, per-attempt timeline: every instrumented action with a
+millisecond timestamp, joined to the patient state in force when it was taken. Scoring/rubric logic
+is deliberately out of scope — the evaluator reads the timeline and judges.
+
+> **Blocked on deploy:** migrations `006_close_legacy_policies.sql` and `007_evaluation_record.sql`
+> have not been run against a live Supabase project. Until they are, `session_state_history` and
+> `student_events.state_version` do not exist and the new event kinds will be rejected by the check
+> constraint. Apply both before the next session, oldest first.
+
 **Wagami Z responsive visual redesign — COMPLETE.** The accepted code-native shell and live touchscreen now follow the approved reference on supported landscape displays, with safe-area-aware fixed-aspect scaling at usable CSS viewports of at least 1024×700. Portrait and undersized windows receive exact, state-preserving French blocking guidance. The power-only functional boundary, two-second centered-WAGAMI boot, live waveforms/vitals, PI and shock-count decoration, and inert non-power controls are preserved. iPad mini receives no special code or QA and is not certified, although it may render when it passes the same capability rule.
 
 > Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
@@ -13,6 +23,16 @@
 ---
 
 ## Completed
+- [x] **Phase 12 — Evaluation record & database hardening — CODE COMPLETE:**
+  - [x] Added append-only `session_state_history` written beside (never on) the student poll path, so the patient state behind every action survives the next Send
+  - [x] Stamped `student_events.state_version` at insert, linking each trainee action to the exact state it was taken against
+  - [x] Instrumented the 11 remaining trainee controls, including the BP button, which had only ever written to the trainee's local store
+  - [x] Pinned `student_events.kind` with a DB check constraint and server-side validation; it was free text from the request body
+  - [x] Collapsed duplicate participants, added `unique (session_id, lower(nickname))`, and made `joinSession` reclaim by nickname (trade-off recorded in PLAN.md 12e)
+  - [x] Scoped `getReview` by attempt with a truncation-reporting limit and a covering index; began writing `participant_attempts.completed_at`
+  - [x] Dropped the seven anon-readable policies left by migration 001 and the unused `vitals_snapshots` table; health check repointed onto `sessions`
+  - [x] All 851 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the Next.js production build pass
+  - [ ] **Migrations 006 and 007 applied to the live Supabase project** — outstanding
 - [x] **Wagami Z responsive visual redesign — COMPLETE:**
   - [x] Rebuilt the shell, faceplate, bezel, controls, lower body, speaker, and touchscreen from normalized reference landmarks using one uniformly contained fixed-aspect composition
   - [x] Added safe-area and live visual-viewport fitting for landscape iPads and the 1920×1080 development target, plus exact state-preserving French fallbacks for portrait and undersized viewports

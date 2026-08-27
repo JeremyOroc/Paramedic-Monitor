@@ -883,6 +883,73 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 
 ---
 
+### Phase 12 — Evaluation Record & Database Hardening
+**Goal:** Every drill produces a reviewable record — what the trainee did, when, and what the
+patient was at that moment — and the legacy schema stops leaking.
+
+**Requirement change (2026-08-27):** The instructor is an evaluator who reviews drills after the
+fact to grade ordering and timing mistakes (example given: a BP reading taken before medication).
+`student_events` alone could not support this: only 8 of the trainee's controls emitted events, and
+`session_state` is overwritten in place so no patient context survived. Scoring/rubric logic is
+explicitly **out of scope** — this phase stores the data; grading stays with the evaluator.
+
+#### 12a — Close legacy RLS policies (migration 006)
+Migration 001 opened `sessions`, `vitals_snapshots`, and `scenarios` to the `anon` key, and
+migration 004 only revisited the session-slice tables. `NEXT_PUBLIC_SUPABASE_ANON_KEY` ships to
+every browser, so `sessions: public read` exposed every room code — and a room code is the entire
+join credential. Drop all seven leftover policies. Drop `vitals_snapshots` (zero reads/writes in
+`src/`; superseded by `session_state`). Repoint the health check off `scenarios` onto `sessions`,
+which is never going away — `scenarios` stays for the deferred timed-state builder.
+
+#### 12b — Instructor-side state history (migration 007)
+New append-only `session_state_history (id, session_id, attempt_version, version, state, applied_at)`.
+`updateSessionState` writes a history row alongside the existing `session_state` upsert. The upsert
+is unchanged so the 1.5s student poll never reads history — it is written beside the hot path,
+never on it.
+
+#### 12c — Link actions to patient state
+`student_events.state_version` is stamped at insert from the session's current state version. A
+join on `(session_id, state_version → version)` reconstructs the exact patient state behind each
+action. `attempt_version` already partitions by drill run.
+
+#### 12d — Full action instrumentation
+Extend `StudentEventKind` and emit from every remaining trainee control. New kinds:
+`nibp_start` `{ mode, intervalMinutes }`, `nibp_result` `{ bp_sys, bp_dia }`, `power_on`,
+`power_off`, `twelve_lead`, `twelve_lead_capture`, `print`, `etco2_toggle` `{ on }`,
+`energy_change` `{ from, to }`, `treatment_menu`, `patient_info`.
+CPR is instructor-driven, not a trainee action — it is captured by 12b, not here.
+A DB `check` constraint plus server-side validation now pins `kind` to the union; it was free text
+passed straight from the request body.
+
+#### 12e — Participant identity integrity
+Identity is a `localStorage` token, so a cleared store or a second device produced a duplicate
+`participants` row with the same nickname — splitting that trainee's events across two IDs and
+quietly corrupting their record. Add `unique (session_id, lower(nickname))`; `joinSession` falls
+back to a nickname match and re-issues the token onto the existing row.
+
+**Accepted trade-off:** anyone with the room code and a nickname can assume that identity. In a
+supervised classroom this is the right trade for a correct roster.
+
+#### 12f — Review query correctness
+`getReview` selected all events `occurred_at` **ascending** with no limit, so PostgREST's 1000-row
+cap silently truncated the *newest* rows — the live roster would stop updating with no error. Add
+an `attemptVersion` filter (defaulting to the active attempt), an explicit limit with a truncation
+flag, and index `student_events (session_id, attempt_version, occurred_at)`.
+Also write `participant_attempts.completed_at` (never written before) so attempt duration is
+computable.
+
+#### Testing
+- `applySessionExpiry`-style unit tests for kind validation and the nickname-merge branch of `joinSession`
+- Service tests: history row written per state update, `state_version` stamped on events,
+  review filtered by attempt, truncation flag set at the cap
+- Component tests: each newly instrumented control emits its event with the right payload
+- Migration review: no policy left on `sessions`/`scenarios` reachable by `anon`
+
+**Milestone:** An evaluator can reconstruct a full per-trainee, per-attempt timeline of actions
+against patient state, and the anon key can no longer read a room code.
+
+---
+
 ## Quick Reference — Key Decisions
 
 | Decision | Choice |
