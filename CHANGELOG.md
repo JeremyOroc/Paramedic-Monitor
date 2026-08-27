@@ -5,6 +5,48 @@
 
 ---
 
+## [2026-08-27] [repository] — Keep Wagami Z source media local-only
+
+- Added ignore rules for the captured source-video frames, original reference-image convention, transcript exports, and reference-derived Wagami Z concept PNGs so they cannot be added to the public repository accidentally.
+- Kept the original research document tracked while replacing local frame links with source-video timestamps and recording the public-repository media policy in the plan and status.
+
+## [2026-08-27] [monitor] — Implement the Wagami Z live monitor surface
+
+- Replaced the Wagami Z post-dispatch placeholder and `/?dev=2` screen with one full-shell production component that consumes live instructor vitals, waveforms, CPR/VF/VT display semantics, fixed channel state, patient category, device timer, and energy.
+- Added the French DEA touchscreen, WAGAMI/Z branding, right-side CHOC/CHARGE/rotary controls, complete blue-and-silver shell depth, visual-only alarms, immediate PNI, and accessible inert feedback for every non-power control.
+- Added a repeatable off → two-second centered-WAGAMI boot → on power cycle, with timer reset and off/boot/on indicator states; the video-derived manual/AED workflows remain deliberately deferred and documented.
+- Added component and route regressions; all 817 tests pass with four workers, TypeScript and the production build pass, ESLint has zero errors (12 existing warnings), and rendered 1242×736 browser QA confirms the live and boot states with a clean console and no framework overlay.
+
+## [2026-08-27] [research/monitor] — Document the Wagami Z video reference
+
+- Inspected the complete 4:08 manual/AED defibrillation video, exported its transcript, and captured representative frames for power, manual energy/charge/shock/disarm, AED analysis/CPR/pause, advanced monitoring, and mode switching.
+- Identified AED-paused advanced monitoring as the supplied still's baseline state and documented the device anatomy, screen hierarchy, workflow states, and project-specific branding/language/boot overrides.
+- Preserved the frame set under `screenshots/wagami-z-video/`, added `docs/research/wagami-z-defibrillation-video.md`, and explicitly kept the discovered defibrillation workflows outside the current power-only functional boundary.
+
+## [2026-08-27] [planning/monitor] — Complete Wagami Z power-state definition
+
+- Defined repeatable shutdown and reboot behavior, with immediate black-screen power-off and timer reset.
+- Defined the timer as stopped at `00:00:00` while off/booting and running only after the two-second boot completes.
+- Limited boot visuals to a large centered white `WAGAMI` wordmark on black and defined dark-green, pulsing-amber, and bright-green power indicators for off, booting, and on.
+
+## [2026-08-27] [planning/monitor] — Define Wagami Z power behavior
+
+- Corrected the inert-control boundary: power is functional on Wagami Z, while every other outer-shell and touchscreen control remains an accessible visual no-op.
+- Defined normal dispatch entry as powered off, followed by the existing two-second power-button boot with a large centered `WAGAMI` wordmark; `/?dev=2` remains an already-on direct-development shortcut.
+- Required Wagami X parity for automatic VF/VT display behavior, CPR overrides, channel activation, and rhythm disconnection.
+
+## [2026-08-27] [planning/monitor] — Define Wagami Z monitoring behavior
+
+- Defined fixed live ECG, EtCO2, and SpO2 lanes plus FC, EtCO2, SpO2, and PNI values, with stable geometry for inactive channels.
+- Made immediate confirmed PNI an explicit temporary exception until a separately specified Wagami X-equivalent cuff interaction replaces it.
+- Defined fixed DEA presentation, live confirmed patient category/date/time/timer/energy, static healthy device indicators, visual-only alarm flashing, and the canonical French control labels including `PNI` and `12 LEAD`.
+
+## [2026-08-27] [planning/monitor] — Define the Wagami Z live monitor surface
+
+- Replaced the temporary post-dispatch Wagami Z placeholder requirement with a distinct full-screen device that consumes the attempt's live confirmed waveforms and vitals.
+- Defined WAGAMI/Z branding, French clinical and control labels, a complete uncropped front shell without external cables, and the reference-derived physical and touchscreen control placement.
+- Defined all Wagami Z controls as accessible inert controls with hover, focus, and press feedback but no audio, navigation, state change, or trainee event; implementation remains pending the rest of the design interview and explicit approval.
+
 ## [2026-08-26] [instructor/monitor] — Add Wagami defibrillator model selection
 
 - Added a fourth Defibrillators tab with staged Wagami X/Z selection, Wagami X defaults, Save → Send integration, Start gating, active-attempt locking, and New Attempt preservation.

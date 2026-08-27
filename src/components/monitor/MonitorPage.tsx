@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
+import { WagamiZDevice } from '@/components/monitor/WagamiZDevice'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
 import { SubBar } from '@/components/monitor/SubBar'
@@ -44,7 +45,6 @@ import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { playCallerInfoAlert, setAudioMuted, stopAllAudio } from '@/lib/audio'
 import { SessionLandingPage } from '@/components/session/SessionLandingPage'
-import { WorkInProgressScreen } from '@/components/monitor/WorkInProgressScreen'
 import { getCprHeartRate } from '@/types/vitals'
 import { useVfDisplayHeartRate } from '@/hooks/useVfDisplayHeartRate'
 import type { VfDisplaySync } from '@/lib/automaticHeartRate'
@@ -100,7 +100,15 @@ export function MonitorPage({
   const cprOverrideActive = cprHeartRate !== null
 
   const searchParams = useSearchParams()
-  const devBypass = searchParams.get('dev') === '1'
+  const devMode = searchParams.get('dev')
+  const devBypass = devMode === '1' || devMode === '2'
+  const activeDefibrillatorModel =
+    devMode === '2'
+      ? 'wagamiZ'
+      : devMode === '1'
+        ? 'wagamiX'
+        : defibrillatorModelConfirmed
+  const isWagamiZ = activeDefibrillatorModel === 'wagamiZ'
   const callerInfoVariant: CallerInfoVariant =
     searchParams.get('callerInfoVariant') === 'classic' ? 'classic' : 'assignment'
 
@@ -330,7 +338,7 @@ export function MonitorPage({
   const alarm = useAlarm(
     alarmVitals,
     controller.isPoweredOn,
-    controller.isMuted,
+    controller.isMuted || isWagamiZ,
     true,
     audioAlarmActive,
   )
@@ -394,7 +402,15 @@ export function MonitorPage({
   )
   const vitalLogHasPagination = vitalLogTotalPages > 1
 
-  useDefibAudio(defib.state, controller.isMuted)
+  useDefibAudio(defib.state, controller.isMuted || isWagamiZ)
+
+  const handlePowerOff = () => {
+    if (etco2Loading) cancelEtco2Loading()
+    cancelNibpReading()
+    controller.onPowerOff()
+    defib.reset()
+    setAudioMuted(false)
+  }
 
   const screen = (
     <div className="relative h-full w-full">
@@ -575,8 +591,32 @@ export function MonitorPage({
     )
   }
 
-  if (!devBypass && defibrillatorModelConfirmed === 'wagamiZ') {
-    return <WorkInProgressScreen />
+  if (isWagamiZ) {
+    return (
+      <WagamiZDevice
+        initialPowerState={devMode === '2' ? 'on' : 'off'}
+        date={date}
+        time={time}
+        sessionTimer={sessionTimer}
+        patientMode={controller.patientMode}
+        rhythm={confirmed.rhythm}
+        heartRate={displayedHrActive ? vfDisplayedHr : displayedHr}
+        spo2={confirmed.spo2}
+        etco2={confirmed.etco2}
+        bpSys={confirmed.bp_sys}
+        bpDia={confirmed.bp_dia}
+        joules={defib.energy}
+        spo2Waveform={confirmed.spo2_waveform}
+        etco2Waveform={confirmed.etco2_waveform}
+        active={{
+          ...confirmedVitalActive,
+          hr: displayedHrActive,
+        }}
+        cprOverride={cprOverrideActive}
+        onPowerOn={controller.onPowerOn}
+        onPowerOff={handlePowerOff}
+      />
+    )
   }
 
   return (
@@ -670,13 +710,7 @@ export function MonitorPage({
         }}
         power={{
           onPowerOn: controller.onPowerOn,
-          onPowerOff: () => {
-            if (etco2Loading) cancelEtco2Loading()
-            cancelNibpReading()
-            controller.onPowerOff()
-            defib.reset()
-            setAudioMuted(false)
-          },
+          onPowerOff: handlePowerOff,
         }}
         audio={{
           isMuted: controller.isMuted,
@@ -713,8 +747,9 @@ export default function MonitorPageRoute() {
 
 function MonitorPageOrLanding() {
   const searchParams = useSearchParams()
-  if (searchParams.get('dev') === '2') return <WorkInProgressScreen />
   if (process.env.NODE_ENV === 'test') return <MonitorPage />
-  if (searchParams.get('dev') === '1') return <MonitorPage />
+  if (searchParams.get('dev') === '1' || searchParams.get('dev') === '2') {
+    return <MonitorPage />
+  }
   return <SessionLandingPage />
 }

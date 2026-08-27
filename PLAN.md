@@ -809,23 +809,44 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 ### Wagami Defibrillator Model Selection
 **Goal:** Let instructors choose the monitor model used for a room attempt while preserving the existing dispatch workflow.
 
-**Status:** Complete on 2026-08-26.
+**Status:** Model selection completed on 2026-08-26. Wagami Z's live device surface was defined and completed on 2026-08-27.
 
 **Requirements:**
 1. Add a fourth Dev Console tab named `Defibrillators` after Patient Physical. It contains staged `Wagami X` and `Wagami Z` choices, defaults to Wagami X, and participates in Save → Send.
 2. Keep Start / Dispatch disabled while the model choice is dirty or pending. A successful Start locks both choices while leaving the tab available and the confirmed model highlighted; New Attempt preserves and unlocks that model.
 3. Save the draft model in version-1 scenario snapshots. Legacy snapshots default to Wagami X, Wagami Z alone is meaningful scenario content, and active attempts disable scenario load/unload controls.
-4. Share the confirmed model with student monitors. Wagami X renders the existing monitor. Wagami Z retains caller info, acknowledgement, countdown, arrival, and Go to Monitor, then renders only a black full-screen `Work In Progress` placeholder.
-5. Keep `/?dev=1` as the direct Wagami X shortcut and add `/?dev=2` as the direct Wagami Z placeholder shortcut. The normal `/` route remains the session lobby.
+4. Share the confirmed model with student monitors. Wagami X renders the existing monitor. Wagami Z retains caller info, acknowledgement, countdown, arrival, and Go to Monitor, then renders its own full-screen live monitor surface instead of the temporary `Work In Progress` placeholder.
+5. Keep `/?dev=1` as the direct Wagami X shortcut and make `/?dev=2` the direct Wagami Z device shortcut. The normal `/` route remains the session lobby.
+6. Render Wagami Z as a complete, uncropped front-facing shell centered within the full-screen desktop viewport at the existing 1024px minimum. Include the body depth, screen bezel, speaker grille, status indicators, and right-side controls; omit external cables and tubing.
+7. Replace the reference `ZOLL` and `Zenix` marks with `WAGAMI` and `Z`. Use French throughout the on-screen clinical labels and touchscreen controls.
+8. Feed Wagami Z the attempt's live confirmed waveforms and vitals rather than fixed reference-image values.
+9. Model the reduced physical-control layout from the reference: power and indicators across the top; Shock, Charge, and rotary controls down the right; mode controls across the touchscreen top; and menu, NIBP, marker, print, snapshot, 12-lead, analysis, and energy controls across the touchscreen bottom.
+10. Except for power, make every Wagami Z outer-shell and touchscreen control an accessible inert control: hover, focus, and press feedback are visible, but clicks produce no audio, navigation, state mutation, or student event.
+11. Keep fixed ECG, EtCO2, and SpO2 waveform lanes with FC, EtCO2, SpO2, and PNI values stacked on the right. Turning a confirmed channel off preserves its space and renders the appropriate disconnected/off state rather than reflowing the screen.
+12. As an explicit temporary behavior, show confirmed PNI immediately while PNI is active because the initial Wagami Z cuff control is inert. A later requirement will replace this with Wagami X-equivalent cuff behavior; do not infer or implement that future interaction until it is specified.
+13. Keep `DEA` visually selected. Derive `ADULTE`, `PÉDIATRIQUE`, or `NÉONATAL` from the confirmed patient category; keep the date, clock, and attempt timer live; and render Wi-Fi, battery, and readiness indicators as static healthy decoration.
+14. Apply existing alarm thresholds as visual flashing on affected Wagami Z values, but suppress alarm audio because the silence control is inert.
+15. Show the confirmed instructor energy setting in the inert energy control without local analysis, charging, shock, or energy-adjustment transitions.
+16. Use the canonical French control labels `DEA`, `MANUEL`, the confirmed patient category, `PNI`, `MARQUEUR`, `IMPRIMER`, `CAPTURE`, `12 LEAD`, `ANALYSER`, `CHOC`, and `CHARGE`.
+17. Preserve Wagami X display semantics for automatic VF/VT heart rate, CPR heart-rate and waveform overrides, channel activation, and rhythm disconnection so both models present the same scenario consistently apart from the temporary PNI exception.
+18. After normal dispatch entry, Wagami Z starts powered off. Its physical power button begins the same two-second boot delay as Wagami X and shows a black inner screen with a large centered `WAGAMI` wordmark while booting. The direct `/?dev=2` shortcut bypasses dispatch and starts the production Wagami Z component already powered on with current/default store values.
+19. Pressing power while Wagami Z is on immediately returns its screen to black, stops and resets its device timer, and allows another two-second boot. The timer remains `00:00:00` while off and booting, then starts when boot completes.
+20. Keep the boot screen limited to the large centered white `WAGAMI` wordmark on pure black, with no progress bar, sound, fade, or secondary copy. Render the power indicator dark green while off, pulsing amber while booting, and bright green while on.
+21. Treat the source video's AED-paused advanced-monitoring screen as the initial visual baseline: fixed waveform lanes and right-side vitals with the top navigation and bottom actions still visible. Do not implement the video's manual/AED transitions, confirmation modal, charge/disarm/shock states, analysis prompts, CPR dashboard, or pause/restart workflow in this inert-control increment.
+22. Keep source-video frames, original reference images, transcript exports, and reference-derived concept PNGs local-only through `.gitignore`. Public research documentation may retain original written observations, the source URL, and timestamps, but must not embed or redistribute those local media files.
 
 #### Testing
 - Store coverage for model draft/saved/confirmed transitions, shared state, reset preservation, and legacy hydration.
 - Scenario coverage for round-tripping, legacy Wagami X fallback, model-only meaningful content, and active load/unload locking.
 - Admin coverage for the fourth tab, selection styling, Start gating, successful-start locking, failed-start behavior, and New Attempt preservation.
-- Monitor coverage for unchanged Wagami X dispatch entry, Wagami Z dispatch-to-placeholder behavior, and both direct development shortcuts.
+- Wagami Z component coverage for the shell landmark anatomy, French labels, WAGAMI/Z branding, repeatable powered-off/two-second centered-wordmark/powered-on transitions, timer start/reset, power-indicator states, fixed channel geometry, Wagami X display parity, live confirmed clinical values and patient category, temporary immediate PNI, visual-only alarm state, live energy, and accessible inert non-power controls.
+- Monitor coverage for unchanged Wagami X dispatch entry, Wagami Z dispatch-to-device behavior, and both direct development shortcuts.
+- Reference QA compares the implementation against the supplied still and the representative power, advanced-monitoring, manual, AED-analysis, CPR, and mode-confirmation frames documented in `docs/research/wagami-z-defibrillation-video.md`, while verifying that deferred workflows remain inert.
 - Full Vitest, TypeScript, ESLint, production build, and rendered desktop interaction QA.
 
 **Milestone — COMPLETE (2026-08-26):** Instructors can stage, save, send, and lock a Wagami model per attempt; saved scenarios and shared sessions retain the choice; Wagami Z preserves dispatch before entering its WIP placeholder; and both direct development shortcuts select their intended model.
+
+**Wagami Z UI extension — COMPLETE (2026-08-27):** The placeholder is replaced by the live, reference-derived Wagami Z shell while the completed selection, persistence, and dispatch behavior remain intact. Normal dispatch starts it powered off; `/?dev=2` starts the same component powered on. The functional boundary remains power-only until the documented manual/AED workflows are explicitly scheduled.
 
 ---
 

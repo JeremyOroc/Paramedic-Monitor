@@ -105,6 +105,39 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
   ),
 }))
 
+vi.mock('@/components/monitor/WagamiZDevice', () => ({
+  WagamiZDevice: ({
+    initialPowerState,
+    patientMode,
+    heartRate,
+    bpSys,
+    bpDia,
+    etco2,
+    spo2,
+    joules,
+  }: {
+    initialPowerState?: 'off' | 'on'
+    patientMode: string
+    heartRate: number
+    bpSys: number
+    bpDia: number
+    etco2: number
+    spo2: number
+    joules: number
+  }) => (
+    <div
+      data-testid="wagami-z-device"
+      data-power-state={initialPowerState}
+      data-patient-mode={patientMode}
+      data-heart-rate={heartRate}
+      data-bp={`${bpSys}/${bpDia}`}
+      data-etco2={etco2}
+      data-spo2={spo2}
+      data-joules={joules}
+    />
+  ),
+}))
+
 vi.mock('@/components/monitor/WaveformPanel', () => ({
   WaveformPanel: ({
     secondaryChannel,
@@ -336,7 +369,7 @@ describe('MonitorPage', () => {
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
-  it('keeps the Wagami Z dispatch flow and shows Work In Progress after entry', async () => {
+  it('keeps the Wagami Z dispatch flow and opens the powered-off Z after entry', async () => {
     const user = userEvent.setup()
     window.history.pushState({}, '', '/')
     act(() => {
@@ -352,11 +385,11 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
 
     expect(screen.getByRole('heading', { name: 'New Assignment' })).toBeInTheDocument()
-    expect(screen.queryByText('Work In Progress')).toBeNull()
+    expect(screen.queryByTestId('wagami-z-device')).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Go to monitor' }))
 
-    expect(screen.getByRole('heading', { name: 'Work In Progress' })).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-z-device')).toHaveAttribute('data-power-state', 'off')
     expect(screen.queryByTestId('device-shell')).toBeNull()
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).toBeNull()
   })
@@ -372,12 +405,12 @@ describe('MonitorPage', () => {
 
     const { rerender } = render(<MonitorPage />)
     expect(screen.getByTestId('device-shell')).toBeInTheDocument()
-    expect(screen.queryByText('Work In Progress')).toBeNull()
+    expect(screen.queryByTestId('wagami-z-device')).toBeNull()
 
     window.history.pushState({}, '', '/?dev=2')
     rerender(<MonitorPage />)
 
-    expect(screen.getByRole('heading', { name: 'Work In Progress' })).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-z-device')).toHaveAttribute('data-power-state', 'on')
     expect(screen.queryByTestId('device-shell')).toBeNull()
   })
 

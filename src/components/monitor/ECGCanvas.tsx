@@ -8,7 +8,8 @@ import {
   getEcgRhythm,
 } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
-import { COLORS, cn } from '@/lib/utils'
+import { COLORS } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
 import { DisconnectedWaveform } from './DisconnectedWaveform'
 

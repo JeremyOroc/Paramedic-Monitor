@@ -1,4 +1,4 @@
-import { COLORS } from '@/lib/utils'
+import { COLORS } from '@/lib/constants'
 import type { WaveformDef } from './rhythms'
 
 export type RendererOptions = {

@@ -1,4 +1,4 @@
-import { COLORS } from '@/lib/utils'
+import { COLORS } from '@/lib/constants'
 
 export type DrawLeadRowOptions = {
   canvas: HTMLCanvasElement

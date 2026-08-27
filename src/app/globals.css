@@ -3,6 +3,19 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --wagami-z-backdrop: #111315;
+  --wagami-z-frame: #0f4f8a;
+  --wagami-z-frame-dark: #083663;
+  --wagami-z-face: #dce3ee;
+  --wagami-z-face-edge: #aeb9ca;
+  --wagami-z-bezel: #17191c;
+  --wagami-z-screen: #020707;
+  --wagami-z-control: #08333d;
+  --wagami-z-action-purple: #7b2bbd;
+  --wagami-z-shock-orange: #ff7a16;
+  --wagami-z-charge-gray: #8a8e95;
+  --wagami-z-knob: #17191c;
+  --wagami-z-readiness: #102b31;
 }
 
 @theme inline {
@@ -11,7 +24,7 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* WAGAMI monitor palette — keep in sync with src/lib/utils.ts COLORS */
+  /* WAGAMI monitor palette — keep in sync with src/lib/constants.ts COLORS */
   --color-monitor-bg: #000000;
   --color-ecg-green: #00ff41;
   --color-cyan-bp: #00ffff;
@@ -23,6 +36,21 @@
   --color-modal-surface: #8ba88c;
   --color-bottom-bar: #1a1a1a;
   --color-sidebar-bg: #0d0d0d;
+  /* Wagami Z shell tokens — keep in sync with WAGAMI_Z_COLORS. */
+  --color-wagami-z-backdrop: #111315;
+  --color-wagami-z-frame: #0f4f8a;
+  --color-wagami-z-frame-dark: #083663;
+  --color-wagami-z-face: #dce3ee;
+  --color-wagami-z-face-edge: #aeb9ca;
+  --color-wagami-z-bezel: #17191c;
+  --color-wagami-z-screen: #020707;
+  --color-wagami-z-control: #08333d;
+  --color-wagami-z-control-active: #0b6070;
+  --color-wagami-z-action-purple: #7b2bbd;
+  --color-wagami-z-shock-orange: #ff7a16;
+  --color-wagami-z-charge-gray: #8a8e95;
+  --color-wagami-z-knob: #17191c;
+  --color-wagami-z-readiness: #102b31;
   /* 12-lead Capture printout (warm tan/salmon ECG paper, dark ink) + acquire bar */
   --color-print-paper: #f4dcc6;
   --color-print-grid: #e0b193;
@@ -60,6 +88,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* The Z shell is a bespoke surface rather than part of the general monitor
+   palette. Explicit utilities keep these classes stable under Turbopack's
+   incremental Tailwind scan while the values remain centralized above. */
+.bg-wagami-z-backdrop { background-color: var(--wagami-z-backdrop); }
+.bg-wagami-z-frame { background-color: var(--wagami-z-frame); }
+.bg-wagami-z-frame-dark { background-color: var(--wagami-z-frame-dark); }
+.bg-wagami-z-face { background-color: var(--wagami-z-face); }
+.border-wagami-z-face-edge { border-color: var(--wagami-z-face-edge); }
+.bg-wagami-z-bezel { background-color: var(--wagami-z-bezel); }
+.bg-wagami-z-screen { background-color: var(--wagami-z-screen); }
+.bg-wagami-z-control { background-color: var(--wagami-z-control); }
+.bg-wagami-z-action-purple { background-color: var(--wagami-z-action-purple); }
+.bg-wagami-z-shock-orange { background-color: var(--wagami-z-shock-orange); }
+.bg-wagami-z-charge-gray { background-color: var(--wagami-z-charge-gray); }
+.bg-wagami-z-knob { background-color: var(--wagami-z-knob); }
+.bg-wagami-z-readiness { background-color: var(--wagami-z-readiness); }
 
 @keyframes chargePulse {
   0%, 49% {
