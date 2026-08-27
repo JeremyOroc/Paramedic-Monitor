@@ -64,6 +64,26 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['session_state']['Insert']>
         Relationships: []
       }
+      session_state_history: {
+        Row: {
+          id: string
+          session_id: string
+          attempt_version: number
+          version: number
+          state: unknown
+          applied_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          attempt_version: number
+          version: number
+          state: unknown
+          applied_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['session_state_history']['Insert']>
+        Relationships: []
+      }
       participants: {
         Row: {
           id: string
@@ -114,6 +134,7 @@ export type Database = {
           label: string
           payload: unknown
           occurred_at: string
+          state_version: number | null
         }
         Insert: {
           id?: string
@@ -124,44 +145,9 @@ export type Database = {
           label: string
           payload?: unknown
           occurred_at?: string
+          state_version?: number | null
         }
         Update: Partial<Database['public']['Tables']['student_events']['Insert']>
-        Relationships: []
-      }
-      vitals_snapshots: {
-        Row: {
-          id: string
-          session_id: string
-          hr: number
-          bp_sys: number
-          bp_dia: number
-          etco2: number
-          spo2: number
-          rhythm: string
-          patient_mode: string
-          joules: number
-          shock_count: number
-          cpr_active: boolean
-          etco2_mode: boolean
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          session_id: string
-          hr?: number
-          bp_sys?: number
-          bp_dia?: number
-          etco2?: number
-          spo2?: number
-          rhythm?: string
-          patient_mode?: string
-          joules?: number
-          shock_count?: number
-          cpr_active?: boolean
-          etco2_mode?: boolean
-          created_at?: string
-        }
-        Update: Partial<Database['public']['Tables']['vitals_snapshots']['Insert']>
         Relationships: []
       }
       scenarios: {

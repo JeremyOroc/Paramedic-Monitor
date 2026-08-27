@@ -17,15 +17,45 @@ export type SessionParticipant = {
   last_seen_at: string | null
 }
 
-export type StudentEventKind =
-  | 'acknowledge'
-  | 'arrival'
-  | 'transport'
-  | 'medication'
-  | 'analyze'
-  | 'charge'
-  | 'shock'
-  | 'etco2_calibration'
+/**
+ * Every trainee action the evaluator can review. Kept in lockstep with the
+ * `student_events_kind_check` constraint in migration 007 -- the database
+ * rejects anything not listed here, because `kind` arrives from the request
+ * body and used to be unvalidated free text.
+ *
+ * CPR is deliberately absent: it is instructor-driven, so it is captured by
+ * session_state_history rather than as a trainee action.
+ */
+export const STUDENT_EVENT_KINDS = [
+  'acknowledge',
+  'arrival',
+  'transport',
+  'medication',
+  'analyze',
+  'charge',
+  'shock',
+  'etco2_calibration',
+  'nibp_start',
+  'nibp_result',
+  'power_on',
+  'power_off',
+  'twelve_lead',
+  'twelve_lead_capture',
+  'print',
+  'etco2_toggle',
+  'energy_change',
+  'treatment_menu',
+  'patient_info',
+] as const
+
+export type StudentEventKind = (typeof STUDENT_EVENT_KINDS)[number]
+
+export function isStudentEventKind(value: unknown): value is StudentEventKind {
+  return (
+    typeof value === 'string' &&
+    (STUDENT_EVENT_KINDS as readonly string[]).includes(value)
+  )
+}
 
 export type StudentEvent = {
   id: string
@@ -36,4 +66,10 @@ export type StudentEvent = {
   label: string
   payload: unknown
   occurred_at: string
+  /**
+   * The session_state_history version in force when this action was taken.
+   * Join on it to recover the patient state behind the action. Null for rows
+   * predating migration 007, and for actions taken before the first Send.
+   */
+  state_version: number | null
 }
