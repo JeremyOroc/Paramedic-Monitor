@@ -606,6 +606,7 @@ export function MonitorPage({
         bpSys={confirmed.bp_sys}
         bpDia={confirmed.bp_dia}
         joules={defib.energy}
+        shockCount={defib.shockCount}
         spo2Waveform={confirmed.spo2_waveform}
         etco2Waveform={confirmed.etco2_waveform}
         active={{

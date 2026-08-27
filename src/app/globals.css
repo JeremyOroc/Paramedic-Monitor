@@ -106,6 +106,126 @@ body {
 .bg-wagami-z-knob { background-color: var(--wagami-z-knob); }
 .bg-wagami-z-readiness { background-color: var(--wagami-z-readiness); }
 
+.wagami-z-stage {
+  container-type: size;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-right: max(12px, env(safe-area-inset-right));
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  padding-left: max(12px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--wagami-z-backdrop) 72%, white), var(--wagami-z-backdrop) 58%, black 100%);
+}
+
+.wagami-z-shell {
+  height: min(100%, calc((100dvw - 24px) / 1.325));
+  height: min(100cqh, calc(100cqw / 1.325));
+  aspect-ratio: 1.325;
+  filter: drop-shadow(0 22px 24px color-mix(in srgb, black 58%, transparent));
+}
+
+.wagami-z-upper-housing {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--wagami-z-frame-dark) 82%, black), transparent 10%, transparent 89%, color-mix(in srgb, var(--wagami-z-frame-dark) 82%, black)),
+    linear-gradient(180deg, color-mix(in srgb, var(--wagami-z-frame) 82%, white) 0%, var(--wagami-z-frame) 8%, var(--wagami-z-frame-dark) 82%, color-mix(in srgb, var(--wagami-z-frame-dark) 76%, black) 100%);
+  box-shadow:
+    inset 0 3px 0 color-mix(in srgb, white 24%, transparent),
+    inset 0 -4px 7px color-mix(in srgb, black 30%, transparent),
+    0 5px 13px color-mix(in srgb, black 45%, transparent);
+}
+
+.wagami-z-faceplate {
+  border: clamp(1px, 0.16cqw, 3px) solid var(--wagami-z-face-edge);
+  background:
+    radial-gradient(circle at 48% 28%, color-mix(in srgb, var(--wagami-z-face) 62%, white), transparent 54%),
+    linear-gradient(110deg, color-mix(in srgb, var(--wagami-z-face) 88%, white), var(--wagami-z-face) 54%, color-mix(in srgb, var(--wagami-z-face) 88%, black));
+  box-shadow:
+    inset 0 0 clamp(12px, 2cqw, 32px) color-mix(in srgb, white 40%, transparent),
+    inset 0 -4px 9px color-mix(in srgb, black 12%, transparent);
+}
+
+.wagami-z-top-handle {
+  border: 1px solid color-mix(in srgb, var(--wagami-z-face-edge) 75%, black);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--wagami-z-face) 76%, white), color-mix(in srgb, var(--wagami-z-face) 92%, black));
+  box-shadow: inset 0 -5px 8px color-mix(in srgb, black 10%, transparent);
+}
+
+.wagami-z-screen-bezel {
+  border: clamp(2px, 0.32cqw, 5px) solid color-mix(in srgb, var(--wagami-z-bezel) 76%, white);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--wagami-z-bezel) 58%, white), var(--wagami-z-bezel) 35%, black);
+  box-shadow:
+    0 clamp(5px, 0.8cqh, 10px) clamp(8px, 1.2cqh, 16px) color-mix(in srgb, black 52%, transparent),
+    inset 0 0 0 clamp(2px, 0.25cqw, 4px) color-mix(in srgb, white 11%, transparent),
+    inset 0 0 clamp(8px, 1cqw, 14px) black;
+}
+
+.wagami-z-readiness {
+  border: clamp(1px, 0.14cqw, 3px) solid color-mix(in srgb, var(--wagami-z-readiness) 78%, white);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--wagami-z-readiness) 78%, white), var(--wagami-z-readiness) 54%, black);
+  box-shadow: inset 0 3px 8px color-mix(in srgb, black 58%, transparent);
+}
+
+.wagami-z-power-on {
+  border-color: color-mix(in srgb, var(--color-ecg-green) 66%, white);
+  background: radial-gradient(circle at 38% 30%, color-mix(in srgb, var(--color-ecg-green) 54%, white), var(--color-ecg-green) 70%, color-mix(in srgb, var(--color-ecg-green) 72%, black));
+  box-shadow:
+    inset 0 0 0 clamp(2px, 0.25cqw, 4px) color-mix(in srgb, white 22%, transparent),
+    0 0 clamp(10px, 1.2cqw, 17px) color-mix(in srgb, var(--color-ecg-green) 64%, transparent);
+}
+
+.wagami-z-shock-button {
+  border-color: color-mix(in srgb, var(--wagami-z-shock-orange) 58%, white);
+  background: radial-gradient(circle at 38% 28%, color-mix(in srgb, var(--wagami-z-shock-orange) 55%, white), var(--wagami-z-shock-orange) 58%, color-mix(in srgb, var(--wagami-z-shock-orange) 74%, black));
+  box-shadow:
+    inset 0 0 0 clamp(3px, 0.38cqw, 6px) color-mix(in srgb, white 20%, transparent),
+    0 4px 8px color-mix(in srgb, black 40%, transparent);
+}
+
+.wagami-z-charge-button {
+  border-color: color-mix(in srgb, var(--wagami-z-charge-gray) 68%, white);
+  background: radial-gradient(circle at 38% 28%, color-mix(in srgb, var(--wagami-z-charge-gray) 56%, white), var(--wagami-z-charge-gray) 64%, color-mix(in srgb, var(--wagami-z-charge-gray) 70%, black));
+  box-shadow:
+    inset 0 0 0 clamp(3px, 0.36cqw, 5px) color-mix(in srgb, white 16%, transparent),
+    0 4px 8px color-mix(in srgb, black 38%, transparent);
+}
+
+.wagami-z-knob {
+  border: clamp(4px, 0.55cqw, 8px) solid color-mix(in srgb, var(--wagami-z-knob) 58%, white);
+  background:
+    linear-gradient(90deg, transparent 0 25%, color-mix(in srgb, white 8%, transparent) 26% 28%, transparent 29% 48%, color-mix(in srgb, white 11%, transparent) 49% 52%, transparent 53% 73%, color-mix(in srgb, black 24%, transparent) 74% 77%, transparent 78%),
+    radial-gradient(circle at 40% 32%, color-mix(in srgb, var(--wagami-z-knob) 76%, white), var(--wagami-z-knob) 58%, black);
+  box-shadow:
+    inset clamp(5px, 0.7cqw, 10px) 0 0 color-mix(in srgb, white 8%, transparent),
+    inset clamp(-9px, -0.65cqw, -5px) 0 0 color-mix(in srgb, black 58%, transparent),
+    0 5px 9px color-mix(in srgb, black 45%, transparent);
+}
+
+.wagami-z-lower-body,
+.wagami-z-left-foot,
+.wagami-z-right-foot,
+.wagami-z-speaker-pod {
+  background: linear-gradient(180deg, var(--wagami-z-frame) 0%, var(--wagami-z-frame-dark) 65%, color-mix(in srgb, var(--wagami-z-frame-dark) 72%, black) 100%);
+}
+
+.wagami-z-lower-body {
+  clip-path: polygon(0 0, 100% 0, 97.5% 80%, 91% 100%, 67% 100%, 63% 94%, 37% 94%, 33% 100%, 9% 100%, 2.5% 80%);
+  border-top: 1px solid color-mix(in srgb, var(--wagami-z-frame) 64%, white);
+}
+
+.wagami-z-left-foot {
+  clip-path: polygon(0 0, 100% 0, 90% 100%, 10% 100%);
+  border-radius: 0 0 16% 20%;
+}
+
+.wagami-z-right-foot {
+  clip-path: polygon(0 0, 100% 0, 90% 100%, 10% 100%);
+  border-radius: 0 0 20% 16%;
+}
+
+.wagami-z-speaker-pod {
+  border: 1px solid color-mix(in srgb, var(--wagami-z-frame) 70%, white);
+  box-shadow: inset 0 4px 8px color-mix(in srgb, black 18%, transparent);
+}
+
 @keyframes chargePulse {
   0%, 49% {
     background-color: #ffff00;

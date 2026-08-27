@@ -6,13 +6,18 @@
 ---
 
 ## Current Phase
-**Wagami Z live monitor surface — COMPLETE.** The confirmed Wagami Z now replaces the placeholder after dispatch with the approved live French monitor, reference-derived shell, functional two-second power cycle, and inert non-power controls. Source imagery remains available locally but is excluded from the public repository; the tracked research document uses source timestamps instead.
+**Wagami Z responsive visual redesign — COMPLETE.** The accepted code-native shell and live touchscreen now follow the approved reference on supported landscape displays, with safe-area-aware fixed-aspect scaling at usable CSS viewports of at least 1024×700. Portrait and undersized windows receive exact, state-preserving French blocking guidance. The power-only functional boundary, two-second centered-WAGAMI boot, live waveforms/vitals, PI and shock-count decoration, and inert non-power controls are preserved. iPad mini receives no special code or QA and is not certified, although it may render when it passes the same capability rule.
 
 > Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
 
 ---
 
 ## Completed
+- [x] **Wagami Z responsive visual redesign — COMPLETE:**
+  - [x] Rebuilt the shell, faceplate, bezel, controls, lower body, speaker, and touchscreen from normalized reference landmarks using one uniformly contained fixed-aspect composition
+  - [x] Added safe-area and live visual-viewport fitting for landscape iPads and the 1920×1080 development target, plus exact state-preserving French fallbacks for portrait and undersized viewports
+  - [x] Preserved live clinical semantics and power behavior while aligning the French navigation, four waveform/vital rows, PI, shock count, status decoration, and bottom action grid to the approved reference
+  - [x] All 822 tests pass; TypeScript and the production build pass; ESLint has zero errors (12 existing warnings); rendered 1024×768 and 1180×820 landscape QA, portrait/narrow fallback QA, power cycling, inert controls, live-value rendering, and state restoration pass
 - [x] **Wagami Z live monitor surface — COMPLETE:**
   - [x] Replaced the post-dispatch placeholder and `/?dev=2` shortcut with one production Wagami Z component, keeping normal dispatch entry powered off and the direct shortcut powered on
   - [x] Added the complete WAGAMI/Z shell, French DEA monitoring screen, live ECG/EtCO2/SpO2 and FC/EtCO2/SpO2/PNI presentation, visual-only alarms, fixed lanes, and immediate confirmed PNI

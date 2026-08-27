@@ -5,6 +5,49 @@
 
 ---
 
+## [2026-08-27] [monitor] — Complete the responsive Wagami Z reference redesign
+
+- Rebuilt the Wagami Z shell and touchscreen from measured reference landmarks, including the faceplate, bezel, right controls, lower body, speaker, fixed clinical lanes, French mode/action labels, PI, shock count, and device-status decoration.
+- Added safe-area-aware live visual-viewport fitting for supported landscape displays, exact state-preserving French portrait/undersized fallbacks, and a Wagami-Z-only escape from the existing desktop minimum-width rule.
+- Preserved live instructor-driven waveforms/vitals, the repeatable two-second centered-WAGAMI power cycle, immediate PNI, and accessible but inert non-power controls.
+- Added hook and component regressions. All 822 tests, TypeScript, ESLint (0 errors; 12 existing warnings), and the production build pass; rendered 1024×768 and 1180×820 landscape QA plus portrait/narrow, power, inert-control, live-data, and restoration checks pass.
+
+## [2026-08-27] [planning/monitor] — Complete Wagami Z responsive design discovery
+
+- Set measurable ±2% primary and ±4% decorative landmark tolerances, with visual review for material rendering and antialiasing.
+- Required live Safari visual-viewport refitting, fixed simulated-device typography, and a pure-black state-preserving unsupported-display surface.
+- Made automated and rendered QA completion requirements and added a non-blocking real-iPad validation checklist; recorded the capability-based fixed-aspect decision in ADR 0001.
+
+## [2026-08-27] [planning/monitor] — Resolve Wagami Z iPad mini semantics
+
+- Defined the device surface by a landscape safe CSS viewport of at least 1024×700 rather than by iPad model detection.
+- Excluded iPad mini from testing, certification, optimization, and dedicated layouts without actively blocking a mini that happens to satisfy the general capability rule.
+- Preserved the non-mini iPad QA matrix and removed the contradictory requirement for a guaranteed mini-only fallback.
+
+## [2026-08-27] [planning/monitor] — Define Wagami Z fit and responsive acceptance
+
+- Selected exact French portrait and unsupported-viewport copy, a Wagami-Z-only exception to the desktop minimum width, uniform desktop/iPad fit targets, and no cropping or axis distortion.
+- Defined PI and shock-count decoration from existing monitor state, a four-viewport rendered QA matrix, and measured Image #1 landmark acceptance instead of visual inspection alone.
+- Kept iPad mini exclusion open because its landscape CSS viewport can pass the proposed `1024×700` capability threshold; implementation remains blocked on the intended exclusion semantics.
+
+## [2026-08-27] [planning/monitor] — Define Wagami Z fidelity and unsupported displays
+
+- Explicitly excluded iPad mini, portrait, and narrow iPad windows from the rendered monitor surface and selected a minimal French blocking screen rather than clipping or compact reflow.
+- Selected a fully code-native rebuild of the reference shell, physical controls, materials, lower body, bezel, touchscreen proportions, density, scales, status decoration, and copy without committing the raster concept.
+- Preserved live instructor-driven waveform/rhythm semantics and the existing power-only functional boundary while permitting larger invisible touch targets around visually faithful controls.
+
+## [2026-08-27] [planning/monitor] — Define the Wagami Z training-display contract
+
+- Made the iPad training display primary over the occasional 1920×1080 development display and limited the simulator to landscape orientation.
+- Selected full-screen Safari and standalone/PWA support with safe-area-aware uniform scaling of one fully visible fixed-aspect shell; narrow multitasking windows and portrait compositions will not compress or crop the device.
+- Required visually faithful controls with enlarged invisible touch targets and an explicit iPad mini support attempt governed by readability and touch criteria.
+
+## [2026-08-27] [planning/monitor] — Expand Wagami Z display support to iPad
+
+- Reopened the Wagami Z visual composition after the implemented render diverged from the approved reference and identified viewport aspect ratio as distinct from physical monitor resolution.
+- Defined the occasional 1920×1080 development display and the multi-resolution iPad training display as separate domain terms.
+- Replaced the desktop-only composition assumption with a pending two-display contract; orientation, Safari/standalone/window behavior, safe areas, minimum viewport, scaling, and fidelity remain to be resolved before implementation.
+
 ## [2026-08-27] [repository] — Keep Wagami Z source media local-only
 
 - Added ignore rules for the captured source-video frames, original reference-image convention, transcript exports, and reference-derived Wagami Z concept PNGs so they cannot be added to the public repository accidentally.

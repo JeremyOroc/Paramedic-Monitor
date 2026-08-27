@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { WagamiZDevice, type WagamiZDeviceProps } from '@/components/monitor/WagamiZDevice'
 
@@ -31,8 +31,22 @@ const DEFAULT_PROPS: WagamiZDeviceProps = {
 }
 
 describe('WagamiZDevice', () => {
+  const originalWidth = window.innerWidth
+  const originalHeight = window.innerHeight
+
+  const setViewport = (width: number, height: number) => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: height })
+    act(() => window.dispatchEvent(new Event('resize')))
+  }
+
+  beforeEach(() => {
+    setViewport(1920, 1080)
+  })
+
   afterEach(() => {
     vi.useRealTimers()
+    setViewport(originalWidth, originalHeight)
   })
 
   it('boots from off for two seconds with a centered WAGAMI mark', () => {
@@ -98,5 +112,36 @@ describe('WagamiZDevice', () => {
 
     expect(screen.getByTestId('wagami-z-device')).toHaveAttribute('data-power-state', 'on')
     expect(onPowerOff).not.toHaveBeenCalled()
+  })
+
+  it('renders the approved shell landmarks without registered marks', () => {
+    render(<WagamiZDevice {...DEFAULT_PROPS} initialPowerState="on" />)
+
+    expect(screen.getByTestId('wagami-z-shell')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-z-screen-bezel')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-z-lower-body')).toBeInTheDocument()
+    expect(screen.getByLabelText('Haut-parleur')).toBeInTheDocument()
+    expect(screen.getByText('WAGAMI')).toBeInTheDocument()
+    expect(screen.getByText('Z')).toBeInTheDocument()
+    expect(screen.queryByText('®')).toBeNull()
+    expect(screen.getByTestId('wagami-z-device')).not.toHaveClass('min-w-[1024px]')
+  })
+
+  it('shows exact state-preserving French guidance for unsupported viewports', () => {
+    render(<WagamiZDevice {...DEFAULT_PROPS} initialPowerState="on" />)
+
+    setViewport(768, 1024)
+    expect(screen.getByRole('heading', { name: 'Mode paysage requis' })).toBeInTheDocument()
+    expect(screen.getByText('Tournez l’iPad pour continuer.')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-z-device')).toHaveAttribute('data-power-state', 'on')
+
+    setViewport(1000, 700)
+    expect(screen.getByRole('heading', { name: 'Affichage non pris en charge' })).toBeInTheDocument()
+    expect(screen.getByText('Utilisez un iPad compatible en plein écran.')).toBeInTheDocument()
+
+    setViewport(1180, 820)
+    expect(screen.getByTestId('wagami-z-shell')).toBeInTheDocument()
+    expect(screen.getByTestId('mock-wagami-z-screen')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-z-device')).toHaveAttribute('data-power-state', 'on')
   })
 })

@@ -47,6 +47,7 @@ const BASE_PROPS = {
   bpSys: 120,
   bpDia: 80,
   joules: 120,
+  shockCount: 0,
   spo2Waveform: 'normal' as const,
   etco2Waveform: 'normal' as const,
   active: ACTIVE,
@@ -69,6 +70,12 @@ describe('WagamiZScreen', () => {
     expect(screen.getByRole('button', { name: '12 LEAD' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'ANALYSER' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Énergie 120 joules' })).toHaveTextContent('120 J')
+    expect(screen.getByLabelText('Nombre de chocs')).toHaveTextContent('00')
+    expect(screen.getByText('ECG')).toBeInTheDocument()
+    expect(screen.queryByText('ÉLECTRODES')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Options' })).toHaveTextContent('')
+    expect(screen.getByTestId('wagami-z-empty-pni-lane')).toBeInTheDocument()
+    expect(screen.getByLabelText('Indice de perfusion')).toHaveTextContent('3.3')
 
     expect(screen.getByTestId('mock-ecg')).toHaveAttribute('data-heart-rate', '72')
     expect(screen.getByTestId('mock-etco2')).toHaveAttribute('data-connected', 'true')
@@ -80,6 +87,22 @@ describe('WagamiZScreen', () => {
     expect(vitals).toHaveTextContent('98')
     expect(vitals).toHaveTextContent('120/80')
     expect(vitals).toHaveTextContent('(93)')
+  })
+
+  it('derives PI decoration from SpO2 signal strength and hides it when off', () => {
+    const { rerender } = render(
+      <WagamiZScreen {...BASE_PROPS} spo2Waveform="weak" />,
+    )
+    expect(screen.getByLabelText('Indice de perfusion')).toHaveTextContent('0.5')
+
+    rerender(
+      <WagamiZScreen
+        {...BASE_PROPS}
+        spo2Waveform="off"
+        active={{ ...ACTIVE, spo2: false }}
+      />,
+    )
+    expect(screen.queryByLabelText('Indice de perfusion')).toBeNull()
   })
 
   it('reserves inactive lanes and reports them as OFF', () => {

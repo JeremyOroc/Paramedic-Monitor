@@ -27,3 +27,11 @@ _Avoid_: ZOLL, Zenix, Wagami-Z
 **Inert control**:
 A non-power Wagami Z control that visibly acknowledges pointing, focus, and pressing without changing monitor state, producing audio, or recording a trainee action.
 _Avoid_: Disabled control, non-clickable control
+
+**Development display**:
+The occasional 1920×1080 desktop monitor used to build, inspect, and test the trainee monitor.
+_Avoid_: Primary display, production monitor
+
+**Training display**:
+An explicitly supported non-mini iPad used in landscape orientation by a trainee during an attempt. Full-screen Safari and standalone display modes are supported; narrow multitasking windows and portrait layouts are outside the monitor surface. iPad mini is not tested, certified, or optimized, although its device surface may render when its usable viewport passes the general capability threshold.
+_Avoid_: Mobile display, tablet monitor
