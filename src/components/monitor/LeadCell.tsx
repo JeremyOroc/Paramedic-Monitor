@@ -2,7 +2,8 @@
 
 import { ECG_SWEEP_MS, getLeadWaveform, type LeadName } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
-import { COLORS, cn } from '@/lib/utils'
+import { COLORS } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
 
 type LeadCellProps = {
@@ -41,10 +42,7 @@ export function LeadCell({ label, rhythm, hr, className }: LeadCellProps) {
         className,
       )}
     >
-      <span
-        className="absolute top-1 left-2 text-xs font-mono font-bold text-ecg-green z-10"
-        style={{ textShadow: '0 0 2px black' }}
-      >
+      <span className="absolute top-1 left-2 z-10 text-xs font-mono font-bold text-ecg-green drop-shadow-[0_0_2px_black]">
         {label}
       </span>
       <canvas ref={canvasRef} className="block h-full w-full" />

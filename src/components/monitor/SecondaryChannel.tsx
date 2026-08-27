@@ -8,7 +8,8 @@ import {
   getSpo2Waveform,
 } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
-import { COLORS, cn } from '@/lib/utils'
+import { COLORS } from '@/lib/constants'
+import { cn } from '@/lib/utils'
 import type { Etco2Waveform, Spo2Waveform } from '@/types/vitals'
 import { DisconnectedWaveform } from './DisconnectedWaveform'
 
@@ -31,6 +32,7 @@ type SecondaryChannelProps = {
   selectedScale?: boolean
   connected?: boolean
   loading?: boolean
+  showLabels?: boolean
 }
 
 function LiveSecondaryCanvas({
@@ -97,25 +99,28 @@ export function SecondaryChannel({
   selectedScale = false,
   connected = true,
   loading = false,
+  showLabels = true,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
 
   return (
     <div className={cn('relative h-full w-full', className)}>
-      <div
-        className={cn(
-          'absolute top-1 left-2 z-10 flex items-center gap-20 text-xs font-mono font-bold',
-          isEtco2 ? 'text-purple-etco2' : 'text-yellow-spo2',
-        )}
-      >
-        <span className={cn('px-1 py-0.5', selectedLabel && 'bg-[var(--color-selection-blue)] text-white')}>
-          {isEtco2 ? 'EtCO2' : 'SpO2'}
-        </span>
-        <span className={cn('px-1 py-0.5', selectedScale && 'bg-[var(--color-selection-blue)] text-white')}>
-          {isEtco2 ? '0 to 60 mmHg' : '1x'}
-        </span>
-      </div>
-      {isEtco2 && (
+      {showLabels && (
+        <div
+          className={cn(
+            'absolute top-1 left-2 z-10 flex items-center gap-20 text-xs font-mono font-bold',
+            isEtco2 ? 'text-purple-etco2' : 'text-yellow-spo2',
+          )}
+        >
+          <span className={cn('px-1 py-0.5', selectedLabel && 'bg-[var(--color-selection-blue)] text-white')}>
+            {isEtco2 ? 'EtCO2' : 'SpO2'}
+          </span>
+          <span className={cn('px-1 py-0.5', selectedScale && 'bg-[var(--color-selection-blue)] text-white')}>
+            {isEtco2 ? '0 to 60 mmHg' : '1x'}
+          </span>
+        </div>
+      )}
+      {isEtco2 && showLabels && (
         <div className="absolute right-2 top-1 bottom-1 flex flex-col justify-between text-[10px] font-mono text-purple-etco2 z-10">
           <span>150</span>
           <span>75</span>

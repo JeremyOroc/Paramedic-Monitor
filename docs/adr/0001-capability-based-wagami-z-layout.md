@@ -1,0 +1,3 @@
+# Use a capability-based fixed-aspect Wagami Z layout
+
+Wagami Z uses one safe-area-aware, fixed-aspect composition that renders in landscape usable CSS viewports of at least 1024×700, with supported non-mini iPads as the primary training displays and 1920×1080 desktop as the secondary development display. We chose capability checks and uniform containment instead of device detection or per-iPad layouts so the shell remains faithful across display sizes without adding a compact iPad mini branch; iPad mini is therefore neither tested nor certified, although it may render when it passes the same capability rule, while portrait and undersized viewports receive a state-preserving French blocking screen.

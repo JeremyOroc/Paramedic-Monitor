@@ -46,3 +46,9 @@ dev-server.err.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Third-party and reference-derived Wagami Z research media (local only)
+/screenshots/wagami-z-video/
+/screenshots/wagami-z-original-reference.*
+/docs/design/wagami-z-*-concept.png
+/docs/research/wagami-z-video-transcript.*

@@ -1,5 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { COLORS } from '@/lib/constants'
+
 import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
@@ -18,6 +21,14 @@ export const metadata: Metadata = {
   description: "Cardiac monitor simulator for paramedic training",
   icons: { icon: '/logo.png' },
 };
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: COLORS.bg,
+  colorScheme: 'dark',
+}
 
 export default function RootLayout({
   children,

@@ -16,7 +16,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 > `student_events.state_version` do not exist and the new event kinds will be rejected by the check
 > constraint. Apply both before the next session, oldest first.
 
-**Wagami defibrillator model selection — COMPLETE.** The Dev Console now stages Wagami X/Z through Save → Send, locks the confirmed model per active attempt, persists it in scenarios and session state, and routes Wagami Z trainees from the unchanged dispatch flow to a full-screen Work In Progress placeholder.
+**Wagami Z responsive visual redesign — COMPLETE.** The accepted code-native shell and live touchscreen now follow the approved reference on supported landscape displays, with safe-area-aware fixed-aspect scaling at usable CSS viewports of at least 1024×700. Portrait and undersized windows receive exact, state-preserving French blocking guidance. The power-only functional boundary, two-second centered-WAGAMI boot, live waveforms/vitals, PI and shock-count decoration, and inert non-power controls are preserved. iPad mini receives no special code or QA and is not certified, although it may render when it passes the same capability rule.
 
 > Note: PLAN.md phases were re-scoped on 2026-05-10. The user opted to defer sessions and realtime to the end and start with a static monitor at `/` that has working menu navigation. Phases 2 (session routing), 7 (realtime), and 10 (scenarios) are deferred. The work below corresponds to a focused subset of PLAN.md phases 3 (static UI), 6 (defib only), and 9 (patient mode popup only).
 
@@ -33,6 +33,20 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
   - [x] Dropped the seven anon-readable policies left by migration 001 and the unused `vitals_snapshots` table; health check repointed onto `sessions`
   - [x] All 851 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the Next.js production build pass
   - [ ] **Migrations 006 and 007 applied to the live Supabase project** — outstanding
+- [x] **Wagami Z responsive visual redesign — COMPLETE:**
+  - [x] Rebuilt the shell, faceplate, bezel, controls, lower body, speaker, and touchscreen from normalized reference landmarks using one uniformly contained fixed-aspect composition
+  - [x] Added safe-area and live visual-viewport fitting for landscape iPads and the 1920×1080 development target, plus exact state-preserving French fallbacks for portrait and undersized viewports
+  - [x] Preserved live clinical semantics and power behavior while aligning the French navigation, four waveform/vital rows, PI, shock count, status decoration, and bottom action grid to the approved reference
+  - [x] All 822 tests pass; TypeScript and the production build pass; ESLint has zero errors (12 existing warnings); rendered 1024×768 and 1180×820 landscape QA, portrait/narrow fallback QA, power cycling, inert controls, live-value rendering, and state restoration pass
+- [x] **Wagami Z live monitor surface — COMPLETE:**
+  - [x] Replaced the post-dispatch placeholder and `/?dev=2` shortcut with one production Wagami Z component, keeping normal dispatch entry powered off and the direct shortcut powered on
+  - [x] Added the complete WAGAMI/Z shell, French DEA monitoring screen, live ECG/EtCO2/SpO2 and FC/EtCO2/SpO2/PNI presentation, visual-only alarms, fixed lanes, and immediate confirmed PNI
+  - [x] Added the repeatable two-second centered-WAGAMI boot cycle and made every non-power touchscreen/physical control accessible, visibly interactive, and inert
+  - [x] Added component and route regressions; all 817 tests pass with four workers, TypeScript and the production build pass, ESLint has zero errors (12 existing warnings), and rendered 1242×736 browser QA has a clean console and no framework overlay
+- [x] **Wagami Z visual/workflow reference research — COMPLETE:**
+  - [x] Captured and inspected representative frames across power, manual energy/charge/shock/disarm, AED analysis/CPR/pause, advanced monitoring, and mode switching
+  - [x] Identified AED-paused advanced monitoring as the supplied still image's baseline state and documented the current inert-control boundary versus future workflows
+  - [x] Preserved the captured frames locally under `screenshots/wagami-z-video/`, excluded source/reference media from version control, and retained the findings as timestamped original writing in `docs/research/wagami-z-defibrillation-video.md`
 - [x] **Wagami defibrillator model selection — COMPLETE:**
   - [x] Added a fourth Defibrillators tab with accessible Wagami X/Z choices, Wagami X defaults, dirty/pending/confirmed styling, Start gating, active-attempt locking, and New Attempt preservation
   - [x] Added backward-compatible scenario and shared-session model state without a database migration; Wagami Z alone is meaningful scenario content and active attempts block scenario load/unload
