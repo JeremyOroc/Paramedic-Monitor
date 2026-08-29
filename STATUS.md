@@ -23,6 +23,13 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Instructor Console scenario safety and row actions — COMPLETE:**
+  - [x] Renamed the visible console, removed obsolete local-monitor guidance, Supabase subtitle, and Caller Info Analyse/action copy
+  - [x] Moved Save/Delete onto every saved row with loaded-and-dirty Save gating, isolated unloaded-row deletion, and retained loaded-scenario values as a draft after deletion
+  - [x] Added explicit selected scenario drafts, virtual empty-library Folder 1 behavior, title-only dirty support, and local confirmed draft deletion
+  - [x] Replaced every Scenarios-tab browser confirmation with the reusable amber/dark/cyan accessible dialog, including backdrop/Escape cancellation and focus containment/restoration
+  - [x] Locked folder and scenario mutations during active attempts and confirmed the row layout has no horizontal overflow at the 1024px minimum
+  - [x] All 869 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and rendered 1366×768/1024×768 browser QA pass with a clean console
 - [x] **Phase 12 — Evaluation record & database hardening — CODE COMPLETE:**
   - [x] Added append-only `session_state_history` written beside (never on) the student poll path, so the patient state behind every action survives the next Send
   - [x] Stamped `student_events.state_version` at insert, linking each trainee action to the exact state it was taken against

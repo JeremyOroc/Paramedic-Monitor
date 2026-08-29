@@ -9,10 +9,12 @@ import {
   type MouseEvent,
 } from 'react'
 
+import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { cn } from '@/lib/utils'
 import type {
   SavedScenario,
   SavedScenarioListResponse,
+  SavedScenarioSummary,
   ScenarioFolder,
   ScenarioFolderListResponse,
 } from '@/types/savedScenario'
@@ -21,6 +23,11 @@ type ScenarioLibraryPanelProps = {
   selectedFolderId: string
   expandedFolderIds: ReadonlySet<string>
   loadedScenarioId: string | null
+  scenarioDraftActive: boolean
+  scenarioDraftTitle: string
+  scenarioIsDirty: boolean
+  scenarioAction: 'idle' | 'saving' | 'deleting'
+  scenarioError: string
   refreshVersion: number
   onSelectedFolderChange: (folderId: string) => void
   onExpandedFolderChange: (folderId: string, expanded: boolean) => void
@@ -28,6 +35,10 @@ type ScenarioLibraryPanelProps = {
   onUnloadScenario: () => void
   onFolderDeleted: (folderId: string) => void
   onLoadedScenarioFolderChange: (folderId: string) => void
+  onNewScenario: () => void
+  onSaveScenario: () => void
+  onDeleteScenario: (scenario: SavedScenarioSummary) => void
+  onDeleteDraft: () => void
   scenarioSelectionDisabled?: boolean
 }
 
@@ -83,10 +94,116 @@ function reorderScenarioList(
   return next.map((scenario, index) => ({ ...scenario, position: index + 1 }))
 }
 
+type ScenarioRowActionsProps = {
+  title: string
+  saveDisabled: boolean
+  deleteDisabled: boolean
+  saving: boolean
+  deleting: boolean
+  onSave: () => void
+  onDelete: () => void
+}
+
+function ScenarioRowActions({
+  title,
+  saveDisabled,
+  deleteDisabled,
+  saving,
+  deleting,
+  onSave,
+  onDelete,
+}: ScenarioRowActionsProps) {
+  return (
+    <div
+      className="grid grid-cols-2 gap-2"
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <button
+        type="button"
+        aria-label={`Save ${title}`}
+        onClick={onSave}
+        disabled={saveDisabled}
+        className="border border-ecg-green bg-neutral-900 px-3 py-2 font-mono text-[10px] font-bold uppercase text-ecg-green hover:bg-ecg-green/10 focus:outline-none focus:ring-2 focus:ring-ecg-green disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
+      >
+        {saving ? 'Saving' : 'Save'}
+      </button>
+      <button
+        type="button"
+        aria-label={`Delete ${title}`}
+        onClick={onDelete}
+        disabled={deleteDisabled}
+        className="border border-alarm-red bg-neutral-900 px-3 py-2 font-mono text-[10px] font-bold uppercase text-alarm-red hover:bg-alarm-red/10 focus:outline-none focus:ring-2 focus:ring-alarm-red disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
+      >
+        {deleting ? 'Deleting' : 'Delete'}
+      </button>
+    </div>
+  )
+}
+
+type ScenarioDraftRowProps = {
+  title: string
+  dirty: boolean
+  action: 'idle' | 'saving' | 'deleting'
+  disabled: boolean
+  onUnload: () => void
+  onSave: () => void
+  onDelete: () => void
+}
+
+function ScenarioDraftRow({
+  title,
+  dirty,
+  action,
+  disabled,
+  onUnload,
+  onSave,
+  onDelete,
+}: ScenarioDraftRowProps) {
+  return (
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-pressed="true"
+      aria-disabled={disabled}
+      aria-label={`Unload ${title}`}
+      onClick={disabled ? undefined : onUnload}
+      onKeyDown={(event) => {
+        if (disabled || (event.key !== 'Enter' && event.key !== ' ')) return
+        event.preventDefault()
+        onUnload()
+      }}
+      className={cn(
+        'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border border-ecg-green bg-ecg-green/10 p-2 focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+        disabled && 'cursor-not-allowed opacity-60',
+      )}
+    >
+      <div className="min-w-0 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white">
+        <span className="block truncate">{title}</span>
+        <span className="mt-1 block font-mono text-[10px] uppercase text-pending-amber">Draft</span>
+      </div>
+      <ScenarioRowActions
+        title={title}
+        saveDisabled={!dirty || action !== 'idle' || disabled}
+        deleteDisabled={action !== 'idle' || disabled}
+        saving={action === 'saving'}
+        deleting={action === 'deleting'}
+        onSave={onSave}
+        onDelete={onDelete}
+      />
+    </div>
+  )
+}
+
 export function ScenarioLibraryPanel({
   selectedFolderId,
   expandedFolderIds,
   loadedScenarioId,
+  scenarioDraftActive,
+  scenarioDraftTitle,
+  scenarioIsDirty,
+  scenarioAction,
+  scenarioError,
   refreshVersion,
   onSelectedFolderChange,
   onExpandedFolderChange,
@@ -94,6 +211,10 @@ export function ScenarioLibraryPanel({
   onUnloadScenario,
   onFolderDeleted,
   onLoadedScenarioFolderChange,
+  onNewScenario,
+  onSaveScenario,
+  onDeleteScenario,
+  onDeleteDraft,
   scenarioSelectionDisabled = false,
 }: ScenarioLibraryPanelProps) {
   const [folders, setFolders] = useState<ScenarioFolder[]>([])
@@ -109,6 +230,7 @@ export function ScenarioLibraryPanel({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
+  const [folderPendingDeletion, setFolderPendingDeletion] = useState<ScenarioFolder | null>(null)
 
   const loadFolders = useCallback(async () => {
     const data = await requestJson<ScenarioFolderListResponse>('/api/scenario-folders')
@@ -218,15 +340,6 @@ export function ScenarioLibraryPanel({
   }
 
   const deleteFolder = async (folder: ScenarioFolder) => {
-    if (
-      folder.scenario_count > 0 &&
-      !window.confirm(
-        `Delete "${folder.name}" and its ${folder.scenario_count} ${folder.scenario_count === 1 ? 'scenario' : 'scenarios'}? This cannot be undone.`,
-      )
-    ) {
-      return
-    }
-
     await runMutation(async () => {
       await requestEmpty(`/api/scenario-folders/${folder.id}`, { method: 'DELETE' })
       onFolderDeleted(folder.id)
@@ -342,6 +455,7 @@ export function ScenarioLibraryPanel({
 
   const handleFolderDrop = (event: DragEvent<HTMLElement>, folderId: string) => {
     event.preventDefault()
+    if (scenarioSelectionDisabled || status === 'working' || scenarioAction !== 'idle') return
     const scenarioId = event.dataTransfer.getData('text/scenario-id')
     const sourceFolderId = [...expandedFolderIds].find((expandedFolderId) =>
       (scenariosByFolderId[expandedFolderId] ?? [])
@@ -358,6 +472,7 @@ export function ScenarioLibraryPanel({
   ) => {
     event.preventDefault()
     event.stopPropagation()
+    if (scenarioSelectionDisabled || status === 'working' || scenarioAction !== 'idle') return
     const bounds = event.currentTarget.getBoundingClientRect()
     const edge = event.clientY >= bounds.top + bounds.height / 2 ? 'after' : 'before'
     setDropTarget({ scenarioId, edge })
@@ -373,7 +488,13 @@ export function ScenarioLibraryPanel({
     const draggedScenarioId = event.dataTransfer.getData('text/scenario-id')
     const edge = dropTarget?.scenarioId === targetScenarioId ? dropTarget.edge : 'before'
     setDropTarget(null)
-    if (!draggedScenarioId || draggedScenarioId === targetScenarioId || status === 'working') {
+    if (
+      !draggedScenarioId ||
+      draggedScenarioId === targetScenarioId ||
+      status === 'working' ||
+      scenarioAction !== 'idle' ||
+      scenarioSelectionDisabled
+    ) {
       return
     }
     const scenarios = scenariosByFolderId[folderId] ?? []
@@ -386,21 +507,43 @@ export function ScenarioLibraryPanel({
     void persistScenarioOrder(folderId, scenarios, next)
   }
 
+  const draftTitle = scenarioDraftTitle.trim() || 'Untitled Scenario'
+  const controlsDisabled =
+    status === 'working' || scenarioAction !== 'idle' || scenarioSelectionDisabled
+
   return (
     <section className="border border-neutral-800 bg-neutral-950 p-4" aria-label="Scenarios library">
       <div className="flex items-center justify-between gap-3 border-b border-neutral-800 pb-3">
-        <div>
-          <h2 className="text-sm uppercase tracking-wider text-neutral-400">Scenarios</h2>
-          <p className="mt-1 text-xs text-neutral-600">Global Supabase library</p>
+        <h2 className="text-sm uppercase tracking-wider text-neutral-400">Scenarios</h2>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onNewScenario}
+            disabled={
+              loading ||
+              status === 'working' ||
+              scenarioAction !== 'idle' ||
+              scenarioSelectionDisabled
+            }
+            className="border border-cyan-bp bg-cyan-bp/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            New Scenario
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreatingFolder(true)}
+            disabled={
+              creatingFolder ||
+              loading ||
+              status === 'working' ||
+              scenarioAction !== 'idle' ||
+              scenarioSelectionDisabled
+            }
+            className="border border-cyan-bp bg-cyan-bp/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            New Folder
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreatingFolder(true)}
-          disabled={creatingFolder || status === 'working'}
-          className="border border-cyan-bp bg-cyan-bp/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/20 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          New Folder
-        </button>
       </div>
 
       {creatingFolder ? (
@@ -420,7 +563,7 @@ export function ScenarioLibraryPanel({
           />
           <button
             type="submit"
-            disabled={!newFolderName.trim() || status === 'working'}
+            disabled={!newFolderName.trim() || controlsDisabled}
             className="border border-ecg-green px-3 py-2 font-mono text-xs uppercase text-ecg-green disabled:opacity-40"
           >
             Create
@@ -438,13 +581,46 @@ export function ScenarioLibraryPanel({
         </form>
       ) : null}
 
-      {error ? <p role="alert" className="mt-3 text-sm font-semibold text-alarm-red">{error}</p> : null}
+      {error || scenarioError ? (
+        <p role="alert" className="mt-3 text-sm font-semibold text-alarm-red">
+          {error || scenarioError}
+        </p>
+      ) : null}
 
       <div className="mt-3 max-h-96 overflow-y-auto border border-neutral-800" data-testid="scenario-folder-scroll">
         {loading && folders.length === 0 ? (
           <p className="p-4 text-sm text-neutral-500">Loading scenarios…</p>
+        ) : folders.length === 0 && scenarioDraftActive ? (
+          <section className="border-b border-neutral-800 last:border-b-0">
+            <div className="bg-cyan-bp/10 px-2 py-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span aria-hidden="true" className="font-mono text-cyan-bp">−</span>
+                <span className="truncate font-mono text-sm font-bold uppercase tracking-wider text-neutral-200">
+                  Folder 1
+                </span>
+                <span className="text-xs text-neutral-600">(0)</span>
+              </div>
+            </div>
+            <div
+              role="region"
+              className="grid gap-2 bg-black/40 p-2"
+              aria-label="Folder 1 scenarios"
+            >
+              <ScenarioDraftRow
+                title={draftTitle}
+                dirty={scenarioIsDirty}
+                action={scenarioAction}
+                disabled={scenarioSelectionDisabled}
+                onUnload={onDeleteDraft}
+                onSave={onSaveScenario}
+                onDelete={onDeleteDraft}
+              />
+            </div>
+          </section>
         ) : folders.length === 0 ? (
-          <p className="p-4 text-sm text-neutral-500">No scenario folders. Saving a scenario will create Folder 1.</p>
+          <p className="p-4 text-sm text-neutral-500">
+            No scenario folders. Select New Scenario to start a draft; Folder 1 will be created when you save.
+          </p>
         ) : (
           folders.map((folder) => {
             const selectedFolder = folder.id === selectedFolderId
@@ -475,7 +651,7 @@ export function ScenarioLibraryPanel({
                         aria-label={`Rename ${folder.name}`}
                         className="min-w-0 border border-neutral-700 bg-black px-2 py-1 text-sm text-white"
                       />
-                      <button type="submit" disabled={!renameValue.trim()} className="text-xs uppercase text-ecg-green disabled:opacity-40">Save</button>
+                      <button type="submit" disabled={!renameValue.trim() || controlsDisabled} className="text-xs uppercase text-ecg-green disabled:opacity-40">Save</button>
                       <button type="button" onClick={() => setRenamingFolderId(null)} className="text-xs uppercase text-neutral-400">Cancel</button>
                     </form>
                   ) : (
@@ -506,15 +682,15 @@ export function ScenarioLibraryPanel({
                           setRenamingFolderId(folder.id)
                           setRenameValue(folder.name)
                         }}
-                        disabled={status === 'working'}
+                        disabled={controlsDisabled}
                         className="font-mono text-[10px] uppercase text-cyan-bp disabled:opacity-40"
                       >
                         Rename
                       </button>
                       <button
                         type="button"
-                        onClick={() => void deleteFolder(folder)}
-                        disabled={status === 'working'}
+                        onClick={() => setFolderPendingDeletion(folder)}
+                        disabled={controlsDisabled}
                         className="font-mono text-[10px] uppercase text-alarm-red disabled:opacity-40"
                       >
                         Delete
@@ -529,9 +705,20 @@ export function ScenarioLibraryPanel({
                     className="grid gap-2 bg-black/40 p-2"
                     aria-label={`${folder.name} scenarios`}
                   >
+                    {scenarioDraftActive && selectedFolder ? (
+                      <ScenarioDraftRow
+                        title={draftTitle}
+                        dirty={scenarioIsDirty}
+                        action={scenarioAction}
+                        disabled={scenarioSelectionDisabled}
+                        onUnload={onDeleteDraft}
+                        onSave={onSaveScenario}
+                        onDelete={onDeleteDraft}
+                      />
+                    ) : null}
                     {loadingScenarios && scenariosByFolderId[folder.id] === undefined ? (
                       <p className="px-2 py-3 text-sm text-neutral-600">Loading scenarios…</p>
-                    ) : scenarios.length === 0 ? (
+                    ) : scenarios.length === 0 && !(scenarioDraftActive && selectedFolder) ? (
                       <p className="px-2 py-3 text-sm text-neutral-600">No scenarios in this folder.</p>
                     ) : (
                       scenarios.map((scenario, index) => {
@@ -542,11 +729,11 @@ export function ScenarioLibraryPanel({
                           <div
                             key={scenario.id}
                             role="button"
-                            tabIndex={0}
+                            tabIndex={scenarioSelectionDisabled ? -1 : 0}
                             aria-pressed={selected}
                             aria-disabled={scenarioSelectionDisabled}
                             aria-label={`${selected ? 'Unload' : 'Load'} ${scenario.title}`}
-                            draggable={status === 'idle'}
+                            draggable={!controlsDisabled}
                             onClick={() => void loadScenario(scenario.id)}
                             onKeyDown={(event) => activateScenario(event, scenario.id)}
                             onDragStart={(event) => {
@@ -562,7 +749,7 @@ export function ScenarioLibraryPanel({
                             onDrop={(event) => handleScenarioDrop(event, folder.id, scenario.id)}
                             onDragEnd={() => setDropTarget(null)}
                             className={cn(
-                              'relative grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto_minmax(8rem,auto)] items-center gap-2 border p-2 focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+                              'relative grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border p-2 focus:outline-none focus:ring-2 focus:ring-cyan-bp',
                               selected
                                 ? 'border-ecg-green bg-ecg-green/10'
                                 : 'border-neutral-800 bg-neutral-950 hover:border-cyan-bp/60',
@@ -575,52 +762,59 @@ export function ScenarioLibraryPanel({
                             <div className="min-w-0 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white">
                               <span className="block truncate">{scenario.title}</span>
                             </div>
+                            <ScenarioRowActions
+                              title={scenario.title}
+                              saveDisabled={!selected || !scenarioIsDirty || controlsDisabled}
+                              deleteDisabled={controlsDisabled}
+                              saving={selected && scenarioAction === 'saving'}
+                              deleting={scenarioAction === 'deleting'}
+                              onSave={onSaveScenario}
+                              onDelete={() => onDeleteScenario(scenario)}
+                            />
                             <div
-                              className="grid grid-cols-2 gap-1"
+                              className="col-start-2 col-span-2 grid grid-cols-[auto_minmax(8rem,1fr)] gap-2"
                               onClick={stopRowActivation}
                               onKeyDown={stopRowKeyboardActivation}
                             >
-                              <button
-                                type="button"
-                                aria-label={`Move ${scenario.title} up`}
-                                onClick={() => moveScenarioBy(folder.id, scenario.id, -1)}
-                                disabled={index === 0 || status === 'working'}
-                                className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
-                              >
-                                ↑
-                              </button>
-                              <button
-                                type="button"
-                                aria-label={`Move ${scenario.title} down`}
-                                onClick={() => moveScenarioBy(folder.id, scenario.id, 1)}
-                                disabled={index === scenarios.length - 1 || status === 'working'}
-                                className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
-                              >
-                                ↓
-                              </button>
+                              <div className="grid grid-cols-2 gap-1">
+                                <button
+                                  type="button"
+                                  aria-label={`Move ${scenario.title} up`}
+                                  onClick={() => moveScenarioBy(folder.id, scenario.id, -1)}
+                                  disabled={index === 0 || controlsDisabled}
+                                  className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
+                                >
+                                  ↑
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-label={`Move ${scenario.title} down`}
+                                  onClick={() => moveScenarioBy(folder.id, scenario.id, 1)}
+                                  disabled={index === scenarios.length - 1 || controlsDisabled}
+                                  className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
+                                >
+                                  ↓
+                                </button>
+                              </div>
+                              <label className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
+                                <span className="text-[10px] uppercase text-neutral-500">Move</span>
+                                <select
+                                  aria-label={`Move ${scenario.title}`}
+                                  value={folder.id}
+                                  onChange={(event) => void moveScenario(
+                                    scenario.id,
+                                    folder.id,
+                                    event.target.value,
+                                  )}
+                                  disabled={controlsDisabled}
+                                  className="min-w-0 border border-neutral-700 bg-neutral-900 px-2 py-2 text-xs text-neutral-200 disabled:opacity-40"
+                                >
+                                  {folders.map((target) => (
+                                    <option key={target.id} value={target.id}>{target.name}</option>
+                                  ))}
+                                </select>
+                              </label>
                             </div>
-                            <label
-                              className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2"
-                              onClick={stopRowActivation}
-                              onKeyDown={stopRowKeyboardActivation}
-                            >
-                              <span className="text-[10px] uppercase text-neutral-500">Move</span>
-                              <select
-                                aria-label={`Move ${scenario.title}`}
-                                value={folder.id}
-                                onChange={(event) => void moveScenario(
-                                  scenario.id,
-                                  folder.id,
-                                  event.target.value,
-                                )}
-                                disabled={status === 'working'}
-                                className="min-w-0 border border-neutral-700 bg-neutral-900 px-2 py-2 text-xs text-neutral-200 disabled:opacity-40"
-                              >
-                                {folders.map((target) => (
-                                  <option key={target.id} value={target.id}>{target.name}</option>
-                                ))}
-                              </select>
-                            </label>
                           </div>
                         )
                       })
@@ -632,6 +826,22 @@ export function ScenarioLibraryPanel({
           })
         )}
       </div>
+      <ConfirmationDialog
+        open={folderPendingDeletion !== null}
+        title="Delete folder"
+        description={folderPendingDeletion
+          ? folderPendingDeletion.scenario_count > 0
+            ? `Delete "${folderPendingDeletion.name}" and its ${folderPendingDeletion.scenario_count} ${folderPendingDeletion.scenario_count === 1 ? 'scenario' : 'scenarios'}? This cannot be undone.`
+            : `Delete "${folderPendingDeletion.name}"? This folder is empty. This cannot be undone.`
+          : ''}
+        confirmLabel="Delete"
+        onCancel={() => setFolderPendingDeletion(null)}
+        onConfirm={() => {
+          const folder = folderPendingDeletion
+          setFolderPendingDeletion(null)
+          if (folder) void deleteFolder(folder)
+        }}
+      />
     </section>
   )
 }

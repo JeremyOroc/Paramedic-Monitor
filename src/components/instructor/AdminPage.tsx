@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
+import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
 import { DefibrillatorPanel } from '@/components/instructor/DefibrillatorPanel'
 import { CallerInfoForm } from '@/components/instructor/CallerInfoForm'
@@ -51,7 +52,11 @@ import {
 import type { PatientPhysicalIconGroupId } from '@/types/patientPhysical'
 import type { CprMode, NumericVitalField } from '@/types/vitals'
 import type { StudentEvent } from '@/types/session'
-import type { SavedScenario, ScenarioSnapshotV1 } from '@/types/savedScenario'
+import type {
+  SavedScenario,
+  SavedScenarioSummary,
+  ScenarioSnapshotV1,
+} from '@/types/savedScenario'
 
 type AdminTab = 'scenarios' | 'monitor' | 'physical' | 'defibrillators'
 
@@ -87,6 +92,13 @@ type ReviewParticipant = {
 type ScenarioBaseline = {
   title: string
   snapshot: ScenarioSnapshotV1
+}
+
+type ScenarioConfirmation = {
+  title: string
+  description: string
+  confirmLabel: string
+  onConfirm: () => void
 }
 
 function getResponseError(data: unknown, fallback: string): string {
@@ -127,10 +139,13 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
   const [loadedScenarioFolderId, setLoadedScenarioFolderId] = useState<string | null>(null)
   const [scenarioBaseline, setScenarioBaseline] = useState<ScenarioBaseline | null>(null)
+  const [scenarioDraftActive, setScenarioDraftActive] = useState(false)
   const [scenarioRefreshVersion, setScenarioRefreshVersion] = useState(0)
   const [scenarioEditorVersion, setScenarioEditorVersion] = useState(0)
   const [scenarioAction, setScenarioAction] = useState<'idle' | 'saving' | 'deleting'>('idle')
   const [scenarioError, setScenarioError] = useState('')
+  const [scenarioConfirmation, setScenarioConfirmation] =
+    useState<ScenarioConfirmation | null>(null)
   const resetForNewAttempt = useMonitorStore((s) => s.resetForNewAttempt)
   const setDraftVitalValues = useMonitorStore((s) => s.setDraftVitalValues)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
@@ -324,9 +339,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     ? scenarioTitle !== scenarioBaseline.title ||
       !scenarioSnapshotsEqual(currentScenarioSnapshot, scenarioBaseline.snapshot)
     : scenarioTitle.trim() !== '' || scenarioHasContent
-  const saveScenarioDisabled = loadedScenarioId
-    ? !scenarioIsDirty
-    : !scenarioHasContent
+  const saveScenarioDisabled =
+    (!loadedScenarioId && !scenarioDraftActive) ||
+    !scenarioIsDirty ||
+    sessionStatus === 'active'
 
   const resetPatientInformation = () => {
     setPatientSelections(EMPTY_PATIENT_INFORMATION_SELECTIONS())
@@ -347,6 +363,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setLoadedScenarioId(null)
     setLoadedScenarioFolderId(null)
     setScenarioBaseline(null)
+    setScenarioDraftActive(false)
     setScenarioError('')
     setScenarioEditorVersion((version) => version + 1)
   }
@@ -362,17 +379,11 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setLoadedScenarioId(null)
     setLoadedScenarioFolderId(null)
     setScenarioBaseline(null)
+    setScenarioDraftActive(false)
     setScenarioError('')
     setScenarioEditorVersion((version) => version + 1)
   }
-  const handleLoadScenario = (scenario: SavedScenario) => {
-    if (
-      scenarioIsDirty &&
-      !window.confirm('Discard unsaved scenario changes and load this scenario?')
-    ) {
-      return
-    }
-
+  const applyLoadedScenario = (scenario: SavedScenario) => {
     applyScenarioDraft(scenario.snapshot)
     setUniversalAutoSortText(scenario.snapshot.autoSortText)
     setPatientSelections({
@@ -390,22 +401,78 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setLoadedScenarioId(scenario.id)
     setLoadedScenarioFolderId(scenario.folder_id)
     setScenarioBaseline({ title: scenario.title, snapshot: scenario.snapshot })
+    setScenarioDraftActive(false)
     setScenarioError('')
     setScenarioEditorVersion((version) => version + 1)
   }
 
+  const startScenarioDraft = () => {
+    clearScenarioAuthoringState()
+    setScenarioDraftActive(true)
+    if (selectedScenarioFolderId) {
+      handleScenarioFolderExpansionChange(selectedScenarioFolderId, true)
+    }
+  }
+
+  const handleLoadScenario = (scenario: SavedScenario) => {
+    if (sessionStatus === 'active') return
+    if (scenarioIsDirty) {
+      setScenarioConfirmation({
+        title: 'Discard scenario changes',
+        description: `Discard the current unsaved changes and load "${scenario.title}"?`,
+        confirmLabel: 'Discard',
+        onConfirm: () => applyLoadedScenario(scenario),
+      })
+      return
+    }
+    applyLoadedScenario(scenario)
+  }
+
   const handleUnloadScenario = () => {
-    if (
-      scenarioIsDirty &&
-      !window.confirm('Discard unsaved scenario changes and unload this scenario?')
-    ) {
+    if (sessionStatus === 'active') return
+    if (scenarioIsDirty) {
+      setScenarioConfirmation({
+        title: 'Discard scenario changes',
+        description: 'Discard the current unsaved changes and unload this scenario?',
+        confirmLabel: 'Discard',
+        onConfirm: clearScenarioAuthoringState,
+      })
       return
     }
     clearScenarioAuthoringState()
   }
 
+  const handleNewScenario = () => {
+    if (sessionStatus === 'active' || scenarioAction !== 'idle') return
+    if (scenarioIsDirty) {
+      setScenarioConfirmation({
+        title: 'Start a new scenario',
+        description: 'Discard the current unsaved changes and start a new scenario draft?',
+        confirmLabel: 'Start New',
+        onConfirm: startScenarioDraft,
+      })
+      return
+    }
+    startScenarioDraft()
+  }
+
+  const handleDeleteDraft = () => {
+    if (!scenarioDraftActive || sessionStatus === 'active' || scenarioAction !== 'idle') return
+    setScenarioConfirmation({
+      title: 'Delete scenario draft',
+      description: `Delete "${scenarioTitle.trim() || 'Untitled Scenario'}"? The draft has not been saved.`,
+      confirmLabel: 'Delete',
+      onConfirm: clearScenarioAuthoringState,
+    })
+  }
+
   const handleScenarioFolderDeleted = (folderId: string) => {
-    if (loadedScenarioFolderId === folderId) clearScenarioAuthoringState()
+    if (
+      loadedScenarioFolderId === folderId ||
+      (scenarioDraftActive && selectedScenarioFolderId === folderId)
+    ) {
+      clearScenarioAuthoringState()
+    }
   }
 
   const handleScenarioFolderExpansionChange = (folderId: string, expanded: boolean) => {
@@ -458,6 +525,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       setLoadedScenarioId(scenario.id)
       setLoadedScenarioFolderId(scenario.folder_id)
       setSelectedScenarioFolderId(scenario.folder_id)
+      setScenarioDraftActive(false)
       if (autoCreatingFolder) {
         handleScenarioFolderExpansionChange(scenario.folder_id, true)
       }
@@ -470,29 +538,43 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     }
   }
 
-  const handleDeleteScenario = async () => {
-    if (!loadedScenarioId || scenarioAction !== 'idle') return
-    if (!window.confirm(`Delete "${scenarioTitle}"? The current editor values will be kept.`)) {
-      return
-    }
-
+  const deleteScenario = async (scenario: SavedScenarioSummary) => {
+    if (scenarioAction !== 'idle' || sessionStatus === 'active') return
     setScenarioAction('deleting')
     setScenarioError('')
     try {
-      const response = await fetch(`/api/scenarios/${loadedScenarioId}`, { method: 'DELETE' })
+      const response = await fetch(`/api/scenarios/${scenario.id}`, { method: 'DELETE' })
       if (!response.ok) {
         const data = await response.json() as unknown
         throw new Error(getResponseError(data, 'Unable to delete scenario'))
       }
-      setLoadedScenarioId(null)
-      setLoadedScenarioFolderId(null)
-      setScenarioBaseline(null)
+      if (loadedScenarioId === scenario.id) {
+        setLoadedScenarioId(null)
+        setLoadedScenarioFolderId(null)
+        setSelectedScenarioFolderId(scenario.folder_id)
+        setScenarioBaseline(null)
+        setScenarioDraftActive(true)
+        handleScenarioFolderExpansionChange(scenario.folder_id, true)
+      }
       setScenarioRefreshVersion((version) => version + 1)
     } catch (caught) {
       setScenarioError(caught instanceof Error ? caught.message : 'Unable to delete scenario')
     } finally {
       setScenarioAction('idle')
     }
+  }
+
+  const handleDeleteScenario = (scenario: SavedScenarioSummary) => {
+    if (scenarioAction !== 'idle' || sessionStatus === 'active') return
+    const deletingLoadedScenario = loadedScenarioId === scenario.id
+    setScenarioConfirmation({
+      title: 'Delete scenario',
+      description: deletingLoadedScenario
+        ? `Delete "${scenario.title}"? The current editor values will be kept as a draft.`
+        : `Delete "${scenario.title}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: () => void deleteScenario(scenario),
+    })
   }
 
   const togglePatientSelection = (checklist: PatientInfoChecklist, letter: string) => {
@@ -806,6 +888,11 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             selectedFolderId={selectedScenarioFolderId}
             expandedFolderIds={expandedScenarioFolderIds}
             loadedScenarioId={loadedScenarioId}
+            scenarioDraftActive={scenarioDraftActive}
+            scenarioDraftTitle={scenarioTitle}
+            scenarioIsDirty={scenarioIsDirty}
+            scenarioAction={scenarioAction}
+            scenarioError={scenarioError}
             refreshVersion={scenarioRefreshVersion}
             onSelectedFolderChange={setSelectedScenarioFolderId}
             onExpandedFolderChange={handleScenarioFolderExpansionChange}
@@ -813,6 +900,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             onUnloadScenario={handleUnloadScenario}
             onFolderDeleted={handleScenarioFolderDeleted}
             onLoadedScenarioFolderChange={setLoadedScenarioFolderId}
+            onNewScenario={handleNewScenario}
+            onSaveScenario={() => void handleSaveScenario()}
+            onDeleteScenario={handleDeleteScenario}
+            onDeleteDraft={handleDeleteDraft}
             scenarioSelectionDisabled={sessionStatus === 'active'}
           />
           <CallerInfoForm
@@ -821,19 +912,21 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             onAutoSortChange={handleUniversalAutoSortChange}
             scenarioTitle={scenarioTitle}
             onScenarioTitleChange={setScenarioTitle}
-            onSaveScenario={() => void handleSaveScenario()}
-            onDeleteScenario={() => void handleDeleteScenario()}
-            saveScenarioDisabled={saveScenarioDisabled}
-            deleteScenarioDisabled={!loadedScenarioId}
-            scenarioAction={scenarioAction}
-            scenarioError={scenarioError}
           />
         </div>
       )}
-      <p className="text-xs text-neutral-500">
-        Open <span className="text-neutral-300">{session ? `/session/${session.code}/waiting` : '/'}</span> in another tab to see the monitor.
-        Changes propagate after <span className="text-pending-amber">Send</span>.
-      </p>
+      <ConfirmationDialog
+        open={scenarioConfirmation !== null}
+        title={scenarioConfirmation?.title ?? ''}
+        description={scenarioConfirmation?.description ?? ''}
+        confirmLabel={scenarioConfirmation?.confirmLabel ?? 'Confirm'}
+        onCancel={() => setScenarioConfirmation(null)}
+        onConfirm={() => {
+          const confirmation = scenarioConfirmation
+          setScenarioConfirmation(null)
+          confirmation?.onConfirm()
+        }}
+      />
     </InstructorLayout>
   )
 }

@@ -43,12 +43,6 @@ type CallerInfoFormProps = {
   onAutoSortChange: (value: string) => void
   scenarioTitle: string
   onScenarioTitleChange: (value: string) => void
-  onSaveScenario: () => void
-  onDeleteScenario: () => void
-  saveScenarioDisabled: boolean
-  deleteScenarioDisabled: boolean
-  scenarioAction: 'idle' | 'saving' | 'deleting'
-  scenarioError: string
 }
 
 function getInitialExtraCount(callerInfoDraft: CallerInfoDraft) {
@@ -72,12 +66,6 @@ export function CallerInfoForm({
   onAutoSortChange,
   scenarioTitle,
   onScenarioTitleChange,
-  onSaveScenario,
-  onDeleteScenario,
-  saveScenarioDisabled,
-  deleteScenarioDisabled,
-  scenarioAction,
-  scenarioError,
 }: CallerInfoFormProps) {
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
@@ -202,7 +190,6 @@ export function CallerInfoForm({
           </button>
           <h2 className="text-sm uppercase tracking-wider text-neutral-400">Caller Info</h2>
         </div>
-        <span className="text-xs uppercase tracking-wider text-neutral-600">Analyse</span>
       </div>
       {expanded ? (
         <div id="caller-info-editor" className="grid gap-3">
@@ -410,29 +397,6 @@ export function CallerInfoForm({
         >
           Add extra
         </button>
-        {scenarioError ? (
-          <p role="alert" className="text-sm font-semibold text-alarm-red">
-            {scenarioError}
-          </p>
-        ) : null}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            onClick={onSaveScenario}
-            disabled={saveScenarioDisabled || scenarioAction !== 'idle'}
-            className="border border-ecg-green bg-neutral-900 px-3 py-2 text-sm font-semibold uppercase tracking-wider text-ecg-green hover:bg-ecg-green/10 focus:outline-none focus:ring-2 focus:ring-ecg-green disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
-          >
-            {scenarioAction === 'saving' ? 'Saving Scenario' : 'Save Scenario'}
-          </button>
-          <button
-            type="button"
-            onClick={onDeleteScenario}
-            disabled={deleteScenarioDisabled || scenarioAction !== 'idle'}
-            className="border border-alarm-red bg-neutral-900 px-3 py-2 text-sm font-semibold uppercase tracking-wider text-alarm-red hover:bg-alarm-red/10 focus:outline-none focus:ring-2 focus:ring-alarm-red disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
-          >
-            {scenarioAction === 'deleting' ? 'Deleting Scenario' : 'Delete Scenario'}
-          </button>
-        </div>
         </div>
       ) : null}
     </section>
