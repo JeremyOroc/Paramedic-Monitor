@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-08-29] [instructor] — Add safe scenario row actions and styled confirmations
+
+- Renamed the surface to Instructor Console and removed the obsolete local-only/waiting-tab guidance, Supabase-library subtitle, Caller Info Analyse label, and Caller Info Save/Delete controls.
+- Added Save/Delete to every saved-scenario row. Save is enabled only for the loaded dirty scenario; deletion works without loading and preserves any different loaded editor, while deleting the loaded scenario retains its values as a selected local draft.
+- Added `New Scenario` with selected local draft rows, live `Untitled Scenario`/title labels, title-only dirty support, confirmed local deletion, selected-folder expansion, and virtual `Folder 1` behavior until the first save.
+- Replaced every Scenarios-tab native confirmation with a reusable accessible amber/dark/cyan dialog. Backdrop clicks, Escape, and Cancel are non-destructive; focus is trapped and restored. Empty folder deletion now confirms, and all folder/scenario mutations lock during active attempts.
+- Added component and integration regressions for copy removal, row action gating, loaded/unloaded deletion, draft creation/save/delete, empty-library behavior, unconditional folder confirmation, active-attempt locking, and dialog styling/focus/dismissal. All 869 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and rendered 1366×768/1024×768 browser QA pass with no horizontal overflow or console errors.
+
 ## [2026-08-27] [session/db] — Store the drill evaluation record and close legacy anon access
 
 - Added `session_state_history`: an append-only row per instructor Send carrying the attempt, version, and full shared state. `session_state` is still upserted unchanged, so the 1.5s student poll never reads history — it is written beside the hot path, not on it, and a failed history write logs rather than costing the room a Send.

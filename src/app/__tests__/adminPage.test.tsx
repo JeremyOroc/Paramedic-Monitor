@@ -20,7 +20,26 @@ vi.mock('next/navigation', () => ({
 }))
 
 vi.mock('@/components/instructor/ScenarioLibraryPanel', () => ({
-  ScenarioLibraryPanel: () => <section aria-label="Scenarios library">Scenario library</section>,
+  ScenarioLibraryPanel: ({
+    scenarioDraftActive,
+    scenarioDraftTitle,
+    scenarioIsDirty,
+    onNewScenario,
+  }: {
+    scenarioDraftActive: boolean
+    scenarioDraftTitle: string
+    scenarioIsDirty: boolean
+    onNewScenario: () => void
+  }) => (
+    <section aria-label="Scenarios library">
+      <button type="button" onClick={onNewScenario}>New Scenario</button>
+      {scenarioDraftActive ? (
+        <button type="button" disabled={!scenarioIsDirty}>
+          Save {scenarioDraftTitle.trim() || 'Untitled Scenario'}
+        </button>
+      ) : null}
+    </section>
+  ),
 }))
 
 describe('AdminPage', () => {
@@ -507,6 +526,8 @@ describe('AdminPage', () => {
     expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
     expect(screen.queryByLabelText('Adresse')).toBeNull()
 
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'New Scenario' }))
     await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
     expect(screen.getByRole('button', { name: 'Defibrillators' })).toHaveAttribute(
       'aria-pressed',
@@ -524,7 +545,7 @@ describe('AdminPage', () => {
     await user.click(screen.getByRole('button', { name: 'Wagami Z' }))
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
-    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeEnabled()
   })
 
   it('places the shared Save and Send actions immediately above the tab list', () => {

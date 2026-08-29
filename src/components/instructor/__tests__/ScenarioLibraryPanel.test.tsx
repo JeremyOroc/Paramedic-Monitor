@@ -139,6 +139,13 @@ type HarnessProps = {
   onLoad?: (value: SavedScenario) => void
   onUnload?: () => void
   onFolderDeleted?: (folderId: string) => void
+  onNewScenario?: () => void
+  onSaveScenario?: () => void
+  onDeleteScenario?: (scenarioId: string) => void
+  onDeleteDraft?: () => void
+  scenarioDraftActive?: boolean
+  scenarioDraftTitle?: string
+  scenarioIsDirty?: boolean
   scenarioSelectionDisabled?: boolean
 }
 
@@ -146,6 +153,13 @@ function Harness({
   onLoad = vi.fn(),
   onUnload = vi.fn(),
   onFolderDeleted = vi.fn(),
+  onNewScenario = vi.fn(),
+  onSaveScenario = vi.fn(),
+  onDeleteScenario = vi.fn(),
+  onDeleteDraft = vi.fn(),
+  scenarioDraftActive = false,
+  scenarioDraftTitle = '',
+  scenarioIsDirty = false,
   scenarioSelectionDisabled = false,
 }: HarnessProps) {
   const [selectedFolderId, setSelectedFolderId] = useState('general')
@@ -156,6 +170,11 @@ function Harness({
       selectedFolderId={selectedFolderId}
       expandedFolderIds={expandedFolderIds}
       loadedScenarioId={loadedScenarioId}
+      scenarioDraftActive={scenarioDraftActive}
+      scenarioDraftTitle={scenarioDraftTitle}
+      scenarioIsDirty={scenarioIsDirty}
+      scenarioAction="idle"
+      scenarioError=""
       refreshVersion={0}
       onSelectedFolderChange={setSelectedFolderId}
       onExpandedFolderChange={(folderId, expanded) => {
@@ -176,6 +195,10 @@ function Harness({
       }}
       onFolderDeleted={onFolderDeleted}
       onLoadedScenarioFolderChange={vi.fn()}
+      onNewScenario={onNewScenario}
+      onSaveScenario={onSaveScenario}
+      onDeleteScenario={(scenario) => onDeleteScenario(scenario.id)}
+      onDeleteDraft={onDeleteDraft}
       scenarioSelectionDisabled={scenarioSelectionDisabled}
     />
   )
@@ -186,7 +209,7 @@ describe('ScenarioLibraryPanel', () => {
     vi.restoreAllMocks()
   })
 
-  it('blocks scenario load activation while selection is disabled', async () => {
+  it('blocks scenario and library actions while selection is disabled', async () => {
     createFetchMock()
     const onLoad = vi.fn()
     const user = userEvent.setup()
@@ -195,6 +218,12 @@ describe('ScenarioLibraryPanel', () => {
     await user.click(await screen.findByRole('button', { name: /General/ }))
     const row = await screen.findByRole('button', { name: 'Load Chest Pain' })
     expect(row).toHaveAttribute('aria-disabled', 'true')
+    expect(screen.getByRole('button', { name: 'New Scenario' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'New Folder' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete Chest Pain' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Move Chest Pain down' })).toBeDisabled()
+    expect(screen.getByLabelText('Move Chest Pain')).toBeDisabled()
 
     await user.click(row)
     fireEvent.keyDown(row, { key: 'Enter' })
@@ -243,6 +272,35 @@ describe('ScenarioLibraryPanel', () => {
 
     onLoad.mockClear()
     await user.click(screen.getByRole('button', { name: 'Move Older Call up' }))
+    expect(onLoad).not.toHaveBeenCalled()
+  })
+
+  it('shows row Save/Delete actions without activating another scenario', async () => {
+    createFetchMock()
+    const onSaveScenario = vi.fn()
+    const onDeleteScenario = vi.fn()
+    const onLoad = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Harness
+        onLoad={onLoad}
+        onSaveScenario={onSaveScenario}
+        onDeleteScenario={onDeleteScenario}
+        scenarioIsDirty
+      />,
+    )
+
+    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: 'Load Chest Pain' }))
+
+    expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Save Older Call' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Save Chest Pain' }))
+    expect(onSaveScenario).toHaveBeenCalledOnce()
+
+    onLoad.mockClear()
+    await user.click(screen.getByRole('button', { name: 'Delete Older Call' }))
+    expect(onDeleteScenario).toHaveBeenCalledWith('scenario-2')
     expect(onLoad).not.toHaveBeenCalled()
   })
 
@@ -348,9 +406,8 @@ describe('ScenarioLibraryPanel', () => {
     expect(within(generalSection).queryByRole('button', { name: 'Load Chest Pain' })).toBeNull()
   })
 
-  it('deletes empty folders without prompting and confirms cascade deletion for non-empty folders', async () => {
+  it('confirms every folder deletion with the styled dialog', async () => {
     const { fetchMock } = createFetchMock()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const onFolderDeleted = vi.fn()
     const user = userEvent.setup()
     render(<Harness onFolderDeleted={onFolderDeleted} />)
@@ -359,9 +416,9 @@ describe('ScenarioLibraryPanel', () => {
 
     const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
     await user.click(within(generalSection).getByRole('button', { name: 'Delete' }))
-    expect(confirm).toHaveBeenCalledWith(
-      'Delete "General" and its 2 scenarios? This cannot be undone.',
-    )
+    let dialog = screen.getByRole('alertdialog', { name: 'Delete folder' })
+    expect(dialog).toHaveTextContent('Delete "General" and its 2 scenarios? This cannot be undone.')
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
       '/api/scenario-folders/general',
       { method: 'DELETE' },
@@ -371,17 +428,61 @@ describe('ScenarioLibraryPanel', () => {
 
     const traumaSection = screen.getByRole('button', { name: /Trauma/ }).closest('section') as HTMLElement
     await user.click(within(traumaSection).getByRole('button', { name: 'Delete' }))
+    dialog = screen.getByRole('alertdialog', { name: 'Delete folder' })
+    expect(dialog).toHaveTextContent('Delete "Trauma"? This folder is empty. This cannot be undone.')
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/scenario-folders/trauma', { method: 'DELETE' })
+
+    await user.click(within(traumaSection).getByRole('button', { name: 'Delete' }))
+    dialog = screen.getByRole('alertdialog', { name: 'Delete folder' })
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
       '/api/scenario-folders/trauma',
       { method: 'DELETE' },
     ))
-    expect(confirm).toHaveBeenCalledOnce()
   })
 
-  it('renders the empty-library save guidance', async () => {
+  it('renders the empty-library draft guidance', async () => {
     createFetchMock({ empty: true })
     render(<Harness />)
 
-    expect(await screen.findByText('No scenario folders. Saving a scenario will create Folder 1.')).toBeInTheDocument()
+    expect(await screen.findByText(
+      'No scenario folders. Select New Scenario to start a draft; Folder 1 will be created when you save.',
+    )).toBeInTheDocument()
+  })
+
+  it('renders a selected draft row with dirty Save gating', async () => {
+    createFetchMock({ empty: true })
+    const onSaveScenario = vi.fn()
+    const onDeleteDraft = vi.fn()
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <Harness
+        scenarioDraftActive
+        onSaveScenario={onSaveScenario}
+        onDeleteDraft={onDeleteDraft}
+      />,
+    )
+
+    expect(await screen.findByRole('region', { name: 'Folder 1 scenarios' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Unload Untitled Scenario' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeDisabled()
+
+    rerender(
+      <Harness
+        scenarioDraftActive
+        scenarioDraftTitle="Title Only"
+        scenarioIsDirty
+        onSaveScenario={onSaveScenario}
+        onDeleteDraft={onDeleteDraft}
+      />,
+    )
+    await user.click(screen.getByRole('button', { name: 'Save Title Only' }))
+    expect(onSaveScenario).toHaveBeenCalledOnce()
+    await user.click(screen.getByRole('button', { name: 'Delete Title Only' }))
+    expect(onDeleteDraft).toHaveBeenCalledOnce()
   })
 })

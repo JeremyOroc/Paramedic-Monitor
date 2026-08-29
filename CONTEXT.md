@@ -4,6 +4,22 @@ Paramedic Monitor is an instructor-led dispatch and patient-monitor simulation. 
 
 ## Language
 
+**Instructor Console**:
+The authoring surface where an instructor prepares scenarios and controls an attempt.
+_Avoid_: Dev Console, Admin console
+
+**Saved scenario**:
+A named instructor-authored clinical and dispatch snapshot stored in the scenario library.
+_Avoid_: Template, preset
+
+**Loaded scenario**:
+The saved scenario currently populating the Instructor Console authoring fields for review or editing.
+_Avoid_: Selected scenario, active scenario
+
+**Scenario draft**:
+Local scenario authoring state that has not yet been stored in the scenario library.
+_Avoid_: Unsaved scenario, temporary scenario
+
 **Attempt**:
 A single instructor-led dispatch simulation run whose confirmed scenario and defibrillator model remain fixed until the attempt ends.
 _Avoid_: Drill, run, session

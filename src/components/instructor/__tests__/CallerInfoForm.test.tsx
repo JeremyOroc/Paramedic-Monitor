@@ -29,12 +29,6 @@ function renderCallerInfoForm({ expand = true }: { expand?: boolean } = {}) {
       onAutoSortChange={handleAutoSortChange}
       scenarioTitle=""
       onScenarioTitleChange={vi.fn()}
-      onSaveScenario={vi.fn()}
-      onDeleteScenario={vi.fn()}
-      saveScenarioDisabled
-      deleteScenarioDisabled
-      scenarioAction="idle"
-      scenarioError=""
     />,
   )
 
@@ -68,8 +62,9 @@ describe('CallerInfoForm', () => {
     expect(screen.getByLabelText('Heure')).toBeInTheDocument()
     expect(screen.queryByLabelText('Extra 1 title')).toBeNull()
     expect(screen.getByRole('button', { name: 'Add extra' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Delete Scenario' })).toBeDisabled()
+    expect(screen.queryByText('Analyse')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Save Scenario/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Delete Scenario/ })).toBeNull()
   })
 
   it('starts collapsed and expands the complete editor from the header control', async () => {
@@ -82,7 +77,7 @@ describe('CallerInfoForm', () => {
       'false',
     )
     expect(screen.queryByLabelText('Scenario title')).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Save Scenario' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Save Scenario/ })).toBeNull()
 
     await user.click(expand)
     expect(screen.getByRole('button', { name: 'Collapse Caller Info' })).toHaveAttribute(
@@ -90,7 +85,7 @@ describe('CallerInfoForm', () => {
       'true',
     )
     expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save Scenario' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Save Scenario/ })).toBeNull()
   })
 
   it('renders dispatch countdown before Call / Priority / MPDS', () => {

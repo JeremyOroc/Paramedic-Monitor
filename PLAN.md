@@ -786,23 +786,28 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 
 **Steps:**
 1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a fixed-height folder accordion above the unchanged caller-info editor. Folder expansion is independent from the selected save destination: every folder starts collapsed on page load, zero or many folders may be open, expansion survives admin-tab switches, opening a folder selects it without closing others, and closing it does not clear its save destination. The first existing folder remains the initial highlighted save target, and newly created folders open and become selected.
-2. Preserve the existing `General` data as an ordinary folder and provide create, rename, and delete controls for every case-insensitively unique folder. Deleting a non-empty folder requires confirmation and cascade-deletes its scenarios; the library may contain zero folders.
+2. Preserve the existing `General` data as an ordinary folder and provide create, rename, and delete controls for every case-insensitively unique folder. Deleting any folder, including an empty folder, requires confirmation and cascade-deletes its scenarios; the library may contain zero folders.
 3. Save versioned authoring snapshots containing raw auto-sort text, monitor drafts and channel states, caller/dispatch inputs, SAMPLE/OPQRST state, and Patient Physical state. Runtime dispatch/CPR/calibration and Save/Send history are excluded.
-4. Add a Title field plus green `Save Scenario` and red `Delete Scenario` actions. Blank titles use the smallest available `Scenario X` number.
-5. Load snapshots directly into editable drafts without sending to students. Track the loaded baseline so unchanged or reverted scenarios cannot be saved again. Scenario rows toggle load/unload, with dirty-discard confirmation and authoring-only clearing on unload.
+4. Add a Title field while placing `Save` and `Delete` actions on every scenario-library row instead of inside Caller Info. Save is enabled only for the loaded scenario when its authored title or snapshot differs from its baseline. Delete is available for any saved scenario and leaves a different loaded scenario and its editor values untouched. Blank titles use the smallest available `Scenario X` number.
+5. Load snapshots directly into editable drafts without sending to students. Track the loaded baseline so unchanged or reverted scenarios cannot be saved again. Scenario rows toggle load/unload, with dirty-discard confirmation and authoring-only clearing on unload. Deleting the loaded scenario preserves its editor values as a selected local scenario draft.
 6. Persist explicit scenario positions per folder. Support drag/drop and Up/Down ordering within a folder, plus cross-folder drag/drop and an accessible Move fallback that append moved scenarios.
 7. Store folders and saved snapshots in dedicated RLS-protected tables accessed only through typed server APIs, leaving the legacy timed-state `scenarios` table unchanged.
-8. When a meaningful draft is saved while the library has no folders, atomically create the smallest available `Folder X`, select it, and save the scenario there.
+8. Add `New Scenario` beside `New Folder`. It creates one selected local draft row under the selected folder, expands that folder, and uses the live title or `Untitled Scenario` as its row label. Any authored field change, including title alone, enables draft Save. Starting another draft while dirty requires confirmation. Deleting a draft requires confirmation and clears it without a server request.
 9. Make the full Caller Info editor collapsible from an initially collapsed `−`/`+` header control without persisting the display preference.
+10. Keep `Folder 1` virtual when `New Scenario` starts from an empty library; create the folder atomically only when the draft is saved. Disable folder/scenario creation, mutation, loading, and deletion while an attempt is active.
+11. Replace every Scenarios-tab browser confirmation with one accessible Instructor Console dialog: black/grey surface and dimmed backdrop, pending-amber border/title, white description, and cyan/dark Confirm and Cancel buttons. Backdrop click and Escape cancel, focus is trapped while open, and focus returns to the triggering control.
+12. Rename the visible `Dev Console` heading to `Instructor Console`; remove its two instructional paragraphs, the scenario-library `Global Supabase library` subtitle, and the Caller Info `Analyse` label.
 
 #### Testing
 - Unit coverage for snapshot normalization, meaningful-content and dirty comparisons, and fallback-number allocation.
 - Migration/service/API coverage for ordinary General behavior, cascade deletion, empty-library auto-create, persisted ordering, concurrent reorder/move safety, validation, grants, and error responses.
-- Component and admin integration coverage for tab order, initially collapsed independent folder expansion, multiple/all-closed states, selected closed-folder save targeting, expansion across tab switches, new-folder opening, deletion fallback, row toggle load/unload, save/update/delete, per-folder drag/drop and Up/Down ordering, cross-folder append, discard confirmation, empty-library save, Caller Info collapse, and four-tab restoration.
+- Component and admin integration coverage for tab order, Instructor Console copy, initially collapsed independent folder expansion, multiple/all-closed states, selected closed-folder save targeting, expansion across tab switches, new-folder opening, unconditional folder-delete confirmation, deletion fallback, row toggle load/unload, selected-and-dirty row Save gating, loaded and unloaded row deletion, local draft creation/save/delete, virtual empty-library `Folder 1`, active-attempt action locking, per-folder drag/drop and Up/Down ordering, cross-folder append, styled dialog confirm/cancel/backdrop/Escape/focus behavior, Caller Info action removal/collapse, and four-tab restoration.
 - Patient SNS component coverage verifies confirmed Pulse, Respiratory, and Skin/Extremities controls retain black fills with green borders, icons, and labels while inactive, pending, and slider behavior remains unchanged.
 - Full Vitest, ESLint, production build, and rendered desktop overflow/interaction QA.
 
 **Milestone — COMPLETE (2026-08-20):** An instructor can manage a global folder library, remove any folder, persist custom scenario order, reload or unload complete editable drafts from scenario rows, save into an automatically created folder when the library is empty, and collapse Caller Info without bypassing the normal Save → Send workflow.
+
+**Instructor Console safety enhancement — COMPLETE (2026-08-29):** Scenario creation now begins from an explicit selected local draft row; saved rows own dirty-gated Save and confirmed Delete actions; every Scenarios-tab confirmation uses the accessible styled dialog; active attempts lock all library mutations; and the obsolete development copy and Caller Info actions are removed.
 
 ---
 
@@ -812,7 +817,7 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 **Status:** Model selection completed on 2026-08-26. Wagami Z's live device surface was defined and completed on 2026-08-27.
 
 **Requirements:**
-1. Add a fourth Dev Console tab named `Defibrillators` after Patient Physical. It contains staged `Wagami X` and `Wagami Z` choices, defaults to Wagami X, and participates in Save → Send.
+1. Add a fourth Instructor Console tab named `Defibrillators` after Patient Physical. It contains staged `Wagami X` and `Wagami Z` choices, defaults to Wagami X, and participates in Save → Send.
 2. Keep Start / Dispatch disabled while the model choice is dirty or pending. A successful Start locks both choices while leaving the tab available and the confirmed model highlighted; New Attempt preserves and unlocks that model.
 3. Save the draft model in version-1 scenario snapshots. Legacy snapshots default to Wagami X, Wagami Z alone is meaningful scenario content, and active attempts disable scenario load/unload controls.
 4. Share the confirmed model with student monitors. Wagami X renders the existing monitor. Wagami Z retains caller info, acknowledgement, countdown, arrival, and Go to Monitor, then renders its own full-screen live monitor surface instead of the temporary `Work In Progress` placeholder.
