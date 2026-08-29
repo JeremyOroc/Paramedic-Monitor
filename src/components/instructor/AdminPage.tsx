@@ -43,13 +43,18 @@ import {
 } from '@/lib/scenarioSnapshot'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
+import { usePatientSnsMeasurements } from '@/hooks/usePatientSnsMeasurements'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
 import {
   hasDefibrillatorModelDirty,
   hasDefibrillatorModelPending,
 } from '@/store/fieldState'
-import type { PatientPhysicalIconGroupId } from '@/types/patientPhysical'
+import type {
+  PatientPhysicalIconGroupId,
+  PatientSnsMeasurementDurationSeconds,
+  PatientSnsMeasurementGroupId,
+} from '@/types/patientPhysical'
 import type { CprMode, NumericVitalField } from '@/types/vitals'
 import type { StudentEvent } from '@/types/session'
 import type {
@@ -131,6 +136,24 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     useState<PatientPhysicalFindings>({})
   const [patientPhysicalActiveIconGroup, setPatientPhysicalActiveIconGroup] =
     useState<PatientPhysicalIconGroupId | null>(null)
+  const handlePatientSnsMeasurementResult = useCallback(
+    (group: PatientSnsMeasurementGroupId) => {
+      setPatientPhysicalSelections((current) => {
+        if (current.has(group)) return current
+        const next = new Set(current)
+        next.add(group)
+        return next
+      })
+    },
+    [],
+  )
+  const {
+    measurements: patientSnsMeasurements,
+    startMeasurement: startPatientSnsMeasurement,
+    revealMeasurement: revealPatientSnsMeasurement,
+    cancelMeasurement: cancelPatientSnsMeasurement,
+    resetMeasurements: resetPatientSnsMeasurements,
+  } = usePatientSnsMeasurements(handlePatientSnsMeasurementResult)
   const [scenarioTitle, setScenarioTitle] = useState('')
   const [selectedScenarioFolderId, setSelectedScenarioFolderId] = useState('')
   const [expandedScenarioFolderIds, setExpandedScenarioFolderIds] = useState<Set<string>>(
@@ -352,6 +375,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setPatientPhysicalSelections(new Set<PatientPhysicalSelection>())
     setPatientPhysicalFindings({})
     setPatientPhysicalActiveIconGroup(null)
+    resetPatientSnsMeasurements()
   }
   const clearScenarioAuthoringState = () => {
     const empty = createEmptyScenarioSnapshot()
@@ -384,6 +408,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setScenarioEditorVersion((version) => version + 1)
   }
   const applyLoadedScenario = (scenario: SavedScenario) => {
+    resetPatientSnsMeasurements()
     applyScenarioDraft(scenario.snapshot)
     setUniversalAutoSortText(scenario.snapshot.autoSortText)
     setPatientSelections({
@@ -661,6 +686,17 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setPatientPhysicalActiveIconGroup((current) => (current === selection ? null : selection))
   }
 
+  const handlePatientSnsMeasurementStart = (
+    group: PatientSnsMeasurementGroupId,
+    durationSeconds: PatientSnsMeasurementDurationSeconds,
+  ) => {
+    startPatientSnsMeasurement(group, durationSeconds, patientPhysicalFindings)
+  }
+
+  const handlePatientSnsMeasurementTap = (group: PatientSnsMeasurementGroupId) => {
+    revealPatientSnsMeasurement(group, patientPhysicalFindings)
+  }
+
   return (
     <InstructorLayout>
       {session && (
@@ -859,6 +895,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               findings: patientPhysicalFindings,
               activeIconGroup: patientPhysicalActiveIconGroup,
               onIconGroupClick: handlePatientPhysicalIconGroupClick,
+              measurements: patientSnsMeasurements,
+              onMeasurementStart: handlePatientSnsMeasurementStart,
+              onMeasurementTap: handlePatientSnsMeasurementTap,
+              onMeasurementCancel: cancelPatientSnsMeasurement,
             }}
             onTimedVitalsClick={handleTimedVitalsPatientPhysicalUpdate}
             sessionEtco2Calibrated={

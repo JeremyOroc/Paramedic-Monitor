@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { usePatientSnsMeasurements } from '@/hooks/usePatientSnsMeasurements'
 import type { PatientPhysicalFindings } from '@/lib/patientPhysicalAutoSort'
 import type {
   PatientPhysicalIconGroupId,
@@ -16,6 +17,20 @@ function renderControls(findings: PatientPhysicalFindings = {}) {
     const [selected, setSelected] = useState<Set<string>>(new Set())
     const [activeIconGroup, setActiveIconGroup] =
       useState<PatientPhysicalIconGroupId | null>(null)
+    const handleMeasurementResult = (group: 'pulse' | 'respiratory') => {
+      setSelected((current) => {
+        if (current.has(group)) return current
+        const next = new Set(current)
+        next.add(group)
+        return next
+      })
+    }
+    const {
+      measurements,
+      startMeasurement,
+      revealMeasurement,
+      cancelMeasurement,
+    } = usePatientSnsMeasurements(handleMeasurementResult)
 
     const handleIconGroupClick = (selection: PatientSnsIconGroupId) => {
       setSelected((current) => {
@@ -33,6 +48,12 @@ function renderControls(findings: PatientPhysicalFindings = {}) {
         findings={findings}
         activeIconGroup={activeIconGroup}
         onIconGroupClick={handleIconGroupClick}
+        measurements={measurements}
+        onMeasurementStart={(group, durationSeconds) =>
+          startMeasurement(group, durationSeconds, findings)
+        }
+        onMeasurementTap={(group) => revealMeasurement(group, findings)}
+        onMeasurementCancel={cancelMeasurement}
       />
     )
   }
@@ -40,91 +61,158 @@ function renderControls(findings: PatientPhysicalFindings = {}) {
   return render(<ControlsHarness />)
 }
 
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 describe('PatientSnsControls', () => {
-  it('renders the three clinical controls in the required horizontal order', () => {
+  it('renders icon context and three measurement options in the required order', () => {
     renderControls()
 
     const controls = screen.getByTestId('patient-sns-controls')
-    const pulse = within(controls).getByRole('button', { name: 'Pulse' })
-    const respiratory = within(controls).getByRole('button', { name: 'Respiratory' })
+    const pulse = within(controls).getByRole('heading', { name: 'Pulse' })
+    const respiratory = within(controls).getByRole('heading', {
+      name: 'Respiratory',
+    })
     const skinExtremities = within(controls).getByRole('button', {
       name: 'Skin/Extremities',
     })
 
     expect(controls).toHaveClass('grid-cols-3')
-    expect(pulse.compareDocumentPosition(respiratory)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(pulse.compareDocumentPosition(respiratory)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
     expect(respiratory.compareDocumentPosition(skinExtremities)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
-    expect(screen.queryByRole('button', { name: 'Scene/Environment' })).toBeNull()
+    expect(
+      within(screen.getByRole('group', { name: 'Pulse measurement options' }))
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['15s', '30s', 'Tap'])
+    expect(
+      within(screen.getByRole('group', { name: 'Respiratory measurement options' }))
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['15s', '30s', 'Tap'])
   })
 
-  it('shows pending Pulse and Respiratory summaries with missing fields', async () => {
+  it('reveals exact independent Tap results and canonical missing fields', async () => {
     const user = userEvent.setup()
     renderControls({
-      'pulse-rate': '112 bpm',
-      'respiratory-rate': '24 breaths/min',
+      'pulse-rate': '98 bpm',
+      'pulse-rhythm': 'Regular',
+      'pulse-strength': 'Moderate',
+      'respiratory-rate': '22 breaths/min',
       'respiratory-rhythm': 'Regular',
     })
 
-    const pulse = screen.getByRole('button', { name: 'Pulse' })
-    const respiratory = screen.getByRole('button', { name: 'Respiratory' })
-    expect(pulse).toHaveClass('border-pending-amber')
-    expect(respiratory).toHaveClass('border-pending-amber')
+    await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
+    await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
 
-    await user.click(respiratory)
-    expect(respiratory).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('region', { name: 'Respiratory finding slider' }))
-      .toHaveTextContent('Rate: 24 breaths/min')
-    expect(screen.getByRole('region', { name: 'Respiratory finding slider' }))
-      .toHaveTextContent('Missing: Strength')
+    const pulseResult = screen.getByRole('region', { name: 'Pulse measurement result' })
+    expect(pulseResult).toHaveTextContent('Rate: 98 bpm')
+    expect(pulseResult).toHaveTextContent('15 sec = 25 beats')
+    expect(pulseResult).toHaveTextContent('30 sec = 49 beats')
+    expect(pulseResult).toHaveTextContent('Rhythm: Regular')
+    expect(pulseResult).toHaveTextContent('Strength: Moderate')
 
-    await user.click(pulse)
-    expect(screen.queryByRole('region', { name: 'Respiratory finding slider' })).toBeNull()
-    expect(screen.getByRole('region', { name: 'Pulse finding slider' }))
-      .toHaveTextContent('Rate: 112 bpm')
-    expect(screen.getByRole('region', { name: 'Pulse finding slider' }))
-      .toHaveTextContent('Missing: Rhythm, Strength')
+    const respiratoryResult = screen.getByRole('region', {
+      name: 'Respiratory measurement result',
+    })
+    expect(respiratoryResult).toHaveTextContent('Respiratory: 22 breaths/min')
+    expect(respiratoryResult).toHaveTextContent('15 sec = 6 breaths')
+    expect(respiratoryResult).toHaveTextContent('30 sec = 11 breaths')
+    expect(respiratoryResult).toHaveTextContent('Regular')
+    expect(respiratoryResult).toHaveTextContent('Missing: Effort')
   })
 
-  it('keeps a confirmed control selected when its slider is closed', async () => {
-    const user = userEvent.setup()
-    renderControls({ 'pulse-rate': '90 bpm' })
+  it('replaces one option row with a cancellable countdown and restores it without a result', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    renderControls({ 'pulse-rate': '98 bpm' })
 
-    const pulse = screen.getByRole('button', { name: 'Pulse' })
-    await user.click(pulse)
-    await user.click(pulse)
+    fireEvent.click(screen.getByRole('button', { name: 'Pulse 15s' }))
 
-    expect(pulse).toHaveAttribute('aria-pressed', 'true')
-    expect(pulse).toHaveClass('border-ecg-green', 'bg-black', 'text-ecg-green')
-    expect(pulse).not.toHaveClass('bg-ecg-green')
-    expect(screen.queryByRole('region', { name: 'Pulse finding slider' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Pulse measurement options' })).toBeNull()
+    const cancel = screen.getByRole('button', {
+      name: 'Cancel Pulse 15-second measurement',
+    })
+    expect(cancel).toHaveTextContent('15s')
+    expect(screen.getByRole('group', { name: 'Respiratory measurement options' }))
+      .toBeInTheDocument()
+
+    fireEvent.click(cancel)
+
+    expect(screen.getByRole('group', { name: 'Pulse measurement options' }))
+      .toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Pulse measurement result' })).toBeNull()
+    expect(screen.getByRole('img', { name: 'Pulse findings' })).not.toHaveClass(
+      'text-ecg-green',
+    )
   })
 
-  it('uses green icons and labels on black for every confirmed SNS control', async () => {
-    const user = userEvent.setup()
-    renderControls()
+  it('completes simultaneous countdowns independently without rendering zero', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    renderControls({
+      'pulse-rate': '98 bpm',
+      'pulse-rhythm': 'Regular',
+      'pulse-strength': 'Moderate',
+      'respiratory-rate': '22 breaths/min',
+      'respiratory-rhythm': 'Regular',
+      'respiratory-strength': 'Mildly labored',
+    })
 
-    for (const name of ['Pulse', 'Respiratory', 'Skin/Extremities']) {
-      const control = screen.getByRole('button', { name })
-      await user.click(control)
+    fireEvent.click(screen.getByRole('button', { name: 'Pulse 15s' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Respiratory 30s' }))
 
-      expect(control).toHaveClass('border-ecg-green', 'bg-black', 'text-ecg-green')
-      expect(control).not.toHaveClass('bg-ecg-green')
-      expect(within(control).getByRole('img')).toHaveClass('bg-current', 'text-ecg-green')
-      expect(within(control).getByRole('heading', { name })).toHaveClass('text-ecg-green')
-    }
+    act(() => {
+      vi.advanceTimersByTime(14_999)
+    })
+    expect(screen.getByRole('button', {
+      name: 'Cancel Pulse 15-second measurement',
+    })).toHaveTextContent('1s')
+    expect(screen.queryByText('0s')).toBeNull()
+
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('button', {
+      name: 'Cancel Respiratory 30-second measurement',
+    })).toHaveTextContent('15s')
+
+    act(() => {
+      vi.advanceTimersByTime(15_000)
+    })
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Respiratory measurement result' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Pulse findings' })).toHaveClass(
+      'text-ecg-green',
+    )
+    expect(screen.getByRole('img', { name: 'Respiratory findings' })).toHaveClass(
+      'text-ecg-green',
+    )
   })
 
-  it('shows Skin/Extremities as a one-note slider without field labels', async () => {
+  it('preserves the Skin/Extremities single-toggle behavior', async () => {
     const user = userEvent.setup()
     renderControls({ 'skin-extremities-note': 'Pale\nCool' })
 
-    await user.click(screen.getByRole('button', { name: 'Skin/Extremities' }))
-    const slider = screen.getByRole('region', { name: 'Skin/Extremities finding slider' })
-    expect(slider).toHaveTextContent('Pale')
-    expect(slider).toHaveTextContent('Cool')
-    expect(slider).not.toHaveTextContent('Missing:')
-    expect(slider).not.toHaveTextContent('Skin/Extremities:')
+    const control = screen.getByRole('button', { name: 'Skin/Extremities' })
+    await user.click(control)
+    expect(control).toHaveAttribute('aria-pressed', 'true')
+    expect(control).toHaveClass('border-ecg-green', 'bg-black', 'text-ecg-green')
+    expect(screen.getByRole('region', { name: 'Skin/Extremities finding slider' }))
+      .toHaveTextContent('Pale')
+
+    await user.click(control)
+    expect(screen.queryByRole('region', { name: 'Skin/Extremities finding slider' }))
+      .toBeNull()
+    expect(control).toHaveAttribute('aria-pressed', 'true')
   })
 })

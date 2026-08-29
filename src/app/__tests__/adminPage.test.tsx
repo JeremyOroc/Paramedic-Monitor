@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -47,6 +47,10 @@ describe('AdminPage', () => {
     vi.restoreAllMocks()
     routerReplace.mockClear()
     useMonitorStore.getState().reset()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('lets a session instructor end an active room', async () => {
@@ -171,6 +175,10 @@ describe('AdminPage', () => {
     render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+    await user.click(screen.getByRole('button', { name: 'Pulse 15s' }))
+    expect(screen.getByRole('button', {
+      name: 'Cancel Pulse 15-second measurement',
+    })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'New Attempt' }))
 
@@ -180,6 +188,13 @@ describe('AdminPage', () => {
         headers: { 'x-session-host-token': 'host_token' },
       }),
     )
+    await waitFor(() =>
+      expect(screen.getByRole('group', { name: 'Pulse measurement options' }))
+        .toBeInTheDocument(),
+    )
+    expect(screen.queryByRole('button', {
+      name: 'Cancel Pulse 15-second measurement',
+    })).toBeNull()
   })
 
   it('keeps Start disabled until the call info has been sent', async () => {
@@ -512,8 +527,12 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'SpO2 off' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'EtCO2 off' })).toBeInTheDocument()
     expect(screen.getByTestId('patient-sns-controls')).toHaveClass('grid-cols-3')
-    expect(screen.getByRole('button', { name: 'Pulse' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Respiratory' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Pulse' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Respiratory' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Pulse measurement options' }))
+      .toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Respiratory measurement options' }))
+      .toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Skin/Extremities' })).toBeInTheDocument()
     const vitals = screen.getByRole('heading', { name: 'Vitals' }).closest('section')
     const sample = screen.getByRole('region', { name: 'Sample' })
@@ -546,6 +565,35 @@ describe('AdminPage', () => {
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeEnabled()
+  })
+
+  it('continues independent SNS measurements while another tab is selected', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    render(<AdminPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Pulse 15s' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Respiratory 30s' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Scenarios' }))
+
+    expect(screen.queryByRole('heading', { name: 'Pulse' })).toBeNull()
+    act(() => {
+      vi.advanceTimersByTime(15_000)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' }))
+      .toHaveTextContent('Missing: Rate, Rhythm, Strength')
+    expect(screen.getByRole('img', { name: 'Pulse findings' })).toHaveClass(
+      'text-ecg-green',
+    )
+    expect(screen.getByRole('button', {
+      name: 'Cancel Respiratory 30-second measurement',
+    })).toHaveTextContent('15s')
+    expect(screen.queryByRole('region', { name: 'Respiratory measurement result' }))
+      .toBeNull()
   })
 
   it('places the shared Save and Send actions immediately above the tab list', () => {
@@ -792,39 +840,45 @@ describe('AdminPage', () => {
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     await user.click(screen.getByRole('button', { name: 'T1' }))
 
-    const pulse = screen.getByRole('button', { name: 'Pulse' })
-    const respiratory = screen.getByRole('button', { name: 'Respiratory' })
-    expect(pulse).toHaveClass('border-pending-amber')
-    expect(respiratory).toHaveClass('border-pending-amber')
+    const pulseContext = screen.getByRole('img', { name: 'Pulse findings' }).parentElement
+    const respiratoryContext = screen.getByRole('img', {
+      name: 'Respiratory findings',
+    }).parentElement
+    expect(pulseContext).toHaveClass('border-pending-amber')
+    expect(respiratoryContext).toHaveClass('border-pending-amber')
 
-    await user.click(pulse)
-    expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
+    await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' })).toHaveTextContent(
       'Rate: 106 bpm',
     )
-    expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' })).toHaveTextContent(
       'Strength: Moderate',
     )
-    await user.click(respiratory)
-    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
-      'Rate: 22 breaths/min',
+    await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
+    expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
+      'Respiratory: 22 breaths/min',
     )
-    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
-      'Strength: Unlabored',
+    expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
+      'Unlabored',
     )
 
     await user.click(screen.getByRole('button', { name: 'U3' }))
 
-    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
-      'Rate: 30 breaths/min',
+    expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
+      'Respiratory: 22 breaths/min',
     )
-    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
-      'Strength: Weak respiratory effort',
+    await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
+    expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
+      'Respiratory: 30 breaths/min',
     )
-    await user.click(screen.getByRole('button', { name: 'Pulse' }))
-    expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
+    expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
+      'Weak respiratory effort',
+    )
+    await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' })).toHaveTextContent(
       'Rate: 136 bpm',
     )
-    expect(screen.getByRole('region', { name: 'Pulse finding slider' })).toHaveTextContent(
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' })).toHaveTextContent(
       'Strength: Thready',
     )
     await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
@@ -971,19 +1025,19 @@ describe('AdminPage', () => {
 
     expect(frontChest).toHaveClass('border-pending-amber')
     expect(sceneEnvironment).toHaveClass('border-pending-amber')
-    expect(screen.queryByRole('button', { name: 'Respiratory' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Respiratory' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Skin/Extremities' })).toBeNull()
     await user.click(frontChest)
     await user.click(sceneEnvironment)
 
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
-    const respiratory = screen.getByRole('button', { name: 'Respiratory' })
+    const respiratory = screen.getByRole('img', { name: 'Respiratory findings' })
     const skinExtremities = screen.getByRole('button', { name: 'Skin/Extremities' })
-    expect(respiratory).toHaveClass('border-pending-amber')
+    expect(respiratory.parentElement).toHaveClass('border-pending-amber')
     expect(skinExtremities).toHaveClass('border-pending-amber')
-    await user.click(respiratory)
-    expect(screen.getByRole('region', { name: 'Respiratory finding slider' })).toHaveTextContent(
-      'Rate: 24 breaths/min',
+    await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
+    expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
+      'Respiratory: 24 breaths/min',
     )
     await user.click(skinExtremities)
     expect(screen.getByRole('region', { name: 'Skin/Extremities finding slider' })).toHaveTextContent(
