@@ -32,6 +32,22 @@ _Avoid_: Active model, selected monitor
 The instructor-approved vital values, channel states, rhythm, patient category, and energy setting available to the trainee during an attempt.
 _Avoid_: Draft vitals, admin inputs
 
+**SNS measurement option**:
+One of the Instructor Console's `15s`, `30s`, or `Tap` actions for revealing a Pulse or Respiratory assessment result.
+_Avoid_: Pulse button, Respiratory button, icon toggle
+
+**SNS measurement countdown**:
+A cancellable Pulse or Respiratory observation period started by a timed SNS measurement option.
+_Avoid_: Scenario timer, dispatch countdown
+
+**SNS measurement result**:
+The Pulse or Respiratory assessment details revealed immediately by Tap or after an SNS measurement countdown completes.
+_Avoid_: Pulse information, Respiratory information, finding slider
+
+**Respiratory effort**:
+The observed work of breathing described by findings such as unlabored or mildly labored.
+_Avoid_: Respiratory strength
+
 **Wagami X**:
 The established Wagami defibrillator model whose controls provide the simulator's existing physical-button interactions.
 _Avoid_: Old monitor, legacy monitor

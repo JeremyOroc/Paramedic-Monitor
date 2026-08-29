@@ -8,6 +8,7 @@
 
 ## Current Requirement Updates
 
+- In the Instructor Console's Monitor & Patient SNS area, Pulse and Respiratory retain their icon/title context but replace their single icon toggle with `15s`, `30s`, and `Tap` measurement options. A timed option replaces its three-button row with a full-width cancellable countdown; cancelling restores the options without revealing or newly confirming a result, while completion restores the options, confirms the finding, and reveals the result. Tap confirms and reveals immediately. Pulse and Respiratory measurements are fully independent: their countdowns may run and complete simultaneously, both results may remain visible, and starting or cancelling one affects only that group. Skin/Extremities and Scene/Environment retain their existing relationship and neither affect nor are affected by Pulse/Respiratory measurements. Timed measurements continue and complete at their real deadlines while another Instructor Console tab is selected, including off-tab confirmation and draft-dirty state, but cancel on scenario load/reset, refresh, or New Attempt. Each measurement snapshots the current auto-sorted findings at start. The 15- and 30-second count lines are display-only values derived from the snapshot rate using nearest-whole-count rounding. Missing findings retain the existing amber review treatment. Countdown state and derived counts are not saved in scenarios or broadcast to trainees.
 - The shared instructor Save/Send actions must render in a left-aligned row immediately above the three-tab strip instead of below the forms. Selecting VF or VT locks the FC editor and turns FC On: VF shows `AUTO 190–220`, saves an underlying FC of 190, and displays a synchronized inclusive 190–220 integer on each 1.9-second FC alarm-flash cycle; VT shows and saves exactly 220. Automatic-rhythm values cannot be overwritten by direct, auto-sort, timed, scenario, or hydration paths. Leaving VF/VT restores the current interaction's prior manual FC, with 80 as the fallback for loaded/rehydrated automatic rhythms. VF randomness affects only the visible FC digits; waveform cadence, alarms, logs, and captures keep the underlying FC, CPR takes precedence, and room participants use server-timestamped deterministic display timing so they see the same sequence.
 - Default entry point is now a Kahoot-style session lobby: instructors create rooms, students join with code + nickname, and `/?dev=1` remains the local monitor shortcut.
 - Session room codes must be selectable and copyable from instructor and student waiting-room views.
@@ -657,16 +658,36 @@ button is inert until a drill gate is satisfied.
   extracts Rate, Rhythm, and Strength internally from explicit
   respiratory/pulse labels and clearly classifiable broad Respiratory/Pulse
   section lines. Skin/Extremities and Scene/Environment sections collect their
-  lines into one icon-only note and do not mark body-map regions. Each icon card
-  is the only toggle: auto-sort places an amber `!` on the whole icon when any
-  matching finding exists, clicking the icon turns it ECG-green and opens a
-  combined slider, and clicking it again closes the slider while keeping the
-  icon confirmed. Confirmed controls keep a black button surface while their
-  border, icon, and label turn ECG green; the surrounding active-card cue remains.
-  Pulse/Respiratory sliders list missing Rate/Rhythm/Strength
-  fields in amber. Comma-separated summaries such as `Pulse: 136 bpm, Regular,
-  Weak` and `Respirations: 30 breaths/min, Regular, Labored` fill rate, rhythm,
-  and strength in order.
+  lines into one icon-only note and do not mark body-map regions. Auto-sort places
+  an amber `!` on a Pulse or Respiratory card when matching findings exist. Each
+  of those cards retains its icon/title context and presents `15s`, `30s`, and
+  `Tap` SNS measurement options. A timed option snapshots the current findings,
+  hides that group's prior result, and replaces the option row with a full-width
+  cancellable countdown displaying `15s` through `1s`; it does not flash `0s`.
+  Cancellation restores the options without revealing or newly confirming the
+  result. Completion restores the options, confirms the card, and reveals the
+  snapshot result; Tap performs the same confirmation/reveal immediately. A
+  previously confirmed card remains confirmed after a later cancellation.
+  Pulse and Respiratory countdowns and result visibility are fully independent:
+  both may run, complete, confirm, and remain visible simultaneously, while a
+  start or cancellation hides or changes only that same group's result. They do
+  not close or cancel Skin/Extremities or Scene/Environment, and those existing
+  icon panels do not close or cancel the measurements. Timed measurements use
+  absolute end timestamps so they continue and complete at the real deadline
+  while another Instructor Console tab is selected. Off-tab completion confirms
+  the relevant card and dirties the scenario draft before the instructor returns.
+  Scenario load/reset, refresh, and New Attempt cancel both measurements.
+  Countdown state and derived counts are local, transient, excluded from saved
+  scenario snapshots, and never broadcast to trainees. The result lists the
+  snapshot's current fields plus display-only 15- and 30-second counts calculated
+  from a valid rate with nearest-whole-count rounding; missing fields retain an
+  amber notice. Respiratory `strength` snapshot data is presented canonically as
+  respiratory effort without changing the backward-compatible saved field key.
+  Skin/Extremities retains its existing single icon-only toggle. Confirmed controls
+  keep a black surface while their border, icon, and label turn ECG green.
+  Comma-separated summaries such as `Pulse: 136 bpm, Regular, Weak` and
+  `Respirations: 30 breaths/min, Regular, Labored` continue to fill rate, rhythm,
+  and strength/effort in order.
 - Admin vitals are ordered FC → SpO2 → BP sys/dia → EtCO2. The ECG graph/rhythm
   control sits in a separate right column beside the numeric vitals column. FC,
   SpO2, BP sys, BP dia, and EtCO2 remain vertically aligned together. SpO2 and
@@ -802,7 +823,7 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 - Unit coverage for snapshot normalization, meaningful-content and dirty comparisons, and fallback-number allocation.
 - Migration/service/API coverage for ordinary General behavior, cascade deletion, empty-library auto-create, persisted ordering, concurrent reorder/move safety, validation, grants, and error responses.
 - Component and admin integration coverage for tab order, Instructor Console copy, initially collapsed independent folder expansion, multiple/all-closed states, selected closed-folder save targeting, expansion across tab switches, new-folder opening, unconditional folder-delete confirmation, deletion fallback, row toggle load/unload, selected-and-dirty row Save gating, loaded and unloaded row deletion, local draft creation/save/delete, virtual empty-library `Folder 1`, active-attempt action locking, per-folder drag/drop and Up/Down ordering, cross-folder append, styled dialog confirm/cancel/backdrop/Escape/focus behavior, Caller Info action removal/collapse, and four-tab restoration.
-- Patient SNS component coverage verifies confirmed Pulse, Respiratory, and Skin/Extremities controls retain black fills with green borders, icons, and labels while inactive, pending, and slider behavior remains unchanged.
+- Patient SNS component coverage verifies black/green confirmed styling, pending and missing states, exact Pulse/Respiratory result formatting and rounded derived counts, immediate Tap behavior, independent simultaneous 15s/30s countdowns, countdown cancellation, no `0s` flash, completion confirmation, result snapshots, tab-surviving absolute timing, and cancellation on scenario load/reset, refresh, and New Attempt. Skin/Extremities retains its existing single-toggle behavior.
 - Full Vitest, ESLint, production build, and rendered desktop overflow/interaction QA.
 
 **Milestone — COMPLETE (2026-08-20):** An instructor can manage a global folder library, remove any folder, persist custom scenario order, reload or unload complete editable drafts from scenario rows, save into an automatically created folder when the library is empty, and collapse Caller Info without bypassing the normal Save → Send workflow.

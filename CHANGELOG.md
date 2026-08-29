@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-08-29] [planning/instructor] — Define timed Pulse and Respiratory measurements
+
+- Replaced the planned immediate Pulse/Respiratory icon-toggle interaction with icon-contextual `15s`, `30s`, and `Tap` measurement options, cancellable timed rows, completion-only confirmation, and exact snapshot-based result semantics.
+- Defined display-only nearest-whole derived counts, canonical respiratory-effort terminology, missing-data behavior, independent simultaneous countdowns, tab-surviving absolute timing, and cancellation boundaries for scenario changes, refresh, and New Attempt.
+- Defined fully independent Pulse/Respiratory countdowns and result visibility, non-interaction with Skin/Extremities and Scene/Environment, and real-deadline off-tab completion that confirms and dirties the scenario draft. Added the domain terms SNS measurement option, SNS measurement countdown, SNS measurement result, and respiratory effort.
+
 ## [2026-08-29] [instructor] — Add safe scenario row actions and styled confirmations
 
 - Renamed the surface to Instructor Console and removed the obsolete local-only/waiting-tab guidance, Supabase-library subtitle, Caller Info Analyse label, and Caller Info Save/Delete controls.

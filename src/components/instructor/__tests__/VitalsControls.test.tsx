@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+import type { PatientSnsMeasurementState } from '@/hooks/usePatientSnsMeasurements'
 import { useMonitorStore } from '@/store/monitorStore'
 
 import { VitalsControls } from '../VitalsControls'
@@ -33,6 +34,23 @@ const TIMED_VITALS_SAMPLE = [
   'EtCO2: 26 mmHg',
 ].join('\n')
 
+const EMPTY_MEASUREMENTS: PatientSnsMeasurementState = {
+  pulse: {
+    durationSeconds: null,
+    endsAt: null,
+    pendingSnapshot: null,
+    resultSnapshot: null,
+    secondsLeft: 0,
+  },
+  respiratory: {
+    durationSeconds: null,
+    endsAt: null,
+    pendingSnapshot: null,
+    resultSnapshot: null,
+    secondsLeft: 0,
+  },
+}
+
 describe('VitalsControls', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
@@ -55,13 +73,17 @@ describe('VitalsControls', () => {
           findings: {},
           activeIconGroup: null,
           onIconGroupClick: vi.fn(),
+          measurements: EMPTY_MEASUREMENTS,
+          onMeasurementStart: vi.fn(),
+          onMeasurementTap: vi.fn(),
+          onMeasurementCancel: vi.fn(),
         }}
       />,
     )
 
     const controls = screen.getByTestId('patient-sns-controls')
-    const pulse = within(controls).getByRole('button', { name: 'Pulse' })
-    const respiratory = within(controls).getByRole('button', { name: 'Respiratory' })
+    const pulse = within(controls).getByRole('heading', { name: 'Pulse' })
+    const respiratory = within(controls).getByRole('heading', { name: 'Respiratory' })
     const skinExtremities = within(controls).getByRole('button', {
       name: 'Skin/Extremities',
     })
