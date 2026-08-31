@@ -23,6 +23,13 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **iPad-safe CPR metronome — IMPLEMENTATION COMPLETE:**
+  - [x] Replaced the delayed streamed-media handoff with a 52.9 KB mono WAV sampled from the original metronome recording; its 600 ms period is exactly 100 BPM and preserves the original click timbre
+  - [x] Kept the CPR instruction and decoded original-sound metronome in the unlocked audio graph, including late-decode recovery and a metronome-first fallback if iPadOS rejects the short voice element
+  - [x] Repeated starts replace the prior sequence; mute, reset, early CPR exit, and two-minute completion stop pending and active CPR audio without later resurrection
+  - [x] Removed the obsolete 30-minute, 11.9 MB `public/audio/100_bpm.mp3` asset
+  - [x] Added original-sample, slow-load, audio lifecycle, defibrillator-hook, and bottom-status regressions; all 889 tests, TypeScript, targeted ESLint, the production build, desktop browser CPR entry/exit, and the served WAV response pass
+  - [ ] Generation-8 iPad Safari and Chrome cold-load/background/repeat-cycle verification — requires the physical device
 - [x] **Instructor Console scenario safety and row actions — COMPLETE:**
   - [x] Renamed the visible console, removed obsolete local-monitor guidance, Supabase subtitle, and Caller Info Analyse/action copy
   - [x] Moved Save/Delete onto every saved row with loaded-and-dirty Save gating, isolated unloaded-row deletion, and retained loaded-scenario values as a draft after deletion

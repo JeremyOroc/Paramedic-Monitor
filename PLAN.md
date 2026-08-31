@@ -403,11 +403,23 @@ existing close-panel and exit-12-lead precedence.
 - Only one alarm sound may play at a time, even when multiple vitals are alarming
 - Alarm audio stops automatically when every vital returns to the normal range
 
+**CPR metronome reliability:**
+- `playCprAudioSequence()` plays the spoken CPR instruction and then loops the original recorded metronome timbre at exactly 100 BPM on supported desktop and iPadOS browsers, including Safari and Chrome.
+- Preserve the original sound in a compact decoded loop; the metronome must not depend on the 30-minute streamed media element or a delayed `HTMLMediaElement.play()` call, because iPadOS can reject that handoff outside the initiating gesture.
+- Repeated play requests replace the current CPR sequence instead of overlapping it. Mute, reset, defibrillator CPR exit, and `stopCprAudioSequence()` silence both the pending instruction and active metronome.
+- If iPadOS suspends the shared audio context, an active metronome request resumes only after the context is running again; stopped or muted requests must not be resurrected.
+
 **Steps:**
 1. Build `audio.ts` — `playAlarm()`, `pauseAlarm()` helpers wrapping `<audio>` element
 2. `useAlarm` hook — monitors live vitals; triggers alarm for HR, BP, or SpO2 threshold violations
 3. Vital boxes render per-vital alarm styling on student monitor
 4. Alarm state resets automatically when vitals return to normal range
+
+**Testing:**
+- Unit tests cover original-sample loading, the CPR voice-to-metronome handoff, exact 100 BPM loop duration, configured gain, repeated-start replacement, stop/mute cancellation, and suspended-context recovery.
+- Defibrillator hook/component tests verify that no-shock and post-shock CPR transitions request the audio sequence and that leaving CPR stops it.
+- Browser QA enters the real non-shock CPR flow, verifies a clean console, and confirms the compact original-sound loop replaces the obsolete long metronome asset.
+- Real-device release QA verifies Safari and Chrome on the generation-8 iPad across cold load, background/foreground recovery, mute/unmute, and repeated CPR cycles.
 
 **Milestone:** Instructor sets HR=220 → student monitor alarm triggers (visual + audio). Returning all alarming vitals to normal silences it.
 

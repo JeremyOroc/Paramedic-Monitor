@@ -1,10 +1,17 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+import { playCprAudioSequence } from '@/lib/audio'
 import { useDefibSequence } from '../useDefibSequence'
+
+vi.mock('@/lib/audio', () => ({
+  playSystemAudio: vi.fn(),
+  playCprAudioSequence: vi.fn(),
+}))
 
 describe('useDefibSequence', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.clearAllMocks()
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -52,6 +59,22 @@ describe('useDefibSequence', () => {
     })
     expect(result.current.state).toBe('cpr')
     expect(result.current.canCharge).toBe(true)
+    expect(playCprAudioSequence).toHaveBeenCalledTimes(1)
+  })
+
+  it('starts the CPR audio sequence after a shock-advised delivery', () => {
+    const { result } = renderHook(() =>
+      useDefibSequence({ patientMode: 'adult', rhythm: 'vf' }),
+    )
+
+    act(() => result.current.onAnalyse())
+    act(() => vi.advanceTimersByTime(2500))
+    act(() => vi.advanceTimersByTime(2500))
+    expect(result.current.state).toBe('shock_advised')
+
+    act(() => result.current.onShock())
+    expect(result.current.state).toBe('cpr')
+    expect(playCprAudioSequence).toHaveBeenCalledTimes(1)
   })
 
   it('transitions charge_prompt → charging → charged', () => {

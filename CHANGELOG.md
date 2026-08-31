@@ -5,6 +5,19 @@
 
 ---
 
+## [2026-08-31] [audio] — Restore the original CPR metronome sound in a compact iPad-safe loop
+
+- Replaced the temporary synthesized click with `public/audio/100_bpm_loop.wav`, a 52.9 KB, 600 ms mono loop extracted from the original metronome recording. It retains the original click timbre at exactly 100 BPM while the obsolete 30-minute, 11.9 MB source track remains out of the shipped app.
+- Decode and loop the compact original sample through the already unlocked Web Audio context, so the post-instruction handoff no longer depends on a delayed `HTMLMediaElement.play()` call. A requested metronome now starts when a slow decode finishes and retries a transient preload failure without reviving a stopped or muted sequence.
+- Added original-asset request and late-decode regressions. All 889 tests, TypeScript, targeted ESLint, the Next.js production build, desktop browser Analyze → CPR → exit QA, and the served WAV's 200/audio-wav/52,964-byte response pass; generation-8 iPad Safari/Chrome device verification remains outstanding.
+
+## [2026-08-31] [audio] — Replace the streamed CPR track with an iPad-safe Web Audio metronome
+
+- Replaced the delayed `100_bpm.mp3` media-element handoff with a generated mono Web Audio tick whose 600 ms loop period is exactly 100 BPM, keeping the spoken CPR instruction and metronome in the shared unlocked audio graph used by timer-driven iPad cues.
+- Added CPR playback intent and lifecycle handling so repeated starts replace the prior sequence, suspended contexts recover only active requests, and mute, reset, early CPR exit, or two-minute completion cannot resurrect stopped audio. If iPadOS blocks the voice-element fallback before its small file is decoded, the metronome still starts instead of losing the entire CPR cue.
+- Removed the obsolete 30-minute, 11.9 MB `public/audio/100_bpm.mp3` asset and its streamed `HTMLAudioElement`/gain routing.
+- Added exact-BPM, gain, handoff, overlap, cancellation, suspended-context, blocked-fallback, no-shock/post-shock entry, and CPR-exit regressions. All 888 tests, TypeScript, targeted ESLint, the Next.js production build, and desktop browser CPR entry/exit QA pass with a clean console; generation-8 iPad Safari/Chrome device verification remains outstanding.
+
 ## [2026-08-29] [planning/instructor] — Define timed Pulse and Respiratory measurements
 
 - Replaced the planned immediate Pulse/Respiratory icon-toggle interaction with icon-contextual `15s`, `30s`, and `Tap` measurement options, cancellable timed rows, completion-only confirmation, and exact snapshot-based result semantics.

@@ -22,18 +22,24 @@ function callsFor(file: string, opts: { muted: boolean }): PlayCall[] {
  * reliable.
  */
 type RoutedCue = { src: string; gain: number }
+type StartedSource = {
+  loop: boolean
+  gain: number
+  duration: number
+  finish: () => void
+}
 
 function installFakeAudioContext(
   initialState: AudioContextState = 'running',
 ): {
   routed: RoutedCue[]
   resumes: number
-  started: Array<{ loop: boolean; gain: number }>
+  started: StartedSource[]
   stopped: number[]
   ctx: () => { state: AudioContextState }
 } {
   const routed: RoutedCue[] = []
-  const started: Array<{ loop: boolean; gain: number }> = []
+  const started: StartedSource[] = []
   const stopped: number[] = []
   const lastGain = { value: 1 }
   const state = { resumes: 0 }
@@ -44,6 +50,7 @@ function installFakeAudioContext(
 
   class FakeAudioContext {
     destination = { id: 'destination' }
+    sampleRate = 48000
     // A suspended context makes routed cues silent, so canStartCue refuses to
     // start them and tries to resume. Without a truthful state here that retry
     // never settles and the module spins.
@@ -77,20 +84,41 @@ function installFakeAudioContext(
       return node
     }
     decodeAudioData(bytes: ArrayBuffer) {
-      return Promise.resolve({ duration: 1, byteLength: bytes.byteLength } as unknown as AudioBuffer)
+      return Promise.resolve({
+        // The metronome fetch stub uses a distinct payload size so these tests
+        // can verify that the decoded original-sound asset is the 600 ms loop.
+        duration: bytes.byteLength === 16 ? 0.6 : 1,
+        byteLength: bytes.byteLength,
+        getChannelData: () => new Float32Array(this.sampleRate),
+      } as unknown as AudioBuffer)
     }
-    createBuffer() {
-      return { duration: 1 } as unknown as AudioBuffer
+    createBuffer(_channels: number, length: number, sampleRate: number) {
+      return {
+        duration: length / sampleRate,
+        getChannelData: () => new Float32Array(length),
+      } as unknown as AudioBuffer
     }
     createBufferSource() {
+      let onEnded: (() => void) | null = null
       const node = {
         buffer: null as AudioBuffer | null,
         loop: false,
         connect: () => {},
         disconnect: () => {},
-        addEventListener: () => {},
+        addEventListener: (event: string, listener: EventListenerOrEventListenerObject) => {
+          if (event !== 'ended') return
+          onEnded = () => {
+            if (typeof listener === 'function') listener(new Event('ended'))
+            else listener.handleEvent(new Event('ended'))
+          }
+        },
         start: () => {
-          started.push({ loop: node.loop, gain: lastGain.value })
+          started.push({
+            loop: node.loop,
+            gain: lastGain.value,
+            duration: node.buffer?.duration ?? 0,
+            finish: () => onEnded?.(),
+          })
         },
         stop: () => {
           stopped.push(1)
@@ -251,7 +279,7 @@ describe('output gain', () => {
     expect(gainFor('alarm.mp3')).toBe(AUDIO_LEVELS.alarm)
     expect(gainFor('charge_beep.mp3')).toBe(AUDIO_LEVELS.chargeBeep)
     expect(gainFor('button_click.mp3')).toBe(AUDIO_LEVELS.buttonClick)
-    expect(gainFor('100_bpm.mp3')).toBe(AUDIO_LEVELS.metronome100Bpm)
+    expect(gainFor('100_bpm.mp3')).toBeUndefined()
   })
 
   it('hands level control to the gain node so it is not applied twice', async () => {
@@ -425,6 +453,200 @@ describe('decoded cue playback', () => {
     audio.playShockReadyBeep()
 
     expect(callsFor('shock_ready_beep.mp3', { muted: false })).not.toHaveLength(0)
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('CPR metronome sequence', () => {
+  function stubSuccessfulFetch() {
+    const fetched: string[] = []
+    vi.stubGlobal('fetch', (input: string | URL | Request) => {
+      const src = String(input)
+      fetched.push(src)
+      return Promise.resolve({
+        ok: true,
+        arrayBuffer: () => Promise.resolve(new ArrayBuffer(src.endsWith('100_bpm_loop.wav') ? 16 : 8)),
+      })
+    })
+    return fetched
+  }
+
+  function resolvedMetronomeFetchOnly() {
+    vi.stubGlobal('fetch', (input: string | URL | Request) =>
+      String(input).endsWith('100_bpm_loop.wav')
+        ? Promise.resolve({
+            ok: true,
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(16)),
+          })
+        : new Promise(() => {}),
+    )
+  }
+
+  it('hands the decoded instruction off to the compact original-sound 100 BPM loop', async () => {
+    const fetched = stubSuccessfulFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    ctx.started.length = 0
+    calls = []
+    const onInstructionEnded = vi.fn()
+
+    audio.playCprAudioSequence(onInstructionEnded)
+    expect(ctx.started).toHaveLength(1)
+    expect(ctx.started[0]).toMatchObject({ loop: false, duration: 1 })
+
+    ctx.started[0].finish()
+
+    expect(audio.CPR_METRONOME_BPM).toBe(100)
+    expect(ctx.started).toHaveLength(2)
+    expect(ctx.started[1]?.loop).toBe(true)
+    expect(ctx.started[1]?.duration).toBeCloseTo(0.6, 5)
+    expect(ctx.started[1]?.gain).toBe(audio.AUDIO_LEVELS.metronome100Bpm)
+    expect(onInstructionEnded).toHaveBeenCalledTimes(1)
+    expect(fetched.some((src) => src.endsWith('/audio/100_bpm_loop.wav'))).toBe(true)
+    expect(fetched.some((src) => src.endsWith('/audio/100_bpm.mp3'))).toBe(false)
+    expect(callsFor('100_bpm.mp3', { muted: false })).toHaveLength(0)
+    vi.unstubAllGlobals()
+  })
+
+  it('replaces an in-progress CPR sequence instead of overlapping it', async () => {
+    stubSuccessfulFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    ctx.started.length = 0
+
+    audio.playCprAudioSequence()
+    const stoppedBeforeRestart = ctx.stopped.length
+    audio.playCprAudioSequence()
+
+    expect(ctx.stopped.length).toBeGreaterThan(stoppedBeforeRestart)
+    expect(ctx.started.filter((source) => !source.loop)).toHaveLength(2)
+    vi.unstubAllGlobals()
+  })
+
+  it('stops the original-sound metronome and prevents a delayed restart', async () => {
+    stubSuccessfulFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    ctx.started.length = 0
+
+    audio.playCprAudioSequence()
+    ctx.started[0].finish()
+    expect(ctx.started.some((source) => source.loop)).toBe(true)
+
+    const stoppedBefore = ctx.stopped.length
+    audio.stopCprAudioSequence()
+    expect(ctx.stopped.length).toBeGreaterThan(stoppedBefore)
+
+    ctx.ctx().state = 'suspended'
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(ctx.started.filter((source) => source.loop)).toHaveLength(1)
+    vi.unstubAllGlobals()
+  })
+
+  it('mute cancels the pending instruction-to-metronome handoff', async () => {
+    stubSuccessfulFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    ctx.started.length = 0
+
+    audio.playCprAudioSequence()
+    const instruction = ctx.started[0]
+    audio.setAudioMuted(true)
+    instruction.finish()
+
+    expect(ctx.started.filter((source) => source.loop)).toHaveLength(0)
+    vi.unstubAllGlobals()
+  })
+
+  it('starts the requested metronome when its sample finishes decoding late', async () => {
+    let resolveMetronomeBytes: ((bytes: ArrayBuffer) => void) | undefined
+    vi.stubGlobal('fetch', (input: string | URL | Request) => {
+      const src = String(input)
+      return Promise.resolve({
+        ok: true,
+        arrayBuffer: () =>
+          src.endsWith('100_bpm_loop.wav')
+            ? new Promise<ArrayBuffer>((resolve) => {
+                resolveMetronomeBytes = resolve
+              })
+            : Promise.resolve(new ArrayBuffer(8)),
+      })
+    })
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await vi.waitFor(() => expect(resolveMetronomeBytes).toBeTypeOf('function'))
+    ctx.started.length = 0
+
+    audio.playCprAudioSequence()
+    await vi.waitFor(() => expect(ctx.started).toHaveLength(1))
+    ctx.started[0].finish()
+    expect(ctx.started.some((source) => source.loop)).toBe(false)
+
+    resolveMetronomeBytes?.(new ArrayBuffer(16))
+    await vi.waitFor(() => {
+      expect(ctx.started.some((source) => source.loop && source.duration === 0.6)).toBe(true)
+    })
+    vi.unstubAllGlobals()
+  })
+
+  it('recovers the requested CPR sequence after a suspended context resumes', async () => {
+    stubSuccessfulFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    ctx.started.length = 0
+    ctx.ctx().state = 'suspended'
+
+    audio.playCprAudioSequence()
+
+    await vi.waitFor(() => expect(ctx.started).toHaveLength(1))
+    expect(ctx.resumes).toBeGreaterThan(1)
+    expect(ctx.started[0]?.loop).toBe(false)
+    vi.unstubAllGlobals()
+  })
+
+  it('still starts the metronome if iPadOS blocks the voice element fallback', async () => {
+    resolvedMetronomeFetchOnly()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    ctx.started.length = 0
+    calls = []
+    locked = true
+
+    audio.playCprAudioSequence()
+
+    await vi.waitFor(() => {
+      expect(ctx.started.some((source) => source.loop)).toBe(true)
+    })
+    expect(callsFor('perform_cpr.mp3', { muted: false })).toHaveLength(1)
+    expect(callsFor('100_bpm.mp3', { muted: false })).toHaveLength(0)
     vi.unstubAllGlobals()
   })
 })

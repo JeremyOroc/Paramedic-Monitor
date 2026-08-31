@@ -61,7 +61,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
     prevIsDone.current = isDone
   }, [isDone, defibState])
 
-  // Stop 100bpm when CPR state exits early (e.g. Analyse pressed mid-CPR)
+  // Stop the metronome when CPR exits early (e.g. Analyse pressed mid-CPR)
   const prevDefibState = useRef(defibState)
   useEffect(() => {
     if (prevDefibState.current === 'cpr' && defibState !== 'cpr') {

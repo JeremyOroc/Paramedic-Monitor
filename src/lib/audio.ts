@@ -57,16 +57,17 @@ function createCue(src: string, level: number, loop = false): HTMLAudioElement {
   return el
 }
 
-// Looping cues run until something explicitly pauses them, so a request made
+// Looping cues and the CPR sequence run until something explicitly pauses them, so a request made
 // while playback is still locked is not a moment that can be missed — it is a
 // state that is still true once we unlock. Remember it here and replay on
 // unlock; priming only grants permission, it does not restart what was blocked.
-// One-shots (button click, voice prompts, caller alert) are deliberately not
+// Independent one-shots (button click, voice prompts, caller alert) are deliberately not
 // tracked — replaying those late would fire them out of context.
 const _wantsPlaying = {
   alarm: false,
   chargeBeep: false,
   shockReadyBeep: false,
+  cprSequence: false,
 }
 
 export function setAudioMuted(muted: boolean): void {
@@ -226,30 +227,144 @@ export function pauseShockReadyBeep(): void {
 }
 
 // ── CPR audio sequence ────────────────────────────────────────────────────────
-// perform_cpr.mp3 plays first; when it naturally ends, 100_bpm.mp3 starts.
-// Both are stopped together by stopCprAudioSequence().
+// perform_cpr.mp3 plays first; when it naturally ends, a compact loop sampled
+// from the original 100 BPM recording starts. Keeping both stages in one
+// AudioContext avoids the delayed HTMLMediaElement.play() call that iPadOS
+// rejects outside a gesture.
 
 const PERFORM_CPR_SRC = '/audio/perform_cpr.mp3'
+const CPR_METRONOME_SRC = '/audio/100_bpm_loop.wav'
+export const CPR_METRONOME_BPM = 100
 
 let _performCpr: HTMLAudioElement | null = null
-let _100bpm: HTMLAudioElement | null = null
 let _onPerformCprEnded: (() => void) | null = null
+let _cprInstructionSource: AudioBufferSourceNode | null = null
+let _cprMetronomeSource: AudioBufferSourceNode | null = null
+let _cprPhase: 'idle' | 'instruction' | 'metronome' = 'idle'
 
 if (typeof window !== 'undefined') {
   _performCpr = createCue(PERFORM_CPR_SRC, AUDIO_LEVELS.performCpr)
-  _100bpm = createCue('/audio/100_bpm.mp3', AUDIO_LEVELS.metronome100Bpm)
-
   _performCpr.addEventListener('ended', handlePerformCprEnded)
 }
 
-// Starts the metronome and fires the caller's callback. Shared by the element
-// 'ended' event and, when the voice line plays from a buffer, a timer for the
-// buffer's duration — buffer sources have no 'ended' event we can rely on here.
-function handlePerformCprEnded(): void {
-  if (!_muted && _100bpm) {
-    _100bpm.currentTime = 0
-    _100bpm.play().catch(() => {})
+function stopSource(source: AudioBufferSourceNode | null): void {
+  if (!source) return
+  try {
+    source.stop()
+    source.disconnect()
+  } catch {
+    // Already stopped or disconnected.
   }
+}
+
+function stopCprInstructionBuffer(): void {
+  const source = _cprInstructionSource
+  _cprInstructionSource = null
+  stopSource(source)
+}
+
+function stopCprMetronomeSource(): void {
+  const source = _cprMetronomeSource
+  _cprMetronomeSource = null
+  stopSource(source)
+}
+
+function startCprMetronome(): void {
+  if (_muted || !_wantsPlaying.cprSequence) return
+  const ctx = _ctx
+  if (!ctx || ctx.state !== 'running') {
+    if (ctx) {
+      void ctx.resume().then(() => {
+        if (ctx.state === 'running') resumeDesiredCues()
+      }).catch(() => {})
+    }
+    return
+  }
+
+  const buffer = _buffers.get(CPR_METRONOME_SRC)
+  if (!buffer) {
+    // Retry a transient preload failure when CPR actually needs the sample.
+    void decodeInto(ctx, CPR_METRONOME_SRC)
+    return
+  }
+  stopCprMetronomeSource()
+
+  try {
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    source.loop = true
+    const gain = ctx.createGain()
+    gain.gain.value = AUDIO_LEVELS.metronome100Bpm
+    source.connect(gain)
+    gain.connect(ctx.destination)
+    source.addEventListener('ended', () => {
+      if (_cprMetronomeSource === source) _cprMetronomeSource = null
+      try {
+        source.disconnect()
+      } catch {
+        // Already disconnected by the explicit stop path.
+      }
+    })
+    _cprMetronomeSource = source
+    source.start()
+  } catch {
+    _cprMetronomeSource = null
+  }
+}
+
+function playCprInstructionFromBuffer(): boolean {
+  const ctx = _ctx
+  const buffer = _buffers.get(PERFORM_CPR_SRC)
+  if (!ctx || ctx.state !== 'running' || !buffer) return false
+
+  stopCprInstructionBuffer()
+  try {
+    const source = ctx.createBufferSource()
+    source.buffer = buffer
+    const gain = ctx.createGain()
+    gain.gain.value = AUDIO_LEVELS.performCpr
+    source.connect(gain)
+    gain.connect(ctx.destination)
+    source.addEventListener('ended', () => {
+      if (_cprInstructionSource !== source) return
+      _cprInstructionSource = null
+      try {
+        source.disconnect()
+      } catch {
+        // Already disconnected by the explicit stop path.
+      }
+      handlePerformCprEnded()
+    })
+    _cprInstructionSource = source
+    source.start()
+    return true
+  } catch {
+    _cprInstructionSource = null
+    return false
+  }
+}
+
+function startCprInstruction(): void {
+  if (_muted || !_wantsPlaying.cprSequence || _cprPhase !== 'instruction') return
+  if (playCprInstructionFromBuffer()) return
+  if (!_performCpr || !canStartCue()) return
+
+  _performCpr.currentTime = 0
+  void _performCpr.play().catch(() => {
+    // If the short voice cue missed the decode window and iPadOS rejects the
+    // fallback media element, do not lose the clinically useful metronome too.
+    if (_wantsPlaying.cprSequence && _cprPhase === 'instruction') {
+      handlePerformCprEnded()
+    }
+  })
+}
+
+// Starts the original-sound metronome loop and fires the caller's callback.
+// Shared by the media-element and decoded-buffer instruction paths.
+function handlePerformCprEnded(): void {
+  if (!_wantsPlaying.cprSequence || _cprPhase !== 'instruction') return
+  _cprPhase = 'metronome'
+  if (!_muted) startCprMetronome()
   const cb = _onPerformCprEnded
   _onPerformCprEnded = null
   cb?.()
@@ -257,37 +372,31 @@ function handlePerformCprEnded(): void {
 
 export function playCprAudioSequence(onEnded?: () => void): void {
   if (typeof window === 'undefined') return
-  if (!_performCpr || !_100bpm) return
-  // Stop any in-progress sequence first
-  _onPerformCprEnded = null
-  _100bpm.pause()
-  _100bpm.currentTime = 0
-  _performCpr.pause()
-  _performCpr.currentTime = 0
+  if (!_performCpr) return
+  stopCprAudioSequence()
   _onPerformCprEnded = onEnded ?? null
-  if (_muted) return
-  // The spoken instruction goes through a buffer like every other short cue.
-  // The metronome that follows stays an element: at 11 MB it would be hundreds
-  // of MB decoded, so it has to stream. It starts from this cue's 'ended'
-  // handler, which is not a gesture, so on iOS it depends on the session being
-  // held open — see the silent loop in unlockAudio.
-  if (playFromBuffer(PERFORM_CPR_SRC, AUDIO_LEVELS.performCpr, false)) {
-    window.setTimeout(
-      () => _onPerformCprEnded && handlePerformCprEnded(),
-      (_buffers.get(PERFORM_CPR_SRC)?.duration ?? 0) * 1000,
-    )
+  _wantsPlaying.cprSequence = true
+  _cprPhase = 'instruction'
+  if (_muted) {
+    _wantsPlaying.cprSequence = false
+    _cprPhase = 'idle'
+    const cb = _onPerformCprEnded
+    _onPerformCprEnded = null
+    cb?.()
     return
   }
-  _performCpr.play().catch(() => {})
+  startCprInstruction()
 }
 
 export function stopCprAudioSequence(): void {
+  _wantsPlaying.cprSequence = false
+  _cprPhase = 'idle'
   _onPerformCprEnded = null
-  if (!_performCpr || !_100bpm) return
+  stopCprInstructionBuffer()
+  stopCprMetronomeSource()
+  if (!_performCpr) return
   _performCpr.pause()
   _performCpr.currentTime = 0
-  _100bpm.pause()
-  _100bpm.currentTime = 0
 }
 
 // ── Autoplay unlock ──────────────────────────────────────────────────────────
@@ -315,11 +424,10 @@ export function stopCprAudioSequence(): void {
 // matter what the map says. Routing each element through a Web Audio GainNode
 // gives us attenuation iOS does respect.
 //
-// MediaElementAudioSourceNode is used rather than decoding into AudioBuffers so
-// playback still streams: 100_bpm.mp3 is 11 MB and would be hundreds of MB of
-// PCM if fully decoded, which an iPad tab will not tolerate. Mixing in the graph
-// also means overlapping cues share one output stream rather than competing as
-// separate media streams, which older iOS restricts.
+// MediaElementAudioSourceNode remains the fallback for file-backed cues. The
+// CPR metronome is a tiny decoded sample from the original recording,
+// avoiding both streamed-media autoplay restrictions and the memory cost of
+// decoding its retired long MP3.
 //
 // Where Web Audio is unavailable (jsdom under test, very old browsers) nothing
 // is routed and el.volume from createCue stays in effect.
@@ -375,14 +483,15 @@ function audioContext(): AudioContext | null {
 // iOS refusing to preload media and the quirks of MediaElementAudioSourceNode.
 //
 // The elements are kept as the fallback path for browsers without Web Audio
-// (and for jsdom under test), and for 100_bpm.mp3, which is 11 MB and would be
-// hundreds of MB decoded.
+// (and for jsdom under test). The metronome itself requires Web Audio on the
+// modern browsers supported by this application.
 
 const _buffers = new Map<string, AudioBuffer>()
+const _buffersLoading = new Set<string>()
 const _activeLoops = new Map<string, AudioBufferSourceNode>()
 let _buffersRequested = false
 
-/** Cues small enough to hold decoded. Excludes the 11 MB metronome. */
+/** Cues small enough to hold decoded, including the compact metronome sample. */
 function bufferableSources(): string[] {
   const sources = new Set<string>([
     BUTTON_CLICK_SRC,
@@ -391,6 +500,7 @@ function bufferableSources(): string[] {
     CHARGE_BEEP_SRC,
     SHOCK_READY_SRC,
     PERFORM_CPR_SRC,
+    CPR_METRONOME_SRC,
   ])
   for (const filename of Object.keys(SYSTEM_AUDIO_LEVELS)) {
     sources.add(`/audio/${filename}`)
@@ -399,7 +509,8 @@ function bufferableSources(): string[] {
 }
 
 async function decodeInto(ctx: AudioContext, src: string): Promise<void> {
-  if (_buffers.has(src)) return
+  if (_buffers.has(src) || _buffersLoading.has(src)) return
+  _buffersLoading.add(src)
   try {
     const response = await fetch(src)
     if (!response.ok) return
@@ -409,8 +520,21 @@ async function decodeInto(ctx: AudioContext, src: string): Promise<void> {
     // whole batch.
     const buffer = await ctx.decodeAudioData(bytes)
     _buffers.set(src, buffer)
+    // The instruction can finish before this independent preload on a slow
+    // iPad. Preserve the requested CPR state and begin as soon as the original
+    // sample is ready instead of losing the metronome permanently.
+    if (
+      src === CPR_METRONOME_SRC &&
+      _wantsPlaying.cprSequence &&
+      _cprPhase === 'metronome' &&
+      !_cprMetronomeSource
+    ) {
+      startCprMetronome()
+    }
   } catch {
     // Leave it unbuffered — playback falls back to the element for this cue.
+  } finally {
+    _buffersLoading.delete(src)
   }
 }
 
@@ -506,6 +630,13 @@ function resumeDesiredCues(): void {
   if (_wantsPlaying.alarm) playAlarm()
   if (_wantsPlaying.chargeBeep) playChargeBeep()
   if (_wantsPlaying.shockReadyBeep) playShockReadyBeep()
+  if (_wantsPlaying.cprSequence) {
+    if (_cprPhase === 'instruction' && !_cprInstructionSource && _performCpr?.paused) {
+      startCprInstruction()
+    } else if (_cprPhase === 'metronome' && !_cprMetronomeSource) {
+      startCprMetronome()
+    }
+  }
 }
 
 function allAudioElements(): HTMLAudioElement[] {
@@ -516,7 +647,6 @@ function allAudioElements(): HTMLAudioElement[] {
     _chargeBeep,
     _shockReadyBeep,
     _performCpr,
-    _100bpm,
   ]) {
     if (el) els.push(el)
   }
