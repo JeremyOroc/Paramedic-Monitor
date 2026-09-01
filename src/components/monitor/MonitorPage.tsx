@@ -392,7 +392,11 @@ export function MonitorPage({
   ])
 
   const acceptedBpDisplayActive = acceptedBpActive.bp_sys || acceptedBpActive.bp_dia
-  const etco2DisplayActive = confirmedVitalActive.etco2 && etco2Loaded
+  const displayedEtco2 = etco2Loaded
+    ? confirmedVitalActive.etco2
+      ? confirmed.etco2
+      : 0
+    : null
   const displayedHr = cprHeartRate ?? confirmed.hr
   const displayedHrActive = cprOverrideActive || confirmedVitalActive.hr
   const vfDisplayedHr = useVfDisplayHeartRate({
@@ -410,7 +414,7 @@ export function MonitorPage({
       fc: displayedHrActive ? displayedHr : null,
       pniSys: acceptedBpActive.bp_sys ? acceptedBp.bp_sys : null,
       pniDia: acceptedBpActive.bp_dia ? acceptedBp.bp_dia : null,
-      etco2: etco2DisplayActive ? confirmed.etco2 : null,
+      etco2: displayedEtco2,
       spo2: confirmedVitalActive.spo2 ? confirmed.spo2 : null,
     }),
     [
@@ -418,12 +422,11 @@ export function MonitorPage({
       acceptedBp.bp_sys,
       acceptedBpActive.bp_dia,
       acceptedBpActive.bp_sys,
-      confirmed.etco2,
       confirmed.spo2,
       confirmedVitalActive.spo2,
       displayedHr,
       displayedHrActive,
-      etco2DisplayActive,
+      displayedEtco2,
     ],
   )
   const vitalLog = useVitalLog({
@@ -513,6 +516,7 @@ export function MonitorPage({
               showApplyElectrodes={false}
               showAllSecondaryChannels={!controller.bottomStatusVisible}
               selected={controller.activeSelectedControl}
+              etco2Calibrated={etco2Loaded}
               etco2Loading={etco2Loading}
               cprOverride={cprOverrideActive}
             />
@@ -527,7 +531,7 @@ export function MonitorPage({
                   pulseHeartRate={displayedHr}
                   bpSys={acceptedBpDisplayActive ? acceptedBp.bp_sys : ''}
                   bpDia={acceptedBpDisplayActive ? acceptedBp.bp_dia : ''}
-                  etco2={etco2DisplayActive ? confirmed.etco2 : ''}
+                  etco2={displayedEtco2 ?? ''}
                   spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
                   spo2Waveform={confirmed.spo2_waveform}
                   spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}

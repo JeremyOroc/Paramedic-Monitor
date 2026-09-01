@@ -36,6 +36,14 @@ _Avoid_: Active model, selected monitor
 The instructor-approved vital values, channel states, rhythm, patient category, and energy setting available to the trainee during an attempt.
 _Avoid_: Draft vitals, admin inputs
 
+**EtCO₂ calibration**:
+The trainee-local Wagami X readiness state for capnography, distinct from the instructor-confirmed EtCO₂ channel state. It remains valid through instructor channel and value changes until the monitor is reset.
+_Avoid_: EtCO₂ On, CO₂ selection
+
+**Confirmed EtCO₂ channel state**:
+The instructor-approved On/Off connectivity of capnography. Off represents a disconnected calibrated baseline; On provides the configured confirmed measurement.
+_Avoid_: EtCO₂ calibration, CO₂ soft-key state
+
 **SNS measurement option**:
 One of the Instructor Console's `15s`, `30s`, or `Tap` actions for revealing a Pulse or Respiratory assessment result.
 _Avoid_: Pulse button, Respiratory button, icon toggle

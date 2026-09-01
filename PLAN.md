@@ -240,11 +240,11 @@ paramedic-monitor/
    - Inner dark sidebar labels are visual only and must not be clickable
    - Right physical Move up / Move down / Enter buttons cycle a blue selected state through monitor header, right vitals, visible waveform labels/scales, ECG labels, and the minus toggle row. Enter is inert except on the minus toggle.
    - Medication mode keeps the normal right-side Move up / Move down / Enter monitor navigation active. When the medication Info soft key opens the event log, those three controls temporarily navigate the log instead. Exit is selected on open; multi-page logs cycle Down through Exit → Prev → Next → Exit and Up in reverse, while single-page logs keep Exit as the only selection. Enter closes only the log from Exit or activates the highlighted page direction from Prev/Next. The log shows 8 events per page, hides pagination for 0–8 events, consumes navigation without changing the background, and keeps unavailable first/last-page directions selectable but disabled when multiple pages exist. Closing the log restores normal monitor navigation while medication mode remains open.
-   - The physical Home button opens a mutually exclusive `Vital Log` modal matching the Event Log geometry. Beginning at `00:05:00`, it records immutable trainee-visible snapshots every five elapsed monitor minutes in Timestamp → FC → PNI SYS → PNI DIA → ETCO2 → SPO2 order. FC includes the CPR override; PNI uses independently active accepted cuff values; EtCO2 requires an active, calibrated channel; SpO2 requires an active channel; unavailable values render as `-`. The log shows 8 rows per page and reuses the Event Log Exit/Prev/Next cyclic navigation and boundary behavior. Back closes it, Home cannot open it over another modal, and no other modal can open while it owns the screen. Its history clears with the monitor session timer on power-off or refresh, but not on an instructor vital reset while that timer continues.
+   - The physical Home button opens a mutually exclusive `Vital Log` modal matching the Event Log geometry. Beginning at `00:05:00`, it records immutable trainee-visible snapshots every five elapsed monitor minutes in Timestamp → FC → PNI SYS → PNI DIA → ETCO2 → SPO2 order. FC includes the CPR override; PNI uses independently active accepted cuff values; calibrated EtCO2 records `0` while its confirmed channel is Off and the configured value while On; uncalibrated EtCO2 is unavailable; SpO2 requires an active channel; unavailable values render as `-`. The log shows 8 rows per page and reuses the Event Log Exit/Prev/Next cyclic navigation and boundary behavior. Back closes it, Home cannot open it over another modal, and no other modal can open while it owns the screen. Its history clears with the monitor session timer on power-off or refresh, but not on an instructor vital reset while that timer continues.
    - Header/subbar reference controls include a combined date/time selectable region, patient-mode selectable region, beacon icon, selectable battery icon, a small minus rectangle beneath date/time, and a larger empty rectangle beside it.
    - The minus toggle hides or restores the bottom status/defib/CPR panel. When hidden, the main waveform area expands to show ECG, EtCO2, and SpO2 rows while the right vitals column stays unchanged.
    - Graph title metadata displays `SpO2 1x` and, when EtCO2 is visible, `EtCO2 0 to 60 mmHg`; this text does not change the internal EtCO2 renderer scale.
-   - The first EtCO2 toggle after monitor reset starts a 10-second calibration gate with a purple progress trace that moves left-to-right while shrinking from large to small. EtCO2 number and graph stay hidden until calibration completes; toggling away before completion restarts calibration, while completed calibrations are skipped until the next monitor reset. The admin Vitals panel shows a compact pink EtCO2 indicator when calibration is complete.
+   - The first EtCO2 toggle after monitor reset starts a 45-second calibration gate with a purple progress trace that loads from left to right. EtCO2 number and graph stay hidden until calibration completes; toggling away before completion restarts calibration, while completed calibrations are skipped until the next monitor reset. Once calibrated, the latest confirmed EtCO2 channel state applies immediately without recalibration: Off displays numeric `0` with the standard dashed disconnected trace, while On displays the configured value and live waveform, including when the configured value is `0`. Instructor changes during calibration are reflected when it completes. The admin Vitals panel shows a compact pink EtCO2 indicator when calibration is complete.
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
 11. Color reference: `#000000` bg, `#00ff41` ECG green, `#00ffff` cyan BP, `#cc44ff` purple EtCO2, `#ffff00` yellow SpO2
 12. `MonitorPage` render composition is kept separate from interaction state. Local monitor UI state
@@ -255,7 +255,7 @@ paramedic-monitor/
 **Testing:**
 - Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
 - Jumpscare removal tests cover former off-state rolls, boot-screen clips, alarm-ack Easter eggs, and battery-triggered overlays staying inactive while legitimate simulator cues remain available.
-- BP/EtCO2 tests cover staged BP commit/cancel/off behavior, BP alarm gating, EtCO2 calibration gating/restart/reset behavior, admin calibration indication, and real-time event-log stamps for medications/analyze rows.
+- BP/EtCO2 tests cover staged BP commit/cancel/off behavior, BP alarm gating, EtCO2 calibration gating/restart/reset behavior, calibrated instructor-Off `0`/disconnected output, calibrated instructor-On configured/live output, immediate post-calibration instructor changes, mid-calibration instructor changes, connected configured zero, normal/expanded graph modes, trainee-visible Vital Log sampling, admin calibration indication, and real-time event-log stamps for medications/analyze rows.
 - Settled PNI tests cover single-number counting, stacked sys/dia settled output, and partial-active BP display after completion.
 - BP alarm-suppression tests cover active NIBP suppression, cancel restore, completion restore, and HR/SpO2 alarms staying active during BP reading.
 - Selection tests cover right physical navigation handlers, initial date/time selection, reverse cycling to the minus toggle, Enter-driven bottom panel hiding, selected vital value highlighting, and visible SpO2/EtCO2 title metadata.
@@ -791,12 +791,17 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
   when SpO2 is disconnected or displaying `SpO2 OFF`.
 - Monitor secondary waveform rows follow confirmed waveform state after
   Save → Send while normal monitor mode shows only one secondary graph slot at
-  a time. The CO2 soft key switches that slot between SpO2 and EtCO2. If the
-  selected secondary channel is Off while the other is On, no secondary row is
-  shown; if both are Off, the selected channel shows a disconnected trace.
-  Bottom-panel-hidden expanded mode shows both EtCO2 and SpO2 rows, with Off
-  rows disconnected. Monitor reset returns the normal-mode secondary selector
-  to SpO2, even if EtCO2 was selected or calibrated before reset.
+  a time. The CO2 soft key switches that slot between SpO2 and EtCO2. An
+  uncalibrated selected EtCO2 channel shows only its calibration progress. Once
+  calibrated, selected EtCO2 always keeps its row: confirmed Off shows numeric
+  `0` with the standard dashed disconnected trace, while confirmed On shows the
+  configured value and live waveform. Later instructor On/Off or value changes
+  apply immediately without recalibration. For selected SpO2, the existing rule
+  remains: if SpO2 is Off while EtCO2 is On, no secondary row is shown; if both
+  are Off, SpO2 shows a disconnected trace. Bottom-panel-hidden expanded mode
+  shows both EtCO2 and SpO2 rows, with calibrated EtCO2 following the same
+  Off/On output and other Off rows disconnected. Monitor reset returns the
+  normal-mode secondary selector to SpO2 and clears calibration.
 - ECG and SpO2 canvas waveform erase/update sweep lines share the same
   wall-clock phase so their black refresh bands stay aligned; EtCO2 keeps its
   slower independent capnography sweep.

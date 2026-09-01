@@ -121,6 +121,24 @@ describe('WaveformPanel', () => {
     expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
   })
 
+  it('shows a calibrated selected EtCO2 disconnected trace when EtCO2 is off', () => {
+    render(
+      <WaveformPanel
+        {...baseProps}
+        secondaryChannel="etco2"
+        etco2Waveform="off"
+        etco2Calibrated
+      />,
+    )
+
+    expect(screen.getByText('EtCO2')).toBeInTheDocument()
+    expect(screen.queryByText('SpO2')).not.toBeInTheDocument()
+    expect(screen.getByTestId('disconnected-waveform')).toHaveAttribute(
+      'data-channel',
+      'etco2',
+    )
+  })
+
   it('shows EtCO2 calibration in normal mode even before the channel is connected', () => {
     render(
       <WaveformPanel
@@ -170,5 +188,19 @@ describe('WaveformPanel', () => {
       .getAllByTestId('disconnected-waveform')
       .map((node) => node.getAttribute('data-channel'))
     expect(channels).toEqual(['etco2'])
+  })
+
+  it('keeps an EtCO2 value of 0 connected when its waveform is on', () => {
+    render(
+      <WaveformPanel
+        {...baseProps}
+        secondaryChannel="etco2"
+        etco2={0}
+        etco2Calibrated
+      />,
+    )
+
+    expect(screen.getByTestId('etco2-waveform-canvas')).toBeInTheDocument()
+    expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
   })
 })
