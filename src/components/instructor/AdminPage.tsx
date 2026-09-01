@@ -150,7 +150,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const {
     measurements: patientSnsMeasurements,
     startMeasurement: startPatientSnsMeasurement,
-    revealMeasurement: revealPatientSnsMeasurement,
+    toggleMeasurementResult: togglePatientSnsMeasurementResult,
     cancelMeasurement: cancelPatientSnsMeasurement,
     resetMeasurements: resetPatientSnsMeasurements,
   } = usePatientSnsMeasurements(handlePatientSnsMeasurementResult)
@@ -694,7 +694,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   }
 
   const handlePatientSnsMeasurementTap = (group: PatientSnsMeasurementGroupId) => {
-    revealPatientSnsMeasurement(group, patientPhysicalFindings)
+    togglePatientSnsMeasurementResult(group, patientPhysicalFindings)
   }
 
   return (
@@ -887,7 +887,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         </button>
       </div>
       {tab === 'monitor' ? (
-        <div className="grid gap-4">
+        <div
+          className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:items-stretch lg:gap-3"
+          data-testid="monitor-patient-sns-layout"
+        >
           <VitalsControls
             autoSortText={universalAutoSortText}
             patientSns={{

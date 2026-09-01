@@ -23,6 +23,13 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Compact two-column Instructor Console Monitor & Patient SNS — COMPLETE:**
+  - [x] Split the local and live Instructor Console tab into an approximately 55/45 Vitals and SAMPLE/OPQRST composition, with equal-height right panels, compact fixed-height fields, bounded note/result overflow, and a stacked portrait/sub-1024 fallback
+  - [x] Compressed Vitals without changing its clinical grouping, and tightened the shared console shell for supported short MacBook/desktop and iPad landscape heights
+  - [x] Replaced always-visible Pulse/Respiratory measurement actions with full-card hover, focus, and single-card pinned-touch disclosure; countdowns reuse the same surface with persistent amber styling and reduced-motion support
+  - [x] Fixed Tap so a first activation reveals a fresh snapshot and a second activation hides that result without clearing its confirmed state
+  - [x] All 882 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the Next.js production build pass; rendered `1080×700`, `1280×720`, `1440×900`, iPad 8 landscape `1024×768`, and portrait-stack QA pass with no horizontal overflow or browser-console errors
+  - [ ] Real iPad 8th-generation Safari device pass — pending device availability; the exact `1024×768` browser viewport passes
 - [x] **Instructor Console scenario safety and row actions — COMPLETE:**
   - [x] Renamed the visible console, removed obsolete local-monitor guidance, Supabase subtitle, and Caller Info Analyse/action copy
   - [x] Moved Save/Delete onto every saved row with loaded-and-dirty Save gating, isolated unloaded-row deletion, and retained loaded-scenario values as a draft after deletion

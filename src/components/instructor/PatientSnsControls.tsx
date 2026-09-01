@@ -1,5 +1,7 @@
 'use client'
 
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import type {
   PatientPhysicalFindings,
   PatientPhysicalIconFindingId,
@@ -114,16 +116,11 @@ interface PatientSnsIconProps {
 function PatientSnsIcon({ group, active, hasFinding }: PatientSnsIconProps) {
   return (
     <>
-      {hasFinding && !active ? (
-        <span className="absolute right-1 top-1 grid h-4 w-4 place-items-center border border-pending-amber bg-black text-[0.65rem] font-black leading-none text-pending-amber">
-          !
-        </span>
-      ) : null}
       <span
         role="img"
         aria-label={group.iconAlt}
         className={cn(
-          'h-14 w-14 bg-current [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] transition-opacity',
+          'h-10 w-10 bg-current [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] transition-opacity motion-reduce:transition-none',
           group.iconMaskClass,
           active
             ? 'text-ecg-green opacity-100'
@@ -134,7 +131,7 @@ function PatientSnsIcon({ group, active, hasFinding }: PatientSnsIconProps) {
       />
       <h3
         className={cn(
-          'text-xs font-semibold uppercase tracking-wider',
+          'text-[10px] font-semibold uppercase tracking-wider',
           active ? 'text-ecg-green' : 'text-neutral-300',
         )}
       >
@@ -154,10 +151,75 @@ export function PatientSnsControls({
   onMeasurementTap,
   onMeasurementCancel,
 }: PatientSnsControlsProps) {
+  const [hoveredGroup, setHoveredGroup] = useState<PatientSnsMeasurementGroupId | null>(null)
+  const [focusedGroup, setFocusedGroup] = useState<PatientSnsMeasurementGroupId | null>(null)
+  const [pinnedGroup, setPinnedGroup] = useState<PatientSnsMeasurementGroupId | null>(null)
+  const disclosureButtonRefs = useRef<
+    Partial<Record<PatientSnsMeasurementGroupId, HTMLButtonElement | null>>
+  >({})
+  const countdownButtonRefs = useRef<
+    Partial<Record<PatientSnsMeasurementGroupId, HTMLButtonElement | null>>
+  >({})
+  const cardRefs = useRef<
+    Partial<Record<PatientSnsMeasurementGroupId, HTMLElement | null>>
+  >({})
+  const lastPointerTypeRef = useRef<string | null>(null)
+  const suppressFocusRevealRef = useRef<PatientSnsMeasurementGroupId | null>(null)
+  const previousRunningRef = useRef<Record<PatientSnsMeasurementGroupId, boolean>>({
+    pulse: measurements.pulse.endsAt !== null,
+    respiratory: measurements.respiratory.endsAt !== null,
+  })
+  const pulseRunning = measurements.pulse.endsAt !== null
+  const respiratoryRunning = measurements.respiratory.endsAt !== null
+
+  const focusDisclosureWithoutReveal = useCallback((group: PatientSnsMeasurementGroupId) => {
+    suppressFocusRevealRef.current = group
+    disclosureButtonRefs.current[group]?.focus()
+  }, [])
+
+  useEffect(() => {
+    if (pinnedGroup === null) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const card = cardRefs.current[pinnedGroup]
+      if (event.target instanceof Node && card?.contains(event.target)) return
+      setPinnedGroup(null)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      const group = pinnedGroup
+      setPinnedGroup(null)
+      setFocusedGroup((current) => (current === group ? null : current))
+      setHoveredGroup((current) => (current === group ? null : current))
+      focusDisclosureWithoutReveal(group)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [focusDisclosureWithoutReveal, pinnedGroup])
+
+  useEffect(() => {
+    const running: Record<PatientSnsMeasurementGroupId, boolean> = {
+      pulse: pulseRunning,
+      respiratory: respiratoryRunning,
+    }
+    for (const group of ['pulse', 'respiratory'] as const) {
+      const wasRunning = previousRunningRef.current[group]
+      if (!wasRunning && running[group]) countdownButtonRefs.current[group]?.focus()
+      if (wasRunning && !running[group]) focusDisclosureWithoutReveal(group)
+    }
+    previousRunningRef.current = running
+  }, [focusDisclosureWithoutReveal, pulseRunning, respiratoryRunning])
+
   return (
     <div
       data-testid="patient-sns-controls"
-      className="grid grid-cols-3 items-start gap-3 border-t border-neutral-800 pt-3"
+      className="grid grid-cols-3 items-start gap-2 border-t border-neutral-800 pt-2"
     >
       {PATIENT_SNS_GROUPS.map((group) => {
         const active = selected.has(group.id)
@@ -180,59 +242,146 @@ export function PatientSnsControls({
           <section
             key={group.id}
             aria-label={`${group.label} icon findings`}
+            ref={(element) => {
+              if (measurementGroup) cardRefs.current[measurementGroup] = element
+            }}
             className={cn(
-              'grid min-w-0 gap-3 border bg-neutral-900/40 p-3',
-              active ? 'border-ecg-green/60' : 'border-neutral-800',
+              'relative grid min-w-0 gap-2 border bg-neutral-900/40 p-2',
+              active
+                ? 'border-ecg-green/60'
+                : hasFinding
+                  ? 'border-pending-amber/80'
+                  : 'border-neutral-800',
             )}
           >
+            {hasFinding && !active ? (
+              <span className="absolute right-1 top-1 z-20 grid h-4 w-4 place-items-center border border-pending-amber bg-black text-[0.65rem] font-black leading-none text-pending-amber">
+                !
+              </span>
+            ) : null}
             {measurementGroup && measurement ? (
               <>
-                <div
-                  className={cn(
-                    'relative grid justify-items-center gap-2 border bg-black p-2 transition-colors',
-                    active
-                      ? 'border-ecg-green text-ecg-green'
-                      : hasFinding
-                        ? 'border-pending-amber bg-pending-amber/20 text-pending-amber'
-                        : 'border-neutral-700 text-neutral-300',
-                  )}
-                >
-                  <PatientSnsIcon group={group} active={active} hasFinding={hasFinding} />
-                </div>
                 {measurement.endsAt !== null ? (
                   <button
+                    ref={(element) => {
+                      countdownButtonRefs.current[measurementGroup] = element
+                    }}
                     type="button"
                     aria-label={`Cancel ${group.label} ${measurement.durationSeconds}-second measurement`}
-                    onClick={() => onMeasurementCancel(measurementGroup)}
-                    className="flex h-11 w-full items-center justify-center border border-pending-amber bg-pending-amber/15 px-3 font-mono text-sm font-black uppercase tracking-wider text-pending-amber transition-colors hover:bg-pending-amber/25 focus:outline-none focus:ring-2 focus:ring-pending-amber"
+                    onClick={() => {
+                      setPinnedGroup((current) => current === measurementGroup ? null : current)
+                      setFocusedGroup((current) => current === measurementGroup ? null : current)
+                      onMeasurementCancel(measurementGroup)
+                    }}
+                    className="flex h-[4.5rem] w-full items-center justify-center border border-pending-amber bg-pending-amber/15 px-3 font-mono text-sm font-black uppercase tracking-wider text-pending-amber transition-colors hover:bg-pending-amber/25 focus:outline-none focus:ring-2 focus:ring-pending-amber motion-reduce:transition-none"
                   >
                     <span aria-live="polite">{measurement.secondsLeft}s</span>
                   </button>
                 ) : (
                   <div
-                    role="group"
-                    aria-label={`${group.label} measurement options`}
-                    className="grid grid-cols-3 gap-2"
+                    className="relative h-[4.5rem] min-w-0"
+                    data-testid={`${measurementGroup}-measurement-surface`}
+                    onPointerEnter={(event) => {
+                      if (event.pointerType !== 'touch') setHoveredGroup(measurementGroup)
+                    }}
+                    onPointerLeave={(event) => {
+                      if (event.pointerType !== 'touch') {
+                        setHoveredGroup((current) => current === measurementGroup ? null : current)
+                      }
+                    }}
+                    onFocusCapture={() => {
+                      if (suppressFocusRevealRef.current === measurementGroup) {
+                        suppressFocusRevealRef.current = null
+                        return
+                      }
+                      setFocusedGroup(measurementGroup)
+                    }}
+                    onBlurCapture={(event) => {
+                      if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) {
+                        return
+                      }
+                      setFocusedGroup((current) => current === measurementGroup ? null : current)
+                    }}
                   >
-                    {([15, 30] as const).map((durationSeconds) => (
-                      <button
-                        key={durationSeconds}
-                        type="button"
-                        aria-label={`${group.label} ${durationSeconds}s`}
-                        onClick={() => onMeasurementStart(measurementGroup, durationSeconds)}
-                        className="flex h-11 items-center justify-center border border-neutral-600 bg-neutral-900 px-2 font-mono text-xs font-bold uppercase tracking-wider text-neutral-200 transition-colors hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green focus:outline-none focus:ring-2 focus:ring-ecg-green"
-                      >
-                        {durationSeconds}s
-                      </button>
-                    ))}
                     <button
+                      ref={(element) => {
+                        disclosureButtonRefs.current[measurementGroup] = element
+                      }}
                       type="button"
-                      aria-label={`${group.label} Tap`}
-                      onClick={() => onMeasurementTap(measurementGroup)}
-                      className="flex h-11 items-center justify-center border border-neutral-600 bg-neutral-900 px-2 font-mono text-xs font-bold uppercase tracking-wider text-neutral-200 transition-colors hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green focus:outline-none focus:ring-2 focus:ring-ecg-green"
+                      aria-label={`${group.label} measurement controls`}
+                      aria-expanded={
+                        hoveredGroup === measurementGroup ||
+                        focusedGroup === measurementGroup ||
+                        pinnedGroup === measurementGroup
+                      }
+                      aria-controls={`${measurementGroup}-measurement-options`}
+                      onPointerDown={(event) => {
+                        lastPointerTypeRef.current = event.pointerType
+                      }}
+                      onClick={() => {
+                        const pointerType = lastPointerTypeRef.current
+                        lastPointerTypeRef.current = null
+                        if (pointerType !== 'touch') return
+                        setPinnedGroup((current) => current === measurementGroup ? null : measurementGroup)
+                      }}
+                      className={cn(
+                        'absolute inset-0 grid justify-items-center gap-1 border bg-black p-1.5',
+                        'transition-[opacity,border-color,color,background-color] duration-150',
+                        'focus:outline-none focus:ring-2 focus:ring-ecg-green focus:ring-inset',
+                        'motion-reduce:transition-none',
+                        active
+                          ? 'border-ecg-green text-ecg-green'
+                          : hasFinding
+                            ? 'border-pending-amber bg-pending-amber/20 text-pending-amber'
+                            : 'border-neutral-700 text-neutral-300',
+                        (hoveredGroup === measurementGroup ||
+                          focusedGroup === measurementGroup ||
+                          pinnedGroup === measurementGroup) &&
+                          'pointer-events-none opacity-0',
+                      )}
                     >
-                      Tap
+                      <PatientSnsIcon group={group} active={active} hasFinding={hasFinding} />
                     </button>
+                    {hoveredGroup === measurementGroup ||
+                    focusedGroup === measurementGroup ||
+                    pinnedGroup === measurementGroup ? (
+                      <div
+                        id={`${measurementGroup}-measurement-options`}
+                        role="group"
+                        aria-label={`${group.label} measurement options`}
+                        className="absolute inset-0 grid grid-cols-3 gap-1 opacity-100 transition-opacity duration-150 starting:opacity-0 motion-reduce:transition-none"
+                      >
+                        {([15, 30] as const).map((durationSeconds) => (
+                          <button
+                            key={durationSeconds}
+                            type="button"
+                            aria-label={`${group.label} ${durationSeconds}s`}
+                            onClick={() => {
+                              setPinnedGroup((current) => current === measurementGroup ? null : current)
+                              setFocusedGroup((current) => current === measurementGroup ? null : current)
+                              setHoveredGroup((current) => current === measurementGroup ? null : current)
+                              onMeasurementStart(measurementGroup, durationSeconds)
+                            }}
+                            className="flex min-h-11 items-center justify-center border border-neutral-600 bg-neutral-900 px-1 font-mono text-[10px] font-bold uppercase tracking-wider text-neutral-200 transition-colors hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green focus:outline-none focus:ring-2 focus:ring-ecg-green motion-reduce:transition-none"
+                          >
+                            {durationSeconds}s
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          aria-label={`${group.label} Tap`}
+                          onClick={() => {
+                            setPinnedGroup((current) => current === measurementGroup ? null : current)
+                            setFocusedGroup((current) => current === measurementGroup ? null : current)
+                            onMeasurementTap(measurementGroup)
+                            focusDisclosureWithoutReveal(measurementGroup)
+                          }}
+                          className="flex min-h-11 items-center justify-center border border-neutral-600 bg-neutral-900 px-1 font-mono text-[10px] font-bold uppercase tracking-wider text-neutral-200 transition-colors hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green focus:outline-none focus:ring-2 focus:ring-ecg-green motion-reduce:transition-none"
+                        >
+                          Tap
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 )}
                 {measurementResult ? (
@@ -240,7 +389,7 @@ export function PatientSnsControls({
                     role="region"
                     aria-label={`${group.label} measurement result`}
                     aria-live="polite"
-                    className="grid min-w-0 gap-1 border border-ecg-green bg-black p-2 font-mono text-xs"
+                    className="grid max-h-20 min-w-0 gap-1 overflow-y-auto border border-ecg-green bg-black p-2 font-mono text-[10px] leading-4"
                   >
                     {measurementResult.lines.map((line) => (
                       <p key={line} className="whitespace-pre-wrap break-words text-ecg-green">
@@ -263,7 +412,7 @@ export function PatientSnsControls({
                   aria-pressed={active}
                   onClick={() => onIconGroupClick(group.id)}
                   className={cn(
-                    'relative grid justify-items-center gap-2 border p-2 transition-colors',
+                    'relative grid h-[4.5rem] justify-items-center gap-1 border p-1.5 transition-colors',
                     'focus:outline-none focus:ring-2 focus:ring-ecg-green focus:ring-offset-2 focus:ring-offset-black',
                     active
                       ? 'border-ecg-green bg-black text-ecg-green'

@@ -123,8 +123,8 @@ describe('VitalsControls', () => {
     const bpDiaRow = screen.getByTestId('admin-vital-row-bp-dia')
     const etco2Row = screen.getByTestId('admin-vital-row-etco2')
 
-    expect(vitalsColumn).toHaveClass('flex', 'flex-col', 'gap-3')
-    expect(ecgColumn).toHaveClass('self-start')
+    expect(vitalsColumn).toHaveClass('flex', 'flex-col', 'gap-2', 'min-w-0')
+    expect(ecgColumn).toHaveClass('self-start', 'min-w-0')
     expect(vitalsColumn).toContainElement(fcRow)
     expect(vitalsColumn).toContainElement(spo2Row)
     expect(vitalsColumn).toContainElement(bpSysRow)
@@ -159,14 +159,14 @@ describe('VitalsControls', () => {
         'relative',
         'z-10',
         'w-full',
-        'h-[3.75rem]',
-        'min-h-[3.75rem]',
+        'h-11',
+        'min-h-11',
         'cursor-pointer',
         'appearance-none',
         'pointer-events-auto',
-        'px-3',
-        'py-3',
-        'text-sm',
+        'px-2',
+        'py-2',
+        'text-xs',
       )
     }
   })

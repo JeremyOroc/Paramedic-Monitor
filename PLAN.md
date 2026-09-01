@@ -8,7 +8,8 @@
 
 ## Current Requirement Updates
 
-- In the Instructor Console's Monitor & Patient SNS area, Pulse and Respiratory retain their icon/title context but replace their single icon toggle with `15s`, `30s`, and `Tap` measurement options. A timed option replaces its three-button row with a full-width cancellable countdown; cancelling restores the options without revealing or newly confirming a result, while completion restores the options, confirms the finding, and reveals the result. Tap confirms and reveals immediately. Pulse and Respiratory measurements are fully independent: their countdowns may run and complete simultaneously, both results may remain visible, and starting or cancelling one affects only that group. Skin/Extremities and Scene/Environment retain their existing relationship and neither affect nor are affected by Pulse/Respiratory measurements. Timed measurements continue and complete at their real deadlines while another Instructor Console tab is selected, including off-tab confirmation and draft-dirty state, but cancel on scenario load/reset, refresh, or New Attempt. Each measurement snapshots the current auto-sorted findings at start. The 15- and 30-second count lines are display-only values derived from the snapshot rate using nearest-whole-count rounding. Missing findings retain the existing amber review treatment. Countdown state and derived counts are not saved in scenarios or broadcast to trainees.
+- In both the local and live-room Instructor Console, the `Monitor & Patient SNS` area uses a compact two-column composition: Vitals occupies approximately 55% on the left, while equal-height SAMPLE above OPQRST occupies approximately 45% on the right. The Instructor Console is primarily presented on a MacBook or desktop monitor and must also fit a landscape iPad 8th generation as a supported secondary instructor display. Rendered acceptance covers `1080×700`, `1280×720`, and `1440×900`: supported layouts never scroll horizontally and show the complete tab for ordinary one-line data. Below `1024px` or in portrait, the tab stacks vertically and permits page scrolling without horizontal overflow. The existing overall console maximum width remains unchanged so other tabs are not widened; accepted short landscape viewports receive reduced outer padding and gaps. Live-room content above the tabs may make the overall page scroll vertically. Vitals retains its two internal columns and clinical ordering while compressing fixed widths, gaps, padding, control heights, icons, the ECG minimum, CPR controls, and the 3×2 timed-vitals grid. SAMPLE/OPQRST use approximately 36–40px letter controls and fixed compact textareas showing up to two lines without focus-driven reflow; longer notes use bounded field scrolling.
+- Pulse and Respiratory retain their default icon/title surface. On hover or keyboard focus, that entire fixed-size surface becomes three equal SNS measurement options of at least 44px height: `15s`, `30s`, and `Tap`. On touch, a first tap reveals and pins the options until an option is chosen, the user taps outside, Escape is pressed, or the other idle card is revealed. Only one idle touch option surface is pinned at a time; countdowns and results remain independent. Unrevealed options are not interactive or exposed as available controls. The surrounding card always communicates state: unconfirmed auto-sorted findings retain an amber border and persistent `!`, confirmed findings retain a green border, option buttons remain neutral until hover/focus, and an active countdown uses amber. A timed option replaces the same surface with a full-width cancellable countdown that remains visible without hover; cancellation restores the icon/title without revealing or newly confirming a result, while completion restores the icon/title, confirms the finding, and reveals the result below. Each result is capped at approximately three visible lines with bounded internal scrolling so both can remain visible without expanding Vitals. Tap is a per-group result-visibility toggle: when a result is visible, Tap hides it without unconfirming the green card or changing findings; when hidden, Tap takes a fresh snapshot, confirms, and reveals it. Pulse and Respiratory measurements remain fully independent: their countdowns may run and complete simultaneously, both results may remain visible, and starting, cancelling, hiding, or revealing one affects only that group. The transformation uses a short fixed-geometry color/crossfade transition, suppresses decorative motion under reduced-motion preferences, and restores focus to the group's disclosure control after dismissal, cancellation, or completion. Skin/Extremities and Scene/Environment retain their existing relationship and neither affect nor are affected by Pulse/Respiratory measurements. Timed measurements continue and complete at their real deadlines while another Instructor Console tab is selected, including off-tab confirmation and draft-dirty state, but cancel on scenario load/reset, refresh, or New Attempt. Each measurement snapshots the current auto-sorted findings at start. The 15- and 30-second count lines are display-only values derived from the snapshot rate using nearest-whole-count rounding. Missing findings retain the existing amber review treatment. Countdown state and derived counts are not saved in scenarios or broadcast to trainees.
 - The shared instructor Save/Send actions must render in a left-aligned row immediately above the three-tab strip instead of below the forms. Selecting VF or VT locks the FC editor and turns FC On: VF shows `AUTO 190–220`, saves an underlying FC of 190, and displays a synchronized inclusive 190–220 integer on each 1.9-second FC alarm-flash cycle; VT shows and saves exactly 220. Automatic-rhythm values cannot be overwritten by direct, auto-sort, timed, scenario, or hydration paths. Leaving VF/VT restores the current interaction's prior manual FC, with 80 as the fallback for loaded/rehydrated automatic rhythms. VF randomness affects only the visible FC digits; waveform cadence, alarms, logs, and captures keep the underlying FC, CPR takes precedence, and room participants use server-timestamped deterministic display timing so they see the same sequence.
 - Default entry point is now a Kahoot-style session lobby: instructors create rooms, students join with code + nickname, and `/?dev=1` remains the local monitor shortcut.
 - Session room codes must be selectable and copyable from instructor and student waiting-room views.
@@ -340,7 +341,7 @@ existing close-panel and exit-12-lead precedence.
 1. `InstructorLayout` — dark panel, responsive columns
 2. `VitalsControls` + `VitalInput` — inputs ordered FC, SpO2, BP sys/dia, EtCO2
    - The former top-of-vitals `Normal` button is removed from the instructor UI; the underlying store action remains available for compatibility
-   - The `Monitor & Patient SNS` tab places Pulse, Respiratory, and Skin/Extremities in one horizontal row at the bottom of the Vitals box, followed by the existing SAMPLE and OPQRST boxes below Vitals
+   - The `Monitor & Patient SNS` tab uses an approximately 55/45 two-column layout: the compact Vitals box, including its Pulse, Respiratory, and Skin/Extremities row, is on the left; compact SAMPLE and OPQRST boxes are stacked on the right
    - Include `CallerInfoForm` in its own admin tab for dispatch/caller info shown on the monitor after ANALYZE: Dispatch countdown, Call #, Priority, MPDS Code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button that reveals up to three optional title/input extra rows
    - Shared Save/Send actions sit immediately above the tab strip. VF/VT use locked automatic FC controls, automatically activate FC on selection, and restore the prior manual FC when the rhythm is left; VF display-only randomness is synchronized across room monitors while VT remains fixed at 220.
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
@@ -357,7 +358,9 @@ existing close-panel and exit-12-lead precedence.
 - Store tests cover the `resetVitalsToNormal` action and verify it preserves non-vital fields.
 - Component/page tests cover caller-info draft/save/send flow and ANALYZE-triggered monitor display.
 - Caller-info form tests cover adding optional extra rows one at a time and capping the form at three extras.
-- Admin page tests cover the three-tab layout, combined monitor/SNS/patient-information content, moved icon behavior, and removed shared Reset control.
+- Admin page and rendered-layout tests cover the shared 55/45 Monitor & Patient SNS composition, compact Vitals and checklist panels, no horizontal overflow, and complete ordinary-content fit at `1080×700`, `1280×720`, and `1440×900`; sub-1024 and portrait checks cover the stacked scrollable fallback.
+- SNS component tests cover default-hidden measurement options, hover/focus and pinned-touch disclosure, one idle pin at a time, persistent state styling, fixed geometry, reduced motion, focus restoration, persistent countdowns, bounded independent results, and Tap hide/fresh-snapshot reveal behavior.
+- Real iPad 8th-generation Safari validation follows a documented interaction and overflow checklist. When that device is unavailable, completion records real-device validation as pending rather than passed.
 - Store, component, monitor, route, and synchronization tests cover automatic VF/VT FC locking across every input path, manual-value restoration and scenario/hydration fallback, synchronized inclusive VF flash values, CPR precedence, fixed underlying consumers, fixed VT 220, and the Save/Send action row above the tabs.
 
 **Milestone:** Instructor panel fully interactive. Editing vitals turns fields amber. Send confirms them. Defib sequence enforces correct order with progress bars.
@@ -620,16 +623,22 @@ button is inert until a drill gate is satisfied.
   Legacy `Intervention prioritaire code` / `Code` labels are ignored. Matching
   fields overwrite immediately in draft state, optional extras are ignored, and
   trainees only see changes after the normal Save → Send flow.
-- The admin dashboard combines monitor controls and patient SNS content in a
-  `Monitor & Patient SNS` tab. The existing square SAMPLE and OPQRST checklist
-  panels render directly below the Vitals box. Each letter has a compact
-  left-aligned toggle button plus an auto-growing textarea. The universal
+- The Instructor Console combines monitor controls and patient SNS content in a
+  `Monitor & Patient SNS` tab shared by the local and live-room views. Vitals
+  occupies approximately 55% on the left; compact SAMPLE and OPQRST checklist
+  panels are stacked in the approximately 45% right column. Each letter has a
+  compact left-aligned toggle button plus a textarea. The universal
   Caller Info scenario auto-sort parses `Letter: value` lines into those
   textareas, with repeated `S` and `P` labels filling SAMPLE first and OPQRST
   second. SAMPLE `M` can also
   collect medication lines following `M:`, strip parenthesized descriptions,
   and store medication names as a comma-separated list. Longer SAMPLE/OPQRST
-  notes automatically grow taller for visibility while short notes stay compact.
+  notes remain available through bounded field scrolling when they exceed the
+  compact panel's visible area. The panels are equal-height; their approximately
+  36–40px letter controls and textareas expose up to two lines without resizing
+  on focus. The two-column tab is accepted at `1080×700`, `1280×720`, and
+  `1440×900`; below `1024px` or in portrait it stacks and scrolls vertically
+  without horizontal overflow. The console's existing maximum width is preserved.
   Green letter selection remains manual only. Text and selections stay local to
   the admin page session, survive tab switching while the page remains mounted,
   and do not use Save/Send or update the trainee monitor.
@@ -652,7 +661,7 @@ button is inert until a drill gate is satisfied.
   back/spine or thoracic headings stop extremity collection instead of being
   appended to leg findings. Confirmed findings in the Selected panel follow the
   order the instructor clicked body parts.
-- The bottom of the combined tab's Vitals box contains equal-width Pulse,
+- The bottom of the combined tab's Vitals box contains compact equal-width Pulse,
   Respiratory, and Skin/Extremities icon cards in one horizontal row. The
   `Patient Physical` tab retains Scene/Environment beside the body map. Auto-sort still
   extracts Rate, Rhythm, and Strength internally from explicit
@@ -660,13 +669,28 @@ button is inert until a drill gate is satisfied.
   section lines. Skin/Extremities and Scene/Environment sections collect their
   lines into one icon-only note and do not mark body-map regions. Auto-sort places
   an amber `!` on a Pulse or Respiratory card when matching findings exist. Each
-  of those cards retains its icon/title context and presents `15s`, `30s`, and
-  `Tap` SNS measurement options. A timed option snapshots the current findings,
-  hides that group's prior result, and replaces the option row with a full-width
-  cancellable countdown displaying `15s` through `1s`; it does not flash `0s`.
-  Cancellation restores the options without revealing or newly confirming the
-  result. Completion restores the options, confirms the card, and reveals the
-  snapshot result; Tap performs the same confirmation/reveal immediately. A
+  card shows only its icon/title surface by default. Hover or keyboard focus
+  replaces that fixed-size full surface with three equal, at-least-44px-high
+  `15s`, `30s`, and `Tap` SNS
+  measurement options; on touch, a first tap reveals and pins the options until
+  selection, outside tap, or Escape. Hidden options are unavailable to pointer,
+  keyboard, and accessibility interaction. Only one idle touch disclosure is
+  pinned at a time; revealing the other card collapses it without affecting any
+  running countdown or visible result. A timed option snapshots the current
+  findings, hides that group's prior result, and replaces the same surface with
+  a full-width cancellable countdown displaying `15s` through `1s`; it does not
+  flash `0s` and stays visible without hover. Cancellation restores the icon/title
+  without revealing or newly confirming the result. Completion restores the
+  icon/title, confirms the card, and reveals the snapshot result below in a
+  fixed region of approximately three visible lines with bounded scrolling. The
+  outer card preserves amber pending `!` or green confirmed styling throughout
+  the transformation, while options are neutral until hover/focus and countdowns
+  are amber. Tap
+  reveals a fresh snapshot when the result is hidden and hides the result when it
+  is visible; hiding is presentation-only and does not unconfirm the card or
+  mutate findings. The surface uses a short fixed-geometry color/crossfade,
+  respects reduced-motion preferences, and restores focus to its disclosure
+  control after dismissal, cancellation, or completion. A
   previously confirmed card remains confirmed after a later cancellation.
   Pulse and Respiratory countdowns and result visibility are fully independent:
   both may run, complete, confirm, and remain visible simultaneously, while a

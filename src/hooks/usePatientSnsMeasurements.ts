@@ -156,21 +156,35 @@ export function usePatientSnsMeasurements(
     setNow(startedAt)
   }, [commitMeasurements])
 
-  const revealMeasurement = useCallback((
+  const toggleMeasurementResult = useCallback((
     group: PatientSnsMeasurementGroupId,
     findings: PatientPhysicalFindings,
   ) => {
-    const snapshot = createPatientSnsFindingSnapshot(group, findings)
-    commitMeasurements((current) => ({
-      ...current,
-      [group]: {
-        durationSeconds: null,
-        endsAt: null,
-        pendingSnapshot: null,
-        resultSnapshot: snapshot,
-      },
-    }))
-    onMeasurementResultRef.current?.(group)
+    let revealed = false
+    commitMeasurements((current) => {
+      const currentMeasurement = current[group]
+      if (currentMeasurement.resultSnapshot !== null) {
+        return {
+          ...current,
+          [group]: {
+            ...currentMeasurement,
+            resultSnapshot: null,
+          },
+        }
+      }
+
+      revealed = true
+      return {
+        ...current,
+        [group]: {
+          durationSeconds: null,
+          endsAt: null,
+          pendingSnapshot: null,
+          resultSnapshot: createPatientSnsFindingSnapshot(group, findings),
+        },
+      }
+    })
+    if (revealed) onMeasurementResultRef.current?.(group)
   }, [commitMeasurements])
 
   const cancelMeasurement = useCallback((group: PatientSnsMeasurementGroupId) => {
@@ -201,7 +215,7 @@ export function usePatientSnsMeasurements(
   return {
     measurements: state,
     startMeasurement,
-    revealMeasurement,
+    toggleMeasurementResult,
     cancelMeasurement,
     resetMeasurements,
   }

@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-08-31] [instructor] — Implement compact two-column Monitor & Patient SNS
+
+- Split the local and live Instructor Console tab into an approximately 55/45 Vitals-left and SAMPLE/OPQRST-right grid, kept the two right panels equal-height, compressed the existing clinical controls, bounded unusually long notes/results internally, and added a stacked sub-1024/portrait fallback.
+- Changed Pulse and Respiratory to show only their icon/title at rest, transform the complete card surface into equal `15s`, `30s`, and `Tap` actions on hover, keyboard focus, or pinned touch, and reuse that surface for persistent amber countdown state. Added outside-click/Escape dismissal, one-card touch pinning, focus restoration, and reduced-motion behavior.
+- Fixed Tap measurement toggling: revealing takes a fresh snapshot, while activating Tap again hides the visible result without undoing the confirmed finding.
+- Added hook, component, and admin-page regressions. All 882 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the Next.js production build pass; rendered QA passes at `1080×700`, `1280×720`, `1440×900`, iPad 8 landscape `1024×768`, and the portrait stacked fallback with no horizontal overflow or browser-console errors. A real iPad 8th-generation Safari pass remains pending device availability.
+
+## [2026-08-31] [planning/instructor] — Complete responsive SNS design decisions
+
+- Defined the sub-1024/portrait stacked fallback, short-viewport console spacing, unchanged global maximum width, approximately 36–40px checklist density, and at-least-44px SNS options.
+- Required persistent amber pending, green confirmed, and amber countdown styling across each fixed-size card transformation, plus reduced-motion behavior and deterministic keyboard-focus restoration.
+- Made automated interaction tests and rendered checks at all accepted viewports mandatory, with a real iPad 8th-generation Safari checklist that must be reported as pending when the device is unavailable.
+- Completed the design-tree interview without selecting an ADR: this responsive component treatment is reversible, unsurprising outside its documented requirements, and does not introduce an architectural lock-in.
+
+## [2026-08-31] [planning/instructor] — Define compact-layout acceptance and SNS result behavior
+
+- Set rendered acceptance at `1080×700`, `1280×720`, and `1440×900`, with no horizontal overflow and complete ordinary-content tab fit at each viewport.
+- Kept Vitals' internal clinical organization while requiring compressed fixed dimensions; defined equal-height stacked SAMPLE/OPQRST panels with approximately 36px controls, stable two-line fields, and bounded note scrolling.
+- Capped independent Pulse/Respiratory results at approximately three visible lines, limited pinned touch disclosure to one idle card, and made Tap hide a visible result without unconfirming while taking a fresh snapshot whenever it reveals a hidden result.
+- Added the corresponding component, page, interaction, and rendered-layout testing requirements to Phase 6.
+
+## [2026-08-31] [planning/instructor] — Define compact two-column Monitor & Patient SNS layout
+
+- Replaced the vertically stacked Instructor Console composition with an approximately 55/45 layout: compact Vitals on the left and compact SAMPLE above OPQRST on the right, shared by local and live-room instructor views.
+- Recorded MacBook/desktop as the primary instructor display, landscape iPad 8th generation as a supported secondary instructor display, and iPad 8th generation as the ordinary trainee display for Wagami X and Wagami Z.
+- Defined no horizontal scrolling on supported layouts, tab-level fit for ordinary content, bounded overflow for unusually long notes/results, and allowance for live-room content above the tabs to extend the page vertically.
+- Replaced always-visible Pulse/Respiratory measurement rows with an icon/title surface that transforms into three equal options on hover, keyboard focus, or pinned touch disclosure; countdowns occupy that surface, results remain below it, and a repeated Tap action hides the visible result for that group.
+
 ## [2026-08-29] [planning/instructor] — Define timed Pulse and Respiratory measurements
 
 - Replaced the planned immediate Pulse/Respiratory icon-toggle interaction with icon-contextual `15s`, `30s`, and `Tap` measurement options, cancellable timed rows, completion-only confirmation, and exact snapshot-based result semantics.

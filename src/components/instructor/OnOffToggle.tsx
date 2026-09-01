@@ -4,13 +4,21 @@ import { cn } from '@/lib/utils'
 
 type OnOffToggleProps = {
   active: boolean
+  compact?: boolean
   label: string
   onToggle: (active: boolean) => void
   status?: string
   testId?: string
 }
 
-export function OnOffToggle({ active, label, onToggle, status, testId }: OnOffToggleProps) {
+export function OnOffToggle({
+  active,
+  compact = false,
+  label,
+  onToggle,
+  status,
+  testId,
+}: OnOffToggleProps) {
   return (
     <button
       type="button"
@@ -18,7 +26,8 @@ export function OnOffToggle({ active, label, onToggle, status, testId }: OnOffTo
       aria-label={`${label} ${active ? 'on' : 'off'}`}
       aria-pressed={active}
       className={cn(
-        'grid w-20 grid-cols-2 overflow-hidden border border-neutral-700 font-mono text-[10px] font-bold uppercase tracking-wider',
+        'grid grid-cols-2 overflow-hidden border border-neutral-700 font-mono font-bold uppercase tracking-wider',
+        compact ? 'w-16 text-[9px]' : 'w-20 text-[10px]',
         active ? 'border-cyan-bp' : 'border-neutral-700',
       )}
       data-testid={testId}
@@ -26,7 +35,7 @@ export function OnOffToggle({ active, label, onToggle, status, testId }: OnOffTo
     >
       <span
         className={cn(
-          'px-1.5 py-1 text-center',
+          compact ? 'px-1 py-0.5 text-center' : 'px-1.5 py-1 text-center',
           !active
             ? 'bg-neutral-300 text-black'
             : 'bg-neutral-900 text-neutral-500',
@@ -36,7 +45,8 @@ export function OnOffToggle({ active, label, onToggle, status, testId }: OnOffTo
       </span>
       <span
         className={cn(
-          'border-l border-neutral-700 px-1.5 py-1 text-center',
+          'border-l border-neutral-700 text-center',
+          compact ? 'px-1 py-0.5' : 'px-1.5 py-1',
           active
             ? 'bg-cyan-bp text-black'
             : 'bg-neutral-900 text-neutral-500',
