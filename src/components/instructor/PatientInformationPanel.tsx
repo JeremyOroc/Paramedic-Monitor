@@ -24,16 +24,6 @@ const CHECKLISTS: ReadonlyArray<{
   { id: 'opqrst', title: 'OPQRST', letters: ['O', 'P', 'Q', 'R', 'S', 'T'] },
 ]
 
-const TEXTAREA_CHARS_PER_ROW = 38
-
-function getPatientInformationRows(value: string) {
-  if (!value) return 1
-
-  return value.split(/\r?\n/).reduce((rows, line) => {
-    return rows + Math.max(1, Math.ceil(line.length / TEXTAREA_CHARS_PER_ROW))
-  }, 0)
-}
-
 export function PatientInformationPanel({
   selected,
   values,
@@ -41,35 +31,34 @@ export function PatientInformationPanel({
   onToggle,
 }: PatientInformationPanelProps) {
   return (
-    <section className="grid gap-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <section className="grid h-full min-h-0 gap-1" data-testid="patient-information-panel">
+      <div className="grid h-full min-h-0 grid-rows-2 gap-1">
         {CHECKLISTS.map(({ id, title, letters }) => (
           <section
             key={id}
             aria-label={title}
             className={cn(
-              'flex aspect-square min-h-[24rem] flex-col gap-4',
-              'border border-neutral-800 bg-neutral-950 p-4',
+              'flex min-h-0 flex-col gap-1 border border-neutral-800 bg-neutral-950 p-2',
             )}
           >
-            <div className="flex items-center justify-between gap-3 border-b border-neutral-800 pb-3">
-              <h2 className="text-sm uppercase tracking-wider text-neutral-400">{title}</h2>
-              <span className="text-xs uppercase tracking-wider text-neutral-600">Checklist</span>
+            <div className="flex items-center justify-between gap-2 border-b border-neutral-800 pb-1">
+              <h2 className="text-xs uppercase tracking-wider text-neutral-400">{title}</h2>
+              <span className="text-[9px] uppercase tracking-wider text-neutral-600">Checklist</span>
             </div>
             <div
               data-testid={`patient-info-letter-column-${id}`}
-              className="flex flex-1 flex-col items-start gap-2"
+              className="flex min-h-0 flex-1 flex-col items-start gap-0.5"
             >
               {letters.map((letter) => {
                 const active = selected[id].has(letter)
                 return (
-                  <div key={letter} className="grid w-full grid-cols-[3rem_minmax(0,1fr)] gap-2">
+                  <div key={letter} className="grid min-h-0 w-full flex-1 grid-cols-[2.25rem_minmax(0,1fr)] gap-1">
                     <button
                       type="button"
                       onClick={() => onToggle(id, letter)}
                       aria-pressed={active}
                       className={cn(
-                        'flex h-12 w-12 items-center justify-center border font-mono text-2xl font-bold',
+                        'flex h-9 w-9 items-center justify-center border font-mono text-lg font-bold',
                         'transition-[background-color,border-color,color] duration-150',
                         active
                           ? 'border-ecg-green bg-ecg-green text-black'
@@ -82,8 +71,8 @@ export function PatientInformationPanel({
                       value={values[id][letter]}
                       onChange={(event) => onTextChange(id, letter, event.target.value)}
                       aria-label={`${title} ${letter} information`}
-                      rows={getPatientInformationRows(values[id][letter])}
-                      className="min-h-12 min-w-0 resize-none overflow-hidden border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm leading-5 text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                      rows={2}
+                      className="h-9 min-h-9 min-w-0 resize-none overflow-y-auto border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-xs leading-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
                     />
                   </div>
                 )

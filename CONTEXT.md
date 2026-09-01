@@ -8,6 +8,10 @@ Paramedic Monitor is an instructor-led dispatch and patient-monitor simulation. 
 The authoring surface where an instructor prepares scenarios and controls an attempt.
 _Avoid_: Dev Console, Admin console
 
+**Instructor display**:
+The MacBook or desktop monitor that ordinarily presents the Instructor Console; a landscape iPad 8th generation is a supported secondary presentation surface.
+_Avoid_: Training display, dev display
+
 **Saved scenario**:
 A named instructor-authored clinical and dispatch snapshot stored in the scenario library.
 _Avoid_: Template, preset
@@ -65,5 +69,5 @@ The occasional 1920×1080 desktop monitor used to build, inspect, and test the t
 _Avoid_: Primary display, production monitor
 
 **Training display**:
-An explicitly supported non-mini iPad used in landscape orientation by a trainee during an attempt. Full-screen Safari and standalone display modes are supported; narrow multitasking windows and portrait layouts are outside the monitor surface. iPad mini is not tested, certified, or optimized, although its device surface may render when its usable viewport passes the general capability threshold.
+An explicitly supported non-mini iPad, ordinarily an iPad 8th generation, used in landscape orientation by a trainee to view a Wagami X or Wagami Z during an attempt. Full-screen Safari and standalone display modes are supported; narrow multitasking windows and portrait layouts are outside the monitor surface. iPad mini is not tested, certified, or optimized, although its device surface may render when its usable viewport passes the general capability threshold.
 _Avoid_: Mobile display, tablet monitor

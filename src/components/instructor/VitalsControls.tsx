@@ -70,28 +70,28 @@ export function VitalsControls({
   }
 
   return (
-    <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
-      <h2 className="text-sm uppercase tracking-wider text-neutral-400">Vitals</h2>
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(21rem,1fr)] items-start gap-3">
-        <div className="flex flex-col gap-3" data-testid="admin-vitals-column">
+    <section className="flex h-full min-w-0 flex-col gap-2 border border-neutral-800 bg-neutral-950 p-3">
+      <h2 className="text-xs uppercase tracking-wider text-neutral-400">Vitals</h2>
+      <div className="grid min-w-0 grid-cols-[minmax(15rem,0.9fr)_minmax(0,1.1fr)] items-start gap-2">
+        <div className="flex min-w-0 flex-col gap-2" data-testid="admin-vitals-column">
           <div className="flex items-center" data-testid="admin-vital-row-fc">
-            <VitalInput field="hr" label="FC" unit="bpm" min={0} max={300} />
+            <VitalInput compact field="hr" label="FC" unit="bpm" min={0} max={300} />
           </div>
 
           <div className="flex items-center" data-testid="admin-vital-row-spo2">
-            <VitalInput field="spo2" label="SpO2" unit="%" min={0} max={100} />
+            <VitalInput compact field="spo2" label="SpO2" unit="%" min={0} max={100} />
           </div>
 
           <div className="flex items-center" data-testid="admin-vital-row-bp-sys">
-            <VitalInput field="bp_sys" label="BP sys" unit="mmHg" min={0} max={300} />
+            <VitalInput compact field="bp_sys" label="BP sys" unit="mmHg" min={0} max={300} />
           </div>
 
           <div className="flex items-center" data-testid="admin-vital-row-bp-dia">
-            <VitalInput field="bp_dia" label="BP dia" unit="mmHg" min={0} max={300} />
+            <VitalInput compact field="bp_dia" label="BP dia" unit="mmHg" min={0} max={300} />
           </div>
 
           <div className="flex items-center" data-testid="admin-vital-row-etco2">
-            <VitalInput field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
+            <VitalInput compact field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
           </div>
           <div
             role="status"
@@ -99,8 +99,8 @@ export function VitalsControls({
             data-testid="admin-etco2-calibration-indicator"
             data-calibrated={etco2Calibrated}
             className={[
-              'ml-[5.75rem] flex h-9 w-24 items-center justify-center border px-2',
-              'font-mono text-xs font-bold uppercase tracking-wider transition-colors',
+              'ml-14 flex h-7 w-20 items-center justify-center border px-2',
+              'font-mono text-[10px] font-bold uppercase tracking-wider transition-colors',
               etco2Calibrated
                 ? 'border-purple-etco2 bg-purple-etco2/15 text-purple-etco2 shadow-[0_0_16px_-6px_var(--color-purple-etco2)]'
                 : 'border-neutral-700 bg-neutral-950 text-neutral-600',
@@ -110,13 +110,13 @@ export function VitalsControls({
           </div>
         </div>
 
-        <div className="self-start" data-testid="admin-ecg-column">
+        <div className="min-w-0 self-start" data-testid="admin-ecg-column">
           <div data-testid="admin-graph-row-ecg">
-            <EcgRhythmSelector />
+            <EcgRhythmSelector compact />
           </div>
           <div
             role="group"
-            className="mt-3 grid grid-cols-2 gap-2"
+            className="mt-2 grid grid-cols-2 gap-1.5"
             aria-label="CPR mode"
           >
             {CPR_MODES.map(({ mode, label }) => {
@@ -128,8 +128,8 @@ export function VitalsControls({
                   aria-pressed={active}
                   onClick={() => setCprMode(active ? 'off' : mode)}
                   className={[
-                    'flex h-11 w-full items-center justify-center border px-3',
-                    'font-mono text-sm font-bold uppercase tracking-wider transition-colors',
+                    'flex h-9 w-full items-center justify-center border px-2',
+                    'font-mono text-[10px] font-bold uppercase tracking-wider transition-colors',
                     active
                       ? 'border-ecg-green bg-ecg-green/15 text-ecg-green shadow-[0_0_18px_-8px_var(--color-ecg-green)]'
                       : 'border-neutral-600 bg-neutral-900 text-neutral-300 hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green',
@@ -141,7 +141,7 @@ export function VitalsControls({
             })}
           </div>
           <div
-            className="relative z-10 mt-3 grid grid-cols-3 grid-rows-2 gap-2"
+            className="relative z-10 mt-2 grid grid-cols-3 grid-rows-2 gap-1.5"
             aria-label="Timed vitals"
           >
             {TIMED_VITAL_BUTTONS.map((slot) => (
@@ -149,7 +149,7 @@ export function VitalsControls({
                 key={slot}
                 type="button"
                 onClick={() => handleTimedVitalsClick(slot)}
-                className="relative z-10 flex h-[3.75rem] min-h-[3.75rem] w-full cursor-pointer appearance-none items-center justify-center border border-neutral-600 bg-neutral-900 px-3 py-3 text-sm font-mono font-bold uppercase tracking-wider text-neutral-200 pointer-events-auto hover:border-cyan-bp hover:bg-cyan-bp/10 hover:text-cyan-bp focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                className="relative z-10 flex h-11 min-h-11 w-full cursor-pointer appearance-none items-center justify-center border border-neutral-600 bg-neutral-900 px-2 py-2 text-xs font-mono font-bold uppercase tracking-wider text-neutral-200 pointer-events-auto hover:border-cyan-bp hover:bg-cyan-bp/10 hover:text-cyan-bp focus:outline-none focus:ring-2 focus:ring-cyan-bp"
               >
                 {slot}
               </button>

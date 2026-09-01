@@ -9,6 +9,10 @@ import type { Rhythm } from '@/types/vitals'
 
 import { OnOffToggle } from './OnOffToggle'
 
+type EcgRhythmSelectorProps = {
+  compact?: boolean
+}
+
 type RhythmOption = {
   value: Exclude<Rhythm, 'off'>
   label: string
@@ -70,7 +74,7 @@ const RHYTHM_LABELS: Record<Rhythm, string> = {
   'inferior-mi': 'Inferior MI',
 }
 
-export function EcgRhythmSelector() {
+export function EcgRhythmSelector({ compact = false }: EcgRhythmSelectorProps) {
   const [open, setOpen] = useState(false)
   const [selectedCategoryLabel, setSelectedCategoryLabel] = useState('NSR')
   const draft = useMonitorStore((s) => s.draft)
@@ -93,9 +97,15 @@ export function EcgRhythmSelector() {
     ECG_RHYTHM_CATEGORIES[0]
 
   return (
-    <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm uppercase tracking-wider text-neutral-400">ECG</h2>
+    <section className={cn(
+      'relative flex flex-col border border-neutral-800 bg-neutral-950',
+      compact ? 'gap-2 p-2' : 'gap-3 p-3',
+    )}>
+      <div className={cn('flex items-center justify-between', compact ? 'gap-1.5' : 'gap-3')}>
+        <h2 className={cn(
+          'uppercase tracking-wider text-neutral-400',
+          compact ? 'text-xs' : 'text-sm',
+        )}>ECG</h2>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <button
             type="button"
@@ -111,7 +121,8 @@ export function EcgRhythmSelector() {
             aria-expanded={open}
             aria-controls={optionsId}
             className={cn(
-              'shrink-0 border px-2 py-1 text-xs font-mono font-bold uppercase tracking-wider',
+              'min-w-0 shrink border px-2 py-1 font-mono font-bold uppercase tracking-wider',
+              compact ? 'max-w-24 truncate text-[10px]' : 'text-xs',
               open
                 ? 'border-cyan-bp bg-cyan-bp text-black'
                 : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800',
@@ -123,6 +134,7 @@ export function EcgRhythmSelector() {
         <div className="flex items-center gap-2">
           <OnOffToggle
             active={connected}
+            compact={compact}
             label="ECG"
             onToggle={(nextConnected) =>
               setDraft('rhythm', nextConnected ? lastRhythm : 'off')
@@ -130,7 +142,8 @@ export function EcgRhythmSelector() {
           />
           <span
             className={cn(
-              'text-xs uppercase tracking-wider',
+              'uppercase tracking-wider',
+              compact ? 'text-[10px]' : 'text-xs',
               displayStatus === 'clean' && 'text-neutral-500',
               status === 'dirty' && 'text-cyan-bp',
               displayStatus === 'pending' && 'text-pending-amber',
@@ -146,7 +159,10 @@ export function EcgRhythmSelector() {
         <div
           id={optionsId}
           data-testid={optionsId}
-          className="flex flex-col gap-2 border border-neutral-800 bg-black/40 p-2"
+          className={cn(
+            'flex flex-col gap-2 border border-neutral-800 bg-black p-2',
+            compact && 'absolute left-0 right-0 top-full z-30 max-h-72 overflow-y-auto',
+          )}
         >
           <div className="grid grid-cols-5 gap-1">
             {ECG_RHYTHM_CATEGORIES.map((category) => {
@@ -158,7 +174,8 @@ export function EcgRhythmSelector() {
                   onClick={() => setSelectedCategoryLabel(category.label)}
                   aria-pressed={selected}
                   className={cn(
-                    'border px-2 py-2 text-xs font-mono uppercase tracking-wider',
+                    'border px-2 font-mono uppercase tracking-wider',
+                    compact ? 'py-1.5 text-[9px]' : 'py-2 text-xs',
                     'border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800',
                     selected && 'border-cyan-bp bg-cyan-bp text-black font-bold',
                   )}
@@ -184,7 +201,8 @@ export function EcgRhythmSelector() {
                       }}
                       aria-pressed={selected}
                       className={cn(
-                        'border px-2 py-2 text-xs font-mono uppercase tracking-wider',
+                        'border px-2 font-mono uppercase tracking-wider',
+                        compact ? 'py-1.5 text-[10px]' : 'py-2 text-xs',
                         'border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800',
                         selected && 'border-cyan-bp bg-cyan-bp text-black font-bold',
                       )}

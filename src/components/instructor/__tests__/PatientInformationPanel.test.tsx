@@ -51,11 +51,6 @@ function renderPanel({
 }
 
 describe('PatientInformationPanel', () => {
-  function expectRowsToBeGreaterThanOne(element: HTMLElement) {
-    expect(element.tagName).toBe('TEXTAREA')
-    expect(Number(element.getAttribute('rows'))).toBeGreaterThan(1)
-  }
-
   it('renders Sample and OPQRST checklist sections without a local auto-sort textarea', () => {
     renderPanel()
 
@@ -77,16 +72,18 @@ describe('PatientInformationPanel', () => {
     }
   })
 
-  it('renders SAMPLE and OPQRST information fields as compact one-row textareas', () => {
+  it('renders SAMPLE and OPQRST information fields as fixed compact two-line textareas', () => {
     renderPanel()
 
     const sampleField = screen.getByLabelText('Sample S information')
     const opqrstField = screen.getByLabelText('OPQRST O information')
 
     expect(sampleField.tagName).toBe('TEXTAREA')
-    expect(sampleField).toHaveAttribute('rows', '1')
+    expect(sampleField).toHaveAttribute('rows', '2')
+    expect(sampleField).toHaveClass('h-9', 'overflow-y-auto')
     expect(opqrstField.tagName).toBe('TEXTAREA')
-    expect(opqrstField).toHaveAttribute('rows', '1')
+    expect(opqrstField).toHaveAttribute('rows', '2')
+    expect(opqrstField).toHaveClass('h-9', 'overflow-y-auto')
   })
 
   it('renders each checklist as a compact left-aligned vertical column', () => {
@@ -104,7 +101,7 @@ describe('PatientInformationPanel', () => {
       within(screen.getByRole('region', { name: 'Sample' })).getByRole('button', {
         name: 'S',
       }),
-    ).toHaveClass('h-12', 'w-12')
+    ).toHaveClass('h-9', 'w-9')
   })
 
   it('updates the matching letter text input when typed manually', async () => {
@@ -117,7 +114,7 @@ describe('PatientInformationPanel', () => {
     expect(screen.getByLabelText('OPQRST S information')).toHaveValue('')
   })
 
-  it('auto-grows a manually typed long SAMPLE field', () => {
+  it('keeps a manually typed long SAMPLE field bounded', () => {
     renderPanel()
 
     const sampleField = screen.getByLabelText('Sample S information')
@@ -131,7 +128,8 @@ describe('PatientInformationPanel', () => {
     expect(sampleField).toHaveValue(
       'Chest pain that started suddenly while walking upstairs and continues despite resting',
     )
-    expectRowsToBeGreaterThanOne(sampleField)
+    expect(sampleField).toHaveAttribute('rows', '2')
+    expect(sampleField).toHaveClass('h-9', 'overflow-y-auto')
   })
 
   it('renders auto-sorted text passed from admin state without selecting green letters', () => {
@@ -169,7 +167,7 @@ describe('PatientInformationPanel', () => {
     ).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('auto-grows long values passed from admin state', () => {
+  it('keeps long values passed from admin state in bounded fields', () => {
     renderPanel({
       initialValues: {
         sample: {
@@ -183,8 +181,10 @@ describe('PatientInformationPanel', () => {
       },
     })
 
-    expectRowsToBeGreaterThanOne(screen.getByLabelText('Sample S information'))
-    expectRowsToBeGreaterThanOne(screen.getByLabelText('OPQRST O information'))
+    expect(screen.getByLabelText('Sample S information')).toHaveAttribute('rows', '2')
+    expect(screen.getByLabelText('Sample S information')).toHaveClass('overflow-y-auto')
+    expect(screen.getByLabelText('OPQRST O information')).toHaveAttribute('rows', '2')
+    expect(screen.getByLabelText('OPQRST O information')).toHaveClass('overflow-y-auto')
   })
 
   it('calls onToggle with the checklist and letter when clicked', async () => {

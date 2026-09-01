@@ -82,7 +82,7 @@ describe('usePatientSnsMeasurements', () => {
     expect(onResult).toHaveBeenCalledWith('respiratory')
   })
 
-  it('reveals a Tap snapshot immediately and keeps it stable as source data changes', () => {
+  it('toggles a fresh Tap snapshot without unconfirming the group', () => {
     const sourceFindings = {
       'pulse-rate': '98 bpm',
       'pulse-rhythm': 'Regular',
@@ -91,7 +91,7 @@ describe('usePatientSnsMeasurements', () => {
     const { result } = renderHook(() => usePatientSnsMeasurements(onResult))
 
     act(() => {
-      result.current.revealMeasurement('pulse', sourceFindings)
+      result.current.toggleMeasurementResult('pulse', sourceFindings)
     })
     sourceFindings['pulse-rate'] = '140 bpm'
 
@@ -100,6 +100,23 @@ describe('usePatientSnsMeasurements', () => {
       'pulse-rhythm': 'Regular',
     })
     expect(onResult).toHaveBeenCalledWith('pulse')
+
+    act(() => {
+      result.current.toggleMeasurementResult('pulse', sourceFindings)
+    })
+
+    expect(result.current.measurements.pulse.resultSnapshot).toBeNull()
+    expect(onResult).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      result.current.toggleMeasurementResult('pulse', sourceFindings)
+    })
+
+    expect(result.current.measurements.pulse.resultSnapshot).toEqual({
+      'pulse-rate': '140 bpm',
+      'pulse-rhythm': 'Regular',
+    })
+    expect(onResult).toHaveBeenCalledTimes(2)
   })
 
   it('resets active countdowns and visible results together', () => {
@@ -107,7 +124,7 @@ describe('usePatientSnsMeasurements', () => {
 
     act(() => {
       result.current.startMeasurement('pulse', 15, { 'pulse-rate': '98 bpm' })
-      result.current.revealMeasurement('respiratory', {
+      result.current.toggleMeasurementResult('respiratory', {
         'respiratory-rate': '22 breaths/min',
       })
       result.current.resetMeasurements()

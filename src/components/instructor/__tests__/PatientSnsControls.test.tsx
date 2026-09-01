@@ -28,7 +28,7 @@ function renderControls(findings: PatientPhysicalFindings = {}) {
     const {
       measurements,
       startMeasurement,
-      revealMeasurement,
+      toggleMeasurementResult,
       cancelMeasurement,
     } = usePatientSnsMeasurements(handleMeasurementResult)
 
@@ -52,7 +52,7 @@ function renderControls(findings: PatientPhysicalFindings = {}) {
         onMeasurementStart={(group, durationSeconds) =>
           startMeasurement(group, durationSeconds, findings)
         }
-        onMeasurementTap={(group) => revealMeasurement(group, findings)}
+        onMeasurementTap={(group) => toggleMeasurementResult(group, findings)}
         onMeasurementCancel={cancelMeasurement}
       />
     )
@@ -61,12 +61,18 @@ function renderControls(findings: PatientPhysicalFindings = {}) {
   return render(<ControlsHarness />)
 }
 
+function revealOptionsWithMouse(group: 'pulse' | 'respiratory') {
+  fireEvent.pointerEnter(screen.getByTestId(`${group}-measurement-surface`), {
+    pointerType: 'mouse',
+  })
+}
+
 afterEach(() => {
   vi.useRealTimers()
 })
 
 describe('PatientSnsControls', () => {
-  it('renders icon context and three measurement options in the required order', () => {
+  it('renders icon context by default and reveals ordered options on hover', () => {
     renderControls()
 
     const controls = screen.getByTestId('patient-sns-controls')
@@ -85,11 +91,21 @@ describe('PatientSnsControls', () => {
     expect(respiratory.compareDocumentPosition(skinExtremities)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )
+    expect(screen.queryByRole('group', { name: 'Pulse measurement options' })).toBeNull()
+    expect(screen.queryByRole('group', { name: 'Respiratory measurement options' })).toBeNull()
+
+    revealOptionsWithMouse('pulse')
     expect(
       within(screen.getByRole('group', { name: 'Pulse measurement options' }))
         .getAllByRole('button')
         .map((button) => button.textContent),
     ).toEqual(['15s', '30s', 'Tap'])
+
+    fireEvent.pointerLeave(screen.getByTestId('pulse-measurement-surface'), {
+      pointerType: 'mouse',
+    })
+    revealOptionsWithMouse('respiratory')
+
     expect(
       within(screen.getByRole('group', { name: 'Respiratory measurement options' }))
         .getAllByRole('button')
@@ -107,7 +123,9 @@ describe('PatientSnsControls', () => {
       'respiratory-rhythm': 'Regular',
     })
 
+    revealOptionsWithMouse('pulse')
     await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
+    revealOptionsWithMouse('respiratory')
     await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
 
     const pulseResult = screen.getByRole('region', { name: 'Pulse measurement result' })
@@ -125,6 +143,29 @@ describe('PatientSnsControls', () => {
     expect(respiratoryResult).toHaveTextContent('30 sec = 11 breaths')
     expect(respiratoryResult).toHaveTextContent('Regular')
     expect(respiratoryResult).toHaveTextContent('Missing: Effort')
+    expect(pulseResult).toHaveClass('max-h-20', 'overflow-y-auto')
+    expect(respiratoryResult).toHaveClass('max-h-20', 'overflow-y-auto')
+  })
+
+  it('uses Tap as an independent hide and fresh-snapshot reveal toggle', async () => {
+    const user = userEvent.setup()
+    const findings: PatientPhysicalFindings = { 'pulse-rate': '98 bpm' }
+    renderControls(findings)
+
+    revealOptionsWithMouse('pulse')
+    await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' }))
+      .toHaveTextContent('Rate: 98 bpm')
+
+    await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
+    expect(screen.queryByRole('region', { name: 'Pulse measurement result' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Pulse measurement controls' }))
+      .toHaveClass('border-ecg-green')
+
+    findings['pulse-rate'] = '140 bpm'
+    await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
+    expect(screen.getByRole('region', { name: 'Pulse measurement result' }))
+      .toHaveTextContent('Rate: 140 bpm')
   })
 
   it('replaces one option row with a cancellable countdown and restores it without a result', () => {
@@ -132,6 +173,7 @@ describe('PatientSnsControls', () => {
     vi.setSystemTime(0)
     renderControls({ 'pulse-rate': '98 bpm' })
 
+    revealOptionsWithMouse('pulse')
     fireEvent.click(screen.getByRole('button', { name: 'Pulse 15s' }))
 
     expect(screen.queryByRole('group', { name: 'Pulse measurement options' })).toBeNull()
@@ -139,13 +181,11 @@ describe('PatientSnsControls', () => {
       name: 'Cancel Pulse 15-second measurement',
     })
     expect(cancel).toHaveTextContent('15s')
-    expect(screen.getByRole('group', { name: 'Respiratory measurement options' }))
-      .toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Respiratory measurement options' })).toBeNull()
 
     fireEvent.click(cancel)
 
-    expect(screen.getByRole('group', { name: 'Pulse measurement options' }))
-      .toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Pulse measurement options' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'Pulse measurement result' })).toBeNull()
     expect(screen.getByRole('img', { name: 'Pulse findings' })).not.toHaveClass(
       'text-ecg-green',
@@ -164,7 +204,9 @@ describe('PatientSnsControls', () => {
       'respiratory-strength': 'Mildly labored',
     })
 
+    revealOptionsWithMouse('pulse')
     fireEvent.click(screen.getByRole('button', { name: 'Pulse 15s' }))
+    revealOptionsWithMouse('respiratory')
     fireEvent.click(screen.getByRole('button', { name: 'Respiratory 30s' }))
 
     act(() => {
@@ -214,5 +256,43 @@ describe('PatientSnsControls', () => {
     expect(screen.queryByRole('region', { name: 'Skin/Extremities finding slider' }))
       .toBeNull()
     expect(control).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('reveals one touch disclosure at a time and dismisses it with Escape', () => {
+    renderControls()
+
+    const pulseDisclosure = screen.getByRole('button', {
+      name: 'Pulse measurement controls',
+    })
+    fireEvent.pointerDown(pulseDisclosure, { pointerType: 'touch' })
+    fireEvent.click(pulseDisclosure)
+    expect(screen.getByRole('group', { name: 'Pulse measurement options' }))
+      .toBeInTheDocument()
+
+    const respiratoryDisclosure = screen.getByRole('button', {
+      name: 'Respiratory measurement controls',
+    })
+    fireEvent.pointerDown(respiratoryDisclosure, { pointerType: 'touch' })
+    fireEvent.click(respiratoryDisclosure)
+    expect(screen.queryByRole('group', { name: 'Pulse measurement options' })).toBeNull()
+    expect(screen.getByRole('group', { name: 'Respiratory measurement options' }))
+      .toBeInTheDocument()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('group', { name: 'Respiratory measurement options' })).toBeNull()
+    expect(respiratoryDisclosure).toHaveFocus()
+  })
+
+  it('reveals options for keyboard focus and preserves pending state on the card', () => {
+    renderControls({ 'pulse-rate': '98 bpm' })
+
+    const card = screen.getByRole('region', { name: 'Pulse icon findings' })
+    const disclosure = screen.getByRole('button', { name: 'Pulse measurement controls' })
+    fireEvent.focus(disclosure)
+
+    expect(screen.getByRole('group', { name: 'Pulse measurement options' }))
+      .toBeInTheDocument()
+    expect(card).toHaveClass('border-pending-amber/80')
+    expect(within(card).getByText('!')).toBeInTheDocument()
   })
 })
