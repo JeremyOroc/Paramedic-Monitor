@@ -145,6 +145,7 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     rhythm,
     spo2Waveform,
     etco2Waveform,
+    etco2Calibrated,
     etco2Loading,
     cprOverride,
   }: {
@@ -153,12 +154,17 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     rhythm?: string
     spo2Waveform?: string
     etco2Waveform?: string
+    etco2Calibrated?: boolean
     etco2Loading?: boolean
     cprOverride?: boolean
   }) => {
     const selected = secondaryChannel ?? 'spo2'
     const selectedWaveform = selected === 'etco2' ? etco2Waveform : spo2Waveform
     const bothSecondaryOff = spo2Waveform === 'off' && etco2Waveform === 'off'
+    const selectedEtco2Ready =
+      selected === 'etco2' && (etco2Calibrated || etco2Loading)
+    const selectedSecondaryVisible =
+      selectedEtco2Ready || selectedWaveform !== 'off' || bothSecondaryOff
 
     return (
       <div>
@@ -181,10 +187,16 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
           </>
         ) : selected === 'etco2' && etco2Loading ? (
           <span>etco2-loading</span>
-        ) : selectedWaveform !== 'off' ? (
-          <span>{selected === 'etco2' ? 'live-etco2' : 'live-spo2'}</span>
-        ) : bothSecondaryOff ? (
-          <span>{selected === 'etco2' ? 'disconnected-etco2' : 'disconnected-spo2'}</span>
+        ) : selectedSecondaryVisible ? (
+          <span>
+            {selectedWaveform !== 'off'
+              ? selected === 'etco2'
+                ? 'live-etco2'
+                : 'live-spo2'
+              : selected === 'etco2'
+                ? 'disconnected-etco2'
+                : 'disconnected-spo2'}
+          </span>
         ) : null}
       </div>
     )
@@ -797,6 +809,109 @@ describe('MonitorPage', () => {
     vi.useRealTimers()
   })
 
+  it('shows calibrated instructor-Off EtCO2 as 0 with a disconnected trace', () => {
+    vi.useFakeTimers()
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('etco2', 35)
+      store.setDraft('spo2', 97)
+      store.setDraftVitalActive('etco2', false)
+      store.setDraftVitalActive('spo2', true)
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS) })
+
+    const vitalValues = screen.getAllByTestId('vital-value')
+    expect(vitalValues[2]).toHaveTextContent('0')
+    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('live-etco2')).not.toBeInTheDocument()
+    expect(screen.queryByText('etco2-loading')).not.toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('applies instructor EtCO2 changes immediately after calibration', () => {
+    vi.useFakeTimers()
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('etco2', 35)
+      store.setDraftVitalActive('etco2', false)
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS) })
+    expect(screen.getAllByTestId('vital-value')[2]).toHaveTextContent('0')
+    expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
+
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraftVitalActive('etco2', true)
+      store.save()
+      store.send()
+    })
+
+    expect(screen.getAllByTestId('vital-value')[2]).toHaveTextContent('35')
+    expect(screen.getByText('live-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('disconnected-etco2')).not.toBeInTheDocument()
+    expect(screen.queryByText('etco2-loading')).not.toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('uses the latest instructor EtCO2 state when calibration completes', () => {
+    vi.useFakeTimers()
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('etco2', 35)
+      store.setDraftVitalActive('etco2', false)
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS - 1) })
+
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('etco2', 42)
+      store.setDraftVitalActive('etco2', true)
+      store.save()
+      store.send()
+    })
+    expect(screen.getByText('etco2-loading')).toBeInTheDocument()
+
+    act(() => { vi.advanceTimersByTime(1) })
+    expect(screen.getAllByTestId('vital-value')[2]).toHaveTextContent('42')
+    expect(screen.getByText('live-etco2')).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('keeps an instructor-On EtCO2 value of 0 connected after calibration', () => {
+    vi.useFakeTimers()
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraftVitalActive('etco2', true)
+      store.setDraft('etco2', 0)
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'Toggle EtCO2' }))
+    act(() => { vi.advanceTimersByTime(ETCO2_CALIBRATION_MS) })
+
+    expect(screen.getAllByTestId('vital-value')[2]).toHaveTextContent('0')
+    expect(screen.getByText('live-etco2')).toBeInTheDocument()
+    expect(screen.queryByText('disconnected-etco2')).not.toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
   it('keeps old BP when the NIBP reading is cancelled', () => {
     vi.useFakeTimers()
     act(() => {
@@ -1310,6 +1425,29 @@ describe('MonitorPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Home' }))
     expect(screen.queryByRole('region', { name: 'Vital Log' })).toBeNull()
+  })
+
+  it('records calibrated instructor-Off EtCO2 as 0 in the Vital Log', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(0)
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('etco2', 36)
+      store.setDraftVitalActive('etco2', false)
+      store.save()
+      store.send()
+      store.startEtco2Calibration()
+      store.completeEtco2Calibration()
+    })
+
+    render(<MonitorPage />)
+    act(() => { vi.advanceTimersByTime(300_000) })
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+
+    const vitalLog = screen.getByRole('region', { name: 'Vital Log' })
+    expect(vitalLog).toHaveTextContent('00:05:00')
+    expect(within(vitalLog).getByText('0')).toBeInTheDocument()
+    vi.useRealTimers()
   })
 
   it('keeps recorded Vital Log rows across an instructor monitor reset', () => {

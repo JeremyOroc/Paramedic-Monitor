@@ -18,6 +18,7 @@ type WaveformPanelProps = {
   showApplyElectrodes?: boolean
   showAllSecondaryChannels?: boolean
   selected?: MonitorSelection
+  etco2Calibrated?: boolean
   etco2Loading?: boolean
   cprOverride?: boolean
 }
@@ -33,6 +34,7 @@ export function WaveformPanel({
   showApplyElectrodes = true,
   showAllSecondaryChannels = false,
   selected,
+  etco2Calibrated = false,
   etco2Loading = false,
   cprOverride = false,
 }: WaveformPanelProps) {
@@ -43,8 +45,10 @@ export function WaveformPanel({
     secondaryChannel === 'etco2' ? etco2Connected : spo2Connected
   const bothSecondaryOff = !spo2Connected && !etco2Connected
   const selectedEtco2Loading = secondaryChannel === 'etco2' && etco2Loading
+  const selectedEtco2Ready =
+    secondaryChannel === 'etco2' && (etco2Calibrated || selectedEtco2Loading)
   const normalSecondaryChannel =
-    selectedEtco2Loading || selectedSecondaryConnected || bothSecondaryOff
+    selectedEtco2Ready || selectedSecondaryConnected || bothSecondaryOff
       ? secondaryChannel
       : null
   const ecgLabel = (

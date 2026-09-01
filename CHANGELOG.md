@@ -5,6 +5,20 @@
 
 ---
 
+## [2026-09-01] [monitor] — Show calibrated disconnected EtCO2 baseline
+
+- Changed the calibrated Wagami X EtCO2 display to show numeric `0` and preserve the selected row with the standard dashed disconnected trace whenever the instructor-confirmed channel is Off.
+- Preserved instructor-On behavior with the configured value and live capnogram, including connected zero, and made later instructor changes apply immediately without another calibration pass.
+- Aligned Vital Log sampling with the trainee-visible calibrated value and kept Wagami Z, reset, cancellation/restart, and the 45-second calibration flow unchanged.
+- Added normal/expanded waveform component coverage and monitor integration regressions for instructor-Off, post-calibration changes, mid-calibration changes, connected zero, and Vital Log output. All 889 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the production build pass; rendered browser QA confirms the live `0`/dashed ↔ `35`/waveform transition with a clean console.
+
+## [2026-09-01] [planning/monitor] — Define calibrated EtCO2 channel semantics
+
+- Distinguished trainee-local Wagami X EtCO2 calibration from the instructor-confirmed EtCO2 channel state: calibration remains valid through instructor changes until monitor reset.
+- Defined calibrated instructor-Off output as numeric `0` plus the standard dashed disconnected trace, and instructor-On output as the configured value plus live waveform, including a connected configured value of `0`.
+- Required immediate post-calibration instructor changes, latest-state resolution for changes made during calibration, consistent normal/expanded waveform behavior, and Vital Log sampling of the trainee-visible value.
+- Reconciled the documented calibration duration and progress direction with the existing 45-second left-to-right runtime; no ADR was added because this display rule is local, reversible, and does not create architectural lock-in.
+
 ## [2026-08-31] [instructor] — Implement compact two-column Monitor & Patient SNS
 
 - Split the local and live Instructor Console tab into an approximately 55/45 Vitals-left and SAMPLE/OPQRST-right grid, kept the two right panels equal-height, compressed the existing clinical controls, bounded unusually long notes/results internally, and added a stacked sub-1024/portrait fallback.

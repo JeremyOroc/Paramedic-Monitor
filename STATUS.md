@@ -23,6 +23,12 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Calibrated Wagami X EtCO2 channel semantics — COMPLETE:**
+  - [x] Calibrated instructor-Off EtCO2 displays numeric `0` and keeps the selected normal or expanded EtCO2 row visible with the standard dashed disconnected trace
+  - [x] Calibrated instructor-On EtCO2 displays the configured value and live capnogram, including a connected configured value of `0`
+  - [x] Instructor On/Off and value changes apply immediately after calibration without another loading pass; changes during calibration resolve from the latest confirmed state at completion
+  - [x] Vital Log samples the trainee-visible calibrated EtCO2 value: `0` while instructor-Off and the configured value while On
+  - [x] All 889 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the Next.js production build pass; rendered Off→On→Off browser interaction QA confirms `0`/dashed and `35`/live transitions with no recalibration, console errors, or framework overlay
 - [x] **Compact two-column Instructor Console Monitor & Patient SNS — COMPLETE:**
   - [x] Split the local and live Instructor Console tab into an approximately 55/45 Vitals and SAMPLE/OPQRST composition, with equal-height right panels, compact fixed-height fields, bounded note/result overflow, and a stacked portrait/sub-1024 fallback
   - [x] Compressed Vitals without changing its clinical grouping, and tightened the shared console shell for supported short MacBook/desktop and iPad landscape heights
