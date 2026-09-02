@@ -13,6 +13,38 @@ describe('VitalsStrip', () => {
     expect(screen.getByText('SpO2')).toBeInTheDocument()
   })
 
+  it('uses a four-column resting layout without changing vital order', () => {
+    const { container } = render(
+      <VitalsStrip
+        hr={80}
+        bpSys={120}
+        bpDia={89}
+        etco2={35}
+        spo2={98}
+        orientation="horizontal"
+        searching={false}
+      />,
+    )
+
+    const strip = container.firstChild
+    expect(strip).toHaveAttribute('data-orientation', 'horizontal')
+    expect(strip).toHaveClass('grid', 'grid-cols-4')
+    expect(
+      Array.from(container.querySelectorAll('[data-alarming]')).map((node) =>
+        node.querySelector('span')?.textContent,
+      ),
+    ).toEqual(['FC', 'PNI', 'EtCO2', 'SpO2'])
+  })
+
+  it('keeps the existing vertical layout as the default orientation', () => {
+    const { container } = render(
+      <VitalsStrip hr={80} bpSys={120} bpDia={89} etco2={35} spo2={98} />,
+    )
+
+    expect(container.firstChild).toHaveAttribute('data-orientation', 'vertical')
+    expect(container.firstChild).toHaveClass('flex', 'flex-col')
+  })
+
   it('renders NIBP as stacked numbers, not as sys/dia string', () => {
     render(
       <VitalsStrip hr={80} bpSys={120} bpDia={89} etco2={35} spo2={98} />,

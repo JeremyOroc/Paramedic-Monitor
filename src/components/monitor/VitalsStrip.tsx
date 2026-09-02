@@ -23,6 +23,7 @@ type VitalsStripProps = {
   selected?: MonitorSelection
   nibpPhase?: NibpPhase
   nibpDisplayValue?: string | number
+  orientation?: 'vertical' | 'horizontal'
 }
 
 function toNumber(value: number | string): number {
@@ -44,6 +45,7 @@ export function VitalsStrip({
   selected,
   nibpPhase,
   nibpDisplayValue,
+  orientation = 'vertical',
 }: VitalsStripProps) {
   const spo2ValueClassName = typeof spo2 === 'string' ? 'text-[1.25rem]' : 'text-[2.35rem]'
   const hrNumber = toNumber(hr)
@@ -58,9 +60,19 @@ export function VitalsStrip({
     bp_dia: toNumber(bpDia),
     spo2: toNumber(spo2),
   })
+  const vitalCellClassName =
+    orientation === 'horizontal'
+      ? 'min-h-0 min-w-0 border-b-0 border-r border-neutral-800 last:border-r-0'
+      : 'flex-1 min-h-0'
 
   return (
-    <div className="h-full w-full flex flex-col bg-black">
+    <div
+      className={cn(
+        'h-full w-full bg-black',
+        orientation === 'horizontal' ? 'grid grid-cols-4' : 'flex flex-col',
+      )}
+      data-orientation={orientation}
+    >
       <VitalBox
         label="FC"
         value={hr}
@@ -68,13 +80,14 @@ export function VitalsStrip({
         color="ecgGreen"
         alarming={alarms.includes('hr')}
         selected={selected === 'hrVital'}
-        className="flex-1 min-h-0"
+        className={vitalCellClassName}
       />
       {nibpPhase === 'please_wait' || nibpPhase === 'reading' ? (
         <div
           className={cn(
-            'flex-1 min-h-0 grid grid-rows-[auto_1fr_auto]',
+            'grid grid-rows-[auto_1fr_auto]',
             'border-b border-neutral-800 px-1 py-1',
+            vitalCellClassName,
           )}
         >
           <div className="flex items-baseline justify-between -mx-1 -mt-1 bg-cyan-bp px-1 py-0.5">
@@ -95,7 +108,7 @@ export function VitalsStrip({
           color="cyanBP"
           alarming={alarms.includes('bp')}
           selected={selected === 'nibpVital'}
-          className="flex-1 min-h-0"
+          className={vitalCellClassName}
         />
       ) : nibpPhase === 'settled' ? (
         <VitalBox
@@ -105,7 +118,7 @@ export function VitalsStrip({
           color="cyanBP"
           alarming={alarms.includes('bp')}
           selected={selected === 'nibpVital'}
-          className="flex-1 min-h-0"
+          className={vitalCellClassName}
         />
       ) : (
         <VitalBox
@@ -115,7 +128,7 @@ export function VitalsStrip({
           color="cyanBP"
           alarming={alarms.includes('bp')}
           selected={selected === 'nibpVital'}
-          className="flex-1 min-h-0"
+          className={vitalCellClassName}
         />
       )}
       <VitalBox
@@ -124,7 +137,7 @@ export function VitalsStrip({
         unit="mmHg"
         color="purpleEtCO2"
         selected={selected === 'etco2Vital'}
-        className="flex-1 min-h-0"
+        className={vitalCellClassName}
       />
       <VitalBox
         label="SpO2"
@@ -133,7 +146,7 @@ export function VitalsStrip({
         color="yellowSpO2"
         alarming={alarms.includes('spo2')}
         selected={selected === 'spo2Vital'}
-        className="flex-1 min-h-0"
+        className={vitalCellClassName}
         valueClassName={spo2ValueClassName}
         valueAccessory={
           showSpo2PulseBar ? (

@@ -9,6 +9,7 @@ type MonitorLayoutProps = {
   sidebar: ReactNode
   main: ReactNode
   vitals: ReactNode
+  vitalsPlacement?: 'right' | 'bottom'
   bottomBar?: ReactNode
   energyColumn?: ReactNode
 }
@@ -19,24 +20,32 @@ export function MonitorLayout({
   sidebar,
   main,
   vitals,
+  vitalsPlacement = 'right',
   bottomBar,
-  energyColumn
+  energyColumn,
 }: MonitorLayoutProps) {
-  const showBottom = bottomBar !== undefined && bottomBar !== null
   const showEnergy = energyColumn !== undefined && energyColumn !== null
   const showVitals = vitals !== undefined && vitals !== null
+  const showBottomVitals = showVitals && vitalsPlacement === 'bottom'
+  const showRightVitals = showVitals && vitalsPlacement === 'right'
+  const showBottomBar =
+    !showBottomVitals && bottomBar !== undefined && bottomBar !== null
+  const showBottomRow = showBottomVitals || showBottomBar
 
-  const rowsClass = showBottom
+  const rowsClass = showBottomRow
     ? 'grid-rows-[32px_24px_1fr_110px]'
     : 'grid-rows-[32px_24px_1fr]'
-    
-  const colsClass = showEnergy
-    ? (showVitals ? 'grid-cols-[56px_1fr_80px_96px]' : 'grid-cols-[56px_1fr_80px]')
-    : (showVitals ? 'grid-cols-[56px_1fr_96px]' : 'grid-cols-[56px_1fr]')
 
-  const topColSpanClass = 
-    showEnergy && showVitals ? 'col-span-4' : 
-    showEnergy || showVitals ? 'col-span-3' : 'col-span-2'
+  const colsClass = showEnergy
+    ? (showRightVitals ? 'grid-cols-[56px_1fr_80px_96px]' : 'grid-cols-[56px_1fr_80px]')
+    : (showRightVitals ? 'grid-cols-[56px_1fr_96px]' : 'grid-cols-[56px_1fr]')
+
+  const topColSpanClass =
+    showEnergy && showRightVitals
+      ? 'col-span-4'
+      : showEnergy || showRightVitals
+        ? 'col-span-3'
+        : 'col-span-2'
 
   return (
     <div
@@ -47,23 +56,41 @@ export function MonitorLayout({
         rowsClass,
       )}
     >
-      <div className={cn("row-start-1", topColSpanClass)}>{topBar}</div>
-      <div className={cn("row-start-2", topColSpanClass)}>{subBar}</div>
-      
-      <div className={cn("row-start-3 col-start-1 border-r border-neutral-800 min-h-0 flex flex-col", showBottom && "row-span-2")}>{sidebar}</div>
+      <div className={cn('row-start-1', topColSpanClass)}>{topBar}</div>
+      <div className={cn('row-start-2', topColSpanClass)}>{subBar}</div>
+
+      <div className={cn('row-start-3 col-start-1 border-r border-neutral-800 min-h-0 flex flex-col', showBottomRow && 'row-span-2')}>{sidebar}</div>
       <div className="row-start-3 col-start-2 overflow-hidden min-h-0 flex flex-col">{main}</div>
-      
+
       {showEnergy && (
-        <div className="row-start-3 row-span-2 col-start-3 border-l border-neutral-800 min-h-0">
+        <div
+          data-testid="monitor-energy-region"
+          className={cn('row-start-3 col-start-3 border-l border-neutral-800 min-h-0', showBottomRow && 'row-span-2')}
+        >
           {energyColumn}
         </div>
       )}
-      
+
       {showVitals && (
-        <div className={cn("row-start-3 border-l border-neutral-800 min-h-0", showBottom && "row-span-2", showEnergy ? "col-start-4" : "col-start-3")}>{vitals}</div>
+        <div
+          data-testid="monitor-vitals-region"
+          data-placement={vitalsPlacement}
+          className={cn(
+            'min-h-0',
+            showBottomVitals
+              ? 'row-start-4 col-start-2 border-t border-neutral-800'
+              : cn(
+                  'row-start-3 border-l border-neutral-800',
+                  showBottomRow && 'row-span-2',
+                  showEnergy ? 'col-start-4' : 'col-start-3',
+                ),
+          )}
+        >
+          {vitals}
+        </div>
       )}
-      
-      {showBottom && <div className="row-start-4 col-start-2">{bottomBar}</div>}
+
+      {showBottomBar && <div className="row-start-4 col-start-2">{bottomBar}</div>}
     </div>
   )
 }
