@@ -78,15 +78,15 @@ export function VitalInput({
   }, [value])
 
   return (
-    <label className={cn('flex w-full items-center', compact ? 'gap-2' : 'gap-3')}>
-      <span className={cn('text-neutral-300', compact ? 'w-12 text-xs' : 'w-20 text-sm')}>
+    <label className={cn('flex w-full items-center', compact ? 'gap-2 xl:[@media(min-height:800px)]:gap-3' : 'gap-3')}>
+      <span className={cn('text-neutral-300', compact ? 'w-12 text-xs xl:[@media(min-height:800px)]:w-14 xl:[@media(min-height:800px)]:text-sm' : 'w-20 text-sm')}>
         {label}
       </span>
       <div
         className={cn(
           'group relative flex shrink-0 items-center border border-b',
-          compact ? 'w-20' : 'w-24',
-          automaticDisplay === 'AUTO 190–220' && (compact ? 'w-28' : 'w-32'),
+          compact ? 'w-20 xl:[@media(min-height:800px)]:w-24' : 'w-24',
+          automaticDisplay === 'AUTO 190–220' && (compact ? 'w-28 xl:[@media(min-height:800px)]:w-32' : 'w-32'),
           'transition-[border-color,box-shadow,background-color] duration-150',
           'focus-within:border-transparent focus-within:border-b-cyan-bp focus-within:bg-cyan-bp/5',
           'focus-within:shadow-[0_8px_18px_-18px_rgba(0,255,255,0.9)]',
@@ -115,7 +115,7 @@ export function VitalInput({
           className={cn(
             'min-w-0 flex-1 bg-transparent py-1 pl-1 text-right',
             'font-mono font-semibold text-white tabular-nums outline-none',
-            compact ? 'h-7 pr-6 text-sm' : 'h-8 pr-8 text-base',
+            compact ? 'h-7 pr-6 text-sm xl:[@media(min-height:800px)]:h-9 xl:[@media(min-height:800px)]:pr-8 xl:[@media(min-height:800px)]:text-base' : 'h-8 pr-8 text-base',
             'placeholder:text-neutral-700 [appearance:textfield]',
             'disabled:cursor-not-allowed disabled:text-neutral-400 disabled:opacity-100',
             automaticDisplay === 'AUTO 190–220' && 'pr-1 text-center text-xs',
@@ -126,7 +126,7 @@ export function VitalInput({
           <span className={cn(
             'pointer-events-none absolute text-[9px] font-bold uppercase tracking-wider',
             'text-neutral-500 group-focus-within:text-cyan-bp',
-            compact ? 'right-1' : 'right-2',
+            compact ? 'right-1 xl:[@media(min-height:800px)]:right-2' : 'right-2',
           )}>
             {unit}
           </span>

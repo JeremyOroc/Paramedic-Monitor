@@ -84,7 +84,20 @@ describe('PatientSnsControls', () => {
       name: 'Skin/Extremities',
     })
 
-    expect(controls).toHaveClass('grid-cols-3')
+    expect(controls).toHaveClass(
+      'grid-cols-3',
+      'xl:[@media(min-height:800px)]:gap-3',
+    )
+    expect(screen.getByTestId('pulse-measurement-surface')).toHaveClass(
+      'h-[4.5rem]',
+      'xl:[@media(min-height:800px)]:h-24',
+    )
+    expect(screen.getByRole('img', { name: 'Pulse findings' })).toHaveClass(
+      'h-10',
+      'w-10',
+      'xl:[@media(min-height:800px)]:h-12',
+      'xl:[@media(min-height:800px)]:w-12',
+    )
     expect(pulse.compareDocumentPosition(respiratory)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     )

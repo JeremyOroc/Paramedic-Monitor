@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-09-01] [instructor] — Expand and center Monitor & Patient SNS controls
+
+- Added the centered Monitor-only `1152px` breakout and approximately `8:5` large-landscape split, growing Vitals to about `700px` while keeping SAMPLE/OPQRST near `438px` and leaving other instructor tabs at the existing width.
+- Enlarged and horizontally centered the Vitals inputs/toggles, ECG, CPR, timed-vitals buttons, SNS cards/options, checklist buttons, fields, text, and icons at the `1280×800` capability breakpoint; compact short landscapes and the sub-1024 stacked fallback remain unchanged.
+- Tightened outer console spacing through `900px` height so the enlarged `1440×900` tab fits completely without reducing the approved control targets. Added component/page regressions; all 890 tests and TypeScript pass, ESLint reports 0 errors with 12 pre-existing warnings, and the Next.js webpack production build passes. Playwright Chrome QA passes at `1440×900`, `1280×720`, `1080×700`, and stacked `900×900` with correct geometry, interaction state, viewport fit, no horizontal overflow, no framework overlay, and no console errors. The default Turbopack build remains unverified because its spawned PostCSS process hit a host `EPERM` path restriction.
+
+## [2026-09-01] [planning/instructor] — Define expanded Monitor & Patient SNS layout
+
+- Approved a Monitor-only centered breakout up to approximately `1152px` at landscape viewports of at least `1280×800`, with an approximately `8:5` Vitals-to-SAMPLE/OPQRST split that grows Vitals by roughly one third without widening other instructor tabs.
+- Required horizontally centered contents and larger interaction targets across Vitals, SNS, SAMPLE, and OPQRST at the expanded breakpoint, while preserving equal checklist-panel heights, bounded note/result overflow, and the clinical grouping.
+- Preserved compact complete-tab fit at `1080×700` and `1280×720`, full enlargement at `1440×900`, the landscape iPad compact layout, and the sub-1024/portrait stacked fallback. No ADR was added because the change is a reversible presentation rule without architectural lock-in.
+
 ## [2026-09-01] [monitor] — Show calibrated disconnected EtCO2 baseline
 
 - Changed the calibrated Wagami X EtCO2 display to show numeric `0` and preserve the selected row with the standard dashed disconnected trace whenever the instructor-confirmed channel is Off.

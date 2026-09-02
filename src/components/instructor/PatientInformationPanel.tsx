@@ -38,7 +38,7 @@ export function PatientInformationPanel({
             key={id}
             aria-label={title}
             className={cn(
-              'flex min-h-0 flex-col gap-1 border border-neutral-800 bg-neutral-950 p-2',
+              'flex min-h-0 flex-col gap-1 border border-neutral-800 bg-neutral-950 p-2 xl:[@media(min-height:800px)]:gap-2 xl:[@media(min-height:800px)]:p-3',
             )}
           >
             <div className="flex items-center justify-between gap-2 border-b border-neutral-800 pb-1">
@@ -47,18 +47,18 @@ export function PatientInformationPanel({
             </div>
             <div
               data-testid={`patient-info-letter-column-${id}`}
-              className="flex min-h-0 flex-1 flex-col items-start gap-0.5"
+              className="flex min-h-0 flex-1 flex-col items-start gap-0.5 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[26rem] xl:[@media(min-height:800px)]:gap-1"
             >
               {letters.map((letter) => {
                 const active = selected[id].has(letter)
                 return (
-                  <div key={letter} className="grid min-h-0 w-full flex-1 grid-cols-[2.25rem_minmax(0,1fr)] gap-1">
+                  <div key={letter} className="grid min-h-0 w-full flex-1 grid-cols-[2.25rem_minmax(0,1fr)] gap-1 xl:[@media(min-height:800px)]:grid-cols-[2.75rem_minmax(0,1fr)] xl:[@media(min-height:800px)]:gap-2">
                     <button
                       type="button"
                       onClick={() => onToggle(id, letter)}
                       aria-pressed={active}
                       className={cn(
-                        'flex h-9 w-9 items-center justify-center border font-mono text-lg font-bold',
+                        'flex h-9 w-9 items-center justify-center border font-mono text-lg font-bold xl:[@media(min-height:800px)]:h-11 xl:[@media(min-height:800px)]:w-11 xl:[@media(min-height:800px)]:text-xl',
                         'transition-[background-color,border-color,color] duration-150',
                         active
                           ? 'border-ecg-green bg-ecg-green text-black'
@@ -72,7 +72,7 @@ export function PatientInformationPanel({
                       onChange={(event) => onTextChange(id, letter, event.target.value)}
                       aria-label={`${title} ${letter} information`}
                       rows={2}
-                      className="h-9 min-h-9 min-w-0 resize-none overflow-y-auto border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-xs leading-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                      className="h-9 min-h-9 min-w-0 resize-none overflow-y-auto border border-neutral-700 bg-neutral-900 px-2 py-0.5 text-xs leading-4 text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp xl:[@media(min-height:800px)]:h-11 xl:[@media(min-height:800px)]:min-h-11 xl:[@media(min-height:800px)]:px-3 xl:[@media(min-height:800px)]:py-1 xl:[@media(min-height:800px)]:text-sm"
                     />
                   </div>
                 )

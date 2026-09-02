@@ -120,7 +120,7 @@ function PatientSnsIcon({ group, active, hasFinding }: PatientSnsIconProps) {
         role="img"
         aria-label={group.iconAlt}
         className={cn(
-          'h-10 w-10 bg-current [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] transition-opacity motion-reduce:transition-none',
+          'h-10 w-10 bg-current [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] transition-opacity motion-reduce:transition-none xl:[@media(min-height:800px)]:h-12 xl:[@media(min-height:800px)]:w-12',
           group.iconMaskClass,
           active
             ? 'text-ecg-green opacity-100'
@@ -131,7 +131,7 @@ function PatientSnsIcon({ group, active, hasFinding }: PatientSnsIconProps) {
       />
       <h3
         className={cn(
-          'text-[10px] font-semibold uppercase tracking-wider',
+          'text-[10px] font-semibold uppercase tracking-wider xl:[@media(min-height:800px)]:text-xs',
           active ? 'text-ecg-green' : 'text-neutral-300',
         )}
       >
@@ -219,7 +219,7 @@ export function PatientSnsControls({
   return (
     <div
       data-testid="patient-sns-controls"
-      className="grid grid-cols-3 items-start gap-2 border-t border-neutral-800 pt-2"
+      className="grid grid-cols-3 items-start gap-2 border-t border-neutral-800 pt-2 xl:[@media(min-height:800px)]:gap-3 xl:[@media(min-height:800px)]:pt-3"
     >
       {PATIENT_SNS_GROUPS.map((group) => {
         const active = selected.has(group.id)
@@ -246,7 +246,7 @@ export function PatientSnsControls({
               if (measurementGroup) cardRefs.current[measurementGroup] = element
             }}
             className={cn(
-              'relative grid min-w-0 gap-2 border bg-neutral-900/40 p-2',
+              'relative grid min-w-0 gap-2 border bg-neutral-900/40 p-2 xl:[@media(min-height:800px)]:gap-3 xl:[@media(min-height:800px)]:p-3',
               active
                 ? 'border-ecg-green/60'
                 : hasFinding
@@ -273,13 +273,13 @@ export function PatientSnsControls({
                       setFocusedGroup((current) => current === measurementGroup ? null : current)
                       onMeasurementCancel(measurementGroup)
                     }}
-                    className="flex h-[4.5rem] w-full items-center justify-center border border-pending-amber bg-pending-amber/15 px-3 font-mono text-sm font-black uppercase tracking-wider text-pending-amber transition-colors hover:bg-pending-amber/25 focus:outline-none focus:ring-2 focus:ring-pending-amber motion-reduce:transition-none"
+                    className="flex h-[4.5rem] w-full items-center justify-center border border-pending-amber bg-pending-amber/15 px-3 font-mono text-sm font-black uppercase tracking-wider text-pending-amber transition-colors hover:bg-pending-amber/25 focus:outline-none focus:ring-2 focus:ring-pending-amber motion-reduce:transition-none xl:[@media(min-height:800px)]:h-24 xl:[@media(min-height:800px)]:text-base"
                   >
                     <span aria-live="polite">{measurement.secondsLeft}s</span>
                   </button>
                 ) : (
                   <div
-                    className="relative h-[4.5rem] min-w-0"
+                    className="relative h-[4.5rem] min-w-0 xl:[@media(min-height:800px)]:h-24"
                     data-testid={`${measurementGroup}-measurement-surface`}
                     onPointerEnter={(event) => {
                       if (event.pointerType !== 'touch') setHoveredGroup(measurementGroup)
@@ -362,7 +362,7 @@ export function PatientSnsControls({
                               setHoveredGroup((current) => current === measurementGroup ? null : current)
                               onMeasurementStart(measurementGroup, durationSeconds)
                             }}
-                            className="flex min-h-11 items-center justify-center border border-neutral-600 bg-neutral-900 px-1 font-mono text-[10px] font-bold uppercase tracking-wider text-neutral-200 transition-colors hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green focus:outline-none focus:ring-2 focus:ring-ecg-green motion-reduce:transition-none"
+                            className="flex min-h-11 items-center justify-center border border-neutral-600 bg-neutral-900 px-1 font-mono text-[10px] font-bold uppercase tracking-wider text-neutral-200 transition-colors hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green focus:outline-none focus:ring-2 focus:ring-ecg-green motion-reduce:transition-none xl:[@media(min-height:800px)]:text-xs"
                           >
                             {durationSeconds}s
                           </button>
@@ -376,7 +376,7 @@ export function PatientSnsControls({
                             onMeasurementTap(measurementGroup)
                             focusDisclosureWithoutReveal(measurementGroup)
                           }}
-                          className="flex min-h-11 items-center justify-center border border-neutral-600 bg-neutral-900 px-1 font-mono text-[10px] font-bold uppercase tracking-wider text-neutral-200 transition-colors hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green focus:outline-none focus:ring-2 focus:ring-ecg-green motion-reduce:transition-none"
+                          className="flex min-h-11 items-center justify-center border border-neutral-600 bg-neutral-900 px-1 font-mono text-[10px] font-bold uppercase tracking-wider text-neutral-200 transition-colors hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green focus:outline-none focus:ring-2 focus:ring-ecg-green motion-reduce:transition-none xl:[@media(min-height:800px)]:text-xs"
                         >
                           Tap
                         </button>
@@ -412,7 +412,7 @@ export function PatientSnsControls({
                   aria-pressed={active}
                   onClick={() => onIconGroupClick(group.id)}
                   className={cn(
-                    'relative grid h-[4.5rem] justify-items-center gap-1 border p-1.5 transition-colors',
+                    'relative grid h-[4.5rem] justify-items-center gap-1 border p-1.5 transition-colors xl:[@media(min-height:800px)]:h-24 xl:[@media(min-height:800px)]:p-2',
                     'focus:outline-none focus:ring-2 focus:ring-ecg-green focus:ring-offset-2 focus:ring-offset-black',
                     active
                       ? 'border-ecg-green bg-black text-ecg-green'

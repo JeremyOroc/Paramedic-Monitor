@@ -99,12 +99,12 @@ export function EcgRhythmSelector({ compact = false }: EcgRhythmSelectorProps) {
   return (
     <section className={cn(
       'relative flex flex-col border border-neutral-800 bg-neutral-950',
-      compact ? 'gap-2 p-2' : 'gap-3 p-3',
+      compact ? 'gap-2 p-2 xl:[@media(min-height:800px)]:gap-3 xl:[@media(min-height:800px)]:p-3' : 'gap-3 p-3',
     )}>
       <div className={cn('flex items-center justify-between', compact ? 'gap-1.5' : 'gap-3')}>
         <h2 className={cn(
           'uppercase tracking-wider text-neutral-400',
-          compact ? 'text-xs' : 'text-sm',
+          compact ? 'text-xs xl:[@media(min-height:800px)]:text-sm' : 'text-sm',
         )}>ECG</h2>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <button
@@ -122,7 +122,7 @@ export function EcgRhythmSelector({ compact = false }: EcgRhythmSelectorProps) {
             aria-controls={optionsId}
             className={cn(
               'min-w-0 shrink border px-2 py-1 font-mono font-bold uppercase tracking-wider',
-              compact ? 'max-w-24 truncate text-[10px]' : 'text-xs',
+              compact ? 'max-w-24 truncate text-[10px] xl:[@media(min-height:800px)]:max-w-32 xl:[@media(min-height:800px)]:py-2 xl:[@media(min-height:800px)]:text-xs' : 'text-xs',
               open
                 ? 'border-cyan-bp bg-cyan-bp text-black'
                 : 'border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800',
@@ -143,7 +143,7 @@ export function EcgRhythmSelector({ compact = false }: EcgRhythmSelectorProps) {
           <span
             className={cn(
               'uppercase tracking-wider',
-              compact ? 'text-[10px]' : 'text-xs',
+              compact ? 'text-[10px] xl:[@media(min-height:800px)]:text-xs' : 'text-xs',
               displayStatus === 'clean' && 'text-neutral-500',
               status === 'dirty' && 'text-cyan-bp',
               displayStatus === 'pending' && 'text-pending-amber',

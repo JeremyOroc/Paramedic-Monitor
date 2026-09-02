@@ -44,6 +44,28 @@ describe('VitalInput', () => {
     expect(shell).toContainElement(screen.getByText('bpm'))
   })
 
+  it('adds roomier large-landscape sizing to compact inputs and toggles', () => {
+    render(<VitalInput compact field="hr" label="FC" unit="bpm" />)
+
+    const input = screen.getByLabelText('FC')
+    const shell = screen.getByTestId('vital-input-shell-hr')
+    const toggle = screen.getByRole('button', { name: 'FC off' })
+
+    expect(shell).toHaveClass(
+      'w-20',
+      'xl:[@media(min-height:800px)]:w-24',
+    )
+    expect(input).toHaveClass(
+      'h-7',
+      'xl:[@media(min-height:800px)]:h-9',
+      'xl:[@media(min-height:800px)]:text-base',
+    )
+    expect(toggle).toHaveClass(
+      'w-16',
+      'xl:[@media(min-height:800px)]:w-20',
+    )
+  })
+
   it('typing updates draft, keeps the vital Off, and marks it dirty', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" unit="bpm" />)

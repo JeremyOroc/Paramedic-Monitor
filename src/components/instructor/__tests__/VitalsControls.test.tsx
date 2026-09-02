@@ -124,7 +124,16 @@ describe('VitalsControls', () => {
     const etco2Row = screen.getByTestId('admin-vital-row-etco2')
 
     expect(vitalsColumn).toHaveClass('flex', 'flex-col', 'gap-2', 'min-w-0')
-    expect(ecgColumn).toHaveClass('self-start', 'min-w-0')
+    expect(vitalsColumn).toHaveClass(
+      'xl:[@media(min-height:800px)]:mx-auto',
+      'xl:[@media(min-height:800px)]:max-w-[18rem]',
+    )
+    expect(ecgColumn).toHaveClass(
+      'self-start',
+      'min-w-0',
+      'xl:[@media(min-height:800px)]:mx-auto',
+      'xl:[@media(min-height:800px)]:max-w-[24rem]',
+    )
     expect(vitalsColumn).toContainElement(fcRow)
     expect(vitalsColumn).toContainElement(spo2Row)
     expect(vitalsColumn).toContainElement(bpSysRow)
@@ -167,6 +176,9 @@ describe('VitalsControls', () => {
         'px-2',
         'py-2',
         'text-xs',
+        'xl:[@media(min-height:800px)]:h-14',
+        'xl:[@media(min-height:800px)]:min-h-14',
+        'xl:[@media(min-height:800px)]:text-sm',
       )
     }
   })
@@ -265,6 +277,10 @@ describe('VitalsControls', () => {
     const regular = within(group).getByRole('button', { name: 'Regular CPR' })
     const weak = within(group).getByRole('button', { name: 'Weak CPR' })
     expect(group).toHaveClass('grid-cols-2')
+    expect(regular).toHaveClass(
+      'h-9',
+      'xl:[@media(min-height:800px)]:h-11',
+    )
     expect(regular).toHaveAttribute('aria-pressed', 'false')
     expect(weak).toHaveAttribute('aria-pressed', 'false')
     expect(useMonitorStore.getState().cprMode).toBe('off')

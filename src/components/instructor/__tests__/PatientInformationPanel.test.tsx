@@ -80,10 +80,19 @@ describe('PatientInformationPanel', () => {
 
     expect(sampleField.tagName).toBe('TEXTAREA')
     expect(sampleField).toHaveAttribute('rows', '2')
-    expect(sampleField).toHaveClass('h-9', 'overflow-y-auto')
+    expect(sampleField).toHaveClass(
+      'h-9',
+      'overflow-y-auto',
+      'xl:[@media(min-height:800px)]:h-11',
+      'xl:[@media(min-height:800px)]:text-sm',
+    )
     expect(opqrstField.tagName).toBe('TEXTAREA')
     expect(opqrstField).toHaveAttribute('rows', '2')
-    expect(opqrstField).toHaveClass('h-9', 'overflow-y-auto')
+    expect(opqrstField).toHaveClass(
+      'h-9',
+      'overflow-y-auto',
+      'xl:[@media(min-height:800px)]:h-11',
+    )
   })
 
   it('renders each checklist as a compact left-aligned vertical column', () => {
@@ -92,6 +101,8 @@ describe('PatientInformationPanel', () => {
     expect(screen.getByTestId('patient-info-letter-column-sample')).toHaveClass(
       'flex-col',
       'items-start',
+      'xl:[@media(min-height:800px)]:mx-auto',
+      'xl:[@media(min-height:800px)]:max-w-[26rem]',
     )
     expect(screen.getByTestId('patient-info-letter-column-opqrst')).toHaveClass(
       'flex-col',
@@ -101,7 +112,12 @@ describe('PatientInformationPanel', () => {
       within(screen.getByRole('region', { name: 'Sample' })).getByRole('button', {
         name: 'S',
       }),
-    ).toHaveClass('h-9', 'w-9')
+    ).toHaveClass(
+      'h-9',
+      'w-9',
+      'xl:[@media(min-height:800px)]:h-11',
+      'xl:[@media(min-height:800px)]:w-11',
+    )
   })
 
   it('updates the matching letter text input when typed manually', async () => {
