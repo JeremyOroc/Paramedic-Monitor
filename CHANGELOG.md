@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-09-02] [ui] — Widen the current admin layout while preserving its panel arrangement
+
+- Preserve the current main layout: Vitals on the left, equal-height SAMPLE/OPQRST stacked on the right, and the existing compact controls.
+- Apply the width change to the shared console with 24px side padding; remove the obsolete Monitor-only centered breakout so every tab fills the same available width.
+- Preserve existing compact spacing through 900px height, control sizes, and the 55/45 and expanded 8:5 column proportions. Above 900px height, use 24px vertical padding and section gaps.
+- Validation: 62 targeted admin/layout/control tests pass. Browser measurements at the requested 1512×850 and 1440×800 laptop sizes confirm SAMPLE aligns to the right of Vitals, OPQRST remains below SAMPLE, equal checklist heights, 24px side gutters, and no horizontal overflow across all tabs. Compact 1080×700 geometry passes; shorter expanded viewports retain vertical scrolling rather than reducing controls.
+
 ## [2026-09-01] [instructor] — Expand and center Monitor & Patient SNS controls
 
 - Added the centered Monitor-only `1152px` breakout and approximately `8:5` large-landscape split, growing Vitals to about `700px` while keeping SAMPLE/OPQRST near `438px` and leaving other instructor tabs at the existing width.

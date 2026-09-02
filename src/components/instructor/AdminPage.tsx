@@ -888,7 +888,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       </div>
       {tab === 'monitor' ? (
         <div
-          className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:items-stretch lg:gap-3 xl:[@media(min-height:800px)]:relative xl:[@media(min-height:800px)]:left-1/2 xl:[@media(min-height:800px)]:w-[calc(100vw-2rem)] xl:[@media(min-height:800px)]:max-w-6xl xl:[@media(min-height:800px)]:-translate-x-1/2 xl:[@media(min-height:800px)]:grid-cols-[minmax(0,8fr)_minmax(0,5fr)] xl:[@media(min-height:800px)]:gap-4"
+          className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:items-stretch lg:gap-3 xl:[@media(min-height:800px)]:grid-cols-[minmax(0,8fr)_minmax(0,5fr)] xl:[@media(min-height:800px)]:gap-4"
           data-testid="monitor-patient-sns-layout"
         >
           <VitalsControls

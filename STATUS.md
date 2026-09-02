@@ -23,6 +23,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Expanded Instructor Console width — COMPLETE (2026-09-02):** Widened all four tabs with 24px side gutters, retaining the current main layout with Vitals on the left, equal-height SAMPLE/OPQRST stacked on the right, existing control sizing, column proportions, and compact height-based spacing. All 62 targeted tests pass. Rendered laptop checks confirm the column geometry and no horizontal overflow; 1080×700 compact geometry also passes. The expanded controls retain vertical scrolling when the viewport is shorter than the approximately 829px content bottom.
 - [x] **Expanded Instructor Console Monitor & Patient SNS — COMPLETE:**
   - [x] Added a centered Monitor-only breakout up to approximately `1152px` at landscape viewports of at least `1280×800`, using an approximately `8:5` split that grows Vitals to about `700px` while SAMPLE/OPQRST remains about `438px`; other tabs retain the existing console width
   - [x] Horizontally centered and enlarged Vitals inputs/toggles, ECG, CPR, timed-vitals buttons, SNS cards/options, checklist buttons, textareas, text, and icons, with 44px checklist/CPR targets, 56px timed-vitals buttons, and 96px SNS surfaces at the expanded breakpoint
