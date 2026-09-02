@@ -23,6 +23,13 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Expanded Instructor Console Monitor & Patient SNS — COMPLETE:**
+  - [x] Added a centered Monitor-only breakout up to approximately `1152px` at landscape viewports of at least `1280×800`, using an approximately `8:5` split that grows Vitals to about `700px` while SAMPLE/OPQRST remains about `438px`; other tabs retain the existing console width
+  - [x] Horizontally centered and enlarged Vitals inputs/toggles, ECG, CPR, timed-vitals buttons, SNS cards/options, checklist buttons, textareas, text, and icons, with 44px checklist/CPR targets, 56px timed-vitals buttons, and 96px SNS surfaces at the expanded breakpoint
+  - [x] Preserved compact complete-tab fit at `1080×700` and `1280×720`, the landscape-iPad behavior, equal-height checklist panels, bounded overflow, and the sub-1024/portrait stacked fallback; tightened outer spacing through 900px height so `1440×900` also fits completely
+  - [x] All 890 tests and TypeScript pass; ESLint reports 0 errors with 12 pre-existing warnings; the Next.js webpack production build passes; Playwright Chrome QA passes at `1440×900`, `1280×720`, `1080×700`, and stacked `900×900` with no horizontal overflow, framework overlay, or console errors
+  - [ ] Default Turbopack production build — blocked on the host environment because its spawned PostCSS process receives `EPERM` while resolving `C:\Users\Jeremy`; webpack production build passes
+  - [ ] Real iPad 8th-generation Safari device pass — pending device availability; compact browser-viewport behavior is unchanged and passes
 - [x] **Calibrated Wagami X EtCO2 channel semantics — COMPLETE:**
   - [x] Calibrated instructor-Off EtCO2 displays numeric `0` and keeps the selected normal or expanded EtCO2 row visible with the standard dashed disconnected trace
   - [x] Calibrated instructor-On EtCO2 displays the configured value and live capnogram, including a connected configured value of `0`
