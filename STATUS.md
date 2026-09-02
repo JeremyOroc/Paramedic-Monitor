@@ -23,6 +23,13 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **State-driven Wagami X vital placement — COMPLETE:**
+  - [x] Removed the idle `APPL ELECT.` banner, its three lower boxes, and the dormant Apply Electrodes component/rendering path from Wagami X
+  - [x] Added the resting vital layout: FC, PNI, EtCO2, and SpO2 render as four equal, full-featured cells in the fixed 110px bottom region before the first accepted physical Analyze or Charge action
+  - [x] Analyze, CPR, result, Charge, charged, shock, and delivered states use the existing 96px right vital column; Charge preserves both the energy scale and readable defib status content beside the vitals
+  - [x] Power-off/on, monitor reset, and New Attempt restore resting placement; the minus control, 12-lead, overlays, navigation order, Enter-on-PNI, shell controls, and Wagami Z behavior remain unchanged
+  - [x] Added ADR 0002, glossary definitions, component contracts, and monitor integration regressions; all 898 tests and TypeScript pass, ESLint reports 0 errors with 12 pre-existing warnings, and the Next.js webpack production build passes
+  - [x] Rendered QA passes at `1280×720` and `1024×768`: resting, Analyze, Charge, collapse/restore, and 12-lead transitions have no clipping or viewport overflow, and the browser console is clean
 - [x] **Expanded Instructor Console Monitor & Patient SNS — COMPLETE:**
   - [x] Added a centered Monitor-only breakout up to approximately `1152px` at landscape viewports of at least `1280×800`, using an approximately `8:5` split that grows Vitals to about `700px` while SAMPLE/OPQRST remains about `438px`; other tabs retain the existing console width
   - [x] Horizontally centered and enlarged Vitals inputs/toggles, ECG, CPR, timed-vitals buttons, SNS cards/options, checklist buttons, textareas, text, and icons, with 44px checklist/CPR targets, 56px timed-vitals buttons, and 96px SNS surfaces at the expanded breakpoint
@@ -354,7 +361,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
   - [x] Zoll palette added to Tailwind theme via `@theme inline` in `globals.css`
   - [x] Reusable atoms: `VideoWaveform`, `SidebarButton`, `VitalBox`, `LeadCell`
   - [x] Layout: `MonitorLayout` (CSS Grid), `TopStatusBar`, `SubBar`, `BottomStatusBar`
-  - [x] Main panels: `WaveformPanel`, `ECGCanvas` (placeholder), `SecondaryChannel`, `ApplyElectrodesBar`, `VitalsStrip`, `LeftSidebar`, `RightNavCluster`
+  - [x] Main panels: `WaveformPanel`, `ECGCanvas` (placeholder), `SecondaryChannel`, state-driven `VitalsStrip`, `LeftSidebar`, `RightNavCluster`
   - [x] Overlays: `TwelveLeadPage`, `PatientModeModal`
   - [x] Defib state machine: `useDefibSequence` + `DefibButtonRow` (ANALYSE → CHARGE → SHOCK), shared `ProgressBar`
   - [x] Wired interactions: 12-lead toggle, EtCO2 channel swap, patient mode dropdown, energy ▲▼, full defib sequence

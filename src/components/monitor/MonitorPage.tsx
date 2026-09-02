@@ -300,6 +300,15 @@ export function MonitorPage({
       })
     },
   })
+  const resetDefib = defib.reset
+  const defibResetVersionRef = useRef(monitorResetVersion)
+
+  useEffect(() => {
+    if (defibResetVersionRef.current === monitorResetVersion) return
+    defibResetVersionRef.current = monitorResetVersion
+    if (!isWagamiZ) resetDefib()
+  }, [isWagamiZ, monitorResetVersion, resetDefib])
+
   const alarmVitals = {
     ...confirmed,
     hr: cprHeartRate ?? confirmed.hr,
@@ -456,6 +465,11 @@ export function MonitorPage({
     setAudioMuted(false)
   }
 
+  const useRestingVitalLayout =
+    defib.state === 'idle' &&
+    !controller.isTwelveLead &&
+    controller.bottomStatusVisible
+
   const screen = (
     <div className="relative h-full w-full">
       {/* Removed jumpscare: Chica overlay/video is disabled and left here only as history.
@@ -513,7 +527,6 @@ export function MonitorPage({
               etco2={confirmed.etco2}
               spo2Waveform={confirmed.spo2_waveform}
               etco2Waveform={confirmed.etco2_waveform}
-              showApplyElectrodes={false}
               showAllSecondaryChannels={!controller.bottomStatusVisible}
               selected={controller.activeSelectedControl}
               etco2Calibrated={etco2Loaded}
@@ -522,30 +535,28 @@ export function MonitorPage({
             />
           )
         }
+        vitalsPlacement={useRestingVitalLayout ? 'bottom' : 'right'}
         vitals={
-          ['charge_prompt', 'charging', 'charged', 'delivered'].includes(defib.state)
-            ? null
-            : (
-                <VitalsStrip
-                  hr={displayedHrActive ? vfDisplayedHr : ''}
-                  pulseHeartRate={displayedHr}
-                  bpSys={acceptedBpDisplayActive ? acceptedBp.bp_sys : ''}
-                  bpDia={acceptedBpDisplayActive ? acceptedBp.bp_dia : ''}
-                  etco2={displayedEtco2 ?? ''}
-                  spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
-                  spo2Waveform={confirmed.spo2_waveform}
-                  spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}
-                  activeAlarms={
-                    isNibpReadingActive
-                      ? alarm.activeAlarms.filter((channel) => channel !== 'bp')
-                      : alarm.activeAlarms
-                  }
-                  searching={false}
-                  selected={controller.activeSelectedControl}
-                  nibpPhase={bpButtonEnabled ? nibpPhase : undefined}
-                  nibpDisplayValue={bpButtonEnabled ? nibpDisplayValue : undefined}
-                />
-              )
+          <VitalsStrip
+            hr={displayedHrActive ? vfDisplayedHr : ''}
+            pulseHeartRate={displayedHr}
+            bpSys={acceptedBpDisplayActive ? acceptedBp.bp_sys : ''}
+            bpDia={acceptedBpDisplayActive ? acceptedBp.bp_dia : ''}
+            etco2={displayedEtco2 ?? ''}
+            spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
+            spo2Waveform={confirmed.spo2_waveform}
+            spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}
+            activeAlarms={
+              isNibpReadingActive
+                ? alarm.activeAlarms.filter((channel) => channel !== 'bp')
+                : alarm.activeAlarms
+            }
+            searching={false}
+            selected={controller.activeSelectedControl}
+            nibpPhase={bpButtonEnabled ? nibpPhase : undefined}
+            nibpDisplayValue={bpButtonEnabled ? nibpDisplayValue : undefined}
+            orientation={useRestingVitalLayout ? 'horizontal' : 'vertical'}
+          />
         }
         energyColumn={
           !controller.isTwelveLead ? (
@@ -561,7 +572,9 @@ export function MonitorPage({
           ) : null
         }
         bottomBar={
-          controller.isTwelveLead || !controller.bottomStatusVisible ? null : (
+          useRestingVitalLayout ||
+          controller.isTwelveLead ||
+          !controller.bottomStatusVisible ? null : (
             <BottomStatusBar
               defibState={defib.state}
               joules={defib.energy}

@@ -1,0 +1,7 @@
+# Use state-driven Wagami X vital placement
+
+Wagami X uses one full-featured FC, PNI, EtCO2, and SpO2 display with two placements. On the ordinary main waveform view, the resting vital layout places four equal cells in the fixed 110px bottom region until the first accepted physical Analyze or Charge action. From that action through analysis, CPR, charge, shock, and delivered states, the defib vital layout places the same displays in the existing 96px right column; charge states retain both the energy scale and right-side vitals. Power-off/on, monitor reset, and New Attempt restore the resting layout.
+
+The placement changes instantly and preserves the existing vital values, units, alarm presentation, PNI reading phases, SpO2 pulse bar, French labels, selection identifiers, navigation order, and Enter-on-PNI behavior. The minus control keeps its existing expanded-waveform contract by temporarily using the right-side placement while the resting bottom region is collapsed. The left Call Info/Analyse soft key is not a defibrillation action and does not change placement. Twelve-lead and full-screen overlays retain their specialized layouts, and Wagami Z is outside this decision.
+
+This replaces the earlier Wagami X requirement that vitals always remain on the right and removes all Wagami X `APPL ELECT.` / Apply Electrodes rendering paths. A shared display with layout-driven placement was chosen over duplicate horizontal and vertical components so clinical behavior and interaction identity cannot diverge between modes.

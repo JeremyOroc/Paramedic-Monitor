@@ -36,11 +36,17 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
     nav,
     meds,
     audio,
+    power,
   }: {
     screen: ReactNode
     screenModal?: ReactNode
-    defib: { onAnalyse: () => void }
+    defib: {
+      onAnalyse: () => void
+      onCharge: () => void
+      onShock: () => void
+    }
     softKeys: {
+      onTwelveLead: () => void
       onLeftAnalyse: () => void
       onToggleEtco2: () => void
       onTreatment: () => void
@@ -58,6 +64,10 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
       onMedInfo?: () => void
     }
     audio?: { onPatientEvent?: () => void }
+    power?: {
+      onPowerOn?: () => void
+      onPowerOff?: () => void
+    }
   }) => (
     <div data-testid="device-shell">
       {screen}
@@ -65,8 +75,23 @@ vi.mock('@/components/monitor/DeviceShell', () => ({
       <button type="button" onClick={defib.onAnalyse}>
         Analyze rhythm
       </button>
+      <button type="button" onClick={defib.onCharge}>
+        Charge
+      </button>
+      <button type="button" onClick={defib.onShock}>
+        Shock
+      </button>
+      <button type="button" onClick={power?.onPowerOff}>
+        Power off
+      </button>
+      <button type="button" onClick={power?.onPowerOn}>
+        Power on
+      </button>
       <button type="button" onClick={softKeys.onLeftAnalyse}>
         Call Info (sidebar)
+      </button>
+      <button type="button" onClick={softKeys.onTwelveLead}>
+        12-lead view
       </button>
       <button type="button" onClick={softKeys.onToggleEtco2}>
         Toggle EtCO2
@@ -1530,21 +1555,129 @@ describe('MonitorPage', () => {
     vi.useRealTimers()
   })
 
-  it('cycles to the bottom status toggle in reverse and hides the bottom panel on enter', async () => {
+  it('starts with horizontal vitals and moves them right when the bottom region is collapsed', async () => {
     const user = userEvent.setup()
     render(<MonitorPage />)
 
-    expect(screen.getByText('APPL ELECT.')).toBeInTheDocument()
+    expect(screen.queryByText('APPL ELECT.')).not.toBeInTheDocument()
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'bottom',
+    )
+    expect(screen.getByText('FC').closest('[data-orientation]')).toHaveAttribute(
+      'data-orientation',
+      'horizontal',
+    )
     await user.click(screen.getByRole('button', { name: 'Move down' }))
     await user.click(screen.getByRole('button', { name: 'Enter' }))
 
-    expect(screen.queryByText('APPL ELECT.')).not.toBeInTheDocument()
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'right',
+    )
+    expect(screen.getByText('FC').closest('[data-orientation]')).toHaveAttribute(
+      'data-orientation',
+      'vertical',
+    )
     expect(screen.getByText('expanded-waveforms')).toBeInTheDocument()
     expect(screen.getByText('disconnected-etco2')).toBeInTheDocument()
     expect(screen.getByText('disconnected-spo2')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Toggle bottom status panel' })).toHaveClass(
       'bg-[var(--color-selection-blue)]',
       'text-white',
+    )
+  })
+
+  it('moves vitals right immediately after physical Analyze and keeps Call Info inert', async () => {
+    const user = userEvent.setup()
+    render(<MonitorPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'bottom',
+    )
+    await user.click(screen.getByRole('button', { name: 'Back to monitor' }))
+
+    await user.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'right',
+    )
+    expect(screen.getByText('ANALYZING ECG')).toBeInTheDocument()
+  })
+
+  it('keeps specialized 12-lead vitals on the right and restores resting placement on Back', async () => {
+    const user = userEvent.setup()
+    render(<MonitorPage />)
+
+    await user.click(screen.getByRole('button', { name: '12-lead view' }))
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'right',
+    )
+    expect(screen.getByText('FC').closest('[data-orientation]')).toHaveAttribute(
+      'data-orientation',
+      'vertical',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'bottom',
+    )
+  })
+
+  it('keeps right-side vitals beside the energy scale throughout Charge', () => {
+    vi.useFakeTimers()
+    render(<MonitorPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Charge' }))
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'right',
+    )
+    expect(screen.getByTestId('monitor-energy-region')).toBeInTheDocument()
+    expect(screen.getByText('Confirm Energy')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Charge' }))
+    act(() => { vi.advanceTimersByTime(4000) })
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'right',
+    )
+    expect(screen.getByText('Charged')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Shock' }))
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'right',
+    )
+    expect(screen.getByText('Delivered Energy')).toBeInTheDocument()
+  })
+
+  it('restores the horizontal vital row after power cycling or monitor reset', async () => {
+    const user = userEvent.setup()
+    render(<MonitorPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'right',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Power off' }))
+    await user.click(screen.getByRole('button', { name: 'Power on' }))
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'bottom',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Charge' }))
+    act(() => useMonitorStore.getState().resetMonitorVitals())
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'bottom',
     )
   })
 })
