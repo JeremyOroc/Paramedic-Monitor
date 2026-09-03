@@ -5,6 +5,12 @@
 
 ---
 
+## [2026-09-02] [planning/instructor] — Define automatic Asystole FC lock
+
+- Required active Asystole in the Instructor Console to set and save FC at `0 bpm`, automatically turn FC On, and disable both the FC number editor and FC On/Off toggle.
+- Required every direct, auto-sort, timed-vitals, scenario, and hydration path to preserve the automatic zero, while leaving Asystole or switching its ECG Off restores the interaction's prior manual FC and unlocks both controls.
+- Extended the existing automatic VF/VT testing contract to cover Asystole store, component, scenario, and hydration behavior. No ADR was added because this extends the existing automatic-FC mechanism without changing its architecture.
+
 ## [2026-09-02] [planning/monitor] — Add state-driven Wagami X vital placement
 
 - Replaced the Wagami X resting `APPL ELECT.` banner and its three lower boxes with four equal-width, full-featured FC, PNI, EtCO2, and SpO2 cells in the existing 110px bottom region. Removed the dormant Apply Electrodes component and kept the existing vital data, units, alarms, PNI phases, SpO2 pulse bar, French labels, selection identifiers, and navigation behavior.

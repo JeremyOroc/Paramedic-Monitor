@@ -4,9 +4,10 @@ export const VF_HEART_RATE_MIN = 190
 export const VF_HEART_RATE_MAX = 220
 export const VF_UNDERLYING_HEART_RATE = VF_HEART_RATE_MIN
 export const VT_HEART_RATE = 220
+export const ASYSTOLE_HEART_RATE = 0
 export const VITAL_ALARM_FLASH_MS = 1900
 
-export type AutomaticHeartRateRhythm = Extract<Rhythm, 'vf' | 'vt'>
+export type AutomaticHeartRateRhythm = Extract<Rhythm, 'vf' | 'vt' | 'asystole'>
 
 export type VfDisplaySync = {
   seed: number
@@ -17,13 +18,18 @@ export type VfDisplaySync = {
 export function isAutomaticHeartRateRhythm(
   rhythm: Rhythm,
 ): rhythm is AutomaticHeartRateRhythm {
-  return rhythm === 'vf' || rhythm === 'vt'
+  return rhythm === 'vf' || rhythm === 'vt' || rhythm === 'asystole'
 }
 
 export function getAutomaticHeartRate(rhythm: Rhythm): number | null {
   if (rhythm === 'vf') return VF_UNDERLYING_HEART_RATE
   if (rhythm === 'vt') return VT_HEART_RATE
+  if (rhythm === 'asystole') return ASYSTOLE_HEART_RATE
   return null
+}
+
+export function isHeartRateToggleLockedRhythm(rhythm: Rhythm): boolean {
+  return rhythm === 'asystole'
 }
 
 export function randomVfHeartRate(random: () => number = Math.random): number {

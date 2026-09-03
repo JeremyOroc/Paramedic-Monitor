@@ -81,7 +81,7 @@ describe('VitalInput', () => {
     )
   })
 
-  it('shows locked automatic FC controls for VF and VT', () => {
+  it('shows locked automatic FC values and disables the FC toggle for Asystole', () => {
     render(<VitalInput field="hr" label="FC" unit="bpm" />)
 
     act(() => useMonitorStore.getState().setDraft('rhythm', 'vf'))
@@ -95,9 +95,16 @@ describe('VitalInput', () => {
     expect(screen.getByLabelText('FC')).toHaveValue('220')
     expect(screen.getByText('bpm')).toBeInTheDocument()
 
+    act(() => useMonitorStore.getState().setDraft('rhythm', 'asystole'))
+    expect(screen.getByLabelText('FC')).toBeDisabled()
+    expect(screen.getByLabelText('FC')).toHaveValue('0')
+    expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
+    expect(screen.getByText('bpm')).toBeInTheDocument()
+
     act(() => useMonitorStore.getState().setDraft('rhythm', 'nsr'))
     expect(screen.getByLabelText('FC')).toBeEnabled()
     expect(screen.getByLabelText('FC')).toHaveValue(0)
+    expect(screen.getByRole('button', { name: 'FC on' })).toBeEnabled()
   })
 
   it('typing SpO2 keeps the SpO2 graph disconnected while Off', async () => {
