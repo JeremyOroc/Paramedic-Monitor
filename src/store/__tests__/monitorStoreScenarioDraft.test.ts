@@ -48,4 +48,17 @@ describe('monitorStore scenario drafts', () => {
     useMonitorStore.getState().setDraft('rhythm', 'nsr')
     expect(useMonitorStore.getState().draft.hr).toBe(80)
   })
+
+  it('applies Asystole with FC fixed at zero and active', () => {
+    const snapshot = createEmptyScenarioSnapshot()
+    snapshot.monitor.draft.hr = 155
+    snapshot.monitor.draft.rhythm = 'asystole'
+    snapshot.monitor.draftVitalActive.hr = false
+
+    useMonitorStore.getState().applyScenarioDraft(snapshot)
+
+    const state = useMonitorStore.getState()
+    expect(state.draft.hr).toBe(0)
+    expect(state.draftVitalActive.hr).toBe(true)
+  })
 })
