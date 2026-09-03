@@ -21,6 +21,7 @@ import {
   joinSession,
   recordStudentEvent,
   startNewAttempt,
+  stripRouteGeometry,
   updateSessionState,
 } from '../service'
 
@@ -142,6 +143,67 @@ describe('updateSessionState — instructor-side history (PLAN 12b)', () => {
     expect(result.state).toMatchObject({ version: 8 })
     expect(consoleError).toHaveBeenCalled()
     consoleError.mockRestore()
+  })
+})
+
+describe('updateSessionState — history stores what was sent, not what the map drew (PLAN 13f)', () => {
+  const ROUTE = {
+    originAddress: 'John Abbott College',
+    destinationAddress: '2100 Boulevard Saint-Jean',
+    origin: { lat: 45.4, lng: -73.9 },
+    destination: { lat: 45.5, lng: -73.8 },
+    geometry: [{ lat: 45.4, lng: -73.9 }, { lat: 45.45, lng: -73.85 }, { lat: 45.5, lng: -73.8 }],
+    status: 'ready',
+    error: '',
+  }
+
+  it('empties the polyline and keeps every other route field', () => {
+    const stripped = stripRouteGeometry({ confirmed: { hr: 80 }, dispatchRouteConfirmed: ROUTE }) as {
+      confirmed: unknown
+      dispatchRouteConfirmed: typeof ROUTE
+    }
+
+    expect(stripped.dispatchRouteConfirmed.geometry).toEqual([])
+    expect(stripped.dispatchRouteConfirmed.originAddress).toBe(ROUTE.originAddress)
+    expect(stripped.dispatchRouteConfirmed.destinationAddress).toBe(ROUTE.destinationAddress)
+    expect(stripped.confirmed).toEqual({ hr: 80 })
+  })
+
+  it('does not mutate the state it was given', () => {
+    const state = { dispatchRouteConfirmed: { ...ROUTE, geometry: [...ROUTE.geometry] } }
+
+    stripRouteGeometry(state)
+
+    expect(state.dispatchRouteConfirmed.geometry).toHaveLength(3)
+  })
+
+  it('passes through a state with no route, and anything that is not an object', () => {
+    expect(stripRouteGeometry({ confirmed: { hr: 80 } })).toEqual({ confirmed: { hr: 80 } })
+    expect(stripRouteGeometry(null)).toBeNull()
+    expect(stripRouteGeometry('nonsense')).toBe('nonsense')
+    expect(stripRouteGeometry({ dispatchRouteConfirmed: 'not-a-route' })).toEqual({
+      dispatchRouteConfirmed: 'not-a-route',
+    })
+  })
+
+  it('writes the live state with its polyline and the history row without it', async () => {
+    const state = { confirmed: { hr: 80 }, dispatchRouteConfirmed: ROUTE }
+    const stub = withResolver({
+      session_state: (op) =>
+        op.method === 'upsert'
+          ? { data: { state, version: 8, updated_at: 'now' } }
+          : { data: { version: 7 } },
+    })
+
+    await updateSessionState(CODE, HOST_TOKEN, state)
+
+    const upsert = stub.opsFor('session_state').find((op) => op.method === 'upsert')
+    const [history] = stub.opsFor('session_state_history')
+    const liveRoute = (upsert?.payload?.state as typeof state).dispatchRouteConfirmed
+    const storedRoute = (history.payload?.state as typeof state).dispatchRouteConfirmed
+    expect(liveRoute.geometry).toHaveLength(3)
+    expect(storedRoute.geometry).toEqual([])
+    expect(storedRoute.destinationAddress).toBe(ROUTE.destinationAddress)
   })
 })
 
@@ -302,7 +364,6 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
     await getReview(CODE, HOST_TOKEN, 1)
 
     expect(filterValue(stub.opsFor('student_events')[0], 'attempt_version')).toBe(1)
-    expect(filterValue(stub.opsFor('session_state_history')[0], 'attempt_version')).toBe(1)
   })
 
   it('drops the attempt filter for a whole-session export', async () => {
@@ -340,12 +401,63 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
     expect(result.events).toHaveLength(3)
   })
 
-  it('returns the state history the evaluator joins actions against', async () => {
+  it('returns the state history the evaluator joins actions against when asked', async () => {
     reviewResolver([])
+
+    const result = await getReview(CODE, HOST_TOKEN, -1, { includeHistory: true })
+
+    expect(result.stateHistory).toEqual([{ version: 7, attempt_version: 3, state: {} }])
+  })
+
+  it('does not touch the history table unless asked (PLAN 13f)', async () => {
+    // The console polls this every 2.5s for the roster. History is only read
+    // while the Report tab is open, and each row is a whole sent state.
+    const stub = reviewResolver([])
 
     const result = await getReview(CODE, HOST_TOKEN)
 
-    expect(result.stateHistory).toEqual([{ version: 7, attempt_version: 3, state: {} }])
+    expect(stub.opsFor('session_state_history')).toHaveLength(0)
+    expect(result.stateHistory).toEqual([])
+  })
+
+  it('still scopes history to the requested attempt when included', async () => {
+    const stub = reviewResolver([])
+
+    await getReview(CODE, HOST_TOKEN, 1, { includeHistory: true })
+
+    expect(filterValue(stub.opsFor('session_state_history')[0], 'attempt_version')).toBe(1)
+  })
+
+  it('issues all of its reads before any of them resolve (PLAN 13f)', async () => {
+    // Promise.all: every builder's `.then` fires in the same tick, so by the
+    // time the first resolver runs the others have been recorded too. A
+    // sequential implementation would record them one round-trip apart.
+    const REVIEW_TABLES = ['participants', 'student_events', 'session_state_history', 'participant_attempts']
+    const seenAtFirstResolve: string[] = []
+    let firstResolveCaptured = false
+    const stub = createSupabaseStub((op) => {
+      // The session and host lookups come first and alone; the observation
+      // starts at the first of the four review reads.
+      if (!firstResolveCaptured && REVIEW_TABLES.includes(op.table)) {
+        firstResolveCaptured = true
+        queueMicrotask(() => {
+          seenAtFirstResolve.push(...stub.ops.map((recorded) => recorded.table))
+        })
+      }
+      return baseResolver({
+        student_events: () => ({ data: [] }),
+        session_state_history: () => ({ data: [] }),
+        participants: () => ({ data: [PARTICIPANT] }),
+        participant_attempts: () => ({ data: [] }),
+      })(op)
+    })
+    currentStub = stub
+
+    await getReview(CODE, HOST_TOKEN, -1, { includeHistory: true })
+
+    expect(seenAtFirstResolve).toEqual(
+      expect.arrayContaining(['participants', 'student_events', 'session_state_history', 'participant_attempts']),
+    )
   })
 })
 

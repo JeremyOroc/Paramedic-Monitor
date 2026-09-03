@@ -6,15 +6,27 @@
 ---
 
 ## Current Phase
-**Phase 12 — Evaluation record & database hardening — CODE COMPLETE, MIGRATIONS NOT YET APPLIED.**
+**Phase 13 — Evaluation report tab — COMPLETE (2026-09-02).** The Instructor Console has a fifth
+tab rendering one chronological stream of an attempt: each trainee action with its payload against the
+patient state in force when it was taken, with the instructor's own changes interleaved as diffs of
+consecutive sent states, and any row whose patient was in alarm outlined in red. Scoring stays with
+the evaluator. Reads the `/review` poll the console was already running, so no new endpoint and no
+extra request on the hot path.
+
+> **Migrations `006` and `007` are applied** (verified against the live project on 2026-09-02:
+> `session_state_history` holds 255 rows, `student_events.state_version` exists and is stamped on
+> current runs, `vitals_snapshots` is dropped, and `anon` is refused on `sessions`/`scenarios`).
+> Drills recorded before those migrations keep a null `state_version` — 588 of 795 events — and
+> render `[dispatch]`, which is correct rather than a fault.
+
+**Phase 12 — Evaluation record & database hardening — COMPLETE, MIGRATIONS APPLIED.**
 Drills now store a reviewable per-trainee, per-attempt timeline: every instrumented action with a
 millisecond timestamp, joined to the patient state in force when it was taken. Scoring/rubric logic
 is deliberately out of scope — the evaluator reads the timeline and judges.
 
-> **Blocked on deploy:** migrations `006_close_legacy_policies.sql` and `007_evaluation_record.sql`
-> have not been run against a live Supabase project. Until they are, `session_state_history` and
-> `student_events.state_version` do not exist and the new event kinds will be rejected by the check
-> constraint. Apply both before the next session, oldest first.
+> **Deployed.** Migrations `006_close_legacy_policies.sql` and `007_evaluation_record.sql` are live,
+> confirmed by direct schema probe on 2026-09-02: history rows are being written, `state_version` is
+> stamped at insert, and the new event kinds pass the check constraint.
 
 **Wagami Z responsive visual redesign — COMPLETE.** The accepted code-native shell and live touchscreen now follow the approved reference on supported landscape displays, with safe-area-aware fixed-aspect scaling at usable CSS viewports of at least 1024×700. Portrait and undersized windows receive exact, state-preserving French blocking guidance. The power-only functional boundary, two-second centered-WAGAMI boot, live waveforms/vitals, PI and shock-count decoration, and inert non-power controls are preserved. iPad mini receives no special code or QA and is not certified, although it may render when it passes the same capability rule.
 
@@ -23,6 +35,37 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Phase 13 — Evaluation report tab — COMPLETE:**
+  - [x] `src/lib/evaluationTimeline.ts` assembles the review payload into one ordered stream: `t+`
+        offsets from `participant_attempts.started_at` (falling back to the first recorded row),
+        each action resolved to its `session_state_history` state via `state_version`, and alarm
+        channels per row from the existing `getActiveAlarms` thresholds
+  - [x] Instructor rows interleaved from diffs of consecutive sent states — rhythm, numeric vitals,
+        channel toggles, CPR mode, monitor reset — so an action's position relative to a change is
+        visible rather than remembered
+  - [x] `EvaluationReportPanel` renders the monospace stream with red-outlined alarm rows, the
+        alarming channel in alarm red, an attempt selector, a truncation banner, and copy-to-clipboard
+  - [x] Fifth `Report` tab in `AdminPage`; the existing 2.5s `/review` poll now keeps `stateHistory`,
+        `attempts`, and `truncated` instead of discarding them. Past attempts are read once on
+        selection so the live roster keeps tracking the run in progress
+  - [x] Extracted `RHYTHM_LABELS` into `src/lib/rhythmLabels.ts` so the report and the rhythm
+        selector name rhythms identically
+  - [x] **13f finish work** (decided in the 2026-09-02 grill): `updateSessionState` strips the
+        route polyline from the history write — the live `session_state` keeps it for the trainee's
+        map; `/review?include=history` and the console sends it only while the Report tab is open;
+        `getReview` issues its four reads with `Promise.all`; migration
+        `20260902160000_strip_history_route_geometry.sql` clears the polyline from the 261 existing
+        rows. Undoes the 823 KB/poll the Report tab had added to the console's 2.5s poll
+  - [x] 54 new tests (32 timeline units, 11 panel components, 2 admin tab, 7 service, 2 route).
+        All 944 tests and TypeScript pass; ESLint reports 0 errors with the 12 pre-existing
+        warnings; the Next.js production build passes. Rendered browser QA is still outstanding —
+        jsdom needed ~3.5 min to initialise on this host, so the suite was run under
+        `--pool=vmThreads`, and no browser pass was made
+
+> **Migration not yet applied:** `20260902160000_strip_history_route_geometry.sql` is written but
+> has not been run against the live project. New history rows are already lean; the 261 rows from
+> before carry the polyline until it runs.
+
 - [x] **Expanded Instructor Console width — COMPLETE (2026-09-02):** Widened all four tabs with 24px side gutters, retaining the current main layout with Vitals on the left, equal-height SAMPLE/OPQRST stacked on the right, existing control sizing, column proportions, and compact height-based spacing. All 62 targeted tests pass. Rendered laptop checks confirm the column geometry and no horizontal overflow; 1080×700 compact geometry also passes. The expanded controls retain vertical scrolling when the viewport is shorter than the approximately 829px content bottom.
 - [x] **State-driven Wagami X vital placement — COMPLETE:**
   - [x] Removed the idle `APPL ELECT.` banner, its three lower boxes, and the dormant Apply Electrodes component/rendering path from Wagami X
@@ -58,7 +101,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
   - [x] Replaced every Scenarios-tab browser confirmation with the reusable amber/dark/cyan accessible dialog, including backdrop/Escape cancellation and focus containment/restoration
   - [x] Locked folder and scenario mutations during active attempts and confirmed the row layout has no horizontal overflow at the 1024px minimum
   - [x] All 869 tests, TypeScript, ESLint (0 errors; 12 pre-existing warnings), and rendered 1366×768/1024×768 browser QA pass with a clean console
-- [x] **Phase 12 — Evaluation record & database hardening — CODE COMPLETE:**
+- [x] **Phase 12 — Evaluation record & database hardening — COMPLETE (migrations applied):**
   - [x] Added append-only `session_state_history` written beside (never on) the student poll path, so the patient state behind every action survives the next Send
   - [x] Stamped `student_events.state_version` at insert, linking each trainee action to the exact state it was taken against
   - [x] Instrumented the 11 remaining trainee controls, including the BP button, which had only ever written to the trainee's local store
@@ -610,7 +653,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## In Progress
-- Nothing — next plan is the admin/instructor dashboard
+- Nothing — Phase 13 is complete pending rendered browser QA
 
 ---
 
@@ -631,7 +674,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 | CPR visual | Blue banner + CPR timer |
 | Language | English |
 | Session routing | `/session/[code]/instructor` vs `/session/[code]/monitor` |
-| Realtime | Supabase Broadcast + Postgres snapshots |
+| Realtime | Polling with `?since=` is the guarantee; Supabase Realtime is a nudge only (`docs/adr/0003`) |
 | Post-shock | Instructor controls manually |
 | Send behavior | Staged commit (pending state → Send → broadcast) |
 

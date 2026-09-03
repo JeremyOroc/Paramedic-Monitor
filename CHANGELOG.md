@@ -5,6 +5,47 @@
 
 ---
 
+## [2026-09-03] [instructor] — Record which scenario an attempt was
+
+- Added `scenarioTitleConfirmed` to the sent state so the evaluation record can say which scenario an attempt was. Nothing else in the stored state revealed it: `SharedMonitorState` is what the trainee's monitor needs, and the monitor never needed the scenario's name, so the title had no way to travel.
+- The title is Instructor Console state rather than store state, so `sendSessionState` joins the two at the send site instead of `getSharedState` carrying it.
+- The opening instructor change now reads `scenario sent — "Fall from ladder"`, falling back to `scenario sent` when the instructor never named one. Switching scenario mid-attempt reports as `scenario "A" → "B"`, and clearing the name reports as `scenario name cleared`.
+- Added 8 tests across the three layers that could each break silently: the console putting the title in the POST body, the timeline reading and diffing it, and the panel rendering and copying it. All 952 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings) pass. Verified end to end against the running app: two Sends with different titles store and render correctly.
+
+## [2026-09-02] [instructor/server] — Phase 13f: keep the evaluation record off the hot path
+
+- Stripped `dispatchRouteConfirmed.geometry` from the `session_state_history` write in `updateSessionState`. The live `session_state` row keeps it, because the trainee's dispatch map is drawn from there; the history copy was 86% of everything stored and nothing read it back. Added `stripRouteGeometry` as a pure, tested helper.
+- Added migration `20260902160000_strip_history_route_geometry.sql` to clear the polyline from the 261 history rows written before the change. Not yet applied.
+- Made history opt-in on `GET /api/session/[code]/review` via `?include=history`; `getReview` defaults to not reading `session_state_history` at all. The Instructor Console adds the flag only while the Report tab is open, and keeps the last history it received rather than blanking it when the tab changes. On the busiest recorded attempt this takes the console's 2.5s poll from 823 KB to about 4 KB.
+- `getReview` now issues its four reads with `Promise.all` instead of one round-trip after the next.
+- Added 10 tests: `stripRouteGeometry` units and the live-vs-history write split; history skipped unless asked, still attempt-scoped when included, and all four reads in flight together; the route parsing `include=history` alone and with an attempt; the console requesting history only on the Report tab. All 944 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass.
+
+## [2026-09-02] [planning] — Grill the reporting and polling plan; settle sync model and vocabulary
+
+- Ran `/grill-with-docs` over the evaluation report and polling plan with the constraint that the product will serve many instructors across colleges. Operating assumption recorded: design for a few hundred concurrent clients, build for one college; the evaluation record lives as long as the room and is reviewed before the instructor closes it; instructor accounts and ownership land before the first external sale, not before.
+- Added `docs/adr/0003` — polling with `?since=` stays the correctness guarantee and Supabase Realtime is layered on only as a nudge, chosen over Realtime alone because a dropped broadcast leaves a monitor silently stale, and over polling alone because polling bills per request against a state change every ~13 minutes. Supersedes the `PLAN.md`/`STATUS.md` "locked" Broadcast line.
+- Added `docs/adr/0004` — trainee actions queue on the device through outages and replay with their own timestamp and the state version the monitor was showing, bounded by the server; the report marks an action taken on a stale monitor as behind rather than letting it read as ignored. Motivated by `monitor/page.tsx` firing actions with `void fetch()` and no retry, so an action during a wifi drop is currently lost.
+- Added glossary terms to `CONTEXT.md`: **Room**, **Evaluation record**, **Trainee action**, **Instructor change**. Replaced "drill" with "attempt" in the Phase 13 plan text per the existing glossary.
+- Rewrote `PLAN.md` Phases 13–16: 13f finish work (strip route geometry from history writes and the 261 existing rows, `include=history` only with the Report tab open, parallel review queries); 14 Sync & Queue; 15 Instructor Change Expansion, showing what each Send changed rather than the full state, since real data shows 79% of the dispatch card would repeat the row above; 16 Realtime Nudge & Presence, triggered by onboarding a second college.
+
+## [2026-09-02] [instructor] — Build the evaluation report tab
+
+- Added a fifth Instructor Console tab rendering one chronological stream of a drill: each trainee action with its formatted payload against the patient state in force when it was taken, so ordering and omission mistakes are readable after the fact instead of remembered.
+- Added `src/lib/evaluationTimeline.ts`, a pure assembly step over the review payload — `t+` offsets from the attempt start with a first-recorded-row fallback, `state_version` resolved against `session_state_history`, `[dispatch]` for actions predating the first Send, `[no state recorded]` for a version the history does not hold, and per-row alarm channels from the existing `getActiveAlarms` thresholds.
+- Interleaved the instructor's own changes as diffs of consecutive sent states (rhythm, numeric vitals, channel toggles, CPR mode, monitor reset), placed before an action sharing their millisecond so cause reads before effect.
+- Rendered a row whose patient was in alarm with a red outline and its alarming channel in alarm red. A channel prints its value when on, `--` when off, and is omitted when the attempt never used it. Scoring stays with the evaluator, unchanged from Phase 12.
+- Wired the tab to the `/review` poll the console was already running, keeping `stateHistory`, `attempts`, and `truncated` instead of discarding them — no new endpoint and nothing added to the hot path. Selecting an earlier attempt reads it once so the live roster keeps tracking the run in progress.
+- Added an attempt selector, a truncation banner, copy-to-clipboard for pasting into a debrief, and a warning when an attempt recorded actions but no instructor state, which would mean history writes are failing.
+- Extracted `RHYTHM_LABELS` into `src/lib/rhythmLabels.ts` so the report and the rhythm selector name rhythms identically.
+- Added 44 tests (32 timeline units, 11 panel components, 1 admin tab). All 934 tests and TypeScript pass; ESLint reports 0 errors with 12 pre-existing warnings; the Next.js production build passes. jsdom needed roughly 3.5 minutes to initialise on this host, exceeding vitest's 60s worker timeout, so the suite was run under `--pool=vmThreads`; rendered browser QA was not performed and remains outstanding.
+
+## [2026-09-02] [planning/instructor] — Define the evaluation report tab
+
+- Added PLAN.md Phase 13: a fifth Instructor Console tab rendering one chronological stream of a drill — each trainee action with its payload, shown against the patient state in force when it was taken. Answers the evaluator problem that only the critical events survive an unaided memory, so small failures and wrong-order actions go unrecorded.
+- Confirmed instructor changes are interleaved into the same stream, diffed from consecutive `session_state_history` versions, because ordering is only legible when the trainee's action and the instructor's change appear against each other.
+- Confirmed a row whose patient state is in alarm is outlined in red, derived from the existing `getActiveAlarms` thresholds. Scoring stays out of scope as in Phase 12 — alarm state is a fact the record already holds, not a grade.
+- Recorded one trainee per session as the current operating assumption, and the instructor-side boundary that console actions absent from `SharedMonitorState` (patient physical, SNS reveals) cannot appear in the stream.
+- Verified migrations `006` and `007` are applied to the live project by direct schema probe: `session_state_history` holds rows, `state_version` is stamped on current runs, `vitals_snapshots` is dropped, and `anon` is refused on `sessions` and `scenarios`. The earlier STATUS.md note calling them unapplied was stale. No ADR was added because the phase introduces a read surface over existing data with no new storage or architectural lock-in.
 ## [2026-09-02] [ui] — Widen the current admin layout while preserving its panel arrangement
 
 - Preserve the current main layout: Vitals on the left, equal-height SAMPLE/OPQRST stacked on the right, and the existing compact controls.

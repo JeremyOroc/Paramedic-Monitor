@@ -1020,6 +1020,222 @@ against patient state, and the anon key can no longer read a room code.
 
 ---
 
+### Phase 13 — Evaluation Report Tab
+**Goal:** The evaluator reads one chronological stream of an attempt — every trainee action and
+every instructor change, in order, each shown against the patient state in force at that moment —
+so ordering and omission mistakes are visible after the fact instead of remembered.
+
+**Requirement change (2026-09-02):** Running a lab, the evaluator cannot hold the whole attempt in
+their head. What survives is the critical events; the small failures and the wrong-order actions
+are the ones that get lost. Phase 12 stored the record but nothing renders it — `getReview` already
+returns `stateHistory` and `attempts`, and `AdminPage` throws both away, using the response only to
+refresh the roster. This phase is the read surface for data that already exists.
+
+Scoring stays out of scope, unchanged from Phase 12: the report presents the run, the evaluator
+judges it. The one derived signal is alarm state, and it is derived from the thresholds already
+agreed in `getActiveAlarms` — reporting that a vital is in alarm is a fact, not a grade.
+
+**Depends on:** migrations `006` and `007`, both verified applied to the live project on
+2026-09-02. Attempts recorded before them carry a null `state_version` and render `[dispatch]`,
+which is the honest reading of an attempt whose patient context was never stored.
+
+#### 13a — Timeline assembly (`src/lib/evaluationTimeline.ts`)
+A pure function over `getReview`'s response, returning `TimelineRow[]`. No fetching, no DB — the
+whole ordering and formatting problem is unit-testable in isolation.
+- `t+` offset from the attempt baseline: `participant_attempts.started_at` for that attempt,
+  falling back to the earliest event when absent (rows predate the `started_at`/`completed_at` write).
+- Patient state per row: `student_events.state_version` → `session_state_history.version`.
+  A null `state_version` is an action taken before the instructor's first Send and renders
+  `[dispatch]` rather than a fabricated state.
+- Context format `RHYTHM HR · SYS/DIA · SpO2 N · EtCO2 N`, each channel rendered `--` when
+  `confirmedVitalActive[field]` is false, and omitted entirely when the channel is off for the
+  whole row — a VF arrest reads `VF · SpO2 --`, not a wall of dashes.
+- Alarm channels per row from `getActiveAlarms(state.confirmed, state.confirmedVitalActive)`.
+
+#### 13b — Instructor rows, interleaved
+Consecutive `session_state_history` entries are diffed into synthetic rows stamped at `applied_at`,
+placed in the same stream as the trainee's actions. This is what makes ordering legible: a
+medication given before the instructor deteriorated the patient reads differently from the same
+medication given after, and only an interleaved stream shows which happened.
+- Only changed fields render — rhythm, each numeric vital, channel on/off, CPR mode, patient mode.
+- The first version of an attempt is an opening state, not a diff: it renders as the scenario being
+  sent, carrying the full context.
+- **Known boundary:** instructor state reaches the database only on Send (plus the CPR and reset
+  immediate pushes), so console-side actions absent from `SharedMonitorState` — patient physical
+  and SNS reveals — do not appear. Widening `SharedMonitorState` is deliberately out of scope here.
+
+#### 13c — The panel (`src/components/instructor/EvaluationReportPanel.tsx`)
+Monospace table: elapsed time, kind, payload, patient state.
+- A row whose state is in alarm carries a red outline, and the alarming channel renders in alarm red
+  inside the context column, so a run's red bands are scannable without reading a word.
+- Instructor rows are dimmed and marked, subordinate to the trainee's actions.
+- Header carries the attempt, elapsed duration, and the truncation banner when `truncated` is set —
+  a partial record says so rather than passing as whole.
+- Copy button dumps the visible stream as plain text for a debrief or an email.
+
+#### 13d — Tab wiring (`AdminPage.tsx`)
+`AdminTab` gains `'report'` and the tab row goes to five columns. The existing 2.5s `/review` poll
+already carries everything the panel needs: it stops discarding `stateHistory` and `attempts` and
+holds them in state instead. No new request, no new endpoint — the tab is live during an attempt and
+correct after it ends.
+
+#### 13e — Attempt scoping
+`getReview` already defaults to the active attempt and accepts `?attempt=N`; the panel exposes that
+for reviewing an earlier attempt in the same room. One trainee per session is the current operating
+assumption, so there is no roster picker — but if a second participant exists the panel shows a
+name column rather than silently interleaving two people into one stream.
+
+#### 13f — Finish work (decided 2026-09-02, before commit)
+Keeping `stateHistory` in the 2.5s poll made the console download every stored state blob on every
+tick — 823 KB per poll on the busiest attempt, 94% of it route polyline the report never reads.
+Before Phase 13 is committed:
+- `updateSessionState` strips `dispatchRouteConfirmed.geometry` before the history insert. The live
+  `session_state` keeps it — the trainee's map is drawn from there. The record stores what the
+  instructor sent and what the trainee pressed; the line the map drew is neither.
+- One-off migration strips `geometry` from the 261 existing history rows.
+- `/review?include=history` — the console sends the flag only while the Report tab is open.
+- `getReview` runs its four queries with `Promise.all` rather than in sequence.
+
+#### Testing
+- `evaluationTimeline` units: offset arithmetic, missing-baseline fallback, null `state_version` →
+  `[dispatch]`, inactive channel → `--`, alarm channels per row, instructor diff across single-field,
+  multi-field, and no-op versions, and correct interleaving when an instructor change and an action
+  share a second
+- Component: rows render in occurrence order, an alarm row carries the red treatment, instructor
+  rows are distinguishable, truncation banner appears at the cap, copy output shape
+- `AdminPage`: the fifth tab renders and the existing four still switch
+
+**Milestone:** An evaluator opens one tab after an attempt and reads the whole of it in order — what the
+trainee did, what the patient was, and what the instructor changed between the two.
+
+---
+
+### Phase 14 — Sync & Queue
+**Goal:** A trainee action survives a wifi outage, lands in the evaluation record at the moment it
+was pressed and against the patient the trainee was looking at, and an unchanged room costs the
+trainee's poll almost nothing.
+
+**Decided 2026-09-02** in a grilling session; see `docs/adr/0004` for the queue and its clock, and
+`docs/adr/0003` for the sync model this is the first half of.
+
+#### 14a — `?since=<version>` on `/state`
+The monitor already tracks the version it holds (`lastVersionRef`). It sends it; the server answers
+`{ version, unchanged: true }` when nothing moved. Same interval, same heartbeat, ~50 bytes instead
+of the whole blob. Room data shows one Send per ~13 minutes against a poll every 1.5 s, so this
+turns roughly 534 of every 535 polls into a no-op.
+
+#### 14b — The action queue
+`monitor/page.tsx` fires each trainee action with `void fetch(...)` and no catch. A failed POST is
+lost with no trace. Replace with an in-memory queue: append on press, drain in order with backoff,
+never drop. Each queued action carries `occurredAtMs` and `captureSequence` from the existing
+`createEventLogStamp()`, plus the state version the monitor was showing when it was pressed.
+
+#### 14c — The record's clock
+New columns on `student_events`: `occurred_at_client`, `capture_sequence`, and `clock_offset_ms`
+(the server offset the monitor already computes for VF display sync). `occurred_at` stays as the
+server's insert time. The report orders by the trainee's corrected clock and falls back to
+`occurred_at` for rows predating the columns.
+
+#### 14d — The state version is claimed, then bounded
+`recordStudentEvent` accepts the monitor's claimed `state_version` and rejects any claim above the
+version current at insert. A monitor may point backward (it was behind); it may never point forward.
+
+#### 14e — The "behind" marker
+A trainee action whose state version is older than the latest instructor change before its time
+carries a marker in the report — `← 1 version behind` — so a decision made on a stale monitor
+reads as "had not received it yet," not "ignored it." The evaluator can see how long the monitor
+was stale, which bears on whether the attempt was fair.
+
+#### Testing
+- Queue: press offline → drain on reconnect in order; a failed drain retries and never drops; the
+  stamp and claimed version are the ones from the press, not the drain
+- Server: claimed version ≤ current accepted; claimed version > current rejected with 400; rows
+  without the new columns still record
+- Timeline: ordering by corrected client clock; fallback to `occurred_at`; the behind marker
+  present exactly when the action's version trails the latest prior instructor change
+
+**Milestone:** A shock pressed during an eight-second wifi drop is in the record, at the right time,
+against the right patient, and flagged if the monitor was behind.
+
+---
+
+### Phase 15 — Instructor Change Expansion
+**Goal:** An instructor change opens to show what that Send changed, field by field, so the record
+accounts for everything the instructor put in — not only the vitals — without repeating the
+unchanged remainder on every row.
+
+**Decided 2026-09-02.** Real room data: 79% of the dispatch card would be a repeat of the row above
+if every expansion rendered it in full, and the card changes in only 17% of Sends. So expansions
+show the difference, and the opening instructor change shows the full scenario because there is
+nothing before it to differ from. Every Send is its own row, including a correction seconds after
+the last; a Send that changed nothing renders dimmed as `sent (no change)` rather than vanishing.
+
+#### 15a — Widen the diff
+**Landed early (2026-09-03):** the scenario title. It was not in the stored state at all, so no
+amount of UI work could have shown it; `scenarioTitleConfirmed` now travels with each Send and the
+opening instructor change names the scenario.
+
+`normalizeHistoryState` and `diffStates` extend, by explicit allowlist, to the fields the instructor
+sets: `spo2_waveform`, `etco2_waveform`, `defibrillatorModelConfirmed`, `callerInfoConfirmed`
+(callNumber, time, priority, mpdsCode, problem, address, update, information, extra1–3 where their
+label is set), `dispatchRouteConfirmed.originAddress` / `destinationAddress`, and
+`dispatchConfirmedSeconds` as a response time. Never deep-diffed: `dispatch.runId`, `startedAt`,
+`countdownEndsAt`, `callerEvents`, `acknowledgedAt` / `arrivedAt` / `transportedAt` (these mirror
+trainee actions already in the stream), route `geometry` / `status` / coordinates, and the legacy
+`cprOverrideActive`.
+
+#### 15b — Summary lines stay one line
+Clinical changes are named individually. Everything else collapses by group — `dispatch card ·
+3 fields`, `route · destination` — with `+n more` past a threshold. This also retires the
+`sent (no clinical change)` wording: a dispatch-only Send now summarises as what it changed.
+
+#### 15c — The expansion
+A native `<button>` disclosure per instructor change, `aria-expanded`, state held per row id so it
+survives the poll. Opening change: the full scenario grouped as the console groups it — Dispatch,
+Patient, Device — empty fields omitted. Every later change: before → after for each changed field
+only. Action rows do not expand; copy-to-clipboard is unchanged.
+
+#### Testing
+- Diff units per new group, and explicit proof the excluded fields produce no change
+- Summary collapsing: grouped label, threshold, clinical changes still named
+- Component: expand/collapse, `aria-expanded`, survives a re-render with new poll data, opening
+  row shows the full scenario, a later row shows only its diff, action rows have no disclosure
+
+**Milestone:** The instructor opens any of their own rows and sees exactly what that Send changed.
+
+---
+
+### Phase 16 — Realtime Nudge & Presence
+**Goal:** A Send reaches the trainee's monitor in well under a second on the happy path, the roster
+knows a trainee dropped the moment it happens, and neither depends on the poll — which becomes a
+slow guarantee rather than the mechanism.
+
+**Decided 2026-09-02**, `docs/adr/0003`. **Trigger: onboarding a second college.** Until then the
+poll with `?since=` is correct and cheap enough; Realtime's cost advantage and its "feels instant"
+value both arrive with scale.
+
+- Both monitor and console subscribe to the room's channel. A Send broadcasts a nudge; a nudge
+  triggers the same `?since=` poll immediately. The broadcast is never the only path a state change
+  takes.
+- Trainee presence moves to Realtime Presence on the same channel: join and leave pushed instantly,
+  zero `last_seen_at` writes. Only then does the guarantee poll slow to 10–15 s.
+- The roster's "connected" becomes *socket alive* rather than *polled recently*; accepted for a
+  supervised classroom.
+- Every Realtime client resyncs on reconnect by polling, because a broadcast dropped during an
+  outage is gone.
+
+---
+
+### Later — Instructor Accounts & Ownership
+Not a phase yet. The evaluation record currently lives as long as the room does, read before the
+instructor closes it, and that is the agreed operating assumption. Selling to a second college
+requires an **Instructor** as an account — Supabase Auth, `owner_id` on rooms and saved scenarios —
+both so a record can be reopened later and so one college cannot see another's scenario library.
+The scenario library is global today; every instructor sees every saved scenario. This lands before
+the first external sale, not before.
+
+---
+
 ## Quick Reference — Key Decisions
 
 | Decision | Choice |
@@ -1033,7 +1249,7 @@ against patient state, and the anon key can no longer read a room code.
 | Language | English |
 | Session routing | `/session/[code]/instructor` vs `/session/[code]/monitor` |
 | Instructor exclusivity | One instructor per session via Supabase Presence |
-| Realtime mechanism | Supabase Broadcast (sub-100ms) + Postgres for late-joiner recovery |
+| Realtime mechanism | Polling with `?since=` as the guarantee; Supabase Realtime as a nudge only — `docs/adr/0003` |
 | Audio | Pre-recorded files in `/public/audio/` |
 | Alarm thresholds | HR < 40 or > 140 bpm; BP sys < 90 or > 200 mmHg; BP dia < 25 or > 225 mmHg; SpO2 < 90%; no EtCO2 threshold |
 | Joule defaults | Adult 120J / Pediatric 50J / Neonate 10J |

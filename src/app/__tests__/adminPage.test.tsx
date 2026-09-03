@@ -507,7 +507,7 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'New Attempt' })).toBeInTheDocument()
   })
 
-  it('shows the four-tab layout and combines Vitals, SNS, and Patient Information', async () => {
+  it('shows the five-tab layout and combines Vitals, SNS, and Patient Information', async () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
@@ -516,6 +516,7 @@ describe('AdminPage', () => {
     expect(screen.queryByRole('button', { name: 'Patient Information' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Patient Physical' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Defibrillators' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Report' })).toBeInTheDocument()
     expect(screen.getByLabelText('Scenarios library')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
@@ -612,6 +613,86 @@ describe('AdminPage', () => {
     })).toHaveTextContent('15s')
     expect(screen.queryByRole('region', { name: 'Respiratory measurement result' }))
       .toBeNull()
+  })
+
+  it('opens the evaluation report on its own tab', async () => {
+    const user = userEvent.setup()
+    render(<AdminPage />)
+
+    await user.click(screen.getByRole('button', { name: 'Report' }))
+
+    expect(screen.getByRole('button', { name: 'Report' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('evaluation-report-panel')).toBeInTheDocument()
+    // No session, so there is nothing recorded to read -- the panel says so
+    // rather than rendering an empty table.
+    expect(screen.getByText('Nothing recorded for this attempt yet.')).toBeInTheDocument()
+  })
+
+  it('sends the scenario name with the state so the record can say what was run', async () => {
+    const user = userEvent.setup()
+    const bodies: string[] = []
+    vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input).endsWith('/state') && init?.body) bodies.push(String(init.body))
+      return new Response(
+        JSON.stringify({
+          session: { status: 'waiting', active_attempt_version: 1 },
+          participants: [],
+          events: [],
+          attempts: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
+    await user.type(screen.getByLabelText('Scenario title'), 'Fall from ladder')
+
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
+      useMonitorStore.getState().save()
+    })
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => expect(bodies.length).toBeGreaterThan(0))
+    // The title is console state, not store state, so this is the only place
+    // the two are joined -- and the record is empty of scenario identity
+    // without it.
+    expect(JSON.parse(bodies.at(-1) as string).state.scenarioTitleConfirmed).toBe(
+      'Fall from ladder',
+    )
+  })
+
+  it('asks the review poll for history only while the Report tab is open (PLAN 13f)', async () => {
+    const user = userEvent.setup()
+    const urls: string[] = []
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      urls.push(String(input))
+      return new Response(
+        JSON.stringify({
+          session: { status: 'active', active_attempt_version: 1 },
+          participants: [],
+          events: [],
+          stateHistory: [],
+          attempts: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(urls.length).toBeGreaterThan(0))
+    expect(urls[0]).toBe('/api/session/ABC123/review')
+
+    await user.click(screen.getByRole('button', { name: 'Report' }))
+    await waitFor(() =>
+      expect(urls.at(-1)).toBe('/api/session/ABC123/review?include=history'),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await waitFor(() => expect(urls.at(-1)).toBe('/api/session/ABC123/review'))
   })
 
   it('places the shared Save and Send actions immediately above the tab list', () => {

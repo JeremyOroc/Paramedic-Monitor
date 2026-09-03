@@ -7,6 +7,7 @@ import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
 import { DefibrillatorPanel } from '@/components/instructor/DefibrillatorPanel'
+import { EvaluationReportPanel } from '@/components/instructor/EvaluationReportPanel'
 import { CallerInfoForm } from '@/components/instructor/CallerInfoForm'
 import { ScenarioLibraryPanel } from '@/components/instructor/ScenarioLibraryPanel'
 import {
@@ -56,14 +57,18 @@ import type {
   PatientSnsMeasurementGroupId,
 } from '@/types/patientPhysical'
 import type { CprMode, NumericVitalField } from '@/types/vitals'
-import type { StudentEvent } from '@/types/session'
+import type {
+  ParticipantAttempt,
+  SessionStateHistoryEntry,
+  StudentEvent,
+} from '@/types/session'
 import type {
   SavedScenario,
   SavedScenarioSummary,
   ScenarioSnapshotV1,
 } from '@/types/savedScenario'
 
-type AdminTab = 'scenarios' | 'monitor' | 'physical' | 'defibrillators'
+type AdminTab = 'scenarios' | 'monitor' | 'physical' | 'defibrillators' | 'report'
 
 type PatientInformationSelections = Record<PatientInfoChecklist, Set<string>>
 
@@ -92,6 +97,15 @@ type ReviewParticipant = {
   nickname: string
   joined_at: string
   last_seen_at: string | null
+}
+
+type PastReview = {
+  attemptVersion: number
+  participants: ReviewParticipant[]
+  events: StudentEvent[]
+  stateHistory: SessionStateHistoryEntry[]
+  attempts: ParticipantAttempt[]
+  truncated: boolean
 }
 
 type ScenarioBaseline = {
@@ -202,14 +216,26 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   )
   const [participants, setParticipants] = useState<ReviewParticipant[]>([])
   const [studentEvents, setStudentEvents] = useState<StudentEvent[]>([])
+  const [stateHistory, setStateHistory] = useState<SessionStateHistoryEntry[]>([])
+  const [attempts, setAttempts] = useState<ParticipantAttempt[]>([])
+  const [reviewTruncated, setReviewTruncated] = useState(false)
   const [attemptVersion, setAttemptVersion] = useState(1)
+  // A past attempt the evaluator has opened in the Report tab. The 2.5s poll
+  // stays on the active attempt, because the roster depends on it -- looking
+  // back is a deliberate, one-off read rather than something polled.
+  const [pastReview, setPastReview] = useState<PastReview | null>(null)
   const [sessionError, setSessionError] = useState('')
 
+  // History rides the poll only while the Report tab is showing it. Each row
+  // is a full sent state, so on a long attempt it dwarfs the roster the poll
+  // is really for.
+  const includeHistory = tab === 'report'
   const refreshReview = useCallback(async () => {
     if (!session) return
-    const response = await fetch(`/api/session/${session.code}/review`, {
-      headers: { 'x-session-host-token': session.hostToken },
-    })
+    const response = await fetch(
+      `/api/session/${session.code}/review${includeHistory ? '?include=history' : ''}`,
+      { headers: { 'x-session-host-token': session.hostToken } },
+    )
     const data = await response.json()
     if (!response.ok) {
       setSessionError(data.error ?? 'Unable to load session review')
@@ -223,7 +249,14 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     }
     setParticipants(data.participants ?? [])
     setStudentEvents(data.events ?? [])
-  }, [session])
+    // The evaluation record's second axis. Fetched all along and thrown away
+    // until the Report tab existed to render it.
+    // Only overwrite history from a response that carried it, so leaving the
+    // Report tab does not blank what the next visit will refetch anyway.
+    if (includeHistory) setStateHistory(data.stateHistory ?? [])
+    setAttempts(data.attempts ?? [])
+    setReviewTruncated(data.truncated === true)
+  }, [includeHistory, session])
 
   // Polls the roster and student events. This is the "subscribe to an external
   // system" case effects exist for; the rule fires only because the first poll
@@ -301,6 +334,47 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     router.replace('/')
   }
 
+  // Selecting the active attempt drops back to the live poll; selecting an
+  // earlier one reads it once. Nothing here touches the polled state, so the
+  // roster keeps tracking the run in progress while the evaluator looks back.
+  const viewReportAttempt = useCallback(
+    async (version: number) => {
+      if (!session) return
+      if (version === attemptVersion) {
+        setPastReview(null)
+        return
+      }
+      const response = await fetch(
+        `/api/session/${session.code}/review?attempt=${version}&include=history`,
+        { headers: { 'x-session-host-token': session.hostToken } },
+      )
+      const data = await response.json()
+      if (!response.ok) {
+        setSessionError(data.error ?? 'Unable to load that attempt')
+        return
+      }
+      setSessionError('')
+      setPastReview({
+        attemptVersion: version,
+        participants: data.participants ?? [],
+        events: data.events ?? [],
+        stateHistory: data.stateHistory ?? [],
+        attempts: data.attempts ?? [],
+        truncated: data.truncated === true,
+      })
+    },
+    [attemptVersion, session],
+  )
+
+  const report = pastReview ?? {
+    attemptVersion,
+    participants,
+    events: studentEvents,
+    stateHistory,
+    attempts,
+    truncated: reviewTruncated,
+  }
+
   const sendSessionState = useCallback(async () => {
     if (!session) return
     const response = await fetch(`/api/session/${session.code}/state`, {
@@ -309,11 +383,18 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         'Content-Type': 'application/json',
         'x-session-host-token': session.hostToken,
       },
-      body: JSON.stringify({ state: getSharedState() }),
+      body: JSON.stringify({
+        state: {
+          ...getSharedState(),
+          // The title is console state, not monitor state, so it joins here
+          // rather than in the store's shared snapshot.
+          scenarioTitleConfirmed: scenarioTitle.trim(),
+        },
+      }),
     })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
-  }, [getSharedState, session])
+  }, [getSharedState, scenarioTitle, session])
 
   // CPR override and full instructor resets bypass Save → Send, so in a
   // session they must push shared state themselves — the Send button stays
@@ -830,7 +911,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         <SendButton onSent={session ? sendSessionState : undefined} />
       </div>
       <div
-        className="grid grid-cols-4 border border-neutral-800 bg-neutral-950 p-1"
+        className="grid grid-cols-5 border border-neutral-800 bg-neutral-950 p-1"
         data-testid="admin-tab-list"
       >
         <button
@@ -885,6 +966,19 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         >
           Defibrillators
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('report')}
+          aria-pressed={tab === 'report'}
+          className={cn(
+            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            tab === 'report'
+              ? 'bg-cyan-bp text-black'
+              : 'text-neutral-400 hover:bg-neutral-900',
+          )}
+        >
+          Report
+        </button>
       </div>
       {tab === 'monitor' ? (
         <div
@@ -925,6 +1019,16 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         />
       ) : tab === 'defibrillators' ? (
         <DefibrillatorPanel disabled={sessionStatus === 'active'} />
+      ) : tab === 'report' ? (
+        <EvaluationReportPanel
+          events={report.events}
+          stateHistory={report.stateHistory}
+          attempts={report.attempts}
+          participants={report.participants}
+          attemptVersion={report.attemptVersion}
+          onAttemptVersionChange={(version) => void viewReportAttempt(version)}
+          truncated={report.truncated}
+        />
       ) : (
         <div className="grid gap-4">
           <ScenarioLibraryPanel
