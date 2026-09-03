@@ -28,13 +28,18 @@ function contextText(context: TimelineContext): string {
   return [context.rhythm, ...context.vitals.map((vital) => `${vital.label} ${vital.value}`)].join(' · ')
 }
 
+/** The opening row names the scenario when the instructor gave it one. */
+function openingLabel(scenarioTitle: string): string {
+  return scenarioTitle ? `scenario sent — "${scenarioTitle}"` : 'scenario sent'
+}
+
 /** The stream as plain text, for pasting into a debrief. */
 function toPlainText(rows: readonly TimelineRow[], showNames: boolean): string {
   return rows
     .map((row) => {
       if (row.kind === 'instructor') {
         const what = row.opening
-          ? 'scenario sent'
+          ? openingLabel(row.scenarioTitle)
           : row.changes.length > 0
             ? row.changes.join(' · ')
             : 'sent (no clinical change)'
@@ -205,7 +210,7 @@ export function EvaluationReportPanel({
                   {'▸▸ Instructor '}
                   <span className="normal-case tracking-normal text-neutral-400">
                     {row.opening
-                      ? 'scenario sent'
+                      ? openingLabel(row.scenarioTitle)
                       : row.changes.length > 0
                         ? row.changes.join(' · ')
                         : 'sent (no clinical change)'}

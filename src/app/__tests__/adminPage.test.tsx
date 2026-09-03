@@ -632,6 +632,43 @@ describe('AdminPage', () => {
     expect(screen.getByText('Nothing recorded for this attempt yet.')).toBeInTheDocument()
   })
 
+  it('sends the scenario name with the state so the record can say what was run', async () => {
+    const user = userEvent.setup()
+    const bodies: string[] = []
+    vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
+      if (String(input).endsWith('/state') && init?.body) bodies.push(String(init.body))
+      return new Response(
+        JSON.stringify({
+          session: { status: 'waiting', active_attempt_version: 1 },
+          participants: [],
+          events: [],
+          attempts: [],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
+    await user.type(screen.getByLabelText('Scenario title'), 'Fall from ladder')
+
+    act(() => {
+      useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')
+      useMonitorStore.getState().save()
+    })
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => expect(bodies.length).toBeGreaterThan(0))
+    // The title is console state, not store state, so this is the only place
+    // the two are joined -- and the record is empty of scenario identity
+    // without it.
+    expect(JSON.parse(bodies.at(-1) as string).state.scenarioTitleConfirmed).toBe(
+      'Fall from ladder',
+    )
+  })
+
   it('asks the review poll for history only while the Report tab is open (PLAN 13f)', async () => {
     const user = userEvent.setup()
     const urls: string[] = []

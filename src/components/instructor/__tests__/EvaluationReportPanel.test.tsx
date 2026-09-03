@@ -39,6 +39,7 @@ function state(
   version: number,
   seconds: number,
   confirmed: Record<string, unknown>,
+  extra: Record<string, unknown> = {},
 ): SessionStateHistoryEntry {
   return {
     version,
@@ -47,6 +48,7 @@ function state(
     state: {
       confirmed: { rhythm: 'nsr', hr: 88, bp_sys: 118, bp_dia: 76, spo2: 97, etco2: 35, ...confirmed },
       confirmedVitalActive: { hr: true, bp_sys: true, bp_dia: true, spo2: true, etco2: false },
+      ...extra,
     },
   }
 }
@@ -140,6 +142,34 @@ describe('EvaluationReportPanel', () => {
     expect(rendered[1]).toContain('nibp_start')
     expect(rendered[2]).toContain('Instructor')
     expect(rendered[3]).toContain('"Epinephrine"')
+  })
+
+  it('names the scenario on the opening row when the instructor titled it', () => {
+    renderPanel({
+      stateHistory: [state(1, 0, {}, { scenarioTitleConfirmed: 'Fall from ladder' })],
+    })
+
+    expect(screen.getByTestId('report-row-instructor')).toHaveTextContent(
+      'scenario sent — "Fall from ladder"',
+    )
+  })
+
+  it('falls back to a plain opening row for an untitled scenario', () => {
+    renderPanel({ stateHistory: [state(1, 0, {})] })
+
+    const opening = screen.getByTestId('report-row-instructor')
+    expect(opening).toHaveTextContent('scenario sent')
+    expect(opening).not.toHaveTextContent('—')
+  })
+
+  it('copies the scenario name with the stream', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+    renderPanel({ stateHistory: [state(1, 0, {}, { scenarioTitleConfirmed: 'Fall from ladder' })] })
+
+    await user.click(screen.getByRole('button', { name: 'Copy' }))
+
+    expect(writeText.mock.calls[0][0]).toContain('scenario sent — "Fall from ladder"')
   })
 
   it('warns that patient context is unavailable when no state was recorded', () => {

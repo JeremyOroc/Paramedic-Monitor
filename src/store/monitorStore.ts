@@ -132,6 +132,13 @@ export type SharedMonitorState = {
   /** Legacy compatibility for clients that predate the three-state CPR mode. */
   cprOverrideActive: boolean
   monitorResetVersion: number
+  /**
+   * The scenario the instructor is running, by name. The monitor ignores it;
+   * it travels so the evaluation record can say which scenario an attempt was,
+   * which nothing else in the sent state reveals. Set at the send site, where
+   * the console's title field lives.
+   */
+  scenarioTitleConfirmed?: string
 }
 
 const initialBpDisplay: BpDisplay = {

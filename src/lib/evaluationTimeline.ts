@@ -81,6 +81,8 @@ export type TimelineInstructorRow = TimelineRowBase & {
   changes: string[]
   /** The attempt's first state: an opening position rather than a change. */
   opening: boolean
+  /** The scenario running at this point, by name. Empty when unnamed. */
+  scenarioTitle: string
 }
 
 export type TimelineRow = TimelineActionRow | TimelineInstructorRow
@@ -117,6 +119,8 @@ type NormalizedState = {
   active: VitalActiveState
   cprMode: CprMode
   monitorResetVersion: number | null
+  /** The scenario's name, empty when the instructor never named one. */
+  scenarioTitle: string
 }
 
 const NUMERIC_FIELDS: readonly NumericVitalField[] = [
@@ -164,6 +168,8 @@ export function normalizeHistoryState(state: unknown): NormalizedState {
     active,
     cprMode: cprModeOrOff(root.cprMode),
     monitorResetVersion: numberOrNull(root.monitorResetVersion),
+    scenarioTitle:
+      typeof root.scenarioTitleConfirmed === 'string' ? root.scenarioTitleConfirmed.trim() : '',
   }
 }
 
@@ -313,6 +319,14 @@ export function diffStates(
     }
   }
 
+  if (previous.scenarioTitle !== next.scenarioTitle) {
+    changes.push(
+      next.scenarioTitle
+        ? `scenario "${previous.scenarioTitle || 'untitled'}" → "${next.scenarioTitle}"`
+        : 'scenario name cleared',
+    )
+  }
+
   if (previous.cprMode !== next.cprMode) {
     changes.push(`CPR ${CPR_LABELS[previous.cprMode]} → ${CPR_LABELS[next.cprMode]}`)
   }
@@ -449,6 +463,7 @@ export function buildEvaluationTimeline(
       version: item.entry.version,
       changes: previous ? diffStates(previous, state) : [],
       opening: previous === undefined,
+      scenarioTitle: state.scenarioTitle,
     })
   })
 

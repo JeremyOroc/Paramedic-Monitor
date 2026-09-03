@@ -1165,6 +1165,10 @@ nothing before it to differ from. Every Send is its own row, including a correct
 the last; a Send that changed nothing renders dimmed as `sent (no change)` rather than vanishing.
 
 #### 15a — Widen the diff
+**Landed early (2026-09-03):** the scenario title. It was not in the stored state at all, so no
+amount of UI work could have shown it; `scenarioTitleConfirmed` now travels with each Send and the
+opening instructor change names the scenario.
+
 `normalizeHistoryState` and `diffStates` extend, by explicit allowlist, to the fields the instructor
 sets: `spo2_waveform`, `etco2_waveform`, `defibrillatorModelConfirmed`, `callerInfoConfirmed`
 (callNumber, time, priority, mpdsCode, problem, address, update, information, extra1–3 where their

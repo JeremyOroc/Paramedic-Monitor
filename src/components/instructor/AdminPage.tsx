@@ -383,11 +383,18 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         'Content-Type': 'application/json',
         'x-session-host-token': session.hostToken,
       },
-      body: JSON.stringify({ state: getSharedState() }),
+      body: JSON.stringify({
+        state: {
+          ...getSharedState(),
+          // The title is console state, not monitor state, so it joins here
+          // rather than in the store's shared snapshot.
+          scenarioTitleConfirmed: scenarioTitle.trim(),
+        },
+      }),
     })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
-  }, [getSharedState, session])
+  }, [getSharedState, scenarioTitle, session])
 
   // CPR override and full instructor resets bypass Save → Send, so in a
   // session they must push shared state themselves — the Send button stays

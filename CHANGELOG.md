@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-09-03] [instructor] — Record which scenario an attempt was
+
+- Added `scenarioTitleConfirmed` to the sent state so the evaluation record can say which scenario an attempt was. Nothing else in the stored state revealed it: `SharedMonitorState` is what the trainee's monitor needs, and the monitor never needed the scenario's name, so the title had no way to travel.
+- The title is Instructor Console state rather than store state, so `sendSessionState` joins the two at the send site instead of `getSharedState` carrying it.
+- The opening instructor change now reads `scenario sent — "Fall from ladder"`, falling back to `scenario sent` when the instructor never named one. Switching scenario mid-attempt reports as `scenario "A" → "B"`, and clearing the name reports as `scenario name cleared`.
+- Added 8 tests across the three layers that could each break silently: the console putting the title in the POST body, the timeline reading and diffing it, and the panel rendering and copying it. All 952 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings) pass. Verified end to end against the running app: two Sends with different titles store and render correctly.
+
 ## [2026-09-02] [instructor/server] — Phase 13f: keep the evaluation record off the hot path
 
 - Stripped `dispatchRouteConfirmed.geometry` from the `session_state_history` write in `updateSessionState`. The live `session_state` row keeps it, because the trainee's dispatch map is drawn from there; the history copy was 86% of everything stored and nothing read it back. Added `stripRouteGeometry` as a pure, tested helper.

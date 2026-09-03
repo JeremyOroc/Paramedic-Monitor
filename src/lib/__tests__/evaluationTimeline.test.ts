@@ -150,6 +150,16 @@ describe('normalizeHistoryState', () => {
     expect(state.vitals.hr).toBe(80)
   })
 
+  it('reads the scenario name the instructor was running', () => {
+    expect(normalizeHistoryState(sharedState({}, {}, { scenarioTitleConfirmed: '  Fall from ladder  ' })).scenarioTitle)
+      .toBe('Fall from ladder')
+  })
+
+  it('has no scenario name when the instructor never gave one', () => {
+    expect(normalizeHistoryState(sharedState({})).scenarioTitle).toBe('')
+    expect(normalizeHistoryState(sharedState({}, {}, { scenarioTitleConfirmed: 42 })).scenarioTitle).toBe('')
+  })
+
   it('degrades rather than throwing on a malformed blob', () => {
     expect(normalizeHistoryState(null).rhythm).toBe('off')
     expect(normalizeHistoryState('nonsense').vitals.hr).toBeNull()
@@ -185,6 +195,19 @@ describe('diffStates', () => {
     const withReset = normalizeHistoryState(sharedState({}, {}, { cprMode: 'regular', monitorResetVersion: 1 }))
     const previous = normalizeHistoryState(sharedState({}, {}, { cprMode: 'off', monitorResetVersion: 0 }))
     expect(diffStates(previous, withReset)).toEqual(['CPR off → Regular', 'monitor reset'])
+  })
+
+  it('reports the instructor switching scenario mid-attempt', () => {
+    const before = normalizeHistoryState(sharedState({}, {}, { scenarioTitleConfirmed: 'Fall from ladder' }))
+    const after = normalizeHistoryState(sharedState({}, {}, { scenarioTitleConfirmed: 'Cardiac arrest' }))
+    expect(diffStates(before, after)).toEqual(['scenario "Fall from ladder" → "Cardiac arrest"'])
+  })
+
+  it('reports a scenario named for the first time, and one cleared', () => {
+    const unnamed = normalizeHistoryState(sharedState({}))
+    const named = normalizeHistoryState(sharedState({}, {}, { scenarioTitleConfirmed: 'Cardiac arrest' }))
+    expect(diffStates(unnamed, named)).toEqual(['scenario "untitled" → "Cardiac arrest"'])
+    expect(diffStates(named, unnamed)).toEqual(['scenario name cleared'])
   })
 
   it('is empty for a Send that changed nothing clinical', () => {
@@ -315,6 +338,13 @@ describe('buildEvaluationTimeline', () => {
       't+4:39 action',
     ])
     expect(instructorRows(rows)[1].changes).toEqual(['rhythm NSR → VF', 'HR 88 → 112'])
+  })
+
+  it('carries the scenario name onto the opening row', () => {
+    const { rows } = build({
+      stateHistory: [makeState(1, 0, sharedState({}, {}, { scenarioTitleConfirmed: 'Fall from ladder' }))],
+    })
+    expect(instructorRows(rows)[0].scenarioTitle).toBe('Fall from ladder')
   })
 
   it('marks the attempt opening state as an opening rather than a change', () => {
