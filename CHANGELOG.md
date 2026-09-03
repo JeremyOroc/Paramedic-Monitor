@@ -23,8 +23,8 @@
 ## [2026-09-02] [planning] — Grill the reporting and polling plan; settle sync model and vocabulary
 
 - Ran `/grill-with-docs` over the evaluation report and polling plan with the constraint that the product will serve many instructors across colleges. Operating assumption recorded: design for a few hundred concurrent clients, build for one college; the evaluation record lives as long as the room and is reviewed before the instructor closes it; instructor accounts and ownership land before the first external sale, not before.
-- Added `docs/adr/0002` — polling with `?since=` stays the correctness guarantee and Supabase Realtime is layered on only as a nudge, chosen over Realtime alone because a dropped broadcast leaves a monitor silently stale, and over polling alone because polling bills per request against a state change every ~13 minutes. Supersedes the `PLAN.md`/`STATUS.md` "locked" Broadcast line.
-- Added `docs/adr/0003` — trainee actions queue on the device through outages and replay with their own timestamp and the state version the monitor was showing, bounded by the server; the report marks an action taken on a stale monitor as behind rather than letting it read as ignored. Motivated by `monitor/page.tsx` firing actions with `void fetch()` and no retry, so an action during a wifi drop is currently lost.
+- Added `docs/adr/0003` — polling with `?since=` stays the correctness guarantee and Supabase Realtime is layered on only as a nudge, chosen over Realtime alone because a dropped broadcast leaves a monitor silently stale, and over polling alone because polling bills per request against a state change every ~13 minutes. Supersedes the `PLAN.md`/`STATUS.md` "locked" Broadcast line.
+- Added `docs/adr/0004` — trainee actions queue on the device through outages and replay with their own timestamp and the state version the monitor was showing, bounded by the server; the report marks an action taken on a stale monitor as behind rather than letting it read as ignored. Motivated by `monitor/page.tsx` firing actions with `void fetch()` and no retry, so an action during a wifi drop is currently lost.
 - Added glossary terms to `CONTEXT.md`: **Room**, **Evaluation record**, **Trainee action**, **Instructor change**. Replaced "drill" with "attempt" in the Phase 13 plan text per the existing glossary.
 - Rewrote `PLAN.md` Phases 13–16: 13f finish work (strip route geometry from history writes and the 261 existing rows, `include=history` only with the Report tab open, parallel review queries); 14 Sync & Queue; 15 Instructor Change Expansion, showing what each Send changed rather than the full state, since real data shows 79% of the dispatch card would repeat the row above; 16 Realtime Nudge & Presence, triggered by onboarding a second college.
 
@@ -46,6 +46,26 @@
 - Confirmed a row whose patient state is in alarm is outlined in red, derived from the existing `getActiveAlarms` thresholds. Scoring stays out of scope as in Phase 12 — alarm state is a fact the record already holds, not a grade.
 - Recorded one trainee per session as the current operating assumption, and the instructor-side boundary that console actions absent from `SharedMonitorState` (patient physical, SNS reveals) cannot appear in the stream.
 - Verified migrations `006` and `007` are applied to the live project by direct schema probe: `session_state_history` holds rows, `state_version` is stamped on current runs, `vitals_snapshots` is dropped, and `anon` is refused on `sessions` and `scenarios`. The earlier STATUS.md note calling them unapplied was stale. No ADR was added because the phase introduces a read surface over existing data with no new storage or architectural lock-in.
+## [2026-09-02] [ui] — Widen the current admin layout while preserving its panel arrangement
+
+- Preserve the current main layout: Vitals on the left, equal-height SAMPLE/OPQRST stacked on the right, and the existing compact controls.
+- Apply the width change to the shared console with 24px side padding; remove the obsolete Monitor-only centered breakout so every tab fills the same available width.
+- Preserve existing compact spacing through 900px height, control sizes, and the 55/45 and expanded 8:5 column proportions. Above 900px height, use 24px vertical padding and section gaps.
+- Validation: 62 targeted admin/layout/control tests pass. Browser measurements at the requested 1512×850 and 1440×800 laptop sizes confirm SAMPLE aligns to the right of Vitals, OPQRST remains below SAMPLE, equal checklist heights, 24px side gutters, and no horizontal overflow across all tabs. Compact 1080×700 geometry passes; shorter expanded viewports retain vertical scrolling rather than reducing controls.
+
+## [2026-09-02] [planning/instructor] — Define automatic Asystole FC lock
+
+- Required active Asystole in the Instructor Console to set and save FC at `0 bpm`, automatically turn FC On, and disable both the FC number editor and FC On/Off toggle.
+- Required every direct, auto-sort, timed-vitals, scenario, and hydration path to preserve the automatic zero, while leaving Asystole or switching its ECG Off restores the interaction's prior manual FC and unlocks both controls.
+- Extended the existing automatic VF/VT testing contract to cover Asystole store, component, scenario, and hydration behavior. No ADR was added because this extends the existing automatic-FC mechanism without changing its architecture.
+
+## [2026-09-02] [planning/monitor] — Add state-driven Wagami X vital placement
+
+- Replaced the Wagami X resting `APPL ELECT.` banner and its three lower boxes with four equal-width, full-featured FC, PNI, EtCO2, and SpO2 cells in the existing 110px bottom region. Removed the dormant Apply Electrodes component and kept the existing vital data, units, alarms, PNI phases, SpO2 pulse bar, French labels, selection identifiers, and navigation behavior.
+- Made the first accepted physical Analyze or Charge action move vitals instantly to the existing 96px right column for the remainder of the attempt. Charge-family states now retain the energy scale and readable defib-status content beside the right vital column; power-off/on, monitor reset, and New Attempt restore the resting layout.
+- Preserved the minus control's expanded-waveform behavior by temporarily moving resting vitals right while collapsed. The left Call Info/Analyse soft key, 12-lead and overlay layouts, outer-shell control order/functionality, Enter-on-PNI behavior, and Wagami Z remain unchanged.
+- Documented the state contract in `PLAN.md`, `CONTEXT.md`, and ADR 0002. Added component and monitor integration regressions; all 898 tests and TypeScript pass, and ESLint reports 0 errors with 12 pre-existing warnings. The Next.js webpack production build passes; the default Turbopack build remains blocked by the known host `EPERM` failure in its spawned PostCSS process.
+- Rendered browser QA passes at `1280×720` and `1024×768` for resting, Analyze, Charge, collapse/restore, and 12-lead transitions. The 1024px resting region measures 541×110px with four 135×109px cells; both tested viewports have no clipping or horizontal/vertical overflow, and the browser console is clean.
 
 ## [2026-09-01] [instructor] — Expand and center Monitor & Patient SNS controls
 

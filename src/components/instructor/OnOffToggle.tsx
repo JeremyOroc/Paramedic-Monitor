@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 type OnOffToggleProps = {
   active: boolean
   compact?: boolean
+  disabled?: boolean
   label: string
   onToggle: (active: boolean) => void
   status?: string
@@ -14,6 +15,7 @@ type OnOffToggleProps = {
 export function OnOffToggle({
   active,
   compact = false,
+  disabled = false,
   label,
   onToggle,
   status,
@@ -22,6 +24,7 @@ export function OnOffToggle({
   return (
     <button
       type="button"
+      disabled={disabled}
       onClick={() => onToggle(!active)}
       aria-label={`${label} ${active ? 'on' : 'off'}`}
       aria-pressed={active}
@@ -29,6 +32,7 @@ export function OnOffToggle({
         'grid grid-cols-2 overflow-hidden border border-neutral-700 font-mono font-bold uppercase tracking-wider',
         compact ? 'w-16 text-[9px] xl:[@media(min-height:800px)]:w-20 xl:[@media(min-height:800px)]:text-[10px]' : 'w-20 text-[10px]',
         active ? 'border-cyan-bp' : 'border-neutral-700',
+        disabled && 'cursor-not-allowed opacity-60',
       )}
       data-testid={testId}
       data-status={status}

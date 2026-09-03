@@ -36,6 +36,7 @@ import { buildEventLogEntry } from '@/lib/eventLog'
 import {
   getAutomaticHeartRate,
   isAutomaticHeartRateRhythm,
+  isHeartRateToggleLockedRhythm,
 } from '@/lib/automaticHeartRate'
 import type { EventLogEntry } from '@/components/monitor/EventLogModal'
 import type { EventLogStamp } from '@/types/eventLog'
@@ -291,7 +292,7 @@ export type MonitorState = {
   confirmedVitalActive: VitalActiveState
   /** Last rhythm chosen while ECG was on; restored when it is switched back on. */
   lastRhythm: ActiveRhythm
-  /** Runtime-only FC restored after leaving VF/VT; hydration/scenario loading clears it. */
+  /** Runtime-only FC restored after leaving an automatic rhythm; hydration/scenario loading clears it. */
   manualHrBeforeAuto: number | null
   callerInfoDraft: CallerInfo
   callerInfoSaved: CallerInfo
@@ -455,6 +456,8 @@ export const useMonitorStore = create<MonitorState>()(
         }),
       setDraftVitalActive: (field, active) =>
         set((s) => {
+          if (field === 'hr' && isHeartRateToggleLockedRhythm(s.draft.rhythm)) return s
+
           const draftVitalActive = { ...s.draftVitalActive, [field]: active }
           const draft = { ...s.draft }
           if (field === 'spo2') draft.spo2_waveform = active ? 'normal' : 'off'
@@ -900,6 +903,9 @@ export const useMonitorStore = create<MonitorState>()(
           persistedState?.confirmedVitalsActive,
         )
         const confirmed = normalizeVitals(persistedState?.confirmed)
+        if (isHeartRateToggleLockedRhythm(draft.rhythm)) draftVitalActive.hr = true
+        if (isHeartRateToggleLockedRhythm(saved.rhythm)) savedVitalActive.hr = true
+        if (isHeartRateToggleLockedRhythm(confirmed.rhythm)) confirmedVitalActive.hr = true
         const dispatchMinutes =
           typeof persistedState?.dispatchMinutes === 'number'
             ? persistedState.dispatchMinutes

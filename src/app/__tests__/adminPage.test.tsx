@@ -550,10 +550,6 @@ describe('AdminPage', () => {
     expect(monitorLayout).toHaveClass(
       'grid',
       'lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)]',
-      'xl:[@media(min-height:800px)]:left-1/2',
-      'xl:[@media(min-height:800px)]:w-[calc(100vw-2rem)]',
-      'xl:[@media(min-height:800px)]:max-w-6xl',
-      'xl:[@media(min-height:800px)]:-translate-x-1/2',
       'xl:[@media(min-height:800px)]:grid-cols-[minmax(0,8fr)_minmax(0,5fr)]',
     )
     expect(monitorLayout).toContainElement(vitals)

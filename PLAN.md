@@ -8,9 +8,11 @@
 
 ## Current Requirement Updates
 
+- 2026-09-02 correction: base Expand-UI on the current main layout. Widen the shared console to the available browser width with 24px side padding across all four tabs; remove the Monitor-only centered 1152px breakout. Preserve Vitals on the left and equal-height SAMPLE/OPQRST stacked on the right, existing 55/45 and expanded 8:5 proportions, all control sizing, and the compact spacing through 900px height. Use 24px outer vertical padding and section gaps only above that height. This supersedes the former tab-only width restriction.
+- Wagami X uses a resting vital layout on the ordinary main waveform view before the first accepted physical Analyze or Charge action: FC, PNI, EtCO2, and SpO2 render as four equal-width, full-featured cells in the fixed `110px` bottom region, and the idle `APPL ELECT.` banner plus its three lower boxes are removed. The first accepted physical Analyze or Charge action moves the same vital displays instantly to the existing `96px` right column for the rest of the powered-on attempt, including analysis, CPR, charge, charged, shock, and delivered states; charge states keep both the energy scale and right-side vitals. Power-off/on, monitor reset, and New Attempt restore the resting layout. The left Call Info/Analyse soft key does not change placement. Collapsing the bottom region with the existing minus control temporarily moves vitals right and preserves the expanded three-waveform view; 12-lead and full-screen overlays retain their specialized layouts. Vital values, units, alarms, PNI reading phases, SpO2 pulse bar, French labels, selection identifiers, navigation order, and Enter-on-PNI behavior remain unchanged. Wagami Z is unaffected.
 - In both the local and live-room Instructor Console, the `Monitor & Patient SNS` area uses a centered responsive two-column composition. At the compact accepted landscapes (`1080×700` and `1280×720`), it retains the approximately 55/45 Vitals-left and equal-height SAMPLE/OPQRST-right layout and compact controls so the complete ordinary-content tab remains visible without horizontal overflow. At landscape viewports at least `1280px` wide and `800px` high, this tab alone breaks out from the console shell into a centered container up to approximately `1152px`, uses an approximately `8:5` split, and grows Vitals by roughly one third to about `700px` while SAMPLE/OPQRST remains about `438px`; other tabs keep the existing console maximum width. The full `1440×900` layout enlarges and horizontally centers the interactive contents in both columns, with the largest growth applied to buttons: Vitals inputs/toggles, ECG, CPR, timed-vitals controls, SNS cards/options, checklist letter buttons, and checklist fields all receive roomier targets and modestly larger text/icons. Below `1024px` or in portrait, the tab stacks vertically and permits page scrolling without horizontal overflow. The Instructor Console is primarily presented on a MacBook or desktop monitor and must also fit a landscape iPad 8th generation as a supported secondary instructor display. Live-room content above the tabs may make the overall page scroll vertically. Vitals retains its two internal columns and clinical ordering. SAMPLE/OPQRST retain equal heights, stable two-line textareas without focus-driven reflow, and bounded field scrolling for longer notes.
 - Pulse and Respiratory retain their default icon/title surface. On hover or keyboard focus, that entire fixed-size surface becomes three equal SNS measurement options of at least 44px height: `15s`, `30s`, and `Tap`. On touch, a first tap reveals and pins the options until an option is chosen, the user taps outside, Escape is pressed, or the other idle card is revealed. Only one idle touch option surface is pinned at a time; countdowns and results remain independent. Unrevealed options are not interactive or exposed as available controls. The surrounding card always communicates state: unconfirmed auto-sorted findings retain an amber border and persistent `!`, confirmed findings retain a green border, option buttons remain neutral until hover/focus, and an active countdown uses amber. A timed option replaces the same surface with a full-width cancellable countdown that remains visible without hover; cancellation restores the icon/title without revealing or newly confirming a result, while completion restores the icon/title, confirms the finding, and reveals the result below. Each result is capped at approximately three visible lines with bounded internal scrolling so both can remain visible without expanding Vitals. Tap is a per-group result-visibility toggle: when a result is visible, Tap hides it without unconfirming the green card or changing findings; when hidden, Tap takes a fresh snapshot, confirms, and reveals it. Pulse and Respiratory measurements remain fully independent: their countdowns may run and complete simultaneously, both results may remain visible, and starting, cancelling, hiding, or revealing one affects only that group. The transformation uses a short fixed-geometry color/crossfade transition, suppresses decorative motion under reduced-motion preferences, and restores focus to the group's disclosure control after dismissal, cancellation, or completion. Skin/Extremities and Scene/Environment retain their existing relationship and neither affect nor are affected by Pulse/Respiratory measurements. Timed measurements continue and complete at their real deadlines while another Instructor Console tab is selected, including off-tab confirmation and draft-dirty state, but cancel on scenario load/reset, refresh, or New Attempt. Each measurement snapshots the current auto-sorted findings at start. The 15- and 30-second count lines are display-only values derived from the snapshot rate using nearest-whole-count rounding. Missing findings retain the existing amber review treatment. Countdown state and derived counts are not saved in scenarios or broadcast to trainees.
-- The shared instructor Save/Send actions must render in a left-aligned row immediately above the three-tab strip instead of below the forms. Selecting VF or VT locks the FC editor and turns FC On: VF shows `AUTO 190–220`, saves an underlying FC of 190, and displays a synchronized inclusive 190–220 integer on each 1.9-second FC alarm-flash cycle; VT shows and saves exactly 220. Automatic-rhythm values cannot be overwritten by direct, auto-sort, timed, scenario, or hydration paths. Leaving VF/VT restores the current interaction's prior manual FC, with 80 as the fallback for loaded/rehydrated automatic rhythms. VF randomness affects only the visible FC digits; waveform cadence, alarms, logs, and captures keep the underlying FC, CPR takes precedence, and room participants use server-timestamped deterministic display timing so they see the same sequence.
+- The shared instructor Save/Send actions must render in a left-aligned row immediately above the three-tab strip instead of below the forms. Selecting VF, VT, or Asystole locks the FC editor and turns FC On: VF shows `AUTO 190–220`, saves an underlying FC of 190, and displays a synchronized inclusive 190–220 integer on each 1.9-second FC alarm-flash cycle; VT shows and saves exactly 220; Asystole shows and saves `0 bpm` and also disables the FC On/Off toggle while the ECG remains On. Automatic-rhythm values cannot be overwritten by direct, auto-sort, timed, scenario, or hydration paths. Leaving an automatic rhythm, including switching an Asystole ECG Off, restores the current interaction's prior manual FC and unlocks both Asystole-locked controls, with 80 as the fallback for loaded/rehydrated automatic rhythms. VF randomness affects only the visible FC digits; waveform cadence, alarms, logs, and captures keep the underlying FC, CPR takes precedence, and room participants use server-timestamped deterministic display timing so they see the same sequence.
 - Default entry point is now a Kahoot-style session lobby: instructors create rooms, students join with code + nickname, and `/?dev=1` remains the local monitor shortcut.
 - Session room codes must be selectable and copyable from instructor and student waiting-room views.
 - Room creators must be able to end their room from the instructor view; ending redirects the instructor home and stops student participation.
@@ -224,25 +226,29 @@ paramedic-monitor/
 2. `SubBar` — static "CO2 Calibration Recommended" message
 3. `LeftSidebar` — 7 buttons (icons: 12-lead, CO2, back — rest decorative)
 4. `WaveformPanel` — ECG area (black, ~55% height), secondary channel area (~45% height)
-5. `ApplyElectrodesBar` — yellow bar "APPL. ELECT." + "Check Electrodes" text
-6. `VitalsStrip` — right column: FC green / PNI cyan / EtCO2 purple / SpO2 yellow / Searching
-   - Vitals must stay in the right-side column. Do not move HR, BP, EtCO2, or SpO2 into the bottom bar; bottom space is reserved for status/defib controls.
-   - Right vitals column width is `96px`; prefer tighter padding or smaller text over moving or hiding vitals.
+5. The Wagami X idle `APPL ELECT.` warning and its three lower status boxes are removed from the monitor surface; no dormant Apply Electrodes rendering path remains.
+6. `VitalsStrip` — FC green / PNI cyan / EtCO2 purple / SpO2 yellow, with one shared component supporting resting-horizontal and defib-vertical placement
+   - On the ordinary main waveform view before an accepted physical Analyze or Charge action, all four full vital displays occupy equal-width cells in the fixed `110px` bottom region. Existing values, units, alarms, PNI phases, SpO2 pulse bar, labels, and selection identifiers are preserved.
+   - The first accepted physical Analyze or Charge action moves the same vitals instantly into the `96px` right column for the remainder of the powered-on attempt, including analysis, CPR, charge, charged, shock, and delivered states. Charge-family states render the energy scale and vitals together.
+   - Power-off/on, monitor reset, and New Attempt restore resting-horizontal placement. The left Call Info/Analyse soft key does not trigger the transition.
+   - The minus toggle keeps its established behavior: when the bottom region is collapsed, the waveform area expands to ECG, EtCO2, and SpO2 rows and vitals move to the right column; restoring it returns pre-defib vitals to the bottom.
+   - 12-lead and full-screen overlays retain their specialized layouts and right-side vitals. Wagami Z is unchanged.
+   - In vertical placement the right vital column width remains `96px`; prefer tighter padding or smaller text over hiding vitals.
    - BP/PNI has an accepted-reading layer: admin Save → Send stages BP changes, but displayed BP values, BP alarms, and BP Off update only after the outer-shell BP reading sequence completes without cancellation.
    - After the BP reading completes, PNI settles to the stacked systolic/diastolic layout with the divider line; only the count-up phase uses a single systolic-style number.
    - During active BP reading phases (Please Wait, Reading in Progress, and count-up), suppress only the BP alarm channel so PNI does not flash red/white and BP does not drive alarm audio; HR and SpO2 alarms remain active.
 7. `RightNavCluster` — 6 nav buttons (alarm, home, back, enter●, forward, camera)
-8. `BottomStatusBar` — "Mode Adult | 120 J Selected | ⚡ | 0"
+8. `BottomStatusBar` — defib, analysis, CPR, charge, and shock feedback only; idle space belongs to the horizontal resting vitals
 9. `DefibButtonRow` — ANALYSE | ▲▼ | CHARGE | SHOCK (styled, not wired)
    - Physical shell also includes an inert PACER button, matching the reference hardware
    - Top-rim power button toggles green/red locally, shows a boot screen on power-up, and shows a black powered-off screen. Jumpscare audio/video pathways are removed/commented out; the monitor remains silent except for legitimate simulator cues.
   - Grey physical soft keys own left-sidebar interactions: 12-lead, EtCO2 toggle, left-menu ANALYSE (opens caller info modal only), and Back
    - Inner dark sidebar labels are visual only and must not be clickable
-   - Right physical Move up / Move down / Enter buttons cycle a blue selected state through monitor header, right vitals, visible waveform labels/scales, ECG labels, and the minus toggle row. Enter is inert except on the minus toggle.
+   - Right physical Move up / Move down / Enter buttons cycle a blue selected state through monitor header, vitals in their current placement, visible waveform labels/scales, ECG labels, and the minus toggle row. The selection order does not change when vitals move. Enter remains functional on PNI and the minus toggle and inert on the other listed selections.
    - Medication mode keeps the normal right-side Move up / Move down / Enter monitor navigation active. When the medication Info soft key opens the event log, those three controls temporarily navigate the log instead. Exit is selected on open; multi-page logs cycle Down through Exit → Prev → Next → Exit and Up in reverse, while single-page logs keep Exit as the only selection. Enter closes only the log from Exit or activates the highlighted page direction from Prev/Next. The log shows 8 events per page, hides pagination for 0–8 events, consumes navigation without changing the background, and keeps unavailable first/last-page directions selectable but disabled when multiple pages exist. Closing the log restores normal monitor navigation while medication mode remains open.
    - The physical Home button opens a mutually exclusive `Vital Log` modal matching the Event Log geometry. Beginning at `00:05:00`, it records immutable trainee-visible snapshots every five elapsed monitor minutes in Timestamp → FC → PNI SYS → PNI DIA → ETCO2 → SPO2 order. FC includes the CPR override; PNI uses independently active accepted cuff values; calibrated EtCO2 records `0` while its confirmed channel is Off and the configured value while On; uncalibrated EtCO2 is unavailable; SpO2 requires an active channel; unavailable values render as `-`. The log shows 8 rows per page and reuses the Event Log Exit/Prev/Next cyclic navigation and boundary behavior. Back closes it, Home cannot open it over another modal, and no other modal can open while it owns the screen. Its history clears with the monitor session timer on power-off or refresh, but not on an instructor vital reset while that timer continues.
    - Header/subbar reference controls include a combined date/time selectable region, patient-mode selectable region, beacon icon, selectable battery icon, a small minus rectangle beneath date/time, and a larger empty rectangle beside it.
-   - The minus toggle hides or restores the bottom status/defib/CPR panel. When hidden, the main waveform area expands to show ECG, EtCO2, and SpO2 rows while the right vitals column stays unchanged.
+   - The minus toggle hides or restores the bottom region. When a resting vital row is hidden, the main waveform area expands to show ECG, EtCO2, and SpO2 rows while vitals move to the right column; active defib/CPR behavior remains unchanged.
    - Graph title metadata displays `SpO2 1x` and, when EtCO2 is visible, `EtCO2 0 to 60 mmHg`; this text does not change the internal EtCO2 renderer scale.
    - The first EtCO2 toggle after monitor reset starts a 45-second calibration gate with a purple progress trace that loads from left to right. EtCO2 number and graph stay hidden until calibration completes; toggling away before completion restarts calibration, while completed calibrations are skipped until the next monitor reset. Once calibrated, the latest confirmed EtCO2 channel state applies immediately without recalibration: Off displays numeric `0` with the standard dashed disconnected trace, while On displays the configured value and live waveform, including when the configured value is `0`. Instructor changes during calibration are reflected when it completes. The admin Vitals panel shows a compact pink EtCO2 indicator when calibration is complete.
 10. Responsive: fixed to `100vw × 100vh`, no scrolling, desktop-only (min-width: 1024px enforced)
@@ -253,6 +259,7 @@ paramedic-monitor/
     the reducer-backed `useMonitorController` hook.
 
 **Testing:**
+- Resting/defib vital-placement tests cover four equal horizontal default cells, complete vital behavior in both orientations, absence of every Wagami X Apply Electrodes path, immediate Analyze and Charge relocation, simultaneous Charge energy scale plus right vitals, persistence through CPR/result/delivered states, power/reset/New Attempt restoration, minus-collapse relocation, unchanged 12-lead/overlay placement, stable selection order, and Enter-on-PNI behavior.
 - Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
 - Jumpscare removal tests cover former off-state rolls, boot-screen clips, alarm-ack Easter eggs, and battery-triggered overlays staying inactive while legitimate simulator cues remain available.
 - BP/EtCO2 tests cover staged BP commit/cancel/off behavior, BP alarm gating, EtCO2 calibration gating/restart/reset behavior, calibrated instructor-Off `0`/disconnected output, calibrated instructor-On configured/live output, immediate post-calibration instructor changes, mid-calibration instructor changes, connected configured zero, normal/expanded graph modes, trainee-visible Vital Log sampling, admin calibration indication, and real-time event-log stamps for medications/analyze rows.
@@ -341,9 +348,9 @@ existing close-panel and exit-12-lead precedence.
 1. `InstructorLayout` — dark panel, responsive columns
 2. `VitalsControls` + `VitalInput` — inputs ordered FC, SpO2, BP sys/dia, EtCO2
    - The former top-of-vitals `Normal` button is removed from the instructor UI; the underlying store action remains available for compatibility
-   - The `Monitor & Patient SNS` tab uses a centered responsive two-column layout: compact short landscapes retain the approximately 55/45 composition, while landscapes at least `1280×800` use a Monitor-only breakout up to approximately `1152px` and an approximately `8:5` split so Vitals grows by roughly one third without widening other tabs. The Vitals box, including its Pulse, Respiratory, and Skin/Extremities row, remains on the left; equal-height SAMPLE and OPQRST boxes remain stacked on the right. At the expanded breakpoint, both panels' interactive contents are horizontally centered and inputs, toggles, ECG/CPR/timed-vitals controls, SNS cards/options, checklist letters, fields, text, and icons scale up, with buttons receiving the largest increase
+   - The `Monitor & Patient SNS` tab uses the full shared console width: compact short landscapes retain the approximately 55/45 composition, while landscapes at least `1280×800` use an approximately `8:5` split. The Vitals box, including its Pulse, Respiratory, and Skin/Extremities row, remains on the left; equal-height SAMPLE and OPQRST boxes remain stacked on the right. At the expanded breakpoint, both panels' interactive contents are horizontally centered and inputs, toggles, ECG/CPR/timed-vitals controls, SNS cards/options, checklist letters, fields, text, and icons scale up, with buttons receiving the largest increase
    - Include `CallerInfoForm` in its own admin tab for dispatch/caller info shown on the monitor after ANALYZE: Dispatch countdown, Call #, Priority, MPDS Code, Adresse, Probleme, Information, Mise a jour, Heure, plus an `Add extra` button that reveals up to three optional title/input extra rows
-   - Shared Save/Send actions sit immediately above the tab strip. VF/VT use locked automatic FC controls, automatically activate FC on selection, and restore the prior manual FC when the rhythm is left; VF display-only randomness is synchronized across room monitors while VT remains fixed at 220.
+   - Shared Save/Send actions sit immediately above the tab strip. VF/VT/Asystole use locked automatic FC values, automatically activate FC on selection, and restore the prior manual FC when the rhythm is left; active Asystole also disables the FC On/Off toggle and fixes the displayed/saved value at `0 bpm`, VF display-only randomness is synchronized across room monitors, and VT remains fixed at 220.
 3. Zustand `instructorStore` — `draftVitals`, `pendingFlags` (per field), `confirmedVitals`
 4. On input change → set `pendingFlags[field] = true` → field turns amber/orange (pending color)
 5. `SendButton` — sets `pendingFlags` all false, sets `confirmedVitals = draftVitals`
@@ -358,10 +365,10 @@ existing close-panel and exit-12-lead precedence.
 - Store tests cover the `resetVitalsToNormal` action and verify it preserves non-vital fields.
 - Component/page tests cover caller-info draft/save/send flow and ANALYZE-triggered monitor display.
 - Caller-info form tests cover adding optional extra rows one at a time and capping the form at three extras.
-- Admin page and rendered-layout tests cover the shared compact 55/45 and expanded 8:5 Monitor & Patient SNS compositions, the centered Monitor-only `1152px` breakout, horizontally centered panel contents, enlarged controls at the `1280×800` capability breakpoint, unchanged compact fit at `1080×700` and `1280×720`, full expanded fit at `1440×900`, no horizontal overflow, and the sub-1024/portrait stacked scrollable fallback.
+- Admin page and rendered-layout tests cover the shared compact 55/45 and expanded 8:5 Monitor & Patient SNS compositions, full shared console width, horizontally centered panel contents, enlarged controls at the `1280×800` capability breakpoint, unchanged compact fit at `1080×700` and `1280×720`, full expanded fit at `1440×900`, no horizontal overflow, and the sub-1024/portrait stacked scrollable fallback. Verify Vitals-left/SAMPLE-over-OPQRST-right geometry and all four tabs at 1512×850 and 1440×800.
 - SNS component tests cover default-hidden measurement options, hover/focus and pinned-touch disclosure, one idle pin at a time, persistent state styling, fixed geometry, reduced motion, focus restoration, persistent countdowns, bounded independent results, and Tap hide/fresh-snapshot reveal behavior.
 - Real iPad 8th-generation Safari validation follows a documented interaction and overflow checklist. When that device is unavailable, completion records real-device validation as pending rather than passed.
-- Store, component, monitor, route, and synchronization tests cover automatic VF/VT FC locking across every input path, manual-value restoration and scenario/hydration fallback, synchronized inclusive VF flash values, CPR precedence, fixed underlying consumers, fixed VT 220, and the Save/Send action row above the tabs.
+- Store, component, monitor, route, and synchronization tests cover automatic VF/VT/Asystole FC locking across every input path, Asystole's disabled FC toggle and fixed `0 bpm`, manual-value restoration and scenario/hydration fallback, synchronized inclusive VF flash values, CPR precedence, fixed underlying consumers, fixed VT 220, and the Save/Send action row above the tabs.
 
 **Milestone:** Instructor panel fully interactive. Editing vitals turns fields amber. Send confirms them. Defib sequence enforces correct order with progress bars.
 
@@ -627,9 +634,8 @@ button is inert until a drill gate is satisfied.
   `Monitor & Patient SNS` tab shared by the local and live-room views. Compact
   short landscapes retain the approximately 55/45 Vitals-left and
   SAMPLE/OPQRST-right split. At landscape viewports at least `1280×800`, this
-  tab alone expands into a centered container up to approximately `1152px` and
-  an approximately `8:5` split, yielding about `700px` for Vitals and `438px`
-  for SAMPLE/OPQRST without widening the other tabs. SAMPLE and OPQRST remain
+  tab uses an approximately `8:5` split within the full-width shared console,
+  with 24px side padding across all four tabs. SAMPLE and OPQRST remain
   stacked in equal-height panels. Each letter has a toggle button plus a
   textarea. The universal
   Caller Info scenario auto-sort parses `Letter: value` lines into those
@@ -647,7 +653,7 @@ button is inert until a drill gate is satisfied.
   accepted at `1080×700`, `1280×720`, and `1440×900`; the first two retain compact
   heights, while `1440×900` receives the full enlargement. Below `1024px` or in
   portrait it stacks and scrolls vertically without horizontal overflow. The
-  console's existing maximum width remains unchanged outside this tab.
+  console has no fixed maximum width; compact height-based spacing is preserved.
   Green letter selection remains manual only. Text and selections stay local to
   the admin page session, survive tab switching while the page remains mounted,
   and do not use Save/Send or update the trainee monitor.
@@ -892,7 +898,7 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 14. Apply existing alarm thresholds as visual flashing on affected Wagami Z values, but suppress alarm audio because the silence control is inert.
 15. Show the confirmed instructor energy setting in the inert energy control without local analysis, charging, shock, or energy-adjustment transitions.
 16. Use the canonical French control labels `DEA`, `MANUEL`, the confirmed patient category, `PNI`, `MARQUEUR`, `IMPRIMER`, `CAPTURE`, `12 LEAD`, `ANALYSER`, `CHOC`, and `CHARGE`.
-17. Preserve Wagami X display semantics for automatic VF/VT heart rate, CPR heart-rate and waveform overrides, channel activation, and rhythm disconnection so both models present the same scenario consistently apart from the temporary PNI exception.
+17. Preserve Wagami X display semantics for automatic VF/VT/Asystole heart rate, CPR heart-rate and waveform overrides, channel activation, and rhythm disconnection so both models present the same scenario consistently apart from the temporary PNI exception.
 18. After normal dispatch entry, Wagami Z starts powered off. Its physical power button begins the same two-second boot delay as Wagami X and shows a black inner screen with a large centered `WAGAMI` wordmark while booting. The direct `/?dev=2` shortcut bypasses dispatch and starts the production Wagami Z component already powered on with current/default store values.
 19. Pressing power while Wagami Z is on immediately returns its screen to black, stops and resets its device timer, and allows another two-second boot. The timer remains `00:00:00` while off and booting, then starts when boot completes.
 20. Keep the boot screen limited to the large centered white `WAGAMI` wordmark on pure black, with no progress bar, sound, fade, or secondary copy. Render the power indicator dark green while off, pulsing amber while booting, and bright green while on.
@@ -937,7 +943,7 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 **Steps:**
 1. Update `STATUS.md` and `CHANGELOG.md` to reflect completed phases
 2. Visual polish: font matching (Zoll uses a monospace/LED-style font for vitals — use `font-mono` or custom), pixel-perfect spacing
-3. "Check Electrodes" warning behavior — shows when no rhythm is active (no session data received yet)
+3. Wagami X no longer renders a "Check Electrodes" / `APPL ELECT.` warning; its resting bottom region is reserved for the horizontal vital layout
 4. Keyboard shortcuts for instructor (optional QoL)
 5. Print/snapshot button on monitor (browser `window.print()`)
 6. Error states: invalid session code → friendly error page
@@ -1109,8 +1115,8 @@ trainee did, what the patient was, and what the instructor changed between the t
 was pressed and against the patient the trainee was looking at, and an unchanged room costs the
 trainee's poll almost nothing.
 
-**Decided 2026-09-02** in a grilling session; see `docs/adr/0003` for the queue and its clock, and
-`docs/adr/0002` for the sync model this is the first half of.
+**Decided 2026-09-02** in a grilling session; see `docs/adr/0004` for the queue and its clock, and
+`docs/adr/0003` for the sync model this is the first half of.
 
 #### 14a — `?since=<version>` on `/state`
 The monitor already tracks the version it holds (`lastVersionRef`). It sends it; the server answers
@@ -1204,7 +1210,7 @@ only. Action rows do not expand; copy-to-clipboard is unchanged.
 knows a trainee dropped the moment it happens, and neither depends on the poll — which becomes a
 slow guarantee rather than the mechanism.
 
-**Decided 2026-09-02**, `docs/adr/0002`. **Trigger: onboarding a second college.** Until then the
+**Decided 2026-09-02**, `docs/adr/0003`. **Trigger: onboarding a second college.** Until then the
 poll with `?since=` is correct and cheap enough; Realtime's cost advantage and its "feels instant"
 value both arrive with scale.
 
@@ -1243,7 +1249,7 @@ the first external sale, not before.
 | Language | English |
 | Session routing | `/session/[code]/instructor` vs `/session/[code]/monitor` |
 | Instructor exclusivity | One instructor per session via Supabase Presence |
-| Realtime mechanism | Polling with `?since=` as the guarantee; Supabase Realtime as a nudge only — `docs/adr/0002` |
+| Realtime mechanism | Polling with `?since=` as the guarantee; Supabase Realtime as a nudge only — `docs/adr/0003` |
 | Audio | Pre-recorded files in `/public/audio/` |
 | Alarm thresholds | HR < 40 or > 140 bpm; BP sys < 90 or > 200 mmHg; BP dia < 25 or > 225 mmHg; SpO2 < 90%; no EtCO2 threshold |
 | Joule defaults | Adult 120J / Pediatric 50J / Neonate 10J |
