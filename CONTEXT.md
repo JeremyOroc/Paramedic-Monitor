@@ -64,6 +64,14 @@ _Avoid_: Respiratory strength
 The established Wagami defibrillator model whose controls provide the simulator's existing physical-button interactions.
 _Avoid_: Old monitor, legacy monitor
 
+**Resting vital layout**:
+The Wagami X main-view placement used after power-on and before the first accepted physical Analyze or Charge action. FC, PNI, EtCO2, and SpO2 occupy four equal cells in the fixed bottom region; collapsing that region temporarily uses the defib vital layout.
+_Avoid_: Apply Electrodes screen, default status bar
+
+**Defib vital layout**:
+The Wagami X placement used after the first accepted physical Analyze or Charge action and by specialized views. The same four vital displays occupy the right column, including beside the energy scale during charge states, until power-off/on, monitor reset, or New Attempt restores the resting vital layout.
+_Avoid_: Charge-only layout, permanent vital strip
+
 **Wagami Z**:
 The newer touchscreen-oriented Wagami defibrillator model. It displays the same live confirmed clinical state as Wagami X; its power control is functional while its remaining controls are intentionally inert in the first implementation.
 _Avoid_: ZOLL, Zenix, Wagami-Z

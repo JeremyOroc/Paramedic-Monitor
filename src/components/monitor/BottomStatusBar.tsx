@@ -85,9 +85,9 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
     let defibBoxContent = (
       <>
         <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs w-full text-center">Defibrillator</div>
-        <div className="flex-1 flex flex-col items-center justify-center bg-black border border-white mx-1 mb-1 relative overflow-hidden">
-          <span className="text-white text-xl font-bold">Confirm Energy</span>
-          <span className="text-white text-xl font-bold">Press CHARGE</span>
+        <div className="relative mx-1 mb-1 flex min-w-0 flex-1 flex-col items-center justify-center overflow-hidden border border-white bg-black">
+          <span className="whitespace-nowrap text-base font-bold text-white">Confirm Energy</span>
+          <span className="whitespace-nowrap text-base font-bold text-white">Press CHARGE</span>
         </div>
       </>
     )
@@ -97,7 +97,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
         <>
           <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs w-full text-center">Defibrillator</div>
           <div className="flex-1 flex flex-col items-center justify-center border border-yellow-spO2 mx-1 mb-1 animate-[chargePulse_0.2s_infinite] overflow-hidden">
-            <span className="text-xl font-bold uppercase">Charging</span>
+            <span className="text-lg font-bold uppercase">Charging</span>
           </div>
         </>
       )
@@ -106,7 +106,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
         <>
           <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs w-full text-center">Defibrillator</div>
           <div className="flex-1 flex flex-col items-center justify-center bg-yellow-400 mx-1 mb-1 overflow-hidden">
-            <span className="text-black text-3xl font-bold uppercase tracking-wide">Charged</span>
+            <span className="text-2xl font-bold uppercase tracking-wide text-black">Charged</span>
           </div>
         </>
       )
@@ -115,8 +115,8 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
         <>
           <div className="bg-ecg-green text-black px-2 py-0.5 font-bold uppercase text-xs w-full text-center">Defibrillator</div>
           <div className="flex-1 flex flex-col items-center justify-center bg-ecg-green mx-1 mb-1 overflow-hidden">
-            <span className="text-black text-xl font-bold tracking-wide">Delivered Energy</span>
-            <span className="text-black text-2xl font-bold tracking-wide">{joules} J</span>
+            <span className="whitespace-nowrap text-base font-bold tracking-wide text-black">Delivered Energy</span>
+            <span className="text-xl font-bold tracking-wide text-black">{joules} J</span>
           </div>
         </>
       )
@@ -125,31 +125,33 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
     return (
       <div className="w-full h-full flex bg-bottom-bar p-1 gap-1 border-t border-t-neutral-600 font-sans">
         {/* Left: Defib Info */}
-        <div className="flex-[1.5] flex flex-col border border-white overflow-hidden">
+        <div className="flex min-w-0 flex-[1.5] flex-col overflow-hidden border border-white">
           {defibBoxContent}
         </div>
 
         {/* Middle: Shock count */}
-        <div className="w-20 border border-white flex flex-col items-center">
+        <div className="flex w-14 flex-col items-center border border-white">
           <div className="flex items-center justify-center py-1">
             <span className="text-white text-2xl">⚡</span>
           </div>
-          <div className="flex-1 flex items-center justify-center text-white text-4xl font-bold">
+          <div className="flex flex-1 items-center justify-center text-3xl font-bold text-white">
             {shockCount}
           </div>
         </div>
 
         {/* Right: Selected Energy */}
-        <div className="flex-1 flex flex-col border border-white overflow-hidden">
-          <div className="bg-ecg-green text-black px-2 py-0.5 font-bold text-xs uppercase self-start w-full text-center">Selected energy</div>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden border border-white">
+          <div className="w-full self-start whitespace-nowrap bg-ecg-green px-1 py-0.5 text-center text-[10px] font-bold uppercase text-black">Selected energy</div>
           <div className={cn("flex-1 flex items-center justify-center mx-1 mb-1", isCharged && "bg-yellow-400 text-black", !isCharged && "bg-black text-white")}>
-            <span className="text-6xl font-bold">{joules}</span>
-            <span className="text-2xl font-bold mt-4 ml-1">J</span>
+            <span className="text-4xl font-bold">{joules}</span>
+            <span className="ml-1 mt-3 text-xl font-bold">J</span>
           </div>
         </div>
       </div>
     )
   }
+
+  if (defibState === 'idle') return null
 
   // CPR Layout
   let bannerBg = "bg-blue-600"
@@ -168,10 +170,6 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
     bannerText = "SHOCK NOT ADVISED"
     bannerBg = "bg-white"
     bannerTextColor = "text-[#ff2020]"
-  } else if (defibState === 'idle') {
-    bannerText = "APPL ELECT."
-    bannerBg = "bg-yellow-500"
-    bannerTextColor = "text-black"
   } else if (defibState === 'cpr' && isDone) {
     bannerText = checkPatient ? "Check Patient" : "Stop CPR"
     bannerBg = "bg-white"

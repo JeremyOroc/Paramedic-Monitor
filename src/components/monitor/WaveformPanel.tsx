@@ -2,7 +2,6 @@
 
 import { ECGCanvas } from './ECGCanvas'
 import { SecondaryChannel } from './SecondaryChannel'
-import { ApplyElectrodesBar } from './ApplyElectrodesBar'
 import { cn } from '@/lib/utils'
 import type { Etco2Waveform, Rhythm, Spo2Waveform } from '@/types/vitals'
 import type { MonitorSelection } from '@/types/monitorSelection'
@@ -15,7 +14,6 @@ type WaveformPanelProps = {
   etco2: number
   spo2Waveform: Spo2Waveform
   etco2Waveform: Etco2Waveform
-  showApplyElectrodes?: boolean
   showAllSecondaryChannels?: boolean
   selected?: MonitorSelection
   etco2Calibrated?: boolean
@@ -31,7 +29,6 @@ export function WaveformPanel({
   etco2,
   spo2Waveform,
   etco2Waveform,
-  showApplyElectrodes = true,
   showAllSecondaryChannels = false,
   selected,
   etco2Calibrated = false,
@@ -127,11 +124,6 @@ export function WaveformPanel({
           cprOverride={cprOverride}
           className="h-full w-full"
         />
-        {showApplyElectrodes && (
-          <div className="absolute inset-x-0 bottom-0">
-            <ApplyElectrodesBar />
-          </div>
-        )}
       </div>
       {normalSecondaryChannel && (
         <div className="relative min-h-0">

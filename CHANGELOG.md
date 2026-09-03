@@ -12,6 +12,14 @@
 - Preserve existing compact spacing through 900px height, control sizes, and the 55/45 and expanded 8:5 column proportions. Above 900px height, use 24px vertical padding and section gaps.
 - Validation: 62 targeted admin/layout/control tests pass. Browser measurements at the requested 1512×850 and 1440×800 laptop sizes confirm SAMPLE aligns to the right of Vitals, OPQRST remains below SAMPLE, equal checklist heights, 24px side gutters, and no horizontal overflow across all tabs. Compact 1080×700 geometry passes; shorter expanded viewports retain vertical scrolling rather than reducing controls.
 
+## [2026-09-02] [planning/monitor] — Add state-driven Wagami X vital placement
+
+- Replaced the Wagami X resting `APPL ELECT.` banner and its three lower boxes with four equal-width, full-featured FC, PNI, EtCO2, and SpO2 cells in the existing 110px bottom region. Removed the dormant Apply Electrodes component and kept the existing vital data, units, alarms, PNI phases, SpO2 pulse bar, French labels, selection identifiers, and navigation behavior.
+- Made the first accepted physical Analyze or Charge action move vitals instantly to the existing 96px right column for the remainder of the attempt. Charge-family states now retain the energy scale and readable defib-status content beside the right vital column; power-off/on, monitor reset, and New Attempt restore the resting layout.
+- Preserved the minus control's expanded-waveform behavior by temporarily moving resting vitals right while collapsed. The left Call Info/Analyse soft key, 12-lead and overlay layouts, outer-shell control order/functionality, Enter-on-PNI behavior, and Wagami Z remain unchanged.
+- Documented the state contract in `PLAN.md`, `CONTEXT.md`, and ADR 0002. Added component and monitor integration regressions; all 898 tests and TypeScript pass, and ESLint reports 0 errors with 12 pre-existing warnings. The Next.js webpack production build passes; the default Turbopack build remains blocked by the known host `EPERM` failure in its spawned PostCSS process.
+- Rendered browser QA passes at `1280×720` and `1024×768` for resting, Analyze, Charge, collapse/restore, and 12-lead transitions. The 1024px resting region measures 541×110px with four 135×109px cells; both tested viewports have no clipping or horizontal/vertical overflow, and the browser console is clean.
+
 ## [2026-09-01] [instructor] — Expand and center Monitor & Patient SNS controls
 
 - Added the centered Monitor-only `1152px` breakout and approximately `8:5` large-landscape split, growing Vitals to about `700px` while keeping SAMPLE/OPQRST near `438px` and leaving other instructor tabs at the existing width.
