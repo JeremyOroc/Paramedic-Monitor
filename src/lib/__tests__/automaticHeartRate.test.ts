@@ -4,15 +4,24 @@ import {
   deterministicVfHeartRate,
   getAutomaticHeartRate,
   getVfFlashIndex,
+  isHeartRateToggleLockedRhythm,
   randomVfHeartRate,
   VITAL_ALARM_FLASH_MS,
 } from '@/lib/automaticHeartRate'
 
 describe('automatic heart rate', () => {
-  it('maps VF and VT to their fixed underlying rates', () => {
+  it('maps VF, VT, and Asystole to their fixed underlying rates', () => {
     expect(getAutomaticHeartRate('vf')).toBe(190)
     expect(getAutomaticHeartRate('vt')).toBe(220)
+    expect(getAutomaticHeartRate('asystole')).toBe(0)
     expect(getAutomaticHeartRate('nsr')).toBeNull()
+  })
+
+  it('locks the FC toggle only for Asystole', () => {
+    expect(isHeartRateToggleLockedRhythm('asystole')).toBe(true)
+    expect(isHeartRateToggleLockedRhythm('vf')).toBe(false)
+    expect(isHeartRateToggleLockedRhythm('vt')).toBe(false)
+    expect(isHeartRateToggleLockedRhythm('off')).toBe(false)
   })
 
   it('generates inclusive whole-number VF endpoints', () => {

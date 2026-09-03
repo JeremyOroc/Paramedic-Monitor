@@ -96,7 +96,7 @@ describe('scenario snapshots', () => {
     expect(normalizeScenarioSnapshot(input)?.defibrillatorModel).toBe('wagamiZ')
   })
 
-  it('normalizes scenario VF and VT values and activates FC', () => {
+  it('normalizes scenario VF, VT, and Asystole values and activates FC', () => {
     const vf = createEmptyScenarioSnapshot()
     vf.monitor.draft.hr = 70
     vf.monitor.draft.rhythm = 'vf'
@@ -110,6 +110,13 @@ describe('scenario snapshots', () => {
     const normalizedVt = normalizeScenarioSnapshot(vt)
     expect(normalizedVt?.monitor.draft.hr).toBe(220)
     expect(normalizedVt?.monitor.draftVitalActive.hr).toBe(true)
+
+    const asystole = createEmptyScenarioSnapshot()
+    asystole.monitor.draft.hr = 70
+    asystole.monitor.draft.rhythm = 'asystole'
+    const normalizedAsystole = normalizeScenarioSnapshot(asystole)
+    expect(normalizedAsystole?.monitor.draft.hr).toBe(0)
+    expect(normalizedAsystole?.monitor.draftVitalActive.hr).toBe(true)
   })
 
   it('rejects unsupported or malformed snapshots', () => {

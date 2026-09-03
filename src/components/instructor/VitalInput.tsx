@@ -6,7 +6,10 @@ import { useMonitorStore } from '@/store/monitorStore'
 import { vitalStatus } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
 import type { NumericVitalField } from '@/types/vitals'
-import { isAutomaticHeartRateRhythm } from '@/lib/automaticHeartRate'
+import {
+  isAutomaticHeartRateRhythm,
+  isHeartRateToggleLockedRhythm,
+} from '@/lib/automaticHeartRate'
 
 import { OnOffToggle } from './OnOffToggle'
 
@@ -57,10 +60,12 @@ export function VitalInput({
   const value = draft[field] as number
   const active = draftVitalActive[field]
   const automaticHeartRate = field === 'hr' && isAutomaticHeartRateRhythm(rhythm)
+  const heartRateToggleLocked =
+    field === 'hr' && isHeartRateToggleLockedRhythm(rhythm)
   const automaticDisplay = automaticHeartRate
     ? rhythm === 'vf'
       ? 'AUTO 190–220'
-      : '220'
+      : String(value)
     : null
 
   // Local text mirrors what's typed so the field can sit empty mid-edit instead of
@@ -135,6 +140,7 @@ export function VitalInput({
       <OnOffToggle
         active={active}
         compact={compact}
+        disabled={heartRateToggleLocked}
         label={label}
         onToggle={(nextActive) => setDraftVitalActive(field, nextActive)}
         status={status}

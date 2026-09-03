@@ -96,6 +96,31 @@ describe('VitalsControls', () => {
     expect(within(controls).queryByRole('button', { name: 'Scene/Environment' })).toBeNull()
   })
 
+  it('locks active Asystole at FC zero and restores the manual FC when ECG turns Off', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 72)
+      useMonitorStore.getState().setDraftVitalActive('hr', true)
+    })
+    render(<VitalsControls autoSortText="" />)
+
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
+    await user.click(screen.getByRole('button', { name: 'Cardiac Arrest' }))
+    await user.click(screen.getByRole('button', { name: 'Asystole' }))
+
+    expect(screen.getByLabelText('FC')).toBeDisabled()
+    expect(screen.getByLabelText('FC')).toHaveValue('0')
+    expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
+    expect(useMonitorStore.getState().draft.hr).toBe(0)
+
+    await user.click(screen.getByRole('button', { name: 'ECG on' }))
+
+    expect(screen.getByLabelText('FC')).toBeEnabled()
+    expect(screen.getByLabelText('FC')).toHaveValue(72)
+    expect(screen.getByRole('button', { name: 'FC on' })).toBeEnabled()
+    expect(useMonitorStore.getState().draft.rhythm).toBe('off')
+  })
+
   it('orders admin vitals as FC, SpO2, BP, EtCO2', () => {
     render(<VitalsControls autoSortText="" />)
 
