@@ -6,6 +6,18 @@
 ---
 
 ## Current Phase
+**Phase 14 — Sync & Queue — CODE COMPLETE (2026-09-03), MIGRATION NOT YET APPLIED.** A trainee action
+pressed during a wifi drop now waits on the device and lands in the evaluation record at the moment
+it was pressed, against the state version the monitor was showing, flagged `← n behind` when that
+trailed what the instructor had sent. The trainee's poll names the version it holds and an unchanged
+room answers in ~300 bytes instead of the whole blob. `docs/adr/0003` and `docs/adr/0004`.
+
+> **Deploy order matters:** apply `20260903120000_trainee_action_clock.sql` *before* deploying this
+> code. `getReview` and `recordStudentEvent` now name the three new columns, so on a database without
+> them the Report tab, the console's roster poll, and every trainee action fail until the migration
+> runs. Verified live: `?since=` works today; the action path returned
+> `Could not find the 'capture_sequence' column` until the columns exist.
+
 **Phase 13 — Evaluation report tab — COMPLETE (2026-09-02).** The Instructor Console has a fifth
 tab rendering one chronological stream of an attempt: each trainee action with its payload against the
 patient state in force when it was taken, with the instructor's own changes interleaved as diffs of
@@ -35,6 +47,30 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Phase 14 — Sync & Queue — CODE COMPLETE:**
+  - [x] 14a `GET /state?since=<version>`: `getSessionStatus` reads only the version when the monitor
+        names the one it holds and answers `{ unchanged: true }` without the blob; the sync hook sends
+        `since` on every poll after the first and skips apply on an unchanged answer. Measured live:
+        13,677 → 315 bytes per unchanged poll
+  - [x] 14b `src/lib/actionQueue.ts` + `useStudentActionQueue`: replaces the fire-and-forget POST in
+        `monitor/page.tsx`. Enqueue stamps press time, a monotonic sequence, the on-screen state
+        version, and the last measured clock offset; drain is in order with 1s→30s backoff; network
+        and 5xx retry forever, 4xx drops and logs so one bad action cannot jam the rest
+  - [x] 14c three nullable columns on `student_events` (`occurred_at_client`, `capture_sequence`,
+        `clock_offset_ms`); `recordStudentEvent` stores them, `getReview` returns them, the generated
+        Supabase types know them
+  - [x] 14d a claimed `stateVersion` is accepted at or below the current version and rejected with
+        400 above it or before any Send; older clients that claim nothing are stamped as before
+  - [x] 14e the timeline orders by corrected client clock when present (client + offset), falls back
+        to `occurred_at`, tiebreaks on `capture_sequence`, and marks each action with how many Sends
+        the monitor had missed; the panel renders `← n behind` in amber and copies it
+  - [x] `useSessionMonitorSync` now returns `{ vfDisplaySync, getClock }` and measures the clock
+        offset on every poll rather than only when state changes
+  - [x] 38 new tests (7 queue, 3 queue hook, 3 sync hook, 10 service, 3 state route, 3 student-event
+        route, 9 timeline, 1 panel). All 1004 tests and TypeScript pass; ESLint 0 errors with the 12
+        pre-existing warnings; production build passes. Live: `?since=` verified end to end; the
+        action path verified by tests only until the migration is applied
+
 - [x] **Phase 13 — Evaluation report tab — COMPLETE:**
   - [x] `src/lib/evaluationTimeline.ts` assembles the review payload into one ordered stream: `t+`
         offsets from `participant_attempts.started_at` (falling back to the first recorded row),
@@ -653,7 +689,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## In Progress
-- Nothing — Phase 13 is complete pending rendered browser QA
+- Phase 14 awaits its migration on the live project, then a live check of the replay path
 
 ---
 

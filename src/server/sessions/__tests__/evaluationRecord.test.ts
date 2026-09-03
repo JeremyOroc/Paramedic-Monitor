@@ -18,6 +18,7 @@ import {
   REVIEW_EVENT_LIMIT,
   endSession,
   getReview,
+  getSessionStatus,
   joinSession,
   recordStudentEvent,
   startNewAttempt,
@@ -279,6 +280,140 @@ describe('recordStudentEvent — action/state linkage (PLAN 12c, 12d)', () => {
     ).rejects.toMatchObject({ status: 400 })
 
     expect(stub.opsFor('student_events')).toHaveLength(0)
+  })
+})
+
+describe('recordStudentEvent — the trainee\'s own clock and claimed version (PLAN 14c, 14d)', () => {
+  const insertedRow = () =>
+    currentStub.opsFor('student_events').find((op) => op.method === 'insert')?.payload
+
+  it('accepts a claimed version at or below the current one', async () => {
+    withResolver({
+      session_state: () => ({ data: { version: 7 } }),
+      student_events: (op) => (op.method === 'insert' ? { data: { id: 'e' } } : undefined),
+    })
+
+    await recordStudentEvent(CODE, PARTICIPANT_TOKEN, {
+      kind: 'shock', label: 'Shock', stateVersion: 5,
+    })
+
+    expect(insertedRow()?.state_version).toBe(5)
+  })
+
+  it('rejects a claim ahead of the room with 400 so the queue drops it rather than retrying', async () => {
+    withResolver({ session_state: () => ({ data: { version: 7 } }) })
+
+    await expect(
+      recordStudentEvent(CODE, PARTICIPANT_TOKEN, { kind: 'shock', label: 'Shock', stateVersion: 8 }),
+    ).rejects.toMatchObject({ status: 400 })
+    expect(currentStub.opsFor('student_events')).toHaveLength(0)
+  })
+
+  it('rejects a claim when the instructor has not sent anything yet', async () => {
+    withResolver({ session_state: () => ({ data: null }) })
+
+    await expect(
+      recordStudentEvent(CODE, PARTICIPANT_TOKEN, { kind: 'shock', label: 'Shock', stateVersion: 1 }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('rejects a malformed claim', async () => {
+    withResolver({ session_state: () => ({ data: { version: 7 } }) })
+
+    await expect(
+      recordStudentEvent(CODE, PARTICIPANT_TOKEN, { kind: 'shock', label: 'Shock', stateVersion: 0 }),
+    ).rejects.toMatchObject({ status: 400 })
+    await expect(
+      recordStudentEvent(CODE, PARTICIPANT_TOKEN, { kind: 'shock', label: 'Shock', stateVersion: 2.5 }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('stamps the current version when no claim is made, as older clients expect', async () => {
+    withResolver({
+      session_state: () => ({ data: { version: 7 } }),
+      student_events: (op) => (op.method === 'insert' ? { data: { id: 'e' } } : undefined),
+    })
+
+    await recordStudentEvent(CODE, PARTICIPANT_TOKEN, { kind: 'shock', label: 'Shock' })
+
+    const row = insertedRow()
+    expect(row?.state_version).toBe(7)
+    expect(row?.occurred_at_client).toBeNull()
+    expect(row?.capture_sequence).toBeNull()
+    expect(row?.clock_offset_ms).toBeNull()
+  })
+
+  it('stores the client clock beside the server clock', async () => {
+    withResolver({
+      session_state: () => ({ data: { version: 7 } }),
+      student_events: (op) => (op.method === 'insert' ? { data: { id: 'e' } } : undefined),
+    })
+
+    await recordStudentEvent(CODE, PARTICIPANT_TOKEN, {
+      kind: 'shock',
+      label: 'Shock',
+      occurredAtClient: '2026-09-03T10:00:00.000Z',
+      captureSequence: 12,
+      clockOffsetMs: 83.6,
+    })
+
+    const row = insertedRow()
+    expect(row?.occurred_at_client).toBe('2026-09-03T10:00:00.000Z')
+    expect(row?.capture_sequence).toBe(12)
+    expect(row?.clock_offset_ms).toBe(84)
+  })
+
+  it('nulls a client clock it cannot parse rather than failing the action', async () => {
+    withResolver({
+      session_state: () => ({ data: { version: 7 } }),
+      student_events: (op) => (op.method === 'insert' ? { data: { id: 'e' } } : undefined),
+    })
+
+    await recordStudentEvent(CODE, PARTICIPANT_TOKEN, {
+      kind: 'shock', label: 'Shock', occurredAtClient: 'yesterday', captureSequence: 1.5,
+    })
+
+    const row = insertedRow()
+    expect(row?.occurred_at_client).toBeNull()
+    expect(row?.capture_sequence).toBeNull()
+  })
+})
+
+describe('getSessionStatus — ?since= (PLAN 14a)', () => {
+  it('answers without the blob when the monitor already holds the current version', async () => {
+    const stub = withResolver({
+      session_state: () => ({ data: { version: 7, updated_at: 'now', state: { big: true } } }),
+    })
+
+    const result = await getSessionStatus(CODE, undefined, 7)
+
+    expect(result).toMatchObject({ unchanged: true, version: 7, state: null })
+    // Only the version was read; the state column was never requested.
+    const reads = stub.opsFor('session_state')
+    expect(reads).toHaveLength(1)
+    expect(reads[0].columns).toBe('version, updated_at')
+  })
+
+  it('returns the full state when the version moved on', async () => {
+    withResolver({
+      session_state: () => ({ data: { version: 8, updated_at: 'now', state: { hr: 40 } } }),
+    })
+
+    const result = await getSessionStatus(CODE, undefined, 7)
+
+    expect(result.unchanged).toBe(false)
+    expect(result.state).toMatchObject({ version: 8, state: { hr: 40 } })
+  })
+
+  it('returns the full state when no version is named', async () => {
+    withResolver({
+      session_state: () => ({ data: { version: 8, updated_at: 'now', state: { hr: 40 } } }),
+    })
+
+    const result = await getSessionStatus(CODE)
+
+    expect(result.unchanged).toBe(false)
+    expect(result.state).toMatchObject({ version: 8 })
   })
 })
 

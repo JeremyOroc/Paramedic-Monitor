@@ -46,7 +46,8 @@ function toPlainText(rows: readonly TimelineRow[], showNames: boolean): string {
         return `${row.offset}\tINSTRUCTOR\t${what}\t${contextText(row.context)}`
       }
       const who = showNames ? `${row.participantName}\t` : ''
-      return `${row.offset}\t${who}${row.eventKind}\t${row.detail}\t${contextText(row.context)}`
+      const behind = row.behindBy > 0 ? `\t← ${row.behindBy} behind` : ''
+      return `${row.offset}\t${who}${row.eventKind}\t${row.detail}\t${contextText(row.context)}${behind}`
     })
     .join('\n')
 }
@@ -186,6 +187,7 @@ export function EvaluationReportPanel({
               key={row.id}
               data-testid={`report-row-${row.kind}`}
               data-alarm={row.inAlarm ? 'true' : undefined}
+              data-behind={row.kind === 'action' && row.behindBy > 0 ? String(row.behindBy) : undefined}
               className={cn(
                 'grid items-baseline gap-x-3 border-l-2 px-2 py-1',
                 'grid-cols-[4.5rem_minmax(0,1fr)]',
@@ -249,6 +251,12 @@ export function EvaluationReportPanel({
                 ) : (
                   contextText(row.context)
                 )}
+                {row.kind === 'action' && row.behindBy > 0 ? (
+                  // The monitor had not received the latest Send yet, so the
+                  // action was taken against an older patient than the row
+                  // above suggests. Says "behind," not "ignored."
+                  <span className="ml-2 text-pending-amber">{`← ${row.behindBy} behind`}</span>
+                ) : null}
               </span>
             </li>
           ))}

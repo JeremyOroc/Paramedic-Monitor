@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildEvaluationTimeline,
   diffStates,
+  eventTimeMs,
   formatEventDetail,
   formatOffset,
   normalizeHistoryState,
@@ -36,6 +37,9 @@ function makeEvent(overrides: Partial<StudentEvent> = {}): StudentEvent {
     payload: {},
     occurred_at: at(0),
     state_version: null,
+    occurred_at_client: null,
+    capture_sequence: null,
+    clock_offset_ms: null,
     ...overrides,
   }
 }
@@ -212,6 +216,97 @@ describe('diffStates', () => {
 
   it('is empty for a Send that changed nothing clinical', () => {
     expect(diffStates(base, normalizeHistoryState(sharedState({})))).toEqual([])
+  })
+})
+
+describe('eventTimeMs', () => {
+  const base = { occurred_at: at(100), occurred_at_client: null, clock_offset_ms: null }
+
+  it('uses the corrected client clock when the monitor supplied one', () => {
+    const time = eventTimeMs({ ...base, occurred_at_client: at(92), clock_offset_ms: 3_000 })
+    expect(time).toEqual({ at: startMs + 95_000, clientTimed: true })
+  })
+
+  it('falls back to the server clock without an offset, since an uncorrected client clock is on its own timeline', () => {
+    expect(eventTimeMs({ ...base, occurred_at_client: at(92) })).toEqual({
+      at: startMs + 100_000,
+      clientTimed: false,
+    })
+  })
+
+  it('falls back to the server clock for rows predating the columns', () => {
+    expect(eventTimeMs(base)).toEqual({ at: startMs + 100_000, clientTimed: false })
+  })
+
+  it('is null when neither clock parses', () => {
+    expect(eventTimeMs({ occurred_at: 'nope', occurred_at_client: 'nope', clock_offset_ms: 0 })).toBeNull()
+  })
+})
+
+describe('buildEvaluationTimeline — the trainee\'s clock (PLAN 14c, 14e)', () => {
+  it('places a replayed action at the moment it was pressed, not when it reached the server', () => {
+    const { rows } = build({
+      events: [
+        makeEvent({
+          kind: 'shock', label: 'Shock',
+          occurred_at: at(70),            // reached the server after the outage
+          occurred_at_client: at(40),     // pressed here...
+          clock_offset_ms: 2_000,         // ...on a clock 2s behind the server
+        }),
+      ],
+    })
+    expect(rows[0].offset).toBe('t+0:42')
+    expect((rows[0] as TimelineActionRow).clientTimed).toBe(true)
+  })
+
+  it('keeps two presses in one millisecond in the order the monitor counted them', () => {
+    const { rows } = build({
+      events: [
+        makeEvent({ id: 'second', kind: 'shock', label: 'Shock', occurred_at: at(10), occurred_at_client: at(10), clock_offset_ms: 0, capture_sequence: 2 }),
+        makeEvent({ id: 'first', kind: 'charge', label: 'Charge', occurred_at: at(10), occurred_at_client: at(10), clock_offset_ms: 0, capture_sequence: 1 }),
+      ],
+    })
+    expect(rows.map((row) => row.id)).toEqual(['first', 'second'])
+  })
+
+  it('marks an action taken on a monitor that had not received the latest Send', () => {
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({})),
+        makeState(2, 276, sharedState({ rhythm: 'vf', hr: 112 })),   // the Send the monitor missed
+      ],
+      events: [
+        makeEvent({ kind: 'analyze', label: 'Analyze', occurred_at: at(302), occurred_at_client: at(280), clock_offset_ms: 0, state_version: 1 }),
+      ],
+    })
+    const action = actions(rows)[0]
+    expect(action.behindBy).toBe(1)
+    // And it is judged against what it saw, not what it should have seen.
+    expect((action.context as TimelineStateContext).rhythm).toBe('NSR 88')
+  })
+
+  it('does not mark an action that was current, or one before any Send', () => {
+    const { rows } = build({
+      stateHistory: [makeState(1, 0, sharedState({})), makeState(2, 100, sharedState({ hr: 90 }))],
+      events: [
+        makeEvent({ occurred_at: at(50), state_version: 1 }),    // current at the time
+        makeEvent({ occurred_at: at(150), state_version: 2 }),   // current at the time
+        makeEvent({ occurred_at: at(150), state_version: null }), // predates any Send
+      ],
+    })
+    expect(actions(rows).map((row) => row.behindBy)).toEqual([0, 0, 0])
+  })
+
+  it('counts every Send the monitor missed, not only the last', () => {
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({})),
+        makeState(2, 10, sharedState({ hr: 90 })),
+        makeState(3, 20, sharedState({ hr: 100 })),
+      ],
+      events: [makeEvent({ occurred_at: at(30), state_version: 1 })],
+    })
+    expect(actions(rows)[0].behindBy).toBe(2)
   })
 })
 

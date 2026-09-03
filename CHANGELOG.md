@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-09-03] [monitor/server] — Phase 14: sync and queue
+
+- Added `?since=<version>` to `GET /api/session/[code]/state`. The trainee's sync hook names the version it holds; when nothing moved the server reads only the version and answers `{ unchanged: true }` without the blob. Measured live at 13,677 → 315 bytes per unchanged poll. The clock offset is now measured on every poll, since a queued action stamps the latest one and the room is usually unchanged (`docs/adr/0003`).
+- Replaced the fire-and-forget `void fetch()` in `monitor/page.tsx` with an in-memory action queue (`src/lib/actionQueue.ts`, `useStudentActionQueue`). An action pressed during an outage waits and replays in press order with the time, sequence, on-screen state version, and clock offset stamped at the press. Network failures and 5xx retry with 1s→30s backoff and are never dropped; a 4xx is dropped and logged so a client bug cannot jam every action behind it (`docs/adr/0004`).
+- Added `occurred_at_client`, `capture_sequence`, and `clock_offset_ms` to `student_events` (migration `20260903120000_trainee_action_clock.sql`, not yet applied). `recordStudentEvent` accepts a claimed `stateVersion`, bounded at the version current at insert: a monitor may say it was behind, never that it saw a state the instructor had not sent.
+- The timeline now orders actions by corrected client clock when present, falls back to `occurred_at`, tiebreaks on `capture_sequence`, and marks an action taken on a stale monitor as `← n behind` so it reads as "had not received it yet" rather than "ignored it". The panel renders the marker in amber and includes it in copied text.
+- `useSessionMonitorSync` returns `{ vfDisplaySync, getClock }` rather than `vfDisplaySync` alone.
+- Added 38 tests. All 1004 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass. `?since=` verified end to end against the running app; the action path fails on the live database until the migration runs, which also means the migration must be applied before this code is deployed.
+
 ## [2026-09-03] [instructor] — Record which scenario an attempt was
 
 - Added `scenarioTitleConfirmed` to the sent state so the evaluation record can say which scenario an attempt was. Nothing else in the stored state revealed it: `SharedMonitorState` is what the trainee's monitor needs, and the monitor never needed the scenario's name, so the title had no way to travel.

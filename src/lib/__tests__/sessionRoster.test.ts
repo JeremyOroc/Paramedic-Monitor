@@ -21,6 +21,9 @@ function makeEvent(overrides: Partial<StudentEvent>): StudentEvent {
     payload: {},
     occurred_at: '2026-07-04T11:59:00.000Z',
     state_version: null,
+    occurred_at_client: null,
+    capture_sequence: null,
+    clock_offset_ms: null,
     ...overrides,
   }
 }

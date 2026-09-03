@@ -31,6 +31,9 @@ function makeEvent(overrides: Partial<StudentEvent> = {}): StudentEvent {
     payload: {},
     occurred_at: at(0),
     state_version: null,
+    occurred_at_client: null,
+    capture_sequence: null,
+    clock_offset_ms: null,
     ...overrides,
   }
 }
@@ -170,6 +173,30 @@ describe('EvaluationReportPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Copy' }))
 
     expect(writeText.mock.calls[0][0]).toContain('scenario sent — "Fall from ladder"')
+  })
+
+  it('flags an action taken on a monitor that was behind, and copies the flag', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+    renderPanel({
+      stateHistory: [state(1, 0, {}), state(2, 276, { rhythm: 'vf', hr: 112 })],
+      events: [
+        makeEvent({ kind: 'analyze', label: 'Analyze', occurred_at: at(302), state_version: 1 }),
+        makeEvent({ kind: 'shock', label: 'Shock', occurred_at: at(310), state_version: 2 }),
+      ],
+    })
+
+    const [behind, current] = screen.getAllByTestId('report-row-action')
+    expect(behind).toHaveAttribute('data-behind', '1')
+    expect(behind).toHaveTextContent('← 1 behind')
+    expect(within(behind).getByText('← 1 behind')).toHaveClass('text-pending-amber')
+    expect(current).not.toHaveAttribute('data-behind')
+    expect(current).not.toHaveTextContent('behind')
+
+    await user.click(screen.getByRole('button', { name: 'Copy' }))
+    const copied = writeText.mock.calls[0][0] as string
+    expect(copied).toMatch(/analyze.*← 1 behind/)
+    expect(copied).not.toMatch(/shock.*behind/)
   })
 
   it('warns that patient context is unavailable when no state was recorded', () => {

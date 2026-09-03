@@ -72,6 +72,14 @@ export type TimelineActionRow = TimelineRowBase & {
   detail: string
   participantId: string
   participantName: string
+  /**
+   * How many instructor changes the monitor had not yet received when this
+   * was pressed. Zero when it was current. A decision made on a stale monitor
+   * reads as "had not received it yet," not "ignored it" (docs/adr/0004).
+   */
+  behindBy: number
+  /** True when the row is placed by the trainee's own clock rather than the server's. */
+  clientTimed: boolean
 }
 
 export type TimelineInstructorRow = TimelineRowBase & {
@@ -352,6 +360,26 @@ function parseTime(value: string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+/**
+ * When an action happened, on the server's clock.
+ *
+ * The trainee's own stamp plus the offset the monitor measured recovers the
+ * moment of the press, which is the honest time for an action that waited
+ * out an outage. Without an offset the client clock is on its own timeline
+ * and cannot be mixed with the instructor's rows, so it falls back to the
+ * server's insert time, as rows predating the columns always do.
+ */
+export function eventTimeMs(
+  event: Pick<StudentEvent, 'occurred_at' | 'occurred_at_client' | 'clock_offset_ms'>,
+): { at: number; clientTimed: boolean } | null {
+  const client = parseTime(event.occurred_at_client)
+  if (client !== null && typeof event.clock_offset_ms === 'number') {
+    return { at: client + event.clock_offset_ms, clientTimed: true }
+  }
+  const server = parseTime(event.occurred_at)
+  return server === null ? null : { at: server, clientTimed: false }
+}
+
 export function formatOffset(offsetMs: number): string {
   const sign = offsetMs < 0 ? '-' : '+'
   const total = Math.floor(Math.abs(offsetMs) / 1000)
@@ -373,8 +401,12 @@ export function buildEvaluationTimeline(
   const { attemptVersion } = input
   const events = input.events
     .filter((event) => event.attempt_version === attemptVersion)
-    .map((event) => ({ event, at: parseTime(event.occurred_at) }))
-    .filter((entry): entry is { event: StudentEvent; at: number } => entry.at !== null)
+    .map((event) => ({ event, time: eventTimeMs(event) }))
+    .filter(
+      (entry): entry is { event: StudentEvent; time: { at: number; clientTimed: boolean } } =>
+        entry.time !== null,
+    )
+    .map(({ event, time }) => ({ event, at: time.at, clientTimed: time.clientTimed }))
 
   const history = input.stateHistory
     .filter((entry) => entry.attempt_version === attemptVersion)
@@ -424,10 +456,26 @@ export function buildEvaluationTimeline(
     return state ? buildContext(state, everActive) : { kind: 'missing' }
   }
 
+  // The version the instructor had sent by a given moment, so an action can
+  // be checked against what it should have been looking at.
+  const latestVersionBefore = (at: number): number | null => {
+    let latest: number | null = null
+    for (const item of history) {
+      if (item.at <= at) latest = item.entry.version
+      else break
+    }
+    return latest
+  }
+
   const rows: TimelineRow[] = []
 
-  for (const { event, at } of events) {
+  for (const { event, at, clientTimed } of events) {
     const context = contextFor(event.state_version)
+    const shouldHaveSeen = latestVersionBefore(at)
+    const behindBy =
+      event.state_version !== null && shouldHaveSeen !== null
+        ? Math.max(0, shouldHaveSeen - event.state_version)
+        : 0
     rows.push({
       kind: 'action',
       id: event.id,
@@ -441,6 +489,8 @@ export function buildEvaluationTimeline(
       detail: formatEventDetail(event),
       participantId: event.participant_id,
       participantName: names.get(event.participant_id) ?? 'Unknown',
+      behindBy,
+      clientTimed,
     })
   }
 
@@ -467,12 +517,21 @@ export function buildEvaluationTimeline(
     })
   })
 
+  const sequenceOf = new Map<string, number>()
+  for (const { event } of events) {
+    if (typeof event.capture_sequence === 'number') sequenceOf.set(event.id, event.capture_sequence)
+  }
+
   rows.sort((a, b) => {
     if (a.offsetMs !== b.offsetMs) return a.offsetMs - b.offsetMs
     // A state change and an action landing in the same millisecond read
     // correctly only one way round: the patient changed, then the trainee acted
     // against what changed.
     if (a.kind !== b.kind) return a.kind === 'instructor' ? -1 : 1
+    // Two presses in one millisecond keep the order the monitor counted them.
+    const sa = sequenceOf.get(a.id)
+    const sb = sequenceOf.get(b.id)
+    if (sa !== undefined && sb !== undefined) return sa - sb
     return 0
   })
 
