@@ -403,6 +403,25 @@ export async function getSessionStatus(code: string, participantToken?: string) 
   return { session, state: state ?? null }
 }
 
+/**
+ * The evaluation record stores what the instructor sent and what the trainee
+ * pressed. The route polyline is neither -- it is what the map drew from an
+ * origin and a destination -- and it was 86% of everything in history. The
+ * live `session_state` keeps it, because the trainee's map is drawn from
+ * there; the history copy does not, because nothing ever reads it back.
+ */
+export function stripRouteGeometry(state: unknown): unknown {
+  if (typeof state !== 'object' || state === null || Array.isArray(state)) return state
+  const record = state as Record<string, unknown>
+  const route = record.dispatchRouteConfirmed
+  if (typeof route !== 'object' || route === null || Array.isArray(route)) return state
+  if (!('geometry' in route)) return state
+  return {
+    ...record,
+    dispatchRouteConfirmed: { ...(route as Record<string, unknown>), geometry: [] },
+  }
+}
+
 export async function updateSessionState(
   code: string,
   hostToken: string,
@@ -448,7 +467,7 @@ export async function updateSessionState(
       session_id: session.id,
       attempt_version: session.active_attempt_version,
       version: nextVersion,
-      state,
+      state: stripRouteGeometry(state),
     })
   if (historyError) {
     console.error('[session] state history write failed:', historyError.message)
@@ -519,10 +538,21 @@ export async function recordStudentEvent(
  * event on `state_version` -> `version` to recover the patient state behind
  * the action.
  */
+export type GetReviewOptions = {
+  /**
+   * Whether to fetch `session_state_history`. Off by default: the console
+   * polls the review every 2.5s for the roster, and the history is only read
+   * while the Report tab is open. Fetching it on every tick made the console
+   * download every stored state on every poll.
+   */
+  includeHistory?: boolean
+}
+
 export async function getReview(
   code: string,
   hostToken: string,
   attemptVersion: number | 'all' = -1,
+  { includeHistory = false }: GetReviewOptions = {},
 ) {
   const session = await verifyHost(code, hostToken)
   const supabase = createServiceClient()
@@ -533,28 +563,11 @@ export async function getReview(
         ? attemptVersion
         : session.active_attempt_version
 
-  const { data: participants, error: participantsError } = await supabase
-    .from('participants')
-    .select('id, session_id, nickname, joined_at, last_seen_at')
-    .eq('session_id', session.id)
-    .order('joined_at', { ascending: true })
-  if (participantsError) throw new SessionError(participantsError.message, 500)
-
   let eventsQuery = supabase
     .from('student_events')
     .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at, state_version')
     .eq('session_id', session.id)
   if (attempt !== 'all') eventsQuery = eventsQuery.eq('attempt_version', attempt)
-
-  // One over the cap: if the extra row comes back, the client is looking at a
-  // partial record and gets told so instead of quietly believing it is whole.
-  const { data: events, error: eventsError } = await eventsQuery
-    .order('occurred_at', { ascending: true })
-    .limit(REVIEW_EVENT_LIMIT + 1)
-  if (eventsError) throw new SessionError(eventsError.message, 500)
-
-  const allEvents = events ?? []
-  const truncated = allEvents.length > REVIEW_EVENT_LIMIT
 
   let historyQuery = supabase
     .from('session_state_history')
@@ -562,24 +575,41 @@ export async function getReview(
     .eq('session_id', session.id)
   if (attempt !== 'all') historyQuery = historyQuery.eq('attempt_version', attempt)
 
-  const { data: stateHistory, error: historyError } = await historyQuery
-    .order('version', { ascending: true })
-    .limit(REVIEW_EVENT_LIMIT)
-  if (historyError) throw new SessionError(historyError.message, 500)
+  // Four independent reads; nothing here depends on another's result, so they
+  // go out together rather than one round-trip after the next.
+  const [participantsResult, eventsResult, historyResult, attemptsResult] = await Promise.all([
+    supabase
+      .from('participants')
+      .select('id, session_id, nickname, joined_at, last_seen_at')
+      .eq('session_id', session.id)
+      .order('joined_at', { ascending: true }),
+    // One over the cap: if the extra row comes back, the client is looking at
+    // a partial record and gets told so instead of quietly believing it is whole.
+    eventsQuery.order('occurred_at', { ascending: true }).limit(REVIEW_EVENT_LIMIT + 1),
+    includeHistory
+      ? historyQuery.order('version', { ascending: true }).limit(REVIEW_EVENT_LIMIT)
+      : Promise.resolve({ data: [], error: null }),
+    supabase
+      .from('participant_attempts')
+      .select('participant_id, attempt_version, started_at, completed_at')
+      .eq('session_id', session.id),
+  ])
 
-  const { data: attempts, error: attemptsError } = await supabase
-    .from('participant_attempts')
-    .select('participant_id, attempt_version, started_at, completed_at')
-    .eq('session_id', session.id)
-  if (attemptsError) throw new SessionError(attemptsError.message, 500)
+  if (participantsResult.error) throw new SessionError(participantsResult.error.message, 500)
+  if (eventsResult.error) throw new SessionError(eventsResult.error.message, 500)
+  if (historyResult.error) throw new SessionError(historyResult.error.message, 500)
+  if (attemptsResult.error) throw new SessionError(attemptsResult.error.message, 500)
+
+  const allEvents = eventsResult.data ?? []
+  const truncated = allEvents.length > REVIEW_EVENT_LIMIT
 
   return {
     session,
     attemptVersion: attempt,
-    participants: participants ?? [],
+    participants: participantsResult.data ?? [],
     events: truncated ? allEvents.slice(0, REVIEW_EVENT_LIMIT) : allEvents,
     truncated,
-    stateHistory: stateHistory ?? [],
-    attempts: attempts ?? [],
+    stateHistory: historyResult.data ?? [],
+    attempts: attemptsResult.data ?? [],
   }
 }

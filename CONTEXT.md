@@ -24,9 +24,25 @@ _Avoid_: Selected scenario, active scenario
 Local scenario authoring state that has not yet been stored in the scenario library.
 _Avoid_: Unsaved scenario, temporary scenario
 
+**Room**:
+The join-coded space one instructor opens for their trainees. It holds every attempt run in it and the evaluation record of each, and both end when the instructor closes it.
+_Avoid_: Session, lobby, class
+
 **Attempt**:
 A single instructor-led dispatch simulation run whose confirmed scenario and defibrillator model remain fixed until the attempt ends.
 _Avoid_: Drill, run, session
+
+**Evaluation record**:
+Everything a room stores about an attempt for the instructor to review afterward: each trainee action in order, the confirmed clinical state it was taken against, and each change the instructor sent. It presents; it does not grade.
+_Avoid_: Report data, session log, history
+
+**Instructor change**:
+One Send by the instructor as the evaluation record shows it: the difference from the previous Send in that attempt. Every Send is its own instructor change, including a correction seconds after the last one; the opening Send is the one instructor change with nothing before it.
+_Avoid_: Instructor row, state diff, send row, version
+
+**Trainee action**:
+A single thing the trainee did on the monitor that the evaluation record captures, such as a shock, a medication, or a blood-pressure reading.
+_Avoid_: Student event, user action, click
 
 **Confirmed defibrillator model**:
 The Wagami device model locked to the current attempt after the instructor completes Save, Send, and Start / Dispatch.

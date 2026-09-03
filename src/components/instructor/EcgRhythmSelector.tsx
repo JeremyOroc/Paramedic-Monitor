@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { fieldStatus } from '@/store/fieldState'
 import { useMonitorStore } from '@/store/monitorStore'
 import { cn } from '@/lib/utils'
+import { RHYTHM_LABELS } from '@/lib/rhythmLabels'
 import type { Rhythm } from '@/types/vitals'
 
 import { OnOffToggle } from './OnOffToggle'
@@ -58,21 +59,6 @@ const ECG_RHYTHM_CATEGORIES: ReadonlyArray<RhythmCategory> = [
     ],
   },
 ]
-
-const RHYTHM_LABELS: Record<Rhythm, string> = {
-  off: 'Off',
-  nsr: 'NSR',
-  vf: 'VF',
-  vt: 'VT',
-  torsades: 'Torsades',
-  asystole: 'Asystole',
-  'first-degree': '1st Degree',
-  'second-degree-type-1': '2nd Degree Type 1',
-  'second-degree-type-2': '2nd Degree Type 2',
-  'third-degree': '3rd Degree',
-  'anterior-mi': 'Anterior MI',
-  'inferior-mi': 'Inferior MI',
-}
 
 export function EcgRhythmSelector({ compact = false }: EcgRhythmSelectorProps) {
   const [open, setOpen] = useState(false)

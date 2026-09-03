@@ -11,7 +11,10 @@ export async function GET(request: Request, { params }: RouteContext) {
   try {
     const { code } = await params
     // Defaults to the active attempt. `?attempt=all` exports the whole session.
-    const requested = new URL(request.url).searchParams.get('attempt')
+    const params_ = new URL(request.url).searchParams
+    const requested = params_.get('attempt')
+    // The console asks for history only while the Report tab is open.
+    const includeHistory = params_.get('include') === 'history'
     const attempt =
       requested === 'all'
         ? ('all' as const)
@@ -22,6 +25,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       code,
       hostTokenFromRequest(request),
       attempt === 'all' || Number.isFinite(attempt) ? attempt : -1,
+      { includeHistory },
     )
     return NextResponse.json(result)
   } catch (error) {

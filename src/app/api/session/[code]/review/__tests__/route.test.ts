@@ -34,26 +34,38 @@ describe('GET /api/session/[code]/review', () => {
   it('defaults to the active attempt when no attempt is requested', async () => {
     await GET(request(), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', -1)
+    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', -1, { includeHistory: false })
   })
 
   it('passes an explicitly requested attempt through', async () => {
     await GET(request('?attempt=2'), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', 2)
+    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', 2, { includeHistory: false })
   })
 
   it('supports a whole-session export', async () => {
     await GET(request('?attempt=all'), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', 'all')
+    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', 'all', { includeHistory: false })
   })
 
   it('falls back to the active attempt on an unparseable value', async () => {
     // A junk query string must not silently widen the review to every attempt.
     await GET(request('?attempt=banana'), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', -1)
+    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', -1, { includeHistory: false })
+  })
+
+  it('asks for history only when the console says it is looking at it (PLAN 13f)', async () => {
+    await GET(request('?include=history'), context)
+
+    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', -1, { includeHistory: true })
+  })
+
+  it('combines an attempt with the history flag', async () => {
+    await GET(request('?attempt=2&include=history'), context)
+
+    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', 2, { includeHistory: true })
   })
 
   it('reports service failures with their status', async () => {

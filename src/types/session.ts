@@ -73,3 +73,34 @@ export type StudentEvent = {
    */
   state_version: number | null
 }
+
+/**
+ * One instructor-confirmed state, as it stood when it was sent. Append-only:
+ * `session_state` is overwritten on the next Send, so this is the only record
+ * of what the patient was when a trainee acted against it.
+ */
+export type SessionStateHistoryEntry = {
+  version: number
+  attempt_version: number
+  state: unknown
+  applied_at: string
+}
+
+/** One trainee's window on one drill run. `completed_at` closes on New Attempt and End. */
+export type ParticipantAttempt = {
+  participant_id: string
+  attempt_version: number
+  started_at: string
+  completed_at: string | null
+}
+
+/** The shape `GET /api/session/[code]/review` returns. */
+export type SessionReview = {
+  session: Session
+  attemptVersion: number | 'all'
+  participants: SessionParticipant[]
+  events: StudentEvent[]
+  truncated: boolean
+  stateHistory: SessionStateHistoryEntry[]
+  attempts: ParticipantAttempt[]
+}
