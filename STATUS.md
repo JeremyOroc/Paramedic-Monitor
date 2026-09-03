@@ -23,6 +23,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Expanded Instructor Console width — COMPLETE (2026-09-02):** Widened all four tabs with 24px side gutters, retaining the current main layout with Vitals on the left, equal-height SAMPLE/OPQRST stacked on the right, existing control sizing, column proportions, and compact height-based spacing. All 62 targeted tests pass. Rendered laptop checks confirm the column geometry and no horizontal overflow; 1080×700 compact geometry also passes. The expanded controls retain vertical scrolling when the viewport is shorter than the approximately 829px content bottom.
 - [x] **State-driven Wagami X vital placement — COMPLETE:**
   - [x] Removed the idle `APPL ELECT.` banner, its three lower boxes, and the dormant Apply Electrodes component/rendering path from Wagami X
   - [x] Added the resting vital layout: FC, PNI, EtCO2, and SpO2 render as four equal, full-featured cells in the fixed 110px bottom region before the first accepted physical Analyze or Charge action

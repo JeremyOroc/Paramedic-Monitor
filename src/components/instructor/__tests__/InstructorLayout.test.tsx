@@ -16,9 +16,10 @@ describe('InstructorLayout', () => {
     expect(screen.queryByText(/Local-only\. Edits go through/)).toBeNull()
     expect(screen.getByText('Console content')).toBeInTheDocument()
     expect(screen.getByText('Console content').parentElement).toHaveClass(
-      'max-w-5xl',
+      'w-full',
+      'p-6',
+      'gap-6',
       '[@media(max-height:900px)]:gap-2',
-      '[@media(max-height:900px)]:px-4',
       '[@media(max-height:900px)]:py-2',
     )
   })
