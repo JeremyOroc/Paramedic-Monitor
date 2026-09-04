@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-09-03] [instructor] — Phase 15: instructor change expansion
+
+- Every instructor change in the Report tab now opens. The opening change shows the scenario as sent, grouped Dispatch / Patient / Device with empty fields absent. Every later change shows only the fields that Send moved, before → after, because real room data put 79% of the dispatch card as a repeat of the row above when every row rendered it in full.
+- Widened `diffStates` to everything the instructor sets: SpO2 and EtCO2 waveforms, defibrillator model, each dispatch card field under the console's own label, route origin and destination, and response time. It returns structured `FieldChange`s; `summarizeChanges` produces the one-line form, naming clinical changes and collapsing the dispatch card and route to a count, with `+n more` past six clauses. The dispatch clock's ids and deadlines, the route's polyline and status, the trainee's own stamps, and the legacy CPR mirror are never compared.
+- Added `describeState` for the opening snapshot and a native disclosure per instructor change with `aria-expanded`, held per row id so an open row survives the 2.5s poll. Action rows and Sends that changed nothing have no disclosure; the latter now read `sent (no change)`. Copy-to-clipboard is unchanged.
+- Waveform display names are defined in the timeline; the console's waveform selectors declare no labels of their own.
+- Added 16 tests. All 1020 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass.
+
 ## [2026-09-03] [monitor/server] — Phase 14: sync and queue
 
 - Added `?since=<version>` to `GET /api/session/[code]/state`. The trainee's sync hook names the version it holds; when nothing moved the server reads only the version and answers `{ unchanged: true }` without the blob. Measured live at 13,677 → 315 bytes per unchanged poll. The clock offset is now measured on every poll, since a queued action stamps the latest one and the room is usually unchanged (`docs/adr/0003`).
