@@ -84,6 +84,22 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['session_state_history']['Insert']>
         Relationships: []
       }
+      session_attempts: {
+        Row: {
+          session_id: string
+          attempt_version: number
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          session_id: string
+          attempt_version: number
+          label?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['session_attempts']['Insert']>
+        Relationships: []
+      }
       participants: {
         Row: {
           id: string

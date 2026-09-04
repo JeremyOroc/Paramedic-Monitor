@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { buildEvaluationTimeline, formatOffset } from '@/lib/evaluationTimeline'
 import { cn } from '@/lib/utils'
 import type {
+  AttemptLabel,
   ParticipantAttempt,
   SessionParticipant,
   SessionStateHistoryEntry,
@@ -24,7 +25,18 @@ type EvaluationReportPanelProps = {
   participants: readonly Pick<SessionParticipant, 'id' | 'nickname'>[]
   attemptVersion: number
   onAttemptVersionChange?: (version: number) => void
+  /** Instructor-given names by attempt number. The number always shows; the name sits beside it. */
+  attemptLabels?: readonly AttemptLabel[]
+  /** Present only for the host; the rename field renders when it is. */
+  onRenameAttempt?: (version: number, label: string) => void
   truncated?: boolean
+}
+
+export const ATTEMPT_LABEL_MAX = 60
+
+/** `2 · Morning cohort`, or `2` when unnamed. */
+export function attemptTitle(version: number, label: string): string {
+  return label ? `${version} · ${label}` : String(version)
 }
 
 function contextText(context: TimelineContext): string {
@@ -91,9 +103,9 @@ function InstructorChangeDetail({ row }: { row: TimelineInstructorRow }) {
   )
 }
 
-/** The stream as plain text, for pasting into a debrief. */
-function toPlainText(rows: readonly TimelineRow[], showNames: boolean): string {
-  return rows
+/** The stream as plain text, for pasting into a debrief, headed by which attempt it was. */
+function toPlainText(rows: readonly TimelineRow[], showNames: boolean, heading: string): string {
+  const body = rows
     .map((row) => {
       if (row.kind === 'instructor') {
         const what = row.opening
@@ -108,6 +120,7 @@ function toPlainText(rows: readonly TimelineRow[], showNames: boolean): string {
       return `${row.offset}\t${who}${row.eventKind}\t${row.detail}\t${contextText(row.context)}${behind}`
     })
     .join('\n')
+  return `${heading}\n${body}`
 }
 
 export function EvaluationReportPanel({
@@ -117,6 +130,8 @@ export function EvaluationReportPanel({
   participants,
   attemptVersion,
   onAttemptVersionChange,
+  attemptLabels = [],
+  onRenameAttempt,
   truncated = false,
 }: EvaluationReportPanelProps) {
   const [copied, setCopied] = useState(false)
@@ -149,6 +164,28 @@ export function EvaluationReportPanel({
   // has to say who did what rather than silently merging two runs.
   const showNames = timeline.participantNames.length > 1
 
+  const labelFor = useCallback(
+    (version: number) =>
+      attemptLabels.find((entry) => entry.attempt_version === version)?.label ?? '',
+    [attemptLabels],
+  )
+  const currentLabel = labelFor(attemptVersion)
+  const heading = [
+    `Attempt ${attemptTitle(attemptVersion, currentLabel)}`,
+    timeline.participantNames.join(', ') || 'No trainee',
+    formatOffset(timeline.durationMs).replace('t+', ''),
+  ].join(' · ')
+
+  // Save when the instructor leaves the field or presses Enter, and only if
+  // the name actually changed -- blur after Enter must not save twice.
+  const commitLabel = useCallback(
+    (value: string) => {
+      const next = value.trim()
+      if (next !== currentLabel) onRenameAttempt?.(attemptVersion, next)
+    },
+    [attemptVersion, currentLabel, onRenameAttempt],
+  )
+
   const attemptVersions = useMemo(() => {
     const versions = new Set<number>([attemptVersion])
     for (const attempt of attempts) versions.add(attempt.attempt_version)
@@ -158,7 +195,7 @@ export function EvaluationReportPanel({
 
   const copy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(toPlainText(timeline.rows, showNames))
+      await navigator.clipboard.writeText(toPlainText(timeline.rows, showNames, heading))
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -166,7 +203,7 @@ export function EvaluationReportPanel({
       // on screen to read from.
       setCopied(false)
     }
-  }, [showNames, timeline.rows])
+  }, [heading, showNames, timeline.rows])
 
   const actionCount = timeline.rows.filter((row) => row.kind === 'action').length
   // Every action resolving to no state is what an unapplied migration 007 looks
@@ -200,16 +237,34 @@ export function EvaluationReportPanel({
               >
                 {attemptVersions.map((version) => (
                   <option key={version} value={version}>
-                    {version}
+                    {attemptTitle(version, labelFor(version))}
                   </option>
                 ))}
               </select>
             </label>
           ) : (
             <span className="font-mono text-xs uppercase tracking-wider text-neutral-500">
-              Attempt {attemptVersion}
+              Attempt {attemptTitle(attemptVersion, currentLabel)}
             </span>
           )}
+          {onRenameAttempt ? (
+            <input
+              // Keyed on the attempt and its stored name so switching attempt,
+              // or a poll bringing a new name, resets the field without an
+              // effect. Uncontrolled between those resets.
+              key={`${attemptVersion}:${currentLabel}`}
+              type="text"
+              aria-label="Attempt name"
+              placeholder="Name this attempt"
+              defaultValue={currentLabel}
+              maxLength={ATTEMPT_LABEL_MAX}
+              onBlur={(nativeEvent) => commitLabel(nativeEvent.currentTarget.value)}
+              onKeyDown={(nativeEvent) => {
+                if (nativeEvent.key === 'Enter') nativeEvent.currentTarget.blur()
+              }}
+              className="w-44 border border-neutral-700 bg-black px-2 py-1 font-mono text-xs text-neutral-200 placeholder:text-neutral-600 focus:border-cyan-bp focus:outline-none"
+            />
+          ) : null}
           <span className="font-mono text-xs uppercase tracking-wider text-neutral-500">
             {timeline.participantNames.join(', ') || 'No trainee'}
           </span>

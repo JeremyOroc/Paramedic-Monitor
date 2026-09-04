@@ -285,6 +285,76 @@ describe('EvaluationReportPanel', () => {
     expect(within(screen.getByTestId('report-row-action')).queryByRole('button')).not.toBeInTheDocument()
   })
 
+  it('shows attempt names beside their numbers, and never drops the number', async () => {
+    const user = userEvent.setup()
+    const onAttemptVersionChange = vi.fn()
+    renderPanel({
+      attemptVersion: 2,
+      attempts: [...ATTEMPTS, { participant_id: 'student-1', attempt_version: 2, started_at: at(600), completed_at: null }],
+      attemptLabels: [{ attempt_version: 2, label: 'Morning cohort' }],
+      onAttemptVersionChange,
+    })
+
+    const picker = screen.getByRole('combobox')
+    expect(within(picker).getByRole('option', { name: '1' })).toBeInTheDocument()
+    expect(within(picker).getByRole('option', { name: '2 · Morning cohort' })).toBeInTheDocument()
+
+    await user.selectOptions(picker, '1')
+    expect(onAttemptVersionChange).toHaveBeenCalledWith(1)
+  })
+
+  it('shows the name in the single-attempt header and in the copied text', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+    renderPanel({
+      attemptLabels: [{ attempt_version: 1, label: 'Warm-up' }],
+      stateHistory: [state(1, 0, {})],
+    })
+
+    expect(screen.getByText('Attempt 1 · Warm-up')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Copy' }))
+    expect((writeText.mock.calls[0][0] as string).split('\n')[0]).toMatch(/^Attempt 1 · Warm-up · /)
+  })
+
+  it('lets the host name the attempt on Enter or blur, once per change', async () => {
+    const user = userEvent.setup()
+    const onRenameAttempt = vi.fn()
+    renderPanel({ onRenameAttempt })
+
+    const field = screen.getByRole('textbox', { name: 'Attempt name' })
+    await user.type(field, 'Morning cohort{Enter}')
+    expect(onRenameAttempt).toHaveBeenCalledWith(1, 'Morning cohort')
+    // Enter blurs the field; the blur must not save the same value again.
+    expect(onRenameAttempt).toHaveBeenCalledTimes(1)
+
+    await user.click(field)
+    await user.clear(field)
+    await user.type(field, 'Exam')
+    await user.tab()
+    expect(onRenameAttempt).toHaveBeenLastCalledWith(1, 'Exam')
+  })
+
+  it('does not save an unchanged name, and clears with an empty one', async () => {
+    const user = userEvent.setup()
+    const onRenameAttempt = vi.fn()
+    renderPanel({ attemptLabels: [{ attempt_version: 1, label: 'Exam' }], onRenameAttempt })
+
+    const field = screen.getByRole('textbox', { name: 'Attempt name' })
+    expect(field).toHaveValue('Exam')
+    await user.click(field)
+    await user.tab()
+    expect(onRenameAttempt).not.toHaveBeenCalled()
+
+    await user.clear(field)
+    await user.tab()
+    expect(onRenameAttempt).toHaveBeenCalledWith(1, '')
+  })
+
+  it('has no rename field without a host', () => {
+    renderPanel({})
+    expect(screen.queryByRole('textbox', { name: 'Attempt name' })).not.toBeInTheDocument()
+  })
+
   it('warns that patient context is unavailable when no state was recorded', () => {
     renderPanel({ events: [makeEvent({ state_version: null })] })
 

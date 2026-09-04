@@ -62,6 +62,7 @@ import type {
 } from '@/types/patientPhysical'
 import type { CprMode, NumericVitalField } from '@/types/vitals'
 import type {
+  AttemptLabel,
   ParticipantAttempt,
   SessionStateHistoryEntry,
   StudentEvent,
@@ -111,6 +112,7 @@ type PastReview = {
   events: StudentEvent[]
   stateHistory: SessionStateHistoryEntry[]
   attempts: ParticipantAttempt[]
+  attemptLabels: AttemptLabel[]
   truncated: boolean
 }
 
@@ -227,6 +229,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const [studentEvents, setStudentEvents] = useState<StudentEvent[]>([])
   const [stateHistory, setStateHistory] = useState<SessionStateHistoryEntry[]>([])
   const [attempts, setAttempts] = useState<ParticipantAttempt[]>([])
+  const [attemptLabels, setAttemptLabels] = useState<AttemptLabel[]>([])
   const [reviewTruncated, setReviewTruncated] = useState(false)
   const [attemptVersion, setAttemptVersion] = useState(1)
   // A past attempt the evaluator has opened in the Report tab. The 2.5s poll
@@ -270,6 +273,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     // Report tab does not blank what the next visit will refetch anyway.
     if (includeHistory) setStateHistory(data.stateHistory ?? [])
     setAttempts(data.attempts ?? [])
+    setAttemptLabels(data.attemptLabels ?? [])
     setReviewTruncated(data.truncated === true)
   }, [includeHistory, session])
 
@@ -389,10 +393,50 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         events: data.events ?? [],
         stateHistory: data.stateHistory ?? [],
         attempts: data.attempts ?? [],
+        attemptLabels: data.attemptLabels ?? [],
         truncated: data.truncated === true,
       })
     },
     [attemptVersion, session],
+  )
+
+  // Name an attempt. The response is applied locally so the picker and the
+  // status line update at once rather than on the next poll.
+  const renameAttempt = useCallback(
+    async (version: number, label: string) => {
+      if (!session) return
+      let data: { attempt?: AttemptLabel; error?: string }
+      try {
+        const response = await fetch(`/api/session/${session.code}/attempt/${version}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-host-token': session.hostToken,
+          },
+          body: JSON.stringify({ label }),
+        })
+        data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          setSessionError(data.error ?? `Unable to rename attempt (HTTP ${response.status})`)
+          return
+        }
+      } catch (caught) {
+        setSessionError(caught instanceof Error ? caught.message : 'Unable to rename attempt')
+        return
+      }
+      const saved = data.attempt
+      if (!saved) return
+      setSessionError('')
+      const apply = (labels: AttemptLabel[]) => [
+        ...labels.filter((entry) => entry.attempt_version !== saved.attempt_version),
+        saved,
+      ]
+      setAttemptLabels(apply)
+      setPastReview((current) =>
+        current ? { ...current, attemptLabels: apply(current.attemptLabels) } : current,
+      )
+    },
+    [session],
   )
 
   const report = pastReview ?? {
@@ -401,8 +445,11 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     events: studentEvents,
     stateHistory,
     attempts,
+    attemptLabels,
     truncated: reviewTruncated,
   }
+  const activeAttemptLabel =
+    attemptLabels.find((entry) => entry.attempt_version === attemptVersion)?.label ?? ''
 
   const sendSessionState = useCallback(async () => {
     if (!session) return
@@ -822,7 +869,11 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               <RoomCodeCopy code={session.code} className="mt-2" />
               <p className="mt-2 text-sm text-neutral-300">
                 Status: <span className="font-bold uppercase">{sessionStatus}</span>
-                {' · '}Attempt <span className="font-bold">{attemptVersion}</span>
+                {' · '}Attempt{' '}
+                <span className="font-bold">
+                  {attemptVersion}
+                  {activeAttemptLabel ? ` · ${activeAttemptLabel}` : ''}
+                </span>
               </p>
             </div>
             <div className="mt-3 flex shrink-0 flex-wrap gap-2">
@@ -1102,6 +1153,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           participants={report.participants}
           attemptVersion={report.attemptVersion}
           onAttemptVersionChange={(version) => void viewReportAttempt(version)}
+          attemptLabels={report.attemptLabels}
+          onRenameAttempt={session ? (version, label) => void renameAttempt(version, label) : undefined}
           truncated={report.truncated}
         />
       ) : (
