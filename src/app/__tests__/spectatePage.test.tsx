@@ -25,7 +25,7 @@ describe('SpectatePage', () => {
   it('shows a waiting state before the trainee publishes a monitor', async () => {
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       session: { status: 'active', active_attempt_version: 1 },
-      participant: { nickname: 'Alice' },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
       projection: null,
     }), { status: 200 }))
 
@@ -38,7 +38,7 @@ describe('SpectatePage', () => {
   it('renders the latest frame inside an inert surface with live metadata', async () => {
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       session: { status: 'active', active_attempt_version: 1 },
-      participant: { nickname: 'Alice' },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
       projection: {
         streamId: 'stream-1',
         clientSequence: 3,
@@ -59,7 +59,7 @@ describe('SpectatePage', () => {
   it('distinguishes a stale trainee heartbeat from a spectator connection failure', async () => {
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       session: { status: 'active', active_attempt_version: 1 },
-      participant: { nickname: 'Alice' },
+      participant: { nickname: 'Alice', last_seen_at: new Date(Date.now() - 10_000).toISOString() },
       projection: {
         streamId: 'stream-1',
         clientSequence: 3,
@@ -87,7 +87,7 @@ describe('SpectatePage', () => {
   it('keeps the last monitor visible after the instructor ends the room', async () => {
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       session: { status: 'ended', active_attempt_version: 1 },
-      participant: { nickname: 'Alice' },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
       projection: {
         streamId: 'stream-1',
         clientSequence: 3,
@@ -107,7 +107,7 @@ describe('SpectatePage', () => {
     const fetchMock = vi.spyOn(window, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({
         session: { status: 'active', active_attempt_version: 1 },
-        participant: { nickname: 'Alice' },
+        participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
         projection: {
           streamId: 'stream-1',
           clientSequence: 3,
@@ -118,7 +118,7 @@ describe('SpectatePage', () => {
       }), { status: 200 }))
       .mockResolvedValue(new Response(JSON.stringify({
         session: { status: 'waiting', active_attempt_version: 2 },
-        participant: { nickname: 'Alice' },
+        participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
         projection: null,
       }), { status: 200 }))
 
@@ -134,7 +134,7 @@ describe('SpectatePage', () => {
     const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async () =>
       new Response(JSON.stringify({
         session: { status: 'active', active_attempt_version: 1 },
-        participant: { nickname: 'Alice' },
+        participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
         projection: {
           streamId: 'stream-1',
           clientSequence: 3,

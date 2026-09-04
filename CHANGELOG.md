@@ -5,6 +5,44 @@
 
 ---
 
+## [2026-09-03] [instructor/realtime] — Embed the selected trainee monitor in the console
+
+- Rebuilt the live-room header as equal 480px room-control and spectator columns. Room information,
+  actions, and the internally scrolling two-line roster now occupy the cyan-bordered left half; the
+  legacy Live Evaluation card is removed and the Report tab remains authoritative.
+- Replaced roster links with a single transient Spectate toggle. Selection receives a cyan treatment,
+  Stop Spectating is amber and immediate, and direct switching synchronously clears the prior frame
+  before the new trainee identity connects.
+- Added a shared abortable one-second spectator polling hook, with only the selected trainee active;
+  waiting, offline-without-monitor, connection-loss, New Attempt, and Room ended behavior preserve
+  identity and the latest valid frame as designed. End Room no longer redirects the instructor away.
+- Contained dispatch overlays and Wagami X/Z inside an inert 1024×753 canvas that scales uniformly
+  into the black preview with letterboxing and no crop or reflow. The standalone route remains and
+  now uses roster heartbeat freshness instead of projection-change time for offline status.
+- Added UI, lifecycle, switch-race, containment, 30-trainee, and standalone regressions. All 999 tests,
+  TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the production build pass. A real
+  instructor/trainee browser run rendered the live dispatch mirror with clean console logs.
+
+## [2026-09-03] [planning/instructor] — Complete the Embedded Spectator design tree
+
+- Made Stop Spectating immediate and confirmation-free, with the right panel returning to its selection prompt. Switching trainees clears the old frame before the new identity appears and shows a targeted connecting state, preventing cross-student frame mislabelling.
+- Kept Spectate enabled for every roster entry. Connected trainees without a projection show Waiting; offline trainees without a saved frame show `Trainee offline · No monitor received`; selection never changes roster order.
+- Locked the two top columns to the same 480px desktop height. The selected row uses a cyan treatment and an amber Stop action, while the right half stays black with no macOS screenshot chrome and uniformly contains the complete trainee presentation.
+- Marked the Embedded Spectator design complete and pending final implementation confirmation; the deployed projection and standalone route remain intact.
+
+## [2026-09-03] [planning/instructor] — Define Embedded Spectator selection and lifecycle
+
+- Made spectator selection transient and intentional: the console starts with no selection, polls only the selected trainee once per second, cancels obsolete polling when stopping or switching, and never automatically switches students.
+- Kept the selected trainee through offline periods, New Attempt, and End Room. The last valid frame remains under the appropriate status; New Attempt resumes automatically when that trainee publishes again, while End Room remains until Stop Spectating or navigation.
+- Defined each half-width student entry as a two-line row with identity/action above progress, and required the miniature to preserve the complete trainee presentation through uniform scaling and black letterboxing rather than cropping or reflowing it.
+
+## [2026-09-03] [planning/instructor] — Redirect Spectating into the Instructor Console
+
+- Replaced the proposed new-tab roster behavior with a single Embedded Spectator in the right half of the room header. A selected trainee's button becomes `Stop Spectating`; selecting another trainee switches directly.
+- Defined the left half as a cyan-bordered, vertically stacked room-control panel: Room Code label, code plus Copy, status plus attempt, room actions, and a bounded scrolling Students list. Both top columns use the same approximately 460–500px desktop height.
+- Removed the legacy Live Evaluation card in favor of the existing Report tab. The right half is black, shows a subdued selection prompt while idle, and shows a compact trainee/model/connection header with the complete contained monitor while active.
+- Kept the standalone Spectator route for potential future use while removing it from the Instructor Console's normal interaction. Added `Embedded Spectator` to the domain language and reopened Phase 17's presentation milestone for the remaining design decisions.
+
 ## [2026-09-03] [database/instructor] — Deploy folder ordering and Spectator storage
 
 - Applied `20260902160000_strip_history_route_geometry.sql` and `20260903222810_instructor_spectator_and_folder_order.sql` to the linked Supabase project after explicit approval of the historical route-geometry cleanup.

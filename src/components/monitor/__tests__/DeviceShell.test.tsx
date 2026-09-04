@@ -113,6 +113,13 @@ describe('DeviceShell', () => {
     expect(document.querySelector('video[src="/videos/golden_freddy.mp4"]')).not.toBeInTheDocument()
   }
 
+  it('drops the desktop minimum width when embedded in a spectator canvas', () => {
+    const { container } = render(<DeviceShell {...makeProps()} embedded />)
+
+    expect(container.firstElementChild).toHaveClass('min-w-0', 'h-full', 'w-full')
+    expect(container.firstElementChild).not.toHaveClass('min-w-[1024px]')
+  })
+
   it('renders the WAGAMI wordmark', () => {
     render(<DeviceShell {...makeProps()} />)
     expect(screen.getByText('WAGAMI')).toBeInTheDocument()

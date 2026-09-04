@@ -53,7 +53,12 @@ function useProjectedDefibProgress(defib: MonitorProjection['defib']) {
   return progress
 }
 
-export function SpectatorMonitor({ projection }: { projection: MonitorProjection }) {
+type SpectatorMonitorProps = {
+  projection: MonitorProjection
+  embedded?: boolean
+}
+
+export function SpectatorMonitor({ projection, embedded = false }: SpectatorMonitorProps) {
   const controller = projection.controller
   const defib = projection.defib
   const defibProgress = useProjectedDefibProgress(defib)
@@ -221,6 +226,7 @@ export function SpectatorMonitor({ projection }: { projection: MonitorProjection
         countdownFormatted={projection.countdownFormatted}
         responseFormatted={projection.responseTimer}
         fullScreen
+        contained={embedded}
         variant={projection.callerInfoVariant}
         canEnterMonitor={projection.gateSatisfied}
         onEnterMonitor={noop}
@@ -305,6 +311,7 @@ export function SpectatorMonitor({ projection }: { projection: MonitorProjection
         onCallerEvent={noop}
         buttonState={callerButtonState}
         fullScreen
+        contained={embedded}
         variant={projection.callerInfoVariant}
         onBack={noop}
         canEnterMonitor

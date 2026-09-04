@@ -6,11 +6,11 @@
 ---
 
 ## Current Phase
-**Phase 17 — Instructor Spectator View — COMPLETE AND DEPLOYED (2026-09-03).** Every trainee row now
-opens a separate, silent, inert Wagami X/Z semantic mirror. Participant projections use a
-host-authorized latest-state channel with stream/sequence freshness, immediate coalesced publishing,
-one-second polling, timestamp-driven timed states, attempt resets, and distinct waiting, offline,
-connection-loss, and room-ended presentation.
+**Phase 17 — Instructor Spectator View — COMPLETE (2026-09-03).** The silent, inert Wagami X/Z
+semantic projection, standalone route, and Embedded Spectator are complete. The Instructor Console
+replaces Live Evaluation with one transiently selected, uniformly contained spectator beside a
+half-width room-control panel. Selected-only polling, safe switching, waiting/offline/ended states,
+and the retained standalone route are verified.
 
 **Phase 10 enhancement — folder scrolling and persistent folder order — COMPLETE AND DEPLOYED
 (2026-09-03).** Expanded scenario folders grow the library without a nested scrollbar. Folders now
@@ -53,9 +53,8 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
-- [x] **Phase 17 — Instructor Spectator View — COMPLETE AND DEPLOYED:**
-  - [x] Added a `Spectate` action to every trainee row, opening a separate host-authorized tab without
-        putting secrets in the URL
+- [x] **Phase 17 foundation — Spectator projection and standalone presentation — COMPLETE AND DEPLOYED:**
+  - [x] Added a standalone host-authorized Spectator presentation without putting secrets in the URL
   - [x] Added versioned semantic monitor projections for dispatch, Wagami X/Z, power/boot, menus,
         modals, selections, defibrillation, NIBP, calibration, timers, and logs
   - [x] Added latest-only projection storage with per-page stream IDs, monotonic sequence rejection,
@@ -692,8 +691,22 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 
 ---
 
-## In Progress
-- None.
+## Recently Completed
+- [x] **Phase 17 presentation enhancement — Embedded Spectator — COMPLETE:**
+  - [x] Replace Live Evaluation with equal 480px-high room-control and Embedded Spectator columns
+  - [x] Define vertically stacked room controls, bounded Students scrolling, and two-line roster rows
+  - [x] Define single transient selection, direct switching, Stop Spectating, selected-only polling,
+        stable roster order, and selected-row styling
+  - [x] Define safe frame clearing on switch, enabled offline/waiting selection, lifecycle behavior,
+        compact status metadata, and uniformly contained black-background rendering
+  - [x] Preserve the standalone route for a possible different future use
+  - [x] Receive final confirmation of the complete design
+  - [x] Implement one abortable selected-only polling path shared with the standalone route
+  - [x] Keep full-screen dispatch overlays inside the preview and uniformly scale the complete
+        simulator canvas with black letterboxing and no crop/reflow
+  - [x] Keep the final frame after End Room by removing the instructor redirect
+  - [x] Verify 999 tests, TypeScript, ESLint with zero errors and 12 pre-existing warnings, the
+        production build, and a real instructor/trainee browser flow with clean console logs
 
 ---
 

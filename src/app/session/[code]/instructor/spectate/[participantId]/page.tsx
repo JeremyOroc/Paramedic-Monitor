@@ -4,21 +4,9 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 
 import { SpectatorMonitor } from '@/components/instructor/SpectatorMonitor'
+import { useSpectatorProjection } from '@/hooks/useSpectatorProjection'
+import { isConnected } from '@/lib/sessionRoster'
 import { cn } from '@/lib/utils'
-import type { MonitorProjectionEnvelope } from '@/types/monitorProjection'
-
-type SpectateResponse = {
-  session: {
-    status: 'waiting' | 'active' | 'ended'
-    active_attempt_version: number
-  }
-  participant: {
-    nickname: string
-  }
-  projection: MonitorProjectionEnvelope | null
-}
-
-const OFFLINE_AFTER_MS = 5_000
 
 function hostStorageKey(code: string) {
   return `paramedic-monitor.host.${code.toUpperCase()}`
@@ -29,9 +17,11 @@ export default function SpectatePage() {
   const code = params.code.toUpperCase()
   const [hostToken, setHostToken] = useState('')
   const [resolved, setResolved] = useState(false)
-  const [data, setData] = useState<SpectateResponse | null>(null)
-  const [connectionLost, setConnectionLost] = useState(false)
-  const [now, setNow] = useState(() => Date.now())
+  const { data, connectionLost, connecting, now } = useSpectatorProjection({
+    code,
+    hostToken,
+    participantId: params.participantId,
+  })
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
@@ -46,42 +36,6 @@ export default function SpectatePage() {
   }, [code])
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  useEffect(() => {
-    if (!hostToken) return
-    let cancelled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
-
-    const poll = async () => {
-      try {
-        const response = await fetch(
-          `/api/session/${code}/spectate/${params.participantId}`,
-          { headers: { 'x-session-host-token': hostToken }, cache: 'no-store' },
-        )
-        if (!response.ok) throw new Error('Spectator request failed')
-        const next = (await response.json()) as SpectateResponse
-        if (!cancelled) {
-          setData(next)
-          setConnectionLost(false)
-        }
-      } catch {
-        if (!cancelled) setConnectionLost(true)
-      } finally {
-        if (!cancelled) timer = setTimeout(poll, 1000)
-      }
-    }
-
-    void poll()
-    return () => {
-      cancelled = true
-      if (timer) clearTimeout(timer)
-    }
-  }, [code, hostToken, params.participantId])
-
   if (!resolved) return <main className="h-screen bg-black" />
   if (!hostToken) {
     return (
@@ -94,18 +48,21 @@ export default function SpectatePage() {
   }
 
   const envelope = data?.projection ?? null
-  const traineeOffline =
-    envelope !== null && now - Date.parse(envelope.updatedAt) > OFFLINE_AFTER_MS
+  const traineeOffline = data ? !isConnected(data.participant.last_seen_at, now) : false
   const roomEnded = data?.session.status === 'ended'
-  const connectionLabel = connectionLost
-    ? 'Spectator connection lost'
-    : roomEnded
-      ? 'Room ended'
-      : traineeOffline
-        ? 'Trainee offline'
-        : envelope
-          ? 'Live'
-          : 'Waiting for trainee monitor'
+  const connectionLabel = connecting
+    ? 'Connecting to trainee…'
+    : connectionLost
+      ? 'Spectator connection lost'
+      : roomEnded
+        ? 'Room ended'
+        : traineeOffline && !envelope
+          ? 'Trainee offline · No monitor received'
+          : traineeOffline
+            ? 'Trainee offline'
+            : envelope
+              ? 'Live'
+              : 'Waiting for trainee monitor'
 
   return (
     <main className="flex h-screen min-w-[1024px] flex-col overflow-hidden bg-black text-white">
@@ -128,9 +85,11 @@ export default function SpectatePage() {
           {connectionLabel}
         </span>
         <span className="text-neutral-500">
-          {envelope
+          {envelope && (connectionLost || traineeOffline || roomEnded)
             ? `Updated ${new Date(envelope.updatedAt).toLocaleTimeString()}`
-            : `Attempt ${data?.session.active_attempt_version ?? '—'}`}
+            : envelope
+              ? null
+              : `Attempt ${data?.session.active_attempt_version ?? '—'}`}
         </span>
       </header>
       <div className="relative min-h-0 flex-1 overflow-hidden">

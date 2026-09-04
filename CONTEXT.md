@@ -37,15 +37,19 @@ A single instructor-led dispatch simulation run whose confirmed scenario and def
 _Avoid_: Drill, run, session
 
 **Spectator view**:
-A host-authorized, read-only reproduction of one trainee's current simulator presentation. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
+A host-authorized, read-only reproduction of one trainee's current simulator presentation, shown either inside the Instructor Console or as a standalone page. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
 _Avoid_: Remote monitor, screen share, instructor monitor
+
+**Embedded Spectator**:
+The single selected trainee's Spectator view shown alongside the room controls inside the Instructor Console.
+_Avoid_: Preview, mini monitor, Live Evaluation
 
 **Trainee monitor projection**:
 A point-in-time description of the trainee-specific simulator state needed to reproduce a Spectator view, including local interaction and timed-progress state.
 _Avoid_: Event replay, screen capture, shared monitor state
 
 **Projection freshness**:
-How current a trainee monitor projection is relative to the trainee's latest accepted simulator state. It is distinct from trainee presence and the Spectator tab's own connection to the server.
+How current a trainee monitor projection is relative to the trainee's latest accepted simulator state. It is distinct from trainee presence and the Spectator presentation's own connection to the server.
 _Avoid_: Connection status, participant presence
 
 **Evaluation record**:

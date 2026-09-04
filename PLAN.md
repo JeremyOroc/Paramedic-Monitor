@@ -1235,11 +1235,12 @@ value both arrive with scale.
 ---
 
 ### Phase 17 — Instructor Spectator View
-**Goal:** From every trainee row in the Instructor Console, the instructor can open a separate tab
-that reproduces that trainee's current simulator presentation without being able to control it.
+**Goal:** From every trainee row in the Instructor Console, the instructor can select one trainee and
+observe that trainee's current simulator presentation in an adjacent Embedded Spectator without being
+able to control it.
 
-**Status:** Complete and deployed on 2026-09-03 after explicit design confirmation and remote schema
-verification.
+**Status:** Complete as of 2026-09-03. The projection, standalone presentation, and remote schema are
+deployed, and the revised Embedded Spectator presentation is implemented in the Instructor Console.
 
 **Decided 2026-09-03:** The Spectator view is a semantic reproduction, not literal screen capture or
 video streaming. It covers the complete simulator presentation, including dispatch, the selected
@@ -1259,11 +1260,41 @@ latest projection once per second, while absolute phase and deadline timestamps 
 progress animate smoothly between responses. This phase does not pull forward Supabase Realtime;
 the future Realtime nudge in Phase 16 may accelerate the same correctness path without replacing it.
 
-Every roster row exposes an enabled Spectate action that opens its trainee in a separate tab, and an
-instructor may keep multiple trainee tabs open at once. Before the first projection, the tab shows a
+Every roster row exposes a Spectate toggle for the single Embedded Spectator. Selecting a trainee
+changes that row's action to `Stop Spectating`; selecting another trainee switches directly and
+restores the previous row's `Spectate` label. The standalone Spectator route remains available for a
+possible different future use, but the Instructor Console no longer opens it in a new tab. Spectator
+selection is transient: the console always starts and reloads with no selected trainee. Only the
+selected trainee is polled, once per second; stopping or switching cancels the obsolete polling path.
+Stop Spectating is immediate and confirmation-free. Switching clears the previous frame before the
+new identity appears, then shows `Connecting to <name>…` until that trainee's response arrives.
+Every roster trainee remains selectable, including offline trainees and those with no projection.
+A selected offline trainee without a saved frame shows `Trainee offline · No monitor received`; a
+connected trainee without a projection shows `Waiting for trainee monitor`.
+
+The Instructor Console's current full-width room section becomes two equal desktop columns of the
+same fixed 480px height. The cyan border encloses only the left half. Its contents stack in this
+order: Room Code label; room-code value with Copy; status and attempt; Start/Dispatch, New Attempt,
+and End Room actions; then Students. Only the Students list scrolls when it exceeds the available
+height. Each trainee uses a compact two-line row: connection, name, and Spectate action above; Ack,
+Arr, Txp, Shk, and Med progress below. The legacy Live Evaluation card is removed; the Report tab
+remains the evaluation record. Roster order remains stable through selection and connection changes.
+The selected row receives a cyan border and subtle cyan-black background; its action uses a
+non-destructive amber `Stop Spectating` treatment.
+
+The right half uses the console's black background and contains the Embedded Spectator. With no
+selection it shows a subdued centered `Select a student to spectate` message. With a selection it
+shows a compact student/model/connection header above the complete proportionally contained device,
+without cropping or internal reflow. Black letterboxing is allowed so the miniature preserves the
+same spatial relationships as the trainee presentation. The macOS screenshot-window chrome from the
+visual reference is not part of the product; the right half contains only its compact header and the
+trainee presentation on black. The last-update time is omitted while live
+and shown only when the projection is stale. Before the first projection, the presentation shows a
 `Waiting for trainee monitor` state. If the trainee disconnects, it preserves the last frame under a
-clear offline/connection-lost banner. It follows the trainee through the waiting state, resets on New
-Attempt, resumes on dispatch, and remains open on a read-only `Room ended` state after End Room.
+clear offline/connection-lost banner and never switches trainees automatically. It follows the
+selected trainee through the waiting state, resets on New Attempt without clearing the selection,
+resumes on dispatch, and remains on a read-only `Room ended` state after End Room until the instructor
+stops spectating or leaves the page.
 
 Spectator playback is always silent. All simulator controls are removed from keyboard focus and
 ignore pointer and touch input through the projection-driven renderer itself, while ordinary browser
@@ -1285,25 +1316,39 @@ and `Waiting for trainee monitor` when no projection exists. Each state preserve
 frame when there is one.
 
 An always-visible, noninteractive strip outside the simulated device identifies the trainee, confirmed
-Wagami model, connection state, and last successful update. Opening or closing a Spectator view does
-not add an indicator to the trainee's monitor. The first implementation has no UI-enforced concurrency
-cap and is designed and tested for at least 30 connected trainees in one room and eight simultaneously
-open Spectator tabs for one instructor.
+Wagami model, and connection state, adding the last successful update only when the projection is
+stale. Opening or closing a Spectator view does not add an indicator to the trainee's monitor. The
+first implementation has no UI-enforced concurrency cap and is designed and tested for at least 30
+connected trainees in one room and eight simultaneously open Spectator tabs for one instructor.
 
 #### Testing
 - Projection coverage for every trainee-visible surface and local/timed state that affects it.
 - Host authorization, room/participant isolation, freshness/version ordering, and lifecycle behavior.
 - Latest-only coalescing and retry behavior under failed, delayed, duplicated, and out-of-order writes.
-- One Spectate button per trainee row, separate-tab opening, unavailable/stale states, and active-model parity.
+- One Spectate toggle per trainee row, single-selection switching, stop behavior, selected-row state,
+  transient/no-selection startup, unavailable/stale states, and active-model parity.
+- Identity-safety coverage verifies a previous trainee frame disappears before the next trainee's
+  name or frame can render, including slow and failed switch requests.
 - Distinct waiting, trainee-offline, Spectator-disconnected, and room-ended states with the latest frame preserved where applicable.
 - Read-only interaction tests proving pointer, keyboard, touch, and focus cannot mutate the projection or simulator.
-- Wagami X and Wagami Z rendered comparison checks across supported spectator viewports.
+- Compact containment checks for dispatch, Wagami X, and Wagami Z in the Embedded Spectator at the
+  supported Instructor Console viewports, with uniform scaling, allowed letterboxing, no internal
+  reflow, and no clipping or escape from the right panel.
+- Polling tests verify exactly one selected participant is requested, obsolete requests cannot replace
+  a newly selected trainee, and Stop Spectating halts projection polling.
 - Load coverage for 30 connected trainees and eight concurrently polling Spectator views.
 
-**Milestone — COMPLETE AND DEPLOYED (2026-09-03):** An instructor can observe one trainee's live
-simulator state in a separate, inert tab without changing either the trainee's state or the Instructor
-Console's persisted state. Automated coverage includes a 30-trainee roster and eight independently
-polling views.
+**Standalone milestone — COMPLETE AND DEPLOYED (2026-09-03):** An instructor can observe one
+trainee's live simulator state in a separate, inert page without changing either the trainee's state
+or the Instructor Console's persisted state.
+
+**Embedded milestone — COMPLETE (2026-09-03):** The Instructor Console presents one selected
+trainee's complete inert simulator state beside the room controls, while the Report tab owns
+evaluation history. The implementation shares one abortable selected-only polling hook with the
+standalone route, contains full-screen dispatch overlays inside a fixed simulator canvas, and scales
+that canvas uniformly with black letterboxing. Verification passed 999 tests, TypeScript, ESLint
+with zero errors and the 12 pre-existing warnings, a production build, and an end-to-end browser run
+with a real instructor room and trainee projection.
 
 ---
 

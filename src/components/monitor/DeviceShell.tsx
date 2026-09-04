@@ -390,8 +390,10 @@ export function DeviceShell({
 
   return (
     <div className={cn(
-      'grid min-w-[1024px] place-items-center overflow-hidden bg-[#101010]',
-      embedded ? 'h-full w-full [container-type:size]' : 'h-screen w-screen',
+      'grid place-items-center overflow-hidden bg-[#101010]',
+      embedded
+        ? 'h-full w-full min-w-0 [container-type:size]'
+        : 'h-screen w-screen min-w-[1024px]',
     )}>
       <div className={cn(
         'relative aspect-[1.36]',

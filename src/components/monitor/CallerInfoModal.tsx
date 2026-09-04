@@ -26,6 +26,8 @@ type CallerInfoModalProps = {
   responseFormatted?: string
   /** Full-page dispatch mode renders as a separate iPad-style surface. */
   fullScreen?: boolean
+  /** Keeps a full-screen surface inside an embedded spectator canvas. */
+  contained?: boolean
   /** A/B switch: classic tablet or icon-led assignment dashboard. */
   variant?: CallerInfoVariant
   /** Full-page in-monitor caller info uses this tablet button to return to the Zoll. */
@@ -127,6 +129,7 @@ export function CallerInfoModal({
   countdownFormatted = '00:00',
   responseFormatted = '00:00',
   fullScreen = false,
+  contained = false,
   variant = 'assignment',
   onBack,
   onEnterMonitor,
@@ -152,7 +155,11 @@ export function CallerInfoModal({
       aria-label="Caller info"
       className={cn(
         'absolute z-30 font-sans',
-        fullScreen ? 'fixed inset-0 z-50' : 'left-[56px] top-[56px] bottom-0 right-0',
+        fullScreen
+          ? contained
+            ? 'absolute inset-0 z-50'
+            : 'fixed inset-0 z-50'
+          : 'left-[56px] top-[56px] bottom-0 right-0',
       )}
     >
       {fullScreen && onBack && (
