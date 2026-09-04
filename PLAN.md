@@ -1331,6 +1331,36 @@ stale. Opening or closing a Spectator view does not add an indicator to the trai
 first implementation has no UI-enforced concurrency cap and is designed and tested for at least 30
 connected trainees in one room and eight simultaneously open Spectator tabs for one instructor.
 
+#### Presentation-mode enhancement (confirmed 2026-09-04)
+
+The Embedded Spectator has three transient presentation modes that all reuse the same selected
+trainee, projection renderer, and one-second polling path:
+
+- **Docked:** the normal 480px console preview beside the room controls. Permanent Pin and Enter
+  fullscreen controls sit at bottom-right.
+- **Floating:** a fixed, non-draggable mini-player at bottom-right while the vacated dock displays
+  `Spectator pinned`. It begins around 320x250 near the minimum desktop width, grows to 360x280 at
+  ordinary desktop widths and at most 400x310 on large screens, and respects 16px/safe-area offsets.
+  Return to dock is top-left, Stop is top-right, and Enter fullscreen is bottom-right. A future change
+  may make its transient corner position draggable; the initial corner is intentionally fixed.
+- **Fullscreen:** browser-native fullscreen for the same player, with Stop at top-right and Exit
+  fullscreen at bottom-right. Native Escape exits fullscreen and returns to the mode from which it
+  was entered. If the Fullscreen API is unavailable the control is disabled with an explanatory
+  tooltip; a rejected request leaves the current mode intact and announces `Fullscreen unavailable`
+  for approximately three seconds. There is no simulated CSS fullscreen fallback.
+
+The floating mini-player remains visible across console document scrolling, console tab changes,
+trainee switches, New Attempt, and End Room. Switching trainees retains the current docked/floating
+mode while the existing identity-safe projection handoff clears the former frame. Stop from any mode
+clears the transient selection, restores Docked as the next mode, and returns focus to the stopped
+trainee's roster button when it remains mounted. Reload continues to clear all spectator state.
+
+Mode controls are permanent rather than hover-only, use code-native 16–18px icons in 36px targets,
+have accessible names, native tooltips, and visible focus treatment, and retain standard Tab,
+Enter, and Space button behavior. The monitor canvas remains inert and uniformly contained with
+black letterboxing in every mode; it must never crop, stretch, or internally reflow. Mode transitions
+use a 160–200ms fade/scale motion that is removed for `prefers-reduced-motion`.
+
 #### Testing
 - Projection coverage for every trainee-visible surface and local/timed state that affects it.
 - Host authorization, room/participant isolation, freshness/version ordering, and lifecycle behavior.
@@ -1347,6 +1377,10 @@ connected trainees in one room and eight simultaneously open Spectator tabs for 
 - Polling tests verify exactly one selected participant is requested, obsolete requests cannot replace
   a newly selected trainee, and Stop Spectating halts projection polling.
 - Load coverage for 30 connected trainees and eight concurrently polling Spectator views.
+- Presentation-mode coverage verifies Docked ↔ Floating, Docked/Floating ↔ native Fullscreen,
+  native Escape restoration, unsupported and rejected fullscreen requests, one-player/one-poll
+  continuity, floating trainee switching, Stop behavior, focus restoration, permanent controls,
+  safe-area sizing, and reduced-motion behavior.
 
 **Standalone milestone — COMPLETE AND DEPLOYED (2026-09-03):** An instructor can observe one
 trainee's live simulator state in a separate, inert page without changing either the trainee's state
@@ -1359,6 +1393,15 @@ standalone route, contains full-screen dispatch overlays inside a fixed simulato
 that canvas uniformly with black letterboxing. Verification passed 999 tests, TypeScript, ESLint
 with zero errors and the 12 pre-existing warnings, a production build, and an end-to-end browser run
 with a real instructor room and trainee projection.
+
+**Presentation-mode milestone — COMPLETE (2026-09-04):** The same Embedded Spectator can be pinned
+as a fixed bottom-right Floating mini-player or expanded through browser-native Fullscreen, then
+returned to its prior Docked/Floating mode without replacing its selected-only projection path.
+Permanent accessible controls, focus restoration, native fullscreen exit handling, error feedback,
+responsive safe-area sizing, reduced motion, and Stop from every mode are implemented. Verification
+passed 1,059 tests, TypeScript, ESLint with zero errors and the 12 pre-existing warnings, a production
+build, and a real instructor/trainee browser flow showing the live dispatch projection in Floating
+and Fullscreen modes with clean console logs.
 
 ---
 

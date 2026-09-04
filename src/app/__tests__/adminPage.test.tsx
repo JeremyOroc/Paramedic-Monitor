@@ -225,10 +225,21 @@ describe('AdminPage', () => {
     expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Connecting to Alice…')
     expect(spectatorRequests).toEqual(['/api/session/ABC123/spectate/student-1'])
 
+    await user.click(screen.getByRole('button', { name: 'Pin spectator mini-player' }))
+    expect(screen.getByText('Spectator pinned')).toBeInTheDocument()
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-mode',
+      'floating',
+    )
+
     await user.click(within(screen.getByTestId('student-row-student-2')).getByRole('button', { name: 'Spectate' }))
     expect(screen.queryByText('Connecting to Alice…')).toBeNull()
     expect(screen.getAllByText('Connecting to Bob…')).toHaveLength(2)
     expect(screen.queryByTestId('projected-monitor')).toBeNull()
+    expect(screen.getByLabelText('Spectating Bob')).toHaveAttribute(
+      'data-spectator-mode',
+      'floating',
+    )
 
     resolveAlice?.(new Response(JSON.stringify({
       session: { status: 'active', active_attempt_version: 1 },
@@ -245,9 +256,14 @@ describe('AdminPage', () => {
     }), { status: 200 }))
     expect(await screen.findByText('bob-frame')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Stop Spectating' }))
+    await user.click(screen.getByRole('button', { name: 'Stop spectating' }))
     expect(screen.queryByTestId('projected-monitor')).toBeNull()
     expect(screen.getByText('Select a student to spectate')).toBeInTheDocument()
+    expect(
+      within(screen.getByTestId('student-row-student-2')).getByRole('button', {
+        name: 'Spectate',
+      }),
+    ).toHaveFocus()
   })
 
   it('lets a session instructor force a new attempt', async () => {

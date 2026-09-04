@@ -5,6 +5,35 @@
 
 ---
 
+## [2026-09-04] [instructor/realtime] — Add spectator mini-player and native fullscreen
+
+- Added Docked, fixed bottom-right Floating mini-player, and browser-native Fullscreen presentation
+  modes to the existing Embedded Spectator without duplicating its selected-only polling hook or
+  projection renderer. The mini-player persists across console scrolling, tab changes, trainee
+  switches, attempts, and room ending; its vacated dock shows `Spectator pinned`.
+- Added permanent code-native controls for pin, return, fullscreen enter/exit, and Stop, with 36px
+  targets, names/tooltips, focus restoration, native Escape/fullscreen-change handling, disabled
+  unsupported states, and three-second rejection feedback. Stop exits fullscreen, clears selection,
+  and returns focus to the matching trainee row.
+- Added responsive safe-area mini-player sizing, uniform black-letterboxed fullscreen scaling, and
+  180ms reduced-motion-aware transitions. The standalone spectator route and all database/API
+  contracts remain unchanged; movable-corner behavior remains an explicit future enhancement.
+- Added component and console integration coverage for mode continuity, one-poll behavior, trainee
+  switching, native exit restoration, failures, controls, and focus. All 1,059 tests, TypeScript,
+  ESLint (0 errors; 12 pre-existing warnings), and the production build pass. A real instructor and
+  trainee browser flow rendered the live dispatch projection in Floating and Fullscreen modes, with
+  clean console logs and successful Stop/focus restoration.
+
+## [2026-09-04] [planning/instructor] — Confirm Embedded Spectator presentation modes
+
+- Added Docked, fixed bottom-right Floating mini-player, and browser-native Fullscreen modes to the
+  Phase 17 contract. All three reuse one selected trainee, inert renderer, and polling path.
+- Locked permanent accessible mode controls, native Escape restoration, unsupported/rejected
+  fullscreen behavior, focus restoration, safe-area-aware responsive sizing, reduced motion, and
+  lifecycle behavior across scrolling, tab changes, trainee switches, attempts, and room ending.
+- Kept corner dragging as a future-compatible enhancement; the initial mini-player is deliberately
+  fixed at bottom-right and reload clears all transient spectator presentation state.
+
 ## [2026-09-03] [instructor/realtime] — Embed the selected trainee monitor in the console
 
 - Rebuilt the live-room header as equal 480px room-control and spectator columns. Room information,
