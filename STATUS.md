@@ -13,17 +13,17 @@ the Report tab opens. The opening change shows the whole scenario as sent, group
 dispatch card field by field, route addresses, and response time. Summary lines stay one line, with
 the dispatch card and route collapsed to a count. Stacked on Phase 14 (PR #77).
 
-**Phase 14 — Sync & Queue — CODE COMPLETE (2026-09-03), MIGRATION NOT YET APPLIED.** A trainee action
+**Phase 14 — Sync & Queue — COMPLETE (2026-09-03), MIGRATION APPLIED.** A trainee action
 pressed during a wifi drop now waits on the device and lands in the evaluation record at the moment
 it was pressed, against the state version the monitor was showing, flagged `← n behind` when that
 trailed what the instructor had sent. The trainee's poll names the version it holds and an unchanged
 room answers in ~300 bytes instead of the whole blob. `docs/adr/0003` and `docs/adr/0004`.
 
-> **Deploy order matters:** apply `20260903120000_trainee_action_clock.sql` *before* deploying this
-> code. `getReview` and `recordStudentEvent` now name the three new columns, so on a database without
-> them the Report tab, the console's roster poll, and every trainee action fail until the migration
-> runs. Verified live: `?since=` works today; the action path returned
-> `Could not find the 'capture_sequence' column` until the columns exist.
+> Migration `20260903120000_trainee_action_clock.sql` is applied (verified 2026-09-03). Live check
+> against the running app and the live database: `?since=` answers an unchanged poll in 315 bytes
+> against 13,676; a claim at the older version is stored as claimed while the room is ahead; a
+> claim ahead of the room gets its 400; a press replayed after a later Send renders at its press
+> time on the trainee's clock and carries `← 1 behind`.
 
 **Phase 13 — Evaluation report tab — COMPLETE (2026-09-02).** The Instructor Console has a fifth
 tab rendering one chronological stream of an attempt: each trainee action with its payload against the
@@ -95,8 +95,8 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
         offset on every poll rather than only when state changes
   - [x] 38 new tests (7 queue, 3 queue hook, 3 sync hook, 10 service, 3 state route, 3 student-event
         route, 9 timeline, 1 panel). All 1004 tests and TypeScript pass; ESLint 0 errors with the 12
-        pre-existing warnings; production build passes. Live: `?since=` verified end to end; the
-        action path verified by tests only until the migration is applied
+        pre-existing warnings; production build passes. Live, after the migration: `?since=`, the
+        bounded claim, the 400 on a claim ahead, and the `← 1 behind` marker all verified end to end
 
 - [x] **Phase 13 — Evaluation report tab — COMPLETE:**
   - [x] `src/lib/evaluationTimeline.ts` assembles the review payload into one ordered stream: `t+`
@@ -716,8 +716,8 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## In Progress
-- Phase 14 awaits its migration on the live project, then a live check of the replay path; Phase 15
-  is stacked on it and retargets to `main` once #77 merges
+- Nothing — #77 (Phase 14) is ready to merge; #78 (Phase 15) is stacked on it and retargets to
+  `main` once #77 merges
 
 ---
 
