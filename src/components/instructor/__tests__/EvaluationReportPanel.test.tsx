@@ -92,13 +92,38 @@ describe('EvaluationReportPanel', () => {
     expect(rows[1]).toHaveTextContent('t+4:39')
     expect(rows[1]).toHaveTextContent('{bp_sys: 82, bp_dia: 48}')
     expect(rows[1]).toHaveTextContent('NSR 88')
-    expect(rows[1]).toHaveTextContent('BP 118/76')
+    // The cuff has just reported, so BP is the reading rather than the
+    // pressure the instructor configured.
+    expect(rows[0]).toHaveTextContent('BP --/--')
+    expect(rows[1]).toHaveTextContent('BP 82/48')
   })
 
   it('shows an action taken before the first Send as dispatch', () => {
     renderPanel({ events: [makeEvent({ state_version: null })] })
 
     expect(screen.getByTestId('report-row-action')).toHaveTextContent('[dispatch]')
+  })
+
+  it('leaves BP blank and unalarmed until the trainee takes a reading', () => {
+    renderPanel({
+      // Configured 88/54, which is below the systolic threshold. Nobody has
+      // taken it, so the monitor shows nothing and nothing alarms.
+      stateHistory: [state(1, 0, { bp_sys: 88, bp_dia: 54 })],
+      events: [
+        makeEvent({ kind: 'power_on', label: 'Power On', occurred_at: at(10), state_version: 1 }),
+        makeEvent({
+          kind: 'nibp_result', label: 'NIBP 88/54',
+          payload: { bp_sys: 88, bp_dia: 54 }, occurred_at: at(20), state_version: 1,
+        }),
+      ],
+    })
+
+    const [before, reading] = screen.getAllByTestId('report-row-action')
+    expect(before).toHaveTextContent('BP --/--')
+    expect(before).not.toHaveAttribute('data-alarm')
+    expect(reading).toHaveTextContent('BP 88/54')
+    expect(reading).toHaveAttribute('data-alarm', 'true')
+    expect(within(reading).getByText(/BP 88\/54/)).toHaveClass('text-alarm-red')
   })
 
   it('marks a row whose patient was in alarm and leaves a stable one unmarked', () => {
