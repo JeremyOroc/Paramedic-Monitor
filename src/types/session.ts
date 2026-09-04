@@ -105,6 +105,12 @@ export type ParticipantAttempt = {
   completed_at: string | null
 }
 
+/** An instructor-given name for one of the room's attempts. The number stays; this sits beside it. */
+export type AttemptLabel = {
+  attempt_version: number
+  label: string
+}
+
 /** The shape `GET /api/session/[code]/review` returns. */
 export type SessionReview = {
   session: Session
@@ -114,4 +120,5 @@ export type SessionReview = {
   truncated: boolean
   stateHistory: SessionStateHistoryEntry[]
   attempts: ParticipantAttempt[]
+  attemptLabels: AttemptLabel[]
 }

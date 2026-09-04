@@ -1223,6 +1223,57 @@ producing the line, so the expansion and the summary read from one diff rather t
 
 ---
 
+### Enhancement — Attempt names
+**Goal:** The instructor can name each attempt, and the Report tab's attempt picker shows names
+rather than only numbers.
+
+**Requirement (2026-09-04):** A room runs several attempts, and the Report tab lets the evaluator
+switch between them by number. Numbers do not say which was which. A name does.
+
+#### Where the name lives
+The room has no attempt record of its own: `sessions.active_attempt_version` is an integer and
+`participant_attempts` is per trainee. A name is a property of the room's attempt, so it needs the
+missing entity. New table `session_attempts (session_id, attempt_version, label, updated_at)`,
+primary key on the pair, service-role only like `session_state_history`. Rows are written on
+rename only; an attempt with no row has no name. This is deliberately not stored in the sent state,
+since a name must be changeable after the fact without a Send, and not on `participant_attempts`,
+which would name it once per trainee.
+
+#### The rename
+`PATCH /api/session/[code]/attempt/[version]` with `{ label }`, host token required. The label is
+trimmed and capped at 60 characters; an empty label clears the name. Any attempt in the room can be
+renamed at any time, including the active one and ones already ended.
+
+#### Where it shows
+- The Report tab picker: `2 · Morning cohort`, or `2` when unnamed.
+- The Report tab header and the plain-text copy header.
+- The console's status line beside the attempt number.
+
+`getReview` returns the room's `session_attempts` rows alongside `attempts`; they are a few bytes
+and ride the existing poll.
+
+#### The control
+In the Report tab header, beside the picker: a small text field labelled `Attempt name`, saving on
+Enter or blur. Host only, so it renders only when the console has a session. No modal, no separate
+page.
+
+#### Not doing
+Naming an attempt at creation. `New Attempt` stays a single click; the name can follow. A default
+name from the scenario title, since the scenario already shows on the opening row and two attempts
+of one scenario would collide.
+
+#### Testing
+- Service: rename upserts the row, trims and caps the label, clears on empty, rejects a bad version,
+  host token required; `getReview` returns the labels
+- Route: label passed through; the 400s surface
+- Panel: the picker shows `n · name`, the header and copy carry it, the field saves on Enter and on
+  blur and calls back with the version
+- Console: the PATCH is sent with the host token; the status line shows the name
+
+**Milestone:** The evaluator opens the Report tab and picks `Morning cohort`, not `2`.
+
+---
+
 ### Phase 16 — Realtime Nudge & Presence
 **Goal:** A Send reaches the trainee's monitor in well under a second on the happy path, the roster
 knows a trainee dropped the moment it happens, and neither depends on the poll — which becomes a

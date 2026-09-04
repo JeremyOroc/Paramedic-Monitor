@@ -15,6 +15,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 import {
+  ATTEMPT_LABEL_MAX,
   REVIEW_EVENT_LIMIT,
   endSession,
   getReview,
@@ -23,6 +24,7 @@ import {
   joinSession,
   publishMonitorProjection,
   recordStudentEvent,
+  renameAttempt,
   startMonitorProjectionStream,
   startNewAttempt,
   stripRouteGeometry,
@@ -710,6 +712,72 @@ describe('an ended room is closed to changes', () => {
       recordStudentEvent(CODE, PARTICIPANT_TOKEN, { kind: 'shock', label: 'Shock' }),
     ).rejects.toMatchObject({ status: 410 })
     expect(currentStub.opsFor('student_events')).toHaveLength(0)
+  })
+})
+
+describe('renameAttempt — attempt names', () => {
+  const upserted = () =>
+    currentStub.opsFor('session_attempts').find((op) => op.method === 'upsert')?.payload
+
+  it('names an attempt in the room', async () => {
+    withResolver({
+      session_attempts: (op) =>
+        op.method === 'upsert' ? { data: { attempt_version: 2, label: 'Morning cohort' } } : undefined,
+    })
+
+    const result = await renameAttempt(CODE, HOST_TOKEN, 2, '  Morning   cohort ')
+
+    expect(upserted()).toMatchObject({
+      session_id: SESSION.id,
+      attempt_version: 2,
+      label: 'Morning cohort',
+    })
+    expect(result).toEqual({ attempt_version: 2, label: 'Morning cohort' })
+  })
+
+  it('caps the label and clears it on empty', async () => {
+    withResolver({
+      session_attempts: (op) => (op.method === 'upsert' ? { data: { attempt_version: 1, label: '' } } : undefined),
+    })
+
+    await renameAttempt(CODE, HOST_TOKEN, 1, 'x'.repeat(ATTEMPT_LABEL_MAX + 20))
+    expect((upserted()?.label as string).length).toBe(ATTEMPT_LABEL_MAX)
+
+    await renameAttempt(CODE, HOST_TOKEN, 1, '   ')
+    expect(currentStub.opsFor('session_attempts').at(-1)?.payload?.label).toBe('')
+  })
+
+  it('rejects an attempt the room has not reached, or a malformed one', async () => {
+    withResolver({})
+    // SESSION.active_attempt_version is 3.
+    await expect(renameAttempt(CODE, HOST_TOKEN, 4, 'x')).rejects.toMatchObject({ status: 400 })
+    await expect(renameAttempt(CODE, HOST_TOKEN, 0, 'x')).rejects.toMatchObject({ status: 400 })
+    await expect(renameAttempt(CODE, HOST_TOKEN, 1.5, 'x')).rejects.toMatchObject({ status: 400 })
+    expect(currentStub.opsFor('session_attempts')).toHaveLength(0)
+  })
+
+  it('requires the host token', async () => {
+    withResolver({})
+    await expect(renameAttempt(CODE, '', 1, 'x')).rejects.toMatchObject({ status: 401 })
+  })
+
+  it('returns every attempt name with the review', async () => {
+    withResolver({
+      student_events: () => ({ data: [] }),
+      session_state_history: () => ({ data: [] }),
+      participants: () => ({ data: [PARTICIPANT] }),
+      participant_attempts: () => ({ data: [] }),
+      session_attempts: () => ({ data: [{ attempt_version: 1, label: 'Warm-up' }, { attempt_version: 3, label: 'Exam' }] }),
+    })
+
+    const result = await getReview(CODE, HOST_TOKEN)
+
+    expect(result.attemptLabels).toEqual([
+      { attempt_version: 1, label: 'Warm-up' },
+      { attempt_version: 3, label: 'Exam' },
+    ])
+    // Not filtered to the requested attempt: the picker lists them all.
+    expect(filterValue(currentStub.opsFor('session_attempts')[0], 'attempt_version')).toBeUndefined()
   })
 })
 

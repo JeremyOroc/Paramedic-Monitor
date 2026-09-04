@@ -813,6 +813,39 @@ describe('AdminPage', () => {
     )
   })
 
+  it('renames an attempt from the Report tab and shows the name in the status line', async () => {
+    const user = userEvent.setup()
+    const calls: Array<{ url: string; init?: RequestInit }> = []
+    vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      calls.push({ url, init })
+      if (init?.method === 'PATCH') {
+        return new Response(JSON.stringify({ attempt: { attempt_version: 1, label: 'Morning cohort' } }), {
+          status: 200, headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(
+        JSON.stringify({ session: { status: 'active', active_attempt_version: 1 }, participants: [], events: [], attempts: [], attemptLabels: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Report' }))
+
+    await user.type(screen.getByRole('textbox', { name: 'Attempt name' }), 'Morning cohort{Enter}')
+
+    await waitFor(() => expect(calls.some((c) => c.init?.method === 'PATCH')).toBe(true))
+    const patch = calls.find((c) => c.init?.method === 'PATCH')!
+    expect(patch.url).toBe('/api/session/ABC123/attempt/1')
+    expect((patch.init?.headers as Record<string, string>)['x-session-host-token']).toBe('host_token')
+    expect(JSON.parse(String(patch.init?.body))).toEqual({ label: 'Morning cohort' })
+    // Applied locally, before the next poll: once in the status line, once in
+    // the report header.
+    await waitFor(() => expect(screen.getAllByText(/1 · Morning cohort/).length).toBeGreaterThanOrEqual(2))
+  })
+
   it('asks the review poll for history only while the Report tab is open (PLAN 13f)', async () => {
     const user = userEvent.setup()
     const urls: string[] = []

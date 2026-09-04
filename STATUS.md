@@ -78,6 +78,10 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Attempt names (2026-09-04):** each attempt can be named; the number stays and the name sits
+      beside it in the Report tab picker, header, copied text, and console status line. New
+      `session_attempts` table, `PATCH /attempt/[version]`, host-only rename field. 14 tests; 1085
+      pass. Migration `20260904120000_attempt_names.sql` not yet applied
 - [x] **Report BP fidelity (2026-09-04):** the patient-state column shows BP only once the trainee has
       taken a reading, holds it until the next one, clears it on a monitor reset, and raises no BP alarm
       without one. Reconstructed from `nibp_result` events, since the displayed value is trainee-local.
