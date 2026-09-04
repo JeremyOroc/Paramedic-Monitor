@@ -847,15 +847,17 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 ### Phase 10 — Folder-Based Scenario Library
 **Goal:** Instructors can save, organize, reload, edit, move, and delete complete reusable scenario drafts from Supabase.
 
-**Status:** Complete and deployed on 2026-08-20 through repair migration `20260820194954_qualify_scenario_order_constraint.sql`.
+**Status:** Original phase complete and deployed on 2026-08-20 through repair migration
+`20260820194954_qualify_scenario_order_constraint.sql`. Document-only folder scrolling and global
+folder ordering were completed and deployed on 2026-09-03.
 
 **Steps:**
-1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a fixed-height folder accordion above the unchanged caller-info editor. Folder expansion is independent from the selected save destination: every folder starts collapsed on page load, zero or many folders may be open, expansion survives admin-tab switches, opening a folder selects it without closing others, and closing it does not clear its save destination. The first existing folder remains the initial highlighted save target, and newly created folders open and become selected.
+1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a bordered folder accordion above the unchanged caller-info editor. The accordion has no fixed maximum height or nested scrollbar: opening folders expands the box, and the Instructor Console document provides the only scrolling around the library. Folder expansion is independent from the selected save destination: every folder starts collapsed on page load, zero or many folders may be open, expansion survives admin-tab switches, opening a folder selects it without closing others, and closing it does not clear its save destination. The first existing folder remains the initial highlighted save target, and newly created folders open and become selected.
 2. Preserve the existing `General` data as an ordinary folder and provide create, rename, and delete controls for every case-insensitively unique folder. Deleting any folder, including an empty folder, requires confirmation and cascade-deletes its scenarios; the library may contain zero folders.
 3. Save versioned authoring snapshots containing raw auto-sort text, monitor drafts and channel states, caller/dispatch inputs, SAMPLE/OPQRST state, and Patient Physical state. Runtime dispatch/CPR/calibration and Save/Send history are excluded.
 4. Add a Title field while placing `Save` and `Delete` actions on every scenario-library row instead of inside Caller Info. Save is enabled only for the loaded scenario when its authored title or snapshot differs from its baseline. Delete is available for any saved scenario and leaves a different loaded scenario and its editor values untouched. Blank titles use the smallest available `Scenario X` number.
 5. Load snapshots directly into editable drafts without sending to students. Track the loaded baseline so unchanged or reverted scenarios cannot be saved again. Scenario rows toggle load/unload, with dirty-discard confirmation and authoring-only clearing on unload. Deleting the loaded scenario preserves its editor values as a selected local scenario draft.
-6. Persist explicit scenario positions per folder. Support drag/drop and Up/Down ordering within a folder, plus cross-folder drag/drop and an accessible Move fallback that append moved scenarios.
+6. Persist explicit scenario positions per folder and explicit global positions for folders. Support drag/drop and accessible Up/Down ordering for both folders and scenarios, plus cross-folder scenario drag/drop and an accessible Move fallback that append moved scenarios. Backfill folder positions from the current case-insensitive alphabetical order; append new folders; preserve position when a folder is renamed; compact positions after deletion; and keep folder reordering locked with the rest of the library during an active attempt.
 7. Store folders and saved snapshots in dedicated RLS-protected tables accessed only through typed server APIs, leaving the legacy timed-state `scenarios` table unchanged.
 8. Add `New Scenario` beside `New Folder`. It creates one selected local draft row under the selected folder, expands that folder, and uses the live title or `Untitled Scenario` as its row label. Any authored field change, including title alone, enables draft Save. Starting another draft while dirty requires confirmation. Deleting a draft requires confirmation and clears it without a server request.
 9. Make the full Caller Info editor collapsible from an initially collapsed `−`/`+` header control without persisting the display preference.
@@ -866,13 +868,19 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 #### Testing
 - Unit coverage for snapshot normalization, meaningful-content and dirty comparisons, and fallback-number allocation.
 - Migration/service/API coverage for ordinary General behavior, cascade deletion, empty-library auto-create, persisted ordering, concurrent reorder/move safety, validation, grants, and error responses.
-- Component and admin integration coverage for tab order, Instructor Console copy, initially collapsed independent folder expansion, multiple/all-closed states, selected closed-folder save targeting, expansion across tab switches, new-folder opening, unconditional folder-delete confirmation, deletion fallback, row toggle load/unload, selected-and-dirty row Save gating, loaded and unloaded row deletion, local draft creation/save/delete, virtual empty-library `Folder 1`, active-attempt action locking, per-folder drag/drop and Up/Down ordering, cross-folder append, styled dialog confirm/cancel/backdrop/Escape/focus behavior, Caller Info action removal/collapse, and four-tab restoration.
+- Component and admin integration coverage for tab order, Instructor Console copy, initially collapsed independent folder expansion, multiple/all-closed states, document-only scenario-library scrolling, selected closed-folder save targeting, expansion across tab switches, new-folder opening, persistent folder drag/drop and Up/Down ordering, folder-order rollback and active-attempt locking, unconditional folder-delete confirmation, deletion fallback, row toggle load/unload, selected-and-dirty row Save gating, loaded and unloaded row deletion, local draft creation/save/delete, virtual empty-library `Folder 1`, active-attempt action locking, per-folder scenario drag/drop and Up/Down ordering, cross-folder append, styled dialog confirm/cancel/backdrop/Escape/focus behavior, Caller Info action removal/collapse, and four-tab restoration.
 - Patient SNS component coverage verifies black/green confirmed styling, pending and missing states, exact Pulse/Respiratory result formatting and rounded derived counts, immediate Tap behavior, independent simultaneous 15s/30s countdowns, countdown cancellation, no `0s` flash, completion confirmation, result snapshots, tab-surviving absolute timing, and cancellation on scenario load/reset, refresh, and New Attempt. Skin/Extremities retains its existing single-toggle behavior.
 - Full Vitest, ESLint, production build, and rendered desktop overflow/interaction QA.
 
 **Milestone — COMPLETE (2026-08-20):** An instructor can manage a global folder library, remove any folder, persist custom scenario order, reload or unload complete editable drafts from scenario rows, save into an automatically created folder when the library is empty, and collapse Caller Info without bypassing the normal Save → Send workflow.
 
 **Instructor Console safety enhancement — COMPLETE (2026-08-29):** Scenario creation now begins from an explicit selected local draft row; saved rows own dirty-gated Save and confirmed Delete actions; every Scenarios-tab confirmation uses the accessible styled dialog; active attempts lock all library mutations; and the obsolete development copy and Caller Info actions are removed.
+
+**Folder scrolling and ordering enhancement — COMPLETE AND DEPLOYED (2026-09-03):** The folder
+accordion grows with its open contents and relies on the Instructor Console document scroll. Global
+folder order persists through drag/drop and Up/Down actions, with deterministic backfill/create/rename/
+delete behavior and active-attempt locking. Migration `20260903222810_instructor_spectator_and_folder_order.sql`
+is deployed to the linked project and verified through the live folder API.
 
 ---
 
@@ -1223,6 +1231,79 @@ value both arrive with scale.
   supervised classroom.
 - Every Realtime client resyncs on reconnect by polling, because a broadcast dropped during an
   outage is gone.
+
+---
+
+### Phase 17 — Instructor Spectator View
+**Goal:** From every trainee row in the Instructor Console, the instructor can open a separate tab
+that reproduces that trainee's current simulator presentation without being able to control it.
+
+**Status:** Complete and deployed on 2026-09-03 after explicit design confirmation and remote schema
+verification.
+
+**Decided 2026-09-03:** The Spectator view is a semantic reproduction, not literal screen capture or
+video streaming. It covers the complete simulator presentation, including dispatch, the selected
+device, power/boot state, menus, modals, selections, defibrillation state, NIBP and calibration
+progress, timers, and logs. It does not reproduce browser chrome, pointer/finger location, or exact
+pixel phase of animated waveform sweeps. The confirmed defibrillator model remains fixed per attempt,
+not assigned per trainee, so each Spectator view follows the attempt's Wagami X or Wagami Z choice.
+
+The implementation must use a participant-specific Trainee monitor projection rather than infer the
+screen from the sparse evaluation event stream. The read-only renderer must be isolated from the
+Instructor Console's persisted monitor store so opening a same-origin tab cannot mutate or rehydrate
+the instructor's authoring state. Spectator reads are host-authorized and verify that the target
+trainee belongs to the room; host or participant secrets never appear in the Spectator URL.
+
+Each meaningful trainee transition publishes immediately. The Spectator view polls the authoritative
+latest projection once per second, while absolute phase and deadline timestamps let timers and timed
+progress animate smoothly between responses. This phase does not pull forward Supabase Realtime;
+the future Realtime nudge in Phase 16 may accelerate the same correctness path without replacing it.
+
+Every roster row exposes an enabled Spectate action that opens its trainee in a separate tab, and an
+instructor may keep multiple trainee tabs open at once. Before the first projection, the tab shows a
+`Waiting for trainee monitor` state. If the trainee disconnects, it preserves the last frame under a
+clear offline/connection-lost banner. It follows the trainee through the waiting state, resets on New
+Attempt, resumes on dispatch, and remains open on a read-only `Room ended` state after End Room.
+
+Spectator playback is always silent. All simulator controls are removed from keyboard focus and
+ignore pointer and touch input through the projection-driven renderer itself, while ordinary browser
+controls remain available. The device surface fits the instructor's Spectator viewport instead of
+reproducing clipping from the trainee's physical screen; small status metadata may report the
+trainee's viewport and orientation without changing the mirrored simulator state.
+
+Short-lived hover, focus, pointer-down, and touch-highlight feedback is outside the projection
+contract, like pointer location; every resulting or sustained simulator state remains inside it.
+Projection publication is latest-state delivery rather than an audit stream: when writes fail, the
+trainee client coalesces obsolete intermediate projections, retains the newest projection, and
+retries until it is accepted. The evaluation record continues to preserve meaningful trainee actions
+independently.
+
+The server stores one latest projection per trainee and no projection history. New Attempt clears the
+current projection, and eventual room cleanup removes it with the room. A failed Spectator request is
+reported as `Spectator connection lost`, distinct from `Trainee offline` when trainee presence expires
+and `Waiting for trainee monitor` when no projection exists. Each state preserves the latest available
+frame when there is one.
+
+An always-visible, noninteractive strip outside the simulated device identifies the trainee, confirmed
+Wagami model, connection state, and last successful update. Opening or closing a Spectator view does
+not add an indicator to the trainee's monitor. The first implementation has no UI-enforced concurrency
+cap and is designed and tested for at least 30 connected trainees in one room and eight simultaneously
+open Spectator tabs for one instructor.
+
+#### Testing
+- Projection coverage for every trainee-visible surface and local/timed state that affects it.
+- Host authorization, room/participant isolation, freshness/version ordering, and lifecycle behavior.
+- Latest-only coalescing and retry behavior under failed, delayed, duplicated, and out-of-order writes.
+- One Spectate button per trainee row, separate-tab opening, unavailable/stale states, and active-model parity.
+- Distinct waiting, trainee-offline, Spectator-disconnected, and room-ended states with the latest frame preserved where applicable.
+- Read-only interaction tests proving pointer, keyboard, touch, and focus cannot mutate the projection or simulator.
+- Wagami X and Wagami Z rendered comparison checks across supported spectator viewports.
+- Load coverage for 30 connected trainees and eight concurrently polling Spectator views.
+
+**Milestone — COMPLETE AND DEPLOYED (2026-09-03):** An instructor can observe one trainee's live
+simulator state in a separate, inert tab without changing either the trainee's state or the Instructor
+Console's persisted state. Automated coverage includes a 30-trainee roster and eight independently
+polling views.
 
 ---
 

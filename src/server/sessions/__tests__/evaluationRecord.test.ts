@@ -18,8 +18,11 @@ import {
   REVIEW_EVENT_LIMIT,
   endSession,
   getReview,
+  getMonitorProjectionForHost,
   joinSession,
+  publishMonitorProjection,
   recordStudentEvent,
+  startMonitorProjectionStream,
   startNewAttempt,
   stripRouteGeometry,
   updateSessionState,
@@ -88,6 +91,99 @@ function withResolver(overrides: Partial<Record<string, TableResolver>> = {}) {
 
 beforeEach(() => {
   withResolver()
+})
+
+const MONITOR_PROJECTION = {
+  version: 1,
+  capturedAt: '2026-09-03T12:00:00.000Z',
+  model: 'wagamiX',
+  surface: 'monitor',
+  controller: {},
+  confirmed: {},
+  confirmedVitalActive: {},
+  acceptedBp: {},
+  acceptedBpActive: {},
+  callerInfo: {},
+  dispatch: {},
+  dispatchRoute: { geometry: [] },
+  patientInfo: {},
+  nibp: {},
+  defib: {},
+  alarms: [],
+  mergedEventLog: [],
+  vitalLog: [],
+}
+
+describe('latest trainee monitor projection (PLAN 17)', () => {
+  it('starts a new stream by replacing the participant latest-state row', async () => {
+    const stub = withResolver({
+      trainee_monitor_projections: (op) => ({
+        data: {
+          ...op.payload,
+          stream_id: op.payload?.stream_id,
+          client_sequence: 0,
+        },
+      }),
+    })
+
+    const result = await startMonitorProjectionStream(
+      CODE,
+      PARTICIPANT_TOKEN,
+      MONITOR_PROJECTION,
+    )
+
+    const [write] = stub.opsFor('trainee_monitor_projections')
+    expect(write.method).toBe('upsert')
+    expect(write.payload).toMatchObject({
+      participant_id: PARTICIPANT.id,
+      session_id: SESSION.id,
+      attempt_version: SESSION.active_attempt_version,
+      client_sequence: 0,
+      projection: MONITOR_PROJECTION,
+    })
+    expect(result.streamId).toEqual(expect.any(String))
+  })
+
+  it('advances only the current stream and a strictly newer sequence', async () => {
+    const streamId = 'a801b81f-436e-4db0-9985-718e7c1051d2'
+    const stub = withResolver({
+      trainee_monitor_projections: (op) => ({
+        data: {
+          ...op.payload,
+          stream_id: streamId,
+          attempt_version: SESSION.active_attempt_version,
+        },
+      }),
+    })
+
+    await publishMonitorProjection(CODE, PARTICIPANT_TOKEN, streamId, 9, MONITOR_PROJECTION)
+
+    const [write] = stub.opsFor('trainee_monitor_projections')
+    expect(write.filters).toEqual(expect.arrayContaining([
+      { op: 'eq', column: 'stream_id', value: streamId },
+      { op: 'eq', column: 'attempt_version', value: SESSION.active_attempt_version },
+      { op: 'lt', column: 'client_sequence', value: 9 },
+    ]))
+  })
+
+  it('returns only a projection from the room current attempt to the host', async () => {
+    withResolver({
+      trainee_monitor_projections: () => ({
+        data: {
+          stream_id: 'stream-id',
+          client_sequence: 4,
+          attempt_version: SESSION.active_attempt_version - 1,
+          projection: MONITOR_PROJECTION,
+          updated_at: 'now',
+        },
+      }),
+    })
+
+    const result = await getMonitorProjectionForHost(CODE, HOST_TOKEN, PARTICIPANT.id)
+
+    expect(result.participant).toMatchObject({ id: PARTICIPANT.id, nickname: 'Sarah' })
+    expect(result.projection).toBeNull()
+  })
 })
 
 describe('updateSessionState — instructor-side history (PLAN 12b)', () => {

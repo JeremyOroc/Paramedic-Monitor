@@ -5,6 +5,47 @@
 
 ---
 
+## [2026-09-03] [database/instructor] — Deploy folder ordering and Spectator storage
+
+- Applied `20260902160000_strip_history_route_geometry.sql` and `20260903222810_instructor_spectator_and_folder_order.sql` to the linked Supabase project after explicit approval of the historical route-geometry cleanup.
+- Verified full local/remote migration parity; every scenario folder has a non-null unique position, the atomic reorder function exists, and the latest-only trainee projection table has RLS enabled with no anonymous read privilege.
+- Confirmed the approved cleanup left zero historical route polylines and verified the running application's `/api/scenario-folders` endpoint returns HTTP 200 with all existing folders, scenario counts, and persisted positions. The reported `scenario_folders.position` error is resolved.
+
+## [2026-09-03] [database] — Reconcile linked migration history before Instructor Console deployment
+
+- Directly verified that the linked schema already contains every material effect of migrations `006_close_legacy_policies.sql` and `007_evaluation_record.sql`: evaluation history and event state-versioning exist, the action-kind constraint and participant uniqueness index exist, and the obsolete snapshots table is absent.
+- Marked only migrations `006` and `007` as applied in Supabase's migration-history table. Local and linked histories now agree through the last deployed scenario migration.
+- Confirmed with a clean `db push --dry-run` that only `20260902160000_strip_history_route_geometry.sql` and `20260903222810_instructor_spectator_and_folder_order.sql` remain pending. The actual push awaits explicit approval because the former permanently strips route geometry from historical evaluation-state copies.
+
+## [2026-09-03] [instructor/realtime/scenarios] — Add read-only spectating and persistent folder order
+
+- Added a `Spectate` action to every trainee row. Each action opens a separate host-authorized tab with a silent, inert semantic reproduction of that trainee's dispatch or active Wagami X/Z monitor, including power/boot state, menus, modals, selected controls, defibrillation, NIBP, calibration, timers, and logs.
+- Added participant-specific latest-only projections with stream IDs and monotonic sequences, immediate coalesced publishing/retry, one-second correctness polling, timestamp-driven timed states, attempt clearing, room cleanup, and distinct waiting, trainee-offline, spectator-connection-lost, and room-ended states that preserve the last valid frame where appropriate.
+- Removed the scenario library's nested scrollbar and added global persistent folder drag/drop and Up/Down controls, with alphabetical backfill, append-on-create, rename stability, delete compaction, optimistic rollback, and active-attempt locking.
+- Added ADRs, domain terms, generated Supabase types, host/participant API isolation, a service-role-only folder reorder RPC, a forward migration, and tests across the renderer, publisher, lifecycle, routes, services, migration, 30-trainee roster, and eight concurrent spectator views.
+- All 992 tests, TypeScript, Supabase schema lint, ESLint (0 errors; 12 pre-existing warnings), and the Next.js production build pass. Migration `20260903222810_instructor_spectator_and_folder_order.sql` is ready but not deployed because the configured database contains remote-only legacy migration versions absent from this checkout.
+
+## [2026-09-03] [planning/instructor] — Complete the Spectator projection contract
+
+- Excluded ephemeral hover/focus/press feedback from semantic mirroring while retaining every resulting or sustained simulator state.
+- Defined Spectator delivery as one latest projection per trainee, not a historical stream: failed writes coalesce to the newest state and retry, New Attempt clears it, and eventual room cleanup removes it. The evaluation record remains the audit history.
+- Distinguished `Trainee offline`, `Spectator connection lost`, and `Waiting for trainee monitor` so an instructor-side network failure cannot falsely label the trainee offline; the latest frame remains visible whenever one exists.
+- Required an always-visible, noninteractive trainee/model/connection/update strip, no trainee-side spectating indicator, no UI concurrency cap, and validation for 30 connected trainees with eight simultaneous Spectator tabs.
+
+## [2026-09-03] [planning/instructor] — Set Spectator delivery and lifecycle behavior
+
+- Set meaningful trainee transitions to publish immediately and the Spectator view to poll the latest projection once per second, with timestamp-driven timers between responses. Supabase Realtime remains deferred to its existing nudge phase.
+- Made Spectator playback silent and the simulator renderer itself inert to keyboard, pointer, and touch input while leaving ordinary browser controls available.
+- Kept every trainee's Spectate action enabled: a new view waits for its first projection, preserves the last frame under an offline banner after disconnect, follows waiting/New Attempt/dispatch automatically, and remains open on a Room ended state.
+- Allowed multiple trainee Spectator tabs and required each simulator surface to fit the instructor's tab rather than inherit clipping from the trainee's viewport; optional status metadata may still report trainee orientation and viewport.
+
+## [2026-09-03] [planning/instructor] — Begin Spectator view and folder-order design
+
+- Removed the fixed-height/nested-scroll requirement from the scenario-folder accordion: expanded folders grow the library box and the Instructor Console document owns surrounding scrolling.
+- Defined persistent global folder order with the same drag/drop and accessible Up/Down controls as scenarios. Existing folders begin in their current case-insensitive alphabetical order; new folders append, renames preserve position, deletions compact positions, and active attempts keep ordering locked.
+- Chose a semantic, host-authorized Spectator view over literal screen streaming. It reproduces one trainee's full simulator presentation but excludes browser chrome, pointer/finger location, and exact waveform sweep pixels; the attempt retains one confirmed Wagami X/Z model for all trainees.
+- Added the Spectator view, Trainee monitor projection, Projection freshness, and Scenario folder order glossary terms; recorded the initial Phase 17 contract and testing scope. The remaining spectating decisions are still in interview and no application code has been changed.
+
 ## [2026-09-03] [instructor] — Record which scenario an attempt was
 
 - Added `scenarioTitleConfirmed` to the sent state so the evaluation record can say which scenario an attempt was. Nothing else in the stored state revealed it: `SharedMonitorState` is what the trainee's monitor needs, and the monitor never needed the scenario's name, so the title had no way to travel.

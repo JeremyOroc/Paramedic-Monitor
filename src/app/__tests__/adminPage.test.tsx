@@ -159,6 +159,32 @@ describe('AdminPage', () => {
     expect(within(aliceRow).getByText('Ack')).toHaveClass('text-ecg-green')
     expect(within(aliceRow).getByText('Arr')).not.toHaveClass('text-ecg-green')
     expect(within(aliceRow).getByText(/Shk 1/)).toBeInTheDocument()
+    expect(within(aliceRow).getByRole('link', { name: 'Spectate' })).toHaveAttribute(
+      'href',
+      '/session/ABC123/instructor/spectate/student-1',
+    )
+    expect(within(studentsPanel).getAllByRole('link', { name: 'Spectate' })).toHaveLength(2)
+  })
+
+  it('keeps Spectate available for a 30-trainee room', async () => {
+    const participants = Array.from({ length: 30 }, (_, index) => ({
+      id: `student-${index + 1}`,
+      nickname: `Student ${index + 1}`,
+      joined_at: '2026-09-03T12:00:00.000Z',
+      last_seen_at: new Date().toISOString(),
+    }))
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participants,
+      events: [],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+
+    const studentsPanel = (await screen.findByText('Students')).parentElement as HTMLElement
+    await waitFor(() => {
+      expect(within(studentsPanel).getAllByRole('link', { name: 'Spectate' })).toHaveLength(30)
+    })
   })
 
   it('lets a session instructor force a new attempt', async () => {

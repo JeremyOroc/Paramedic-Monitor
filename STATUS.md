@@ -6,6 +6,24 @@
 ---
 
 ## Current Phase
+**Phase 17 — Instructor Spectator View — COMPLETE AND DEPLOYED (2026-09-03).** Every trainee row now
+opens a separate, silent, inert Wagami X/Z semantic mirror. Participant projections use a
+host-authorized latest-state channel with stream/sequence freshness, immediate coalesced publishing,
+one-second polling, timestamp-driven timed states, attempt resets, and distinct waiting, offline,
+connection-loss, and room-ended presentation.
+
+**Phase 10 enhancement — folder scrolling and persistent folder order — COMPLETE AND DEPLOYED
+(2026-09-03).** Expanded scenario folders grow the library without a nested scrollbar. Folders now
+support persistent drag/drop and Up/Down ordering with alphabetical backfill, append-on-create,
+rename stability, delete compaction, rollback, and active-attempt locking.
+
+> **Deployed:** On 2026-09-03 the linked database migration history was reconciled after direct schema
+> verification, then `20260902160000_strip_history_route_geometry.sql` and
+> `20260903222810_instructor_spectator_and_folder_order.sql` were applied. Post-deployment queries
+> confirm complete migration parity, non-null unique folder positions, the reorder RPC, the RLS-secured
+> projection table, no anonymous projection access, and zero remaining historical route polylines.
+> The live `/api/scenario-folders` endpoint returns HTTP 200 with ordered folders and positions.
+
 **Phase 13 — Evaluation report tab — COMPLETE (2026-09-02).** The Instructor Console has a fifth
 tab rendering one chronological stream of an attempt: each trainee action with its payload against the
 patient state in force when it was taken, with the instructor's own changes interleaved as diffs of
@@ -35,6 +53,28 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Phase 17 — Instructor Spectator View — COMPLETE AND DEPLOYED:**
+  - [x] Added a `Spectate` action to every trainee row, opening a separate host-authorized tab without
+        putting secrets in the URL
+  - [x] Added versioned semantic monitor projections for dispatch, Wagami X/Z, power/boot, menus,
+        modals, selections, defibrillation, NIBP, calibration, timers, and logs
+  - [x] Added latest-only projection storage with per-page stream IDs, monotonic sequence rejection,
+        immediate coalesced publishing, retry, one-second reads, attempt clearing, and room cleanup
+  - [x] Added an isolated silent renderer with an inert pointer/keyboard/touch/focus boundary,
+        spectator-fitted device layout, and status handling for waiting, trainee offline, spectator
+        connection loss, new attempts, and ended rooms while preserving the latest valid frame
+  - [x] Added ADRs 0005/0006, domain terminology, typed service/API routes, migration coverage, and
+        explicit regressions for a 30-trainee roster and eight independently polling spectator views
+- [x] **Phase 10 enhancement — folder scrolling and persistent folder order — COMPLETE AND DEPLOYED:**
+  - [x] Removed the scenario library's fixed-height nested scrollbar so expanded folders grow into the
+        Instructor Console's outer document scroll
+  - [x] Added global persistent folder drag/drop and Up/Down controls, optimistic rollback,
+        alphabetical migration backfill, append-on-create, rename stability, delete compaction, and
+        active-attempt locking
+  - [x] Added generated types, a service-role-only reorder RPC, typed service/API coverage, and UI,
+        migration, rollback, and active-attempt tests
+  - [x] Full verification: 992 tests, TypeScript, Supabase schema lint, ESLint with 0 errors and the
+        12 pre-existing warnings, and the Next.js production build pass
 - [x] **Phase 13 — Evaluation report tab — COMPLETE:**
   - [x] `src/lib/evaluationTimeline.ts` assembles the review payload into one ordered stream: `t+`
         offsets from `participant_attempts.started_at` (falling back to the first recorded row),
@@ -653,7 +693,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## In Progress
-- Nothing — Phase 13 is complete pending rendered browser QA
+- None.
 
 ---
 

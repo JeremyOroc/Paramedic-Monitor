@@ -872,6 +872,14 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                           {' · '}Shk {progress.shocks}
                           {' · '}Med {progress.medications}
                         </span>
+                        <a
+                          href={`/session/${session.code}/instructor/spectate/${participant.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="border border-cyan-bp px-3 py-1 font-mono text-[10px] font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp hover:text-black"
+                        >
+                          Spectate
+                        </a>
                       </div>
                     )
                   })

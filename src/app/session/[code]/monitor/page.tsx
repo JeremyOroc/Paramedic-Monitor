@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 
 import { MonitorPage, type StudentEventRecord } from '@/components/monitor/MonitorPage'
 import { useSessionMonitorSync } from '@/hooks/useSessionMonitorSync'
+import { useMonitorProjectionPublisher } from '@/hooks/useMonitorProjectionPublisher'
 import { useMonitorStore } from '@/store/monitorStore'
 
 function participantStorageKey(code: string) {
@@ -65,11 +66,13 @@ export default function SessionMonitorPage() {
     },
     [code, participantToken],
   )
+  const publishProjection = useMonitorProjectionPublisher({ code, participantToken })
 
   return (
     <MonitorPage
       key={attemptVersion}
       onStudentEvent={recordStudentEvent}
+      onProjectionChange={publishProjection}
       vfDisplaySync={vfDisplaySync}
     />
   )

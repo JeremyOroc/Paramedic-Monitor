@@ -46,6 +46,12 @@ function databaseError(error: { code?: string; message: string } | null, fallbac
       409,
     )
   }
+  if (error?.message.includes('Folder order must contain')) {
+    throw new ScenarioLibraryError(
+      'Folder order must contain every folder exactly once',
+      409,
+    )
+  }
   throw new ScenarioLibraryError(error?.message ?? fallback, 500)
 }
 
@@ -73,7 +79,7 @@ async function requireFolder(folderId: string): Promise<FolderRow> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('scenario_folders')
-    .select('id, name, created_at, updated_at')
+    .select('id, name, position, created_at, updated_at')
     .eq('id', folderId)
     .maybeSingle()
 
@@ -87,7 +93,8 @@ export async function listScenarioFolders(): Promise<ScenarioFolder[]> {
   const [foldersResult, scenariosResult] = await Promise.all([
     supabase
       .from('scenario_folders')
-      .select('id, name, created_at, updated_at')
+      .select('id, name, position, created_at, updated_at')
+      .order('position', { ascending: true })
       .order('name', { ascending: true }),
     supabase.from('saved_scenarios').select('folder_id'),
   ])
@@ -104,14 +111,10 @@ export async function listScenarioFolders(): Promise<ScenarioFolder[]> {
     counts.set(scenario.folder_id, (counts.get(scenario.folder_id) ?? 0) + 1)
   }
 
-  return (foldersResult.data ?? [])
-    .map((folder) => ({
-      ...folder,
-      scenario_count: counts.get(folder.id) ?? 0,
-    }))
-    .sort((left, right) =>
-      left.name.localeCompare(right.name, undefined, { sensitivity: 'base' }),
-    )
+  return (foldersResult.data ?? []).map((folder) => ({
+    ...folder,
+    scenario_count: counts.get(folder.id) ?? 0,
+  }))
 }
 
 export async function createScenarioFolder(name: string): Promise<ScenarioFolder> {
@@ -119,7 +122,7 @@ export async function createScenarioFolder(name: string): Promise<ScenarioFolder
   const { data, error } = await supabase
     .from('scenario_folders')
     .insert({ name: normalizeFolderName(name) })
-    .select('id, name, created_at, updated_at')
+    .select('id, name, position, created_at, updated_at')
     .single()
 
   if (error || !data) databaseError(error, 'Unable to create scenario folder')
@@ -134,7 +137,7 @@ export async function renameScenarioFolder(id: string, name: string): Promise<Sc
     .from('scenario_folders')
     .update({ name: normalizeFolderName(name) })
     .eq('id', id)
-    .select('id, name, created_at, updated_at')
+    .select('id, name, position, created_at, updated_at')
     .single()
 
   if (error || !data) databaseError(error, 'Unable to rename scenario folder')
@@ -152,6 +155,31 @@ export async function deleteScenarioFolder(id: string): Promise<void> {
 
   if (error) databaseError(error, 'Unable to delete scenario folder')
   if (!data) throw new ScenarioLibraryError('Scenario folder not found', 404)
+}
+
+export async function reorderScenarioFolders(
+  orderedFolderIds: string[],
+): Promise<ScenarioFolder[]> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase.rpc('reorder_scenario_folders', {
+    ordered_folder_ids: orderedFolderIds,
+  })
+
+  if (error) databaseError(error, 'Unable to reorder scenario folders')
+
+  const countsResult = await supabase.from('saved_scenarios').select('folder_id')
+  if (countsResult.error) {
+    databaseError(countsResult.error, 'Unable to count saved scenarios')
+  }
+  const counts = new Map<string, number>()
+  for (const scenario of countsResult.data ?? []) {
+    counts.set(scenario.folder_id, (counts.get(scenario.folder_id) ?? 0) + 1)
+  }
+
+  return (data ?? []).map((folder) => ({
+    ...folder,
+    scenario_count: counts.get(folder.id) ?? 0,
+  }))
 }
 
 export async function listSavedScenarios(folderId: string): Promise<SavedScenarioSummary[]> {

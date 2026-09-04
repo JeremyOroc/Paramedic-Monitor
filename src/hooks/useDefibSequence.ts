@@ -43,6 +43,8 @@ export function useDefibSequence({
   }))
   const [shockCount, setShockCount] = useState(0)
   const [progress, setProgress] = useState(0)
+  const [phaseStartedAt, setPhaseStartedAt] = useState<number | null>(null)
+  const [phaseEndsAt, setPhaseEndsAt] = useState<number | null>(null)
   const [cprStartTime, setCprStartTime] = useState<number | null>(null)
   const [lastDeliveredJoules, setLastDeliveredJoules] = useState<number | null>(null)
 
@@ -81,6 +83,8 @@ export function useDefibSequence({
       clearTimers()
       startedAtRef.current = Date.now()
       durationRef.current = durationMs
+      setPhaseStartedAt(startedAtRef.current)
+      setPhaseEndsAt(startedAtRef.current + durationMs)
       setProgress(0)
       const tickProgress = () => {
         const elapsed = Date.now() - startedAtRef.current
@@ -94,6 +98,8 @@ export function useDefibSequence({
       timerRef.current = setTimeout(() => {
         clearTimers()
         setProgress(1)
+        setPhaseStartedAt(null)
+        setPhaseEndsAt(null)
         onComplete()
       }, durationMs)
     },
@@ -152,6 +158,8 @@ export function useDefibSequence({
     setShockCount((n) => n + 1)
     setState('delivered')
     setProgress(0)
+    setPhaseStartedAt(null)
+    setPhaseEndsAt(null)
   }, [state, energyState, patientMode])
 
   const onEnergyUp = useCallback(() => {
@@ -183,6 +191,8 @@ export function useDefibSequence({
     energy,
     shockCount,
     progress,
+    phaseStartedAt,
+    phaseEndsAt,
     cprStartTime,
     lastDeliveredJoules,
     canAnalyse,

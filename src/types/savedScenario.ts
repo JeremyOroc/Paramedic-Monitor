@@ -51,6 +51,7 @@ export type ScenarioSnapshotV1 = {
 export type ScenarioFolder = {
   id: string
   name: string
+  position: number
   scenario_count: number
   created_at: string
   updated_at: string

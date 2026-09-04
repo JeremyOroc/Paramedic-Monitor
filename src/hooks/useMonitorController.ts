@@ -56,7 +56,7 @@ const EVENT_LOG_EXIT_ONLY: readonly EventLogHighlightedButton[] = ['exit']
 const VITAL_LOG_BUTTONS: readonly VitalLogHighlightedButton[] = ['exit', 'prev', 'next']
 const VITAL_LOG_EXIT_ONLY: readonly VitalLogHighlightedButton[] = ['exit']
 
-type MonitorControllerState = {
+export type MonitorControllerState = {
   view: MonitorView
   secondary: SecondaryChannel
   patientMode: PatientMode
@@ -837,6 +837,7 @@ export function useMonitorController({
 
   return {
     ...state,
+    snapshot: state,
     selectableControls,
     activeSelectedControl,
     isTwelveLead: state.view === '12lead',

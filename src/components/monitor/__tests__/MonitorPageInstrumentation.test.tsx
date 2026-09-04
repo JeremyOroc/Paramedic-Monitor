@@ -100,6 +100,24 @@ beforeEach(() => {
 })
 
 describe('trainee action instrumentation (PLAN 12d)', () => {
+  it('emits a semantic projection containing the current device and controller state', () => {
+    const onProjectionChange = vi.fn()
+
+    render(<MonitorPage onProjectionChange={onProjectionChange} />)
+
+    expect(onProjectionChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        version: 1,
+        model: 'wagamiX',
+        surface: 'monitor',
+        powerState: 'on',
+        controller: expect.objectContaining({ view: 'main', patientModalOpen: false }),
+        confirmed: expect.objectContaining({ rhythm: 'off' }),
+        defib: expect.objectContaining({ state: 'idle' }),
+      }),
+    )
+  })
+
   it('reports the BP button press as its own event, before any reading exists', () => {
     // The evaluator grades ordering, so the moment the trainee reached for the
     // cuff is the fact that matters -- the reading lands ~11s later.

@@ -17,6 +17,12 @@ export type WagamiZPowerState = 'off' | 'booting' | 'on'
 
 export type WagamiZDeviceProps = {
   initialPowerState?: Exclude<WagamiZPowerState, 'booting'>
+  /** Controlled power state used by the read-only spectator renderer. */
+  powerStateOverride?: WagamiZPowerState
+  /** Reports every committed power transition for trainee projection. */
+  onPowerStateChange?: (state: WagamiZPowerState) => void
+  embedded?: boolean
+  forceSupportedViewport?: boolean
   date: string
   time: string
   sessionTimer: string
@@ -225,19 +231,32 @@ function WagamiZShell({
 
 export function WagamiZDevice({
   initialPowerState = 'off',
+  powerStateOverride,
+  onPowerStateChange,
+  embedded = false,
+  forceSupportedViewport = false,
   onPowerOn,
   onPowerOff,
   ...props
 }: WagamiZDeviceProps) {
-  const [powerState, setPowerState] = useState<WagamiZPowerState>(initialPowerState)
+  const [internalPowerState, setPowerState] = useState<WagamiZPowerState>(initialPowerState)
+  const powerState = powerStateOverride ?? internalPowerState
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const viewportState = useWagamiZViewport()
+  const reportedPowerStateRef = useRef(powerState)
+  const detectedViewportState = useWagamiZViewport()
+  const viewportState = forceSupportedViewport ? 'supported' : detectedViewportState
 
   useEffect(() => {
     return () => {
       if (bootTimerRef.current) clearTimeout(bootTimerRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (reportedPowerStateRef.current === powerState) return
+    reportedPowerStateRef.current = powerState
+    onPowerStateChange?.(powerState)
+  }, [onPowerStateChange, powerState])
 
   const handlePowerToggle = () => {
     if (powerState === 'booting') return
@@ -257,7 +276,10 @@ export function WagamiZDevice({
   }
 
   return (
-    <main data-testid="wagami-z-device" data-power-state={powerState} data-viewport-state={viewportState} className="wagami-z-stage grid h-[100dvh] w-screen place-items-center overflow-hidden bg-wagami-z-backdrop">
+    <main data-testid="wagami-z-device" data-power-state={powerState} data-viewport-state={viewportState} className={cn(
+      'wagami-z-stage grid place-items-center overflow-hidden bg-wagami-z-backdrop',
+      embedded ? 'h-full w-full' : 'h-[100dvh] w-screen',
+    )}>
       {viewportState === 'supported' ? (
         <WagamiZShell {...props} powerState={powerState} onPowerToggle={handlePowerToggle} />
       ) : (
