@@ -281,15 +281,30 @@ const VITAL_LABELS: Record<Exclude<NumericVitalField, 'hr' | 'bp_dia'>, string> 
   etco2: 'EtCO2',
 }
 
-function alarmsFor(state: NormalizedState): AlarmChannel[] {
+/**
+ * The blood pressure on the trainee's screen, or null when there is none.
+ *
+ * NIBP is intermittent: the cuff reads only when the trainee starts it, so
+ * the monitor shows `--/--` until then and holds the last reading afterwards.
+ * The instructor's confirmed BP is what the cuff *will* report, not what is
+ * displayed, and `acceptedBp` -- the value actually on screen -- is
+ * trainee-local and never reaches the record. So the report reconstructs it
+ * from the `nibp_result` events, which are emitted in the same callback that
+ * puts the reading on screen.
+ */
+export type BpReading = { sys: number; dia: number } | null
+
+function alarmsFor(state: NormalizedState, bp: BpReading): AlarmChannel[] {
   return getActiveAlarms(
     {
       hr: state.vitals.hr ?? Number.NaN,
-      bp_sys: state.vitals.bp_sys ?? Number.NaN,
-      bp_dia: state.vitals.bp_dia ?? Number.NaN,
+      bp_sys: bp?.sys ?? Number.NaN,
+      bp_dia: bp?.dia ?? Number.NaN,
       spo2: state.vitals.spo2 ?? Number.NaN,
     },
-    state.active,
+    // No reading means no BP alarm. A patient whose configured pressure is
+    // 88/54 is not in a BP alarm state on a monitor that has never taken it.
+    { ...state.active, bp_sys: bp !== null && state.active.bp_sys, bp_dia: bp !== null && state.active.bp_dia },
   )
 }
 
@@ -302,8 +317,9 @@ function alarmsFor(state: NormalizedState): AlarmChannel[] {
 function buildContext(
   state: NormalizedState,
   everActive: ReadonlySet<NumericVitalField>,
+  bp: BpReading,
 ): TimelineStateContext {
-  const alarms = alarmsFor(state)
+  const alarms = alarmsFor(state, bp)
   const alarmed = new Set(alarms)
   const vitals: TimelineVital[] = []
 
@@ -314,11 +330,11 @@ function buildContext(
   }
 
   if (show('bp_sys') || show('bp_dia')) {
-    const systolic = read('bp_sys')
-    const diastolic = read('bp_dia')
+    // What the cuff last reported, not what the instructor configured.
+    const channelsOn = state.active.bp_sys && state.active.bp_dia
     vitals.push({
       label: VITAL_LABELS.bp_sys,
-      value: `${systolic}/${diastolic}`,
+      value: bp === null || !channelsOn ? '--/--' : `${bp.sys}/${bp.dia}`,
       alarm: alarmed.has('bp'),
     })
   }
@@ -669,10 +685,44 @@ export function buildEvaluationTimeline(
   // HR is the run's spine -- it prints even in an attempt that never sent one.
   everActive.add('hr')
 
-  const contextFor = (stateVersion: number | null): TimelineContext => {
+  // When a reading appeared on the trainee's screen, and when it was cleared.
+  // A monitor reset clears the accepted reading, so the display goes back to
+  // `--/--` until the trainee takes another one.
+  const bpChanges: Array<{ at: number; bp: BpReading }> = []
+  for (const { event, at } of events) {
+    if (event.kind !== 'nibp_result' || !isRecord(event.payload)) continue
+    const sys = numberOrNull(event.payload.bp_sys)
+    const dia = numberOrNull(event.payload.bp_dia)
+    if (sys !== null && dia !== null) bpChanges.push({ at, bp: { sys, dia } })
+  }
+  history.forEach((item, index) => {
+    if (index === 0) return
+    const before = states.get(history[index - 1].entry.version)
+    const after = states.get(item.entry.version)
+    if (!before || !after) return
+    if (
+      before.monitorResetVersion !== null &&
+      after.monitorResetVersion !== null &&
+      before.monitorResetVersion !== after.monitorResetVersion
+    ) {
+      bpChanges.push({ at: item.at, bp: null })
+    }
+  })
+  bpChanges.sort((a, b) => a.at - b.at)
+
+  const bpAt = (at: number): BpReading => {
+    let current: BpReading = null
+    for (const change of bpChanges) {
+      if (change.at > at) break
+      current = change.bp
+    }
+    return current
+  }
+
+  const contextFor = (stateVersion: number | null, at: number): TimelineContext => {
     if (stateVersion === null) return { kind: 'dispatch' }
     const state = states.get(stateVersion)
-    return state ? buildContext(state, everActive) : { kind: 'missing' }
+    return state ? buildContext(state, everActive, bpAt(at)) : { kind: 'missing' }
   }
 
   // The version the instructor had sent by a given moment, so an action can
@@ -689,7 +739,7 @@ export function buildEvaluationTimeline(
   const rows: TimelineRow[] = []
 
   for (const { event, at, clientTimed } of events) {
-    const context = contextFor(event.state_version)
+    const context = contextFor(event.state_version, at)
     const shouldHaveSeen = latestVersionBefore(at)
     const behindBy =
       event.state_version !== null && shouldHaveSeen !== null
@@ -718,7 +768,7 @@ export function buildEvaluationTimeline(
     if (!state) return
     const previousEntry = index > 0 ? history[index - 1] : null
     const previous = previousEntry ? states.get(previousEntry.entry.version) : undefined
-    const context = buildContext(state, everActive)
+    const context = buildContext(state, everActive, bpAt(item.at))
     const offsetMs = baselineMs === null ? 0 : item.at - baselineMs
 
     const fieldChanges = previous ? diffStates(previous, state) : []

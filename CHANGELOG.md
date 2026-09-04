@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-09-04] [instructor] — Report shows BP only once the trainee reads it
+
+- The report's patient-state column showed the instructor's configured blood pressure from the moment it was sent, but NIBP is intermittent: the trainee's monitor reads `--/--` until they start the cuff. The column now reconstructs what was on screen from the `nibp_result` events, which are emitted in the same callback that puts a reading on the monitor. `acceptedBp`, the displayed value, is trainee-local and never reaches the record, so the events are the only source.
+- A row with no reading behind it no longer raises a BP alarm. On a reported attempt this was the larger error: a configured 88/54 red-railed eight rows across three and a half minutes before anyone had taken a pressure, and none of those rows had any other channel out of range.
+- A reading is held until the next one rather than following the instructor, so a pressure changed after the cuff read shows the old reading until the trainee re-reads. A monitor reset clears it back to `--/--`.
+- Added 8 tests. All 1071 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass. Verified by re-rendering the reported attempt from the live database.
+
 ## [2026-09-04] [instructor/server] — End Room reports failure instead of doing nothing
 
 - Reported by an instructor as "End Room doesn't end the room": the console stayed on the admin page. Two causes, one of them intentional. The spectate work deliberately stopped navigating away after End Room so the mini-player and the Report tab stay useful, which reads as nothing happening. Separately, `endSession` had no `try/catch`, so a thrown fetch or a non-JSON error body rejected the handler unhandled with no message at all; every failure now shows an amber line naming the reason and HTTP status. Server-side, End Room was already correct, verified by an API loop: status flips to `ended`, trainee polls report it, join and restart return 410.

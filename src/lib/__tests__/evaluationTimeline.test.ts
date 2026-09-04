@@ -466,6 +466,103 @@ describe('describeState (PLAN 15c)', () => {
   })
 })
 
+describe('buildEvaluationTimeline — BP appears only once the trainee reads it', () => {
+  const reading = (seconds: number, sys: number, dia: number, over = {}) =>
+    makeEvent({ kind: 'nibp_result', label: `NIBP ${sys}/${dia}`, payload: { bp_sys: sys, bp_dia: dia }, occurred_at: at(seconds), state_version: 1, ...over })
+  const bpOf = (row: TimelineActionRow | TimelineInstructorRow) =>
+    (row.context as TimelineStateContext).vitals.find((v) => v.label === 'BP')
+
+  it('shows dashes before any reading, even though the instructor sent a pressure', () => {
+    const { rows } = build({
+      stateHistory: [makeState(1, 0, sharedState({ bp_sys: 88, bp_dia: 54 }))],
+      events: [makeEvent({ kind: 'power_on', label: 'Power On', occurred_at: at(10), state_version: 1 })],
+    })
+    expect(bpOf(actions(rows)[0])).toEqual({ label: 'BP', value: '--/--', alarm: false })
+  })
+
+  it('does not raise a BP alarm for a pressure the monitor never displayed', () => {
+    // 88/54 is below the systolic threshold, but nobody has taken it.
+    const { rows } = build({
+      stateHistory: [makeState(1, 0, sharedState({ bp_sys: 88, bp_dia: 54 }))],
+      events: [makeEvent({ occurred_at: at(10), state_version: 1 })],
+    })
+    const row = actions(rows)[0]
+    expect(row.inAlarm).toBe(false)
+    expect((row.context as TimelineStateContext).alarms).toEqual([])
+  })
+
+  it('shows the reading from the moment it is taken, and alarms on it', () => {
+    const { rows } = build({
+      stateHistory: [makeState(1, 0, sharedState({ bp_sys: 88, bp_dia: 54 }))],
+      events: [
+        makeEvent({ kind: 'power_on', label: 'Power On', occurred_at: at(10), state_version: 1 }),
+        reading(20, 88, 54),
+        makeEvent({ kind: 'medication', label: 'AAS', occurred_at: at(30), state_version: 1 }),
+      ],
+    })
+    const [before, result, after] = actions(rows)
+    expect(bpOf(before)?.value).toBe('--/--')
+    expect(before.inAlarm).toBe(false)
+    expect(bpOf(result)).toEqual({ label: 'BP', value: '88/54', alarm: true })
+    expect(result.inAlarm).toBe(true)
+    expect(bpOf(after)?.value).toBe('88/54')
+  })
+
+  it('holds the last reading rather than following the instructor', () => {
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({ bp_sys: 120, bp_dia: 80 })),
+        makeState(2, 30, sharedState({ bp_sys: 88, bp_dia: 54 })),
+      ],
+      events: [
+        reading(10, 120, 80),
+        makeEvent({ kind: 'medication', label: 'AAS', occurred_at: at(40), state_version: 2 }),
+        reading(50, 88, 54, { state_version: 2 }),
+      ],
+    })
+    const [, afterInstructorChange, secondReading] = actions(rows)
+    // The instructor dropped the pressure at t+30; the cuff has not re-read.
+    expect(bpOf(afterInstructorChange)?.value).toBe('120/80')
+    expect(afterInstructorChange.inAlarm).toBe(false)
+    expect(bpOf(secondReading)?.value).toBe('88/54')
+  })
+
+  it('clears the reading on a monitor reset', () => {
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({}, {}, { monitorResetVersion: 0 })),
+        makeState(2, 30, sharedState({}, {}, { monitorResetVersion: 1 })),
+      ],
+      events: [
+        reading(10, 120, 80),
+        makeEvent({ kind: 'power_on', label: 'Power On', occurred_at: at(40), state_version: 2 }),
+      ],
+    })
+    const [firstReading, afterReset] = actions(rows)
+    expect(bpOf(firstReading)?.value).toBe('120/80')
+    expect(bpOf(afterReset)?.value).toBe('--/--')
+  })
+
+  it('omits BP entirely when the channels were off for the whole attempt, reading or not', () => {
+    const { rows } = build({
+      stateHistory: [makeState(1, 0, sharedState({}, { bp_sys: false, bp_dia: false }))],
+      events: [reading(10, 120, 80)],
+    })
+    expect(bpOf(actions(rows)[0])).toBeUndefined()
+  })
+
+  it('shows dashes for a reading taken while the instructor had the channels off', () => {
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({})),
+        makeState(2, 20, sharedState({}, { bp_sys: false, bp_dia: false })),
+      ],
+      events: [reading(10, 120, 80), makeEvent({ occurred_at: at(30), state_version: 2 })],
+    })
+    expect(bpOf(actions(rows)[1])?.value).toBe('--/--')
+  })
+})
+
 describe('buildEvaluationTimeline', () => {
   it('counts offsets from the attempt start', () => {
     const { rows, durationMs } = build({
@@ -503,10 +600,11 @@ describe('buildEvaluationTimeline', () => {
       ],
       events: [
         makeEvent({ kind: 'power_on', label: 'Power On', occurred_at: at(260), state_version: 1 }),
+        makeEvent({ kind: 'nibp_result', label: 'NIBP 82/48', payload: { bp_sys: 82, bp_dia: 48 }, occurred_at: at(300), state_version: 2 }),
         makeEvent({ kind: 'medication', label: 'Epinephrine', occurred_at: at(302), state_version: 2 }),
       ],
     })
-    const [early, late] = actions(rows)
+    const [early, , late] = actions(rows)
     expect((early.context as TimelineStateContext).rhythm).toBe('NSR 88')
     expect((late.context as TimelineStateContext).rhythm).toBe('VF 112')
     expect((late.context as TimelineStateContext).vitals).toEqual([
@@ -559,7 +657,9 @@ describe('buildEvaluationTimeline', () => {
       events: [makeEvent({ occurred_at: at(10), state_version: 1 })],
     })
     const context = actions(rows)[0].context as TimelineStateContext
-    expect(context.vitals).toEqual([{ label: 'BP', value: '118/76', alarm: false }])
+    // BP reads as dashes because the trainee never took one, not because the
+    // channel is off -- the column is present, the reading is not.
+    expect(context.vitals).toEqual([{ label: 'BP', value: '--/--', alarm: false }])
     expect(context.rhythm).toBe('NSR 88')
   })
 

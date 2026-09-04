@@ -78,6 +78,10 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Report BP fidelity (2026-09-04):** the patient-state column shows BP only once the trainee has
+      taken a reading, holds it until the next one, clears it on a monitor reset, and raises no BP alarm
+      without one. Reconstructed from `nibp_result` events, since the displayed value is trainee-local.
+      8 tests; 1071 pass
 - [x] **End Room feedback (2026-09-04):** a failed End Room request now shows why instead of leaving the
       console silently on the admin page; an already-ended room shows a `Room ended` notice with a way
       to create a new one; Sends and trainee actions on an ended room return 410. 4 tests; 1024 pass
