@@ -1208,6 +1208,11 @@ only. Action rows do not expand; copy-to-clipboard is unchanged.
 
 **Milestone:** The instructor opens any of their own rows and sees exactly what that Send changed.
 
+**Code complete 2026-09-03.** Two things the build settled: the console's waveform selectors carry
+no display names, so the report defines Normal / Weak / Off and Normal / Hypoventilation /
+Obstructed / Off itself; and `diffStates` now returns structured changes with `summarizeChanges`
+producing the line, so the expansion and the summary read from one diff rather than two.
+
 ---
 
 ### Phase 16 — Realtime Nudge & Presence

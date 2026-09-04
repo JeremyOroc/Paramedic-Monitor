@@ -6,17 +6,24 @@
 ---
 
 ## Current Phase
-**Phase 14 — Sync & Queue — CODE COMPLETE (2026-09-03), MIGRATION NOT YET APPLIED.** A trainee action
+**Phase 15 — Instructor Change Expansion — CODE COMPLETE (2026-09-03).** Every instructor change in
+the Report tab opens. The opening change shows the whole scenario as sent, grouped Dispatch / Patient
+/ Device with empty fields absent; every later change shows only the fields that Send moved, before
+→ after. The diff now covers everything the instructor sets: waveforms, defibrillator model, the
+dispatch card field by field, route addresses, and response time. Summary lines stay one line, with
+the dispatch card and route collapsed to a count. Stacked on Phase 14 (PR #77).
+
+**Phase 14 — Sync & Queue — COMPLETE (2026-09-03), MIGRATION APPLIED.** A trainee action
 pressed during a wifi drop now waits on the device and lands in the evaluation record at the moment
 it was pressed, against the state version the monitor was showing, flagged `← n behind` when that
 trailed what the instructor had sent. The trainee's poll names the version it holds and an unchanged
 room answers in ~300 bytes instead of the whole blob. `docs/adr/0003` and `docs/adr/0004`.
 
-> **Deploy order matters:** apply `20260903120000_trainee_action_clock.sql` *before* deploying this
-> code. `getReview` and `recordStudentEvent` now name the three new columns, so on a database without
-> them the Report tab, the console's roster poll, and every trainee action fail until the migration
-> runs. Verified live: `?since=` works today; the action path returned
-> `Could not find the 'capture_sequence' column` until the columns exist.
+> Migration `20260903120000_trainee_action_clock.sql` is applied (verified 2026-09-03). Live check
+> against the running app and the live database: `?since=` answers an unchanged poll in 315 bytes
+> against 13,676; a claim at the older version is stored as claimed while the room is ahead; a
+> claim ahead of the room gets its 400; a press replayed after a later Send renders at its press
+> time on the trainee's clock and carries `← 1 behind`.
 
 **Phase 13 — Evaluation report tab — COMPLETE (2026-09-02).** The Instructor Console has a fifth
 tab rendering one chronological stream of an attempt: each trainee action with its payload against the
@@ -47,6 +54,26 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **Phase 15 — Instructor Change Expansion — CODE COMPLETE:**
+  - [x] 15a `normalizeHistoryState` reads the waveforms, defibrillator model, every dispatch card
+        field, the route addresses, and the response time; `diffStates` returns structured
+        `FieldChange`s by explicit allowlist and never compares the dispatch clock's ids and
+        deadlines, the route polyline / status / coordinates, the trainee's stamps, or the legacy
+        CPR mirror. Extra slots count only once named. Dispatch fields use the console's own labels
+        from `CALLER_INFO_FIELDS`; waveform names are defined in the timeline because the console
+        has none
+  - [x] 15b `summarizeChanges` names clinical, care, scenario, device, and timing changes and
+        collapses the dispatch card to `dispatch card · n fields` and the route to
+        `route · destination`, ending in `+n more` past six clauses. `sent (no clinical change)`
+        becomes `sent (no change)`
+  - [x] 15c `describeState` lays the opening state out by group with empty fields absent; the panel
+        gives each instructor change with content a native disclosure button with `aria-expanded`,
+        held per row id so it survives the poll. Action rows and no-change Sends have no disclosure.
+        Copy is unchanged
+  - [x] 16 new tests (8 diff groups and exclusions, 3 summary, 2 snapshot, 3 panel). All 1020 tests
+        and TypeScript pass; ESLint 0 errors with the 12 pre-existing warnings; production build
+        passes
+
 - [x] **Phase 14 — Sync & Queue — CODE COMPLETE:**
   - [x] 14a `GET /state?since=<version>`: `getSessionStatus` reads only the version when the monitor
         names the one it holds and answers `{ unchanged: true }` without the blob; the sync hook sends
@@ -68,8 +95,8 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
         offset on every poll rather than only when state changes
   - [x] 38 new tests (7 queue, 3 queue hook, 3 sync hook, 10 service, 3 state route, 3 student-event
         route, 9 timeline, 1 panel). All 1004 tests and TypeScript pass; ESLint 0 errors with the 12
-        pre-existing warnings; production build passes. Live: `?since=` verified end to end; the
-        action path verified by tests only until the migration is applied
+        pre-existing warnings; production build passes. Live, after the migration: `?since=`, the
+        bounded claim, the 400 on a claim ahead, and the `← 1 behind` marker all verified end to end
 
 - [x] **Phase 13 — Evaluation report tab — COMPLETE:**
   - [x] `src/lib/evaluationTimeline.ts` assembles the review payload into one ordered stream: `t+`
@@ -689,7 +716,8 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## In Progress
-- Phase 14 awaits its migration on the live project, then a live check of the replay path
+- Nothing — #77 (Phase 14) is ready to merge; #78 (Phase 15) is stacked on it and retargets to
+  `main` once #77 merges
 
 ---
 

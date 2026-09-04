@@ -10,7 +10,12 @@ import type {
   SessionStateHistoryEntry,
   StudentEvent,
 } from '@/types/session'
-import type { TimelineContext, TimelineRow } from '@/lib/evaluationTimeline'
+import type {
+  StateFact,
+  TimelineContext,
+  TimelineInstructorRow,
+  TimelineRow,
+} from '@/lib/evaluationTimeline'
 
 type EvaluationReportPanelProps = {
   events: readonly StudentEvent[]
@@ -33,6 +38,59 @@ function openingLabel(scenarioTitle: string): string {
   return scenarioTitle ? `scenario sent — "${scenarioTitle}"` : 'scenario sent'
 }
 
+/** A row opens when it has something to show: the opening scenario, or at least one changed field. */
+function hasDetail(row: TimelineInstructorRow): boolean {
+  return row.opening ? row.snapshot.length > 0 : row.fieldChanges.length > 0
+}
+
+const FACT_GROUPS: readonly StateFact['group'][] = ['Dispatch', 'Patient', 'Device']
+
+/**
+ * The opening change shows the whole scenario as sent; every later change
+ * shows only its fields, before → after. Not the full state again: real room
+ * data made 79% of the dispatch card a repeat of the row above when every
+ * expansion rendered it.
+ */
+function InstructorChangeDetail({ row }: { row: TimelineInstructorRow }) {
+  return (
+    <div
+      id={`${row.id}-detail`}
+      data-testid="report-row-detail"
+      className="ml-[4.5rem] mt-1 grid gap-y-1 border-l border-neutral-800 pl-3 text-neutral-400"
+    >
+      {row.opening
+        ? FACT_GROUPS.map((group) => {
+            const facts = row.snapshot.filter((fact) => fact.group === group)
+            if (facts.length === 0) return null
+            return (
+              <div key={group} className="grid gap-y-0.5">
+                <span className="uppercase tracking-wider text-neutral-600">{group}</span>
+                {facts.map((fact) => (
+                  <span key={`${group}-${fact.label}`} className="grid grid-cols-[9rem_minmax(0,1fr)] gap-x-3">
+                    <span className="text-neutral-500">{fact.label}</span>
+                    <span className="whitespace-pre-wrap break-words text-neutral-300">{fact.value}</span>
+                  </span>
+                ))}
+              </div>
+            )
+          })
+        : row.fieldChanges.map((change) => (
+            <span
+              key={`${change.group}-${change.label}`}
+              className="grid grid-cols-[9rem_minmax(0,1fr)] gap-x-3"
+            >
+              <span className="text-neutral-500">{change.label}</span>
+              <span className="break-words">
+                <span className="text-neutral-500">{change.before}</span>
+                <span className="text-neutral-600">{' → '}</span>
+                <span className="text-neutral-200">{change.after}</span>
+              </span>
+            </span>
+          ))}
+    </div>
+  )
+}
+
 /** The stream as plain text, for pasting into a debrief. */
 function toPlainText(rows: readonly TimelineRow[], showNames: boolean): string {
   return rows
@@ -42,7 +100,7 @@ function toPlainText(rows: readonly TimelineRow[], showNames: boolean): string {
           ? openingLabel(row.scenarioTitle)
           : row.changes.length > 0
             ? row.changes.join(' · ')
-            : 'sent (no clinical change)'
+            : 'sent (no change)'
         return `${row.offset}\tINSTRUCTOR\t${what}\t${contextText(row.context)}`
       }
       const who = showNames ? `${row.participantName}\t` : ''
@@ -62,6 +120,17 @@ export function EvaluationReportPanel({
   truncated = false,
 }: EvaluationReportPanelProps) {
   const [copied, setCopied] = useState(false)
+  // Keyed by row id so a row opened mid-attempt stays open across the poll,
+  // which replaces every row object every 2.5s.
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
+  const toggle = useCallback((id: string) => {
+    setExpanded((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
   const timeline = useMemo(
     () =>
@@ -189,15 +258,20 @@ export function EvaluationReportPanel({
               data-alarm={row.inAlarm ? 'true' : undefined}
               data-behind={row.kind === 'action' && row.behindBy > 0 ? String(row.behindBy) : undefined}
               className={cn(
-                'grid items-baseline gap-x-3 border-l-2 px-2 py-1',
-                'grid-cols-[4.5rem_minmax(0,1fr)]',
-                showNames
-                  ? 'md:grid-cols-[4.5rem_7rem_9rem_minmax(0,1fr)_auto]'
-                  : 'md:grid-cols-[4.5rem_9rem_minmax(0,1fr)_auto]',
+                'border-l-2 px-2 py-1',
                 row.inAlarm
                   ? 'border-l-alarm-red bg-alarm-red/10'
                   : 'border-l-transparent',
                 row.kind === 'instructor' && 'text-neutral-500',
+              )}
+            >
+            <div
+              className={cn(
+                'grid items-baseline gap-x-3',
+                'grid-cols-[4.5rem_minmax(0,1fr)]',
+                showNames
+                  ? 'md:grid-cols-[4.5rem_7rem_9rem_minmax(0,1fr)_auto]'
+                  : 'md:grid-cols-[4.5rem_9rem_minmax(0,1fr)_auto]',
               )}
             >
               <span className="text-neutral-500">{row.offset}</span>
@@ -205,17 +279,33 @@ export function EvaluationReportPanel({
               {row.kind === 'instructor' ? (
                 <span
                   className={cn(
-                    'truncate uppercase tracking-wider text-cyan-bp/70',
+                    'flex min-w-0 items-baseline gap-2 uppercase tracking-wider text-cyan-bp/70',
                     showNames ? 'md:col-span-3' : 'md:col-span-2',
                   )}
                 >
-                  {'▸▸ Instructor '}
-                  <span className="normal-case tracking-normal text-neutral-400">
-                    {row.opening
-                      ? openingLabel(row.scenarioTitle)
-                      : row.changes.length > 0
-                        ? row.changes.join(' · ')
-                        : 'sent (no clinical change)'}
+                  {hasDetail(row) ? (
+                    <button
+                      type="button"
+                      onClick={() => toggle(row.id)}
+                      aria-expanded={expanded.has(row.id)}
+                      aria-controls={`${row.id}-detail`}
+                      aria-label={expanded.has(row.id) ? 'Collapse instructor change' : 'Expand instructor change'}
+                      className="shrink-0 text-cyan-bp/70 hover:text-cyan-bp"
+                    >
+                      {expanded.has(row.id) ? '▾' : '▸'}
+                    </button>
+                  ) : (
+                    <span className="shrink-0">▸▸</span>
+                  )}
+                  <span className="truncate">
+                    {'Instructor '}
+                    <span className="normal-case tracking-normal text-neutral-400">
+                      {row.opening
+                        ? openingLabel(row.scenarioTitle)
+                        : row.changes.length > 0
+                          ? row.changes.join(' · ')
+                          : 'sent (no change)'}
+                    </span>
                   </span>
                 </span>
               ) : (
@@ -258,6 +348,10 @@ export function EvaluationReportPanel({
                   <span className="ml-2 text-pending-amber">{`← ${row.behindBy} behind`}</span>
                 ) : null}
               </span>
+            </div>
+            {row.kind === 'instructor' && expanded.has(row.id) ? (
+              <InstructorChangeDetail row={row} />
+            ) : null}
             </li>
           ))}
         </ol>
