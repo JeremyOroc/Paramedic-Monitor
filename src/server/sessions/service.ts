@@ -555,6 +555,48 @@ export async function startNewAttempt(code: string, hostToken: string) {
   return data as SessionRecord
 }
 
+export const ATTEMPT_LABEL_MAX = 60
+
+/**
+ * Name one of the room's attempts. The number is what the record is keyed
+ * on and never changes; the name is a label beside it, changeable at any
+ * time, including for an attempt that has already ended. An empty label
+ * clears the name.
+ */
+export async function renameAttempt(
+  code: string,
+  hostToken: string,
+  attemptVersion: number,
+  label: string,
+) {
+  const session = await verifyHost(code, hostToken)
+  if (
+    !Number.isInteger(attemptVersion) ||
+    attemptVersion < 1 ||
+    attemptVersion > session.active_attempt_version
+  ) {
+    throw new SessionError(`No attempt ${attemptVersion} in this room`, 400)
+  }
+  const normalized = label.trim().replace(/\s+/g, ' ').slice(0, ATTEMPT_LABEL_MAX)
+
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('session_attempts')
+    .upsert(
+      {
+        session_id: session.id,
+        attempt_version: attemptVersion,
+        label: normalized,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'session_id,attempt_version' },
+    )
+    .select('attempt_version, label')
+    .single()
+  if (error || !data) throw new SessionError(error?.message ?? 'Unable to rename attempt', 500)
+  return data
+}
+
 export async function endSession(code: string, hostToken: string) {
   const session = await verifyHost(code, hostToken)
   const supabase = createServiceClient()
@@ -833,7 +875,7 @@ export async function getReview(
 
   // Four independent reads; nothing here depends on another's result, so they
   // go out together rather than one round-trip after the next.
-  const [participantsResult, eventsResult, historyResult, attemptsResult] = await Promise.all([
+  const [participantsResult, eventsResult, historyResult, attemptsResult, labelsResult] = await Promise.all([
     supabase
       .from('participants')
       .select('id, session_id, nickname, joined_at, last_seen_at')
@@ -849,12 +891,18 @@ export async function getReview(
       .from('participant_attempts')
       .select('participant_id, attempt_version, started_at, completed_at')
       .eq('session_id', session.id),
+    // Every attempt's name, not only the requested one: the picker lists them all.
+    supabase
+      .from('session_attempts')
+      .select('attempt_version, label')
+      .eq('session_id', session.id),
   ])
 
   if (participantsResult.error) throw new SessionError(participantsResult.error.message, 500)
   if (eventsResult.error) throw new SessionError(eventsResult.error.message, 500)
   if (historyResult.error) throw new SessionError(historyResult.error.message, 500)
   if (attemptsResult.error) throw new SessionError(attemptsResult.error.message, 500)
+  if (labelsResult.error) throw new SessionError(labelsResult.error.message, 500)
 
   const allEvents = eventsResult.data ?? []
   const truncated = allEvents.length > REVIEW_EVENT_LIMIT
@@ -867,5 +915,6 @@ export async function getReview(
     truncated,
     stateHistory: historyResult.data ?? [],
     attempts: attemptsResult.data ?? [],
+    attemptLabels: labelsResult.data ?? [],
   }
 }

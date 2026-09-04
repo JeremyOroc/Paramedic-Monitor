@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-09-04] [instructor/server] — Attempt names
+
+- The instructor can name each attempt. The number stays and is what everything is keyed on; the name sits beside it: the Report tab picker reads `2 · Morning cohort`, the header, the copied text, and the console's status line carry it, and an unnamed attempt shows its number alone.
+- Added `session_attempts (session_id, attempt_version, label, updated_at)`, migration `20260904120000_attempt_names.sql`, service-role only. The room had no attempt record of its own: `sessions.active_attempt_version` is an integer and `participant_attempts` is per trainee. A row exists only once an attempt is named. Not stored in the sent state, since a name must be changeable after the fact without a Send.
+- `PATCH /api/session/[code]/attempt/[version]` with `{ label }`, host token required; trimmed, capped at 60 characters, empty clears. Any attempt in the room can be renamed at any time, including an ended one. `getReview` returns every attempt's name, unfiltered, so the picker lists them all; they ride the existing poll.
+- A text field beside the picker in the Report tab, host only, saves on Enter or blur and only when the name changed. The console applies the response locally so the picker and status line update before the next poll.
+- Added 14 tests. All 1085 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass. The migration is not yet applied.
+
 ## [2026-09-04] [instructor] — Report shows BP only once the trainee reads it
 
 - The report's patient-state column showed the instructor's configured blood pressure from the moment it was sent, but NIBP is intermittent: the trainee's monitor reads `--/--` until they start the cuff. The column now reconstructs what was on screen from the `nibp_result` events, which are emitted in the same callback that puts a reading on the monitor. `acceptedBp`, the displayed value, is trainee-local and never reaches the record, so the events are the only source.
