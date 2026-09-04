@@ -1,10 +1,14 @@
 import { RHYTHM_LABELS } from '@/lib/rhythmLabels'
+import { CALLER_INFO_FIELDS, type CallerInfoField } from '@/types/callerInfo'
+import type { DefibrillatorModel } from '@/types/defibrillator'
 import {
   getActiveAlarms,
   type AlarmChannel,
   type CprMode,
+  type Etco2Waveform,
   type NumericVitalField,
   type Rhythm,
+  type Spo2Waveform,
   type VitalActiveState,
 } from '@/types/vitals'
 import type {
@@ -85,12 +89,39 @@ export type TimelineActionRow = TimelineRowBase & {
 export type TimelineInstructorRow = TimelineRowBase & {
   kind: 'instructor'
   version: number
-  /** `HR 88 → 112`, one per changed field. Empty on a Send that changed nothing clinical. */
+  /**
+   * The one-line summary: clinical changes named individually, the dispatch
+   * card and route collapsed by group. Empty on a Send that changed nothing.
+   */
   changes: string[]
+  /** Every changed field with its before and after, for the expansion. */
+  fieldChanges: FieldChange[]
   /** The attempt's first state: an opening position rather than a change. */
   opening: boolean
+  /** The full sent state, grouped as the console groups it. Only the opening row shows it. */
+  snapshot: StateFact[]
   /** The scenario running at this point, by name. Empty when unnamed. */
   scenarioTitle: string
+}
+
+/** Where a change belongs, which decides whether the summary names it or counts it. */
+export type ChangeGroup = 'patient' | 'care' | 'scenario' | 'device' | 'timing' | 'dispatch' | 'route'
+
+export type FieldChange = {
+  group: ChangeGroup
+  label: string
+  before: string
+  after: string
+  /** The one-line form, e.g. `HR 88 → 112` or `SpO2 off`. */
+  summary: string
+}
+
+export type StateFactGroup = 'Dispatch' | 'Patient' | 'Device'
+
+export type StateFact = {
+  group: StateFactGroup
+  label: string
+  value: string
 }
 
 export type TimelineRow = TimelineActionRow | TimelineInstructorRow
@@ -125,10 +156,55 @@ type NormalizedState = {
   rhythm: Rhythm
   vitals: Record<NumericVitalField, number | null>
   active: VitalActiveState
+  spo2Waveform: Spo2Waveform
+  etco2Waveform: Etco2Waveform
   cprMode: CprMode
   monitorResetVersion: number | null
   /** The scenario's name, empty when the instructor never named one. */
   scenarioTitle: string
+  defibrillatorModel: DefibrillatorModel | null
+  /** Every field of the dispatch card, empty strings for the ones left blank. */
+  callerInfo: Record<CallerInfoField, string>
+  originAddress: string
+  destinationAddress: string
+  /** The confirmed response time, or null when none was set. */
+  responseSeconds: number | null
+}
+
+const CALLER_FIELDS: readonly CallerInfoField[] = CALLER_INFO_FIELDS.map((entry) => entry.field)
+const CALLER_LABELS: Record<CallerInfoField, string> = Object.fromEntries(
+  CALLER_INFO_FIELDS.map((entry) => [entry.field, entry.label]),
+) as Record<CallerInfoField, string>
+
+const SPO2_WAVEFORM_LABELS: Record<Spo2Waveform, string> = { normal: 'Normal', weak: 'Weak', off: 'Off' }
+const ETCO2_WAVEFORM_LABELS: Record<Etco2Waveform, string> = {
+  normal: 'Normal',
+  hypoventilation: 'Hypoventilation',
+  obstructed: 'Obstructed',
+  off: 'Off',
+}
+const DEFIB_LABELS: Record<DefibrillatorModel, string> = { wagamiX: 'Wagami X', wagamiZ: 'Wagami Z' }
+
+function stringOrEmpty(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function spo2WaveformOrOff(value: unknown): Spo2Waveform {
+  return value === 'normal' || value === 'weak' ? value : 'off'
+}
+
+function etco2WaveformOrOff(value: unknown): Etco2Waveform {
+  return value === 'normal' || value === 'hypoventilation' || value === 'obstructed' ? value : 'off'
+}
+
+function defibOrNull(value: unknown): DefibrillatorModel | null {
+  return value === 'wagamiX' || value === 'wagamiZ' ? value : null
+}
+
+/** `4:00`, for a response time or any other duration the instructor set. */
+export function formatSeconds(total: number): string {
+  const seconds = Math.max(0, Math.floor(total))
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
 const NUMERIC_FIELDS: readonly NumericVitalField[] = [
@@ -170,14 +246,28 @@ export function normalizeHistoryState(state: unknown): NormalizedState {
     active[field] = activeRaw[field] !== false
   }
 
+  const callerRaw = isRecord(root.callerInfoConfirmed) ? root.callerInfoConfirmed : {}
+  const callerInfo = {} as Record<CallerInfoField, string>
+  for (const field of CALLER_FIELDS) callerInfo[field] = stringOrEmpty(callerRaw[field])
+
+  // Only the addresses. The route also carries a polyline, coordinates, and a
+  // loading status, none of which the instructor typed (docs/adr on 13f).
+  const route = isRecord(root.dispatchRouteConfirmed) ? root.dispatchRouteConfirmed : {}
+
   return {
     rhythm: rhythmOrOff(confirmed.rhythm),
     vitals,
     active,
+    spo2Waveform: spo2WaveformOrOff(confirmed.spo2_waveform),
+    etco2Waveform: etco2WaveformOrOff(confirmed.etco2_waveform),
     cprMode: cprModeOrOff(root.cprMode),
     monitorResetVersion: numberOrNull(root.monitorResetVersion),
-    scenarioTitle:
-      typeof root.scenarioTitleConfirmed === 'string' ? root.scenarioTitleConfirmed.trim() : '',
+    scenarioTitle: stringOrEmpty(root.scenarioTitleConfirmed),
+    defibrillatorModel: defibOrNull(root.defibrillatorModelConfirmed),
+    callerInfo,
+    originAddress: stringOrEmpty(route.originAddress),
+    destinationAddress: stringOrEmpty(route.destinationAddress),
+    responseSeconds: numberOrNull(root.dispatchConfirmedSeconds),
   }
 }
 
@@ -299,44 +389,58 @@ const CPR_LABELS: Record<CprMode, string> = {
   weak: 'Weak',
 }
 
-/** What changed between two sent states, in the evaluator's words. */
-export function diffStates(
-  previous: NormalizedState,
-  next: NormalizedState,
-): string[] {
-  const changes: string[] = []
+/**
+ * What changed between two sent states, one entry per field.
+ *
+ * Read by explicit allowlist. The stored state also carries the dispatch
+ * clock's run id and deadlines, the route's polyline and status, the
+ * trainee's acknowledged/arrived/transported stamps (already rows of their
+ * own in the stream), and a legacy CPR mirror. None of that is something the
+ * instructor set, so none of it is ever compared.
+ */
+export function diffStates(previous: NormalizedState, next: NormalizedState): FieldChange[] {
+  const changes: FieldChange[] = []
+  const push = (group: ChangeGroup, label: string, before: string, after: string, summary?: string) =>
+    changes.push({ group, label, before, after, summary: summary ?? `${label} ${before} → ${after}` })
 
   if (previous.rhythm !== next.rhythm) {
-    changes.push(`rhythm ${RHYTHM_LABELS[previous.rhythm]} → ${RHYTHM_LABELS[next.rhythm]}`)
+    push('patient', 'rhythm', RHYTHM_LABELS[previous.rhythm], RHYTHM_LABELS[next.rhythm])
   }
 
   for (const field of NUMERIC_FIELDS) {
     const wasOn = previous.active[field]
     const isOn = next.active[field]
     if (wasOn !== isOn) {
-      changes.push(`${CHANGE_LABELS[field]} ${isOn ? 'on' : 'off'}`)
       // A channel that just came on has no previous value worth diffing, and
       // one that just went off has no new value. The toggle is the change.
+      push('patient', CHANGE_LABELS[field], wasOn ? 'on' : 'off', isOn ? 'on' : 'off',
+        `${CHANGE_LABELS[field]} ${isOn ? 'on' : 'off'}`)
       continue
     }
     if (!isOn) continue
     const before = previous.vitals[field]
     const after = next.vitals[field]
     if (before !== after && after !== null) {
-      changes.push(`${CHANGE_LABELS[field]} ${before ?? '--'} → ${after}`)
+      push('patient', CHANGE_LABELS[field], String(before ?? '--'), String(after))
     }
   }
 
+  if (previous.spo2Waveform !== next.spo2Waveform) {
+    push('patient', 'SpO2 waveform', SPO2_WAVEFORM_LABELS[previous.spo2Waveform], SPO2_WAVEFORM_LABELS[next.spo2Waveform])
+  }
+  if (previous.etco2Waveform !== next.etco2Waveform) {
+    push('patient', 'EtCO2 waveform', ETCO2_WAVEFORM_LABELS[previous.etco2Waveform], ETCO2_WAVEFORM_LABELS[next.etco2Waveform])
+  }
+
   if (previous.scenarioTitle !== next.scenarioTitle) {
-    changes.push(
+    push('scenario', 'scenario', previous.scenarioTitle || 'untitled', next.scenarioTitle || 'untitled',
       next.scenarioTitle
         ? `scenario "${previous.scenarioTitle || 'untitled'}" → "${next.scenarioTitle}"`
-        : 'scenario name cleared',
-    )
+        : 'scenario name cleared')
   }
 
   if (previous.cprMode !== next.cprMode) {
-    changes.push(`CPR ${CPR_LABELS[previous.cprMode]} → ${CPR_LABELS[next.cprMode]}`)
+    push('care', 'CPR', CPR_LABELS[previous.cprMode], CPR_LABELS[next.cprMode])
   }
 
   if (
@@ -344,10 +448,125 @@ export function diffStates(
     next.monitorResetVersion !== null &&
     previous.monitorResetVersion !== next.monitorResetVersion
   ) {
-    changes.push('monitor reset')
+    // The counter behind this is bookkeeping; the change is that a reset happened.
+    push('care', 'monitor', 'running', 'reset', 'monitor reset')
+  }
+
+  if (previous.defibrillatorModel !== next.defibrillatorModel && next.defibrillatorModel !== null) {
+    push('device', 'defibrillator',
+      previous.defibrillatorModel ? DEFIB_LABELS[previous.defibrillatorModel] : '--',
+      DEFIB_LABELS[next.defibrillatorModel])
+  }
+
+  if (previous.responseSeconds !== next.responseSeconds && next.responseSeconds !== null) {
+    push('timing', 'response time',
+      previous.responseSeconds === null ? '--' : formatSeconds(previous.responseSeconds),
+      formatSeconds(next.responseSeconds))
+  }
+
+  for (const field of CALLER_FIELDS) {
+    const before = previous.callerInfo[field]
+    const after = next.callerInfo[field]
+    if (before === after) continue
+    // An extra slot is only meaningful once it has a name.
+    if (/^extra[123]$/.test(field)) {
+      const labelField = `${field}Label` as CallerInfoField
+      if (!previous.callerInfo[labelField] && !next.callerInfo[labelField]) continue
+    }
+    push('dispatch', CALLER_LABELS[field], before || '(empty)', after || '(empty)')
+  }
+
+  if (previous.originAddress !== next.originAddress) {
+    push('route', 'origin', previous.originAddress || '(empty)', next.originAddress || '(empty)')
+  }
+  if (previous.destinationAddress !== next.destinationAddress) {
+    push('route', 'destination', previous.destinationAddress || '(empty)', next.destinationAddress || '(empty)')
   }
 
   return changes
+}
+
+/** More clauses than this and the line ends in `+n more`. */
+export const SUMMARY_CLAUSE_LIMIT = 6
+
+/**
+ * The one-line form. Clinical, care, scenario, device, and timing changes are
+ * the ones read at a glance, so each is named. The dispatch card and the
+ * route collapse to a count, since a Send that rewrites six card fields must
+ * not become a six-clause row -- the expansion has the fields.
+ */
+export function summarizeChanges(changes: readonly FieldChange[]): string[] {
+  const clauses: string[] = []
+  const dispatch = changes.filter((change) => change.group === 'dispatch')
+  const route = changes.filter((change) => change.group === 'route')
+
+  for (const change of changes) {
+    if (change.group === 'dispatch' || change.group === 'route') continue
+    clauses.push(change.summary)
+  }
+  if (dispatch.length > 0) {
+    clauses.push(`dispatch card · ${dispatch.length} field${dispatch.length === 1 ? '' : 's'}`)
+  }
+  if (route.length > 0) {
+    clauses.push(`route · ${route.map((change) => change.label).join(', ')}`)
+  }
+
+  if (clauses.length > SUMMARY_CLAUSE_LIMIT) {
+    const shown = clauses.slice(0, SUMMARY_CLAUSE_LIMIT - 1)
+    return [...shown, `+${clauses.length - shown.length} more`]
+  }
+  return clauses
+}
+
+/**
+ * The full sent state as facts, grouped the way the console groups its tabs.
+ * Empty fields are absent rather than rendered blank: an unused extra slot
+ * is not information. Only the opening instructor change shows this; every
+ * later one shows its diff, since real room data put 79% of the dispatch
+ * card as a repeat of the row above when every row rendered it.
+ */
+export function describeState(state: NormalizedState): StateFact[] {
+  const facts: StateFact[] = []
+  const fact = (group: StateFactGroup, label: string, value: string) => {
+    if (value) facts.push({ group, label, value })
+  }
+
+  if (state.scenarioTitle) fact('Dispatch', 'Scenario', state.scenarioTitle)
+  for (const field of CALLER_FIELDS) {
+    if (/^extra[123]Label$/.test(field)) continue
+    const match = /^extra([123])$/.exec(field)
+    if (match) {
+      const name = state.callerInfo[`extra${match[1]}Label` as CallerInfoField]
+      if (name) fact('Dispatch', name, state.callerInfo[field])
+      continue
+    }
+    fact('Dispatch', CALLER_LABELS[field], state.callerInfo[field])
+  }
+  fact('Dispatch', 'From', state.originAddress)
+  if (state.destinationAddress && state.destinationAddress !== state.callerInfo.address) {
+    fact('Dispatch', 'To', state.destinationAddress)
+  }
+  if (state.responseSeconds !== null) fact('Dispatch', 'Response time', formatSeconds(state.responseSeconds))
+
+  const channel = (field: NumericVitalField) => {
+    const value = state.vitals[field]
+    return value === null ? '' : `${value}${state.active[field] ? '' : ' (off)'}`
+  }
+  fact('Patient', 'Rhythm', RHYTHM_LABELS[state.rhythm])
+  fact('Patient', 'HR', channel('hr'))
+  if (state.vitals.bp_sys !== null && state.vitals.bp_dia !== null) {
+    const on = state.active.bp_sys && state.active.bp_dia
+    fact('Patient', 'BP', `${state.vitals.bp_sys}/${state.vitals.bp_dia}${on ? '' : ' (off)'}`)
+  }
+  fact('Patient', 'SpO2', channel('spo2'))
+  fact('Patient', 'SpO2 waveform', SPO2_WAVEFORM_LABELS[state.spo2Waveform])
+  fact('Patient', 'EtCO2', channel('etco2'))
+  fact('Patient', 'EtCO2 waveform', ETCO2_WAVEFORM_LABELS[state.etco2Waveform])
+  fact('Patient', 'CPR', CPR_LABELS[state.cprMode])
+
+  if (state.defibrillatorModel) fact('Device', 'Defibrillator', DEFIB_LABELS[state.defibrillatorModel])
+
+  return facts
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -502,6 +721,8 @@ export function buildEvaluationTimeline(
     const context = buildContext(state, everActive)
     const offsetMs = baselineMs === null ? 0 : item.at - baselineMs
 
+    const fieldChanges = previous ? diffStates(previous, state) : []
+    const opening = previous === undefined
     rows.push({
       kind: 'instructor',
       id: `state-${item.entry.version}`,
@@ -511,8 +732,10 @@ export function buildEvaluationTimeline(
       context,
       inAlarm: context.alarms.length > 0,
       version: item.entry.version,
-      changes: previous ? diffStates(previous, state) : [],
-      opening: previous === undefined,
+      changes: summarizeChanges(fieldChanges),
+      fieldChanges,
+      opening,
+      snapshot: opening ? describeState(state) : [],
       scenarioTitle: state.scenarioTitle,
     })
   })
