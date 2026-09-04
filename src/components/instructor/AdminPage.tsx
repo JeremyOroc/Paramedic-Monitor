@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import {
@@ -102,6 +103,8 @@ type ReviewParticipant = {
   last_seen_at: string | null
 }
 
+type SessionStatusValue = 'waiting' | 'active' | 'ended' | 'error'
+
 type PastReview = {
   attemptVersion: number
   participants: ReviewParticipant[]
@@ -137,6 +140,8 @@ function getResponseError(data: unknown, fallback: string): string {
 
 export default function AdminPage({ session }: SessionAdminProps = {}) {
   useStoreHydration()
+  // Only the "Room ended" notice navigates; End Room itself stays put.
+  const router = useRouter()
   const [tab, setTab] = useState<AdminTab>('scenarios')
   const [patientSelections, setPatientSelections] = useState<PatientInformationSelections>(
     EMPTY_PATIENT_INFORMATION_SELECTIONS,
@@ -213,9 +218,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     defibrillatorModelConfirmed,
   )
   const defibrillatorModelReady = !defibrillatorModelDirty && !defibrillatorModelPending
-  const [sessionStatus, setSessionStatus] = useState<'waiting' | 'active' | 'ended' | 'error'>(
-    'waiting',
-  )
+  const [sessionStatus, setSessionStatus] = useState<SessionStatusValue>('waiting')
   const [participants, setParticipants] = useState<ReviewParticipant[]>([])
   const [spectatedParticipantId, setSpectatedParticipantId] = useState<string | null>(null)
   const [spectatorPresentationMode, setSpectatorPresentationMode] =
@@ -333,16 +336,31 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
 
   const endSession = async () => {
     if (!session) return
-    const response = await fetch(`/api/session/${session.code}/end`, {
-      method: 'POST',
-      headers: { 'x-session-host-token': session.hostToken },
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      setSessionError(data.error ?? 'Unable to end session')
+    // A thrown fetch (offline, a non-JSON 500 from the host) used to reject
+    // this handler unhandled: no message, no navigation, the button did
+    // nothing. Every failure now says so.
+    let data: { session?: { status?: SessionStatusValue }; error?: string }
+    try {
+      const response = await fetch(`/api/session/${session.code}/end`, {
+        method: 'POST',
+        headers: { 'x-session-host-token': session.hostToken },
+      })
+      data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setSessionError(data.error ?? `Unable to end room (HTTP ${response.status})`)
+        return
+      }
+    } catch (caught) {
+      setSessionError(
+        caught instanceof Error ? `Unable to end room: ${caught.message}` : 'Unable to end room',
+      )
       return
     }
-    setSessionStatus(data.session.status)
+    setSessionError('')
+    // Deliberately no navigation: the spectator mini-player and the Report
+    // tab stay useful after End Room (see the spectate work). The "Room
+    // ended" notice below is how the instructor leaves when ready.
+    if (data.session?.status) setSessionStatus(data.session.status)
   }
 
   // Selecting the active attempt drops back to the live poll; selecting an
@@ -850,6 +868,26 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                 {sessionError}
               </p>
             ) : null}
+            {sessionStatus === 'ended' && (
+              // A room can end without this tab's End Room click: expiry, or a
+              // click from another tab. End Room greys out and the console sat
+              // here with no way out, which reads as "it didn't end."
+              <div
+                data-testid="room-ended-notice"
+                className="flex flex-wrap items-center justify-between gap-3 border border-alarm-red/50 bg-alarm-red/10 px-3 py-2"
+              >
+                <p className="font-mono text-xs uppercase tracking-wider text-alarm-red">
+                  Room ended — no longer accepting trainees
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.replace('/')}
+                  className="border border-neutral-700 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-cyan-bp hover:text-cyan-bp"
+                >
+                  Create a new room
+                </button>
+              </div>
+            )}
             <div className="mt-3 flex min-h-0 flex-1 flex-col border border-neutral-800 bg-black/40 p-3">
               <h2 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-400">
                 Students

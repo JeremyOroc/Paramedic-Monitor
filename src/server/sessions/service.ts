@@ -638,6 +638,9 @@ export async function updateSessionState(
   state: unknown,
 ) {
   const session = await verifyHost(code, hostToken)
+  // An ended room is closed to changes: a Send here would write history the
+  // record shows as part of an attempt that had already finished.
+  if (session.status === 'ended') throw new SessionError('Session has ended', 410)
   const supabase = createServiceClient()
   const { data: current, error: currentError } = await supabase
     .from('session_state')
@@ -692,6 +695,9 @@ export async function recordStudentEvent(
   input: StudentEventInput,
 ) {
   const { session, participant } = await verifyParticipant(code, participantToken)
+  // 410 rather than a silent accept: the queue treats a 4xx as permanent and
+  // drops the action, which is right for a room that no longer exists to act in.
+  if (session.status === 'ended') throw new SessionError('Session has ended', 410)
   const label = input.label.trim()
   const kind = input.kind.trim()
   if (!kind || !label) throw new SessionError('Event kind and label are required', 400)

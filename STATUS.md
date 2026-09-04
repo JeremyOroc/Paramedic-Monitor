@@ -78,6 +78,9 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **End Room feedback (2026-09-04):** a failed End Room request now shows why instead of leaving the
+      console silently on the admin page; an already-ended room shows a `Room ended` notice with a way
+      to create a new one; Sends and trainee actions on an ended room return 410. 4 tests; 1024 pass
 - [x] **Phase 17 foundation — Spectator projection and standalone presentation — COMPLETE AND DEPLOYED:**
   - [x] Added a standalone host-authorized Spectator presentation without putting secrets in the URL
   - [x] Added versioned semantic monitor projections for dispatch, Wagami X/Z, power/boot, menus,

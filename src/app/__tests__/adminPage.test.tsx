@@ -102,6 +102,49 @@ describe('AdminPage', () => {
     expect(routerReplace).not.toHaveBeenCalled()
   })
 
+  it('tells the instructor when End Room fails instead of silently staying put', async () => {
+    // A thrown fetch (offline, or a non-JSON 500 from the host) used to reject
+    // the handler unhandled: no error, no navigation, the button just did
+    // nothing. That is the "End Room doesn't end the room" report.
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch')
+    fetchMock.mockImplementation(async (input) => {
+      if (String(input).endsWith('/end')) throw new TypeError('Failed to fetch')
+      return new Response(
+        JSON.stringify({ session: { status: 'active' }, participants: [], events: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: 'End Room' }))
+
+    await waitFor(() => expect(screen.getByText(/Unable to end/)).toBeInTheDocument())
+    expect(routerReplace).not.toHaveBeenCalled()
+  })
+
+  it('offers a way home when the room is already ended', async () => {
+    // The poll can report 'ended' without this tab having clicked End Room
+    // (expiry, another tab). End Room is disabled then, so without this the
+    // console just sits there.
+    const user = userEvent.setup()
+    vi.spyOn(window, 'fetch').mockImplementation(async () =>
+      new Response(
+        JSON.stringify({ session: { status: 'ended' }, participants: [], events: [] }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+
+    const notice = await screen.findByTestId('room-ended-notice')
+    expect(screen.getByRole('button', { name: 'End Room' })).toBeDisabled()
+    await user.click(within(notice).getByRole('button', { name: 'Create a new room' }))
+    expect(routerReplace).toHaveBeenCalledWith('/')
+  })
+
   it('shows a live roster with connection dots and per-student progress', async () => {
     vi.spyOn(window, 'fetch').mockImplementation(async () => {
       const body = {

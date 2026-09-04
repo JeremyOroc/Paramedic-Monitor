@@ -5,6 +5,13 @@
 
 ---
 
+## [2026-09-04] [instructor/server] — End Room reports failure instead of doing nothing
+
+- Reported by an instructor as "End Room doesn't end the room": the console stayed on the admin page. Two causes, one of them intentional. The spectate work deliberately stopped navigating away after End Room so the mini-player and the Report tab stay useful, which reads as nothing happening. Separately, `endSession` had no `try/catch`, so a thrown fetch or a non-JSON error body rejected the handler unhandled with no message at all; every failure now shows an amber line naming the reason and HTTP status. Server-side, End Room was already correct, verified by an API loop: status flips to `ended`, trainee polls report it, join and restart return 410.
+- Added a `Room ended` notice with a `Create a new room` button whenever the room is ended, for any reason: this tab's End Room click, expiry, or another tab. It is the deliberate way home now that End Room itself stays put.
+- Hardened the server: `updateSessionState` and `recordStudentEvent` now return 410 on an ended room. Both accepted writes before, so an ended room could still take Sends and trainee actions; the queue treats the 4xx as permanent and drops the action, which is right for a room that no longer exists to act in.
+- 4 new tests. All 1024 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass.
+
 ## [2026-09-04] [instructor/realtime] — Add spectator mini-player and native fullscreen
 
 - Added Docked, fixed bottom-right Floating mini-player, and browser-native Fullscreen presentation
