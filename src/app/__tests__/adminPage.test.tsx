@@ -42,6 +42,12 @@ vi.mock('@/components/instructor/ScenarioLibraryPanel', () => ({
   ),
 }))
 
+vi.mock('@/components/instructor/SpectatorMonitor', () => ({
+  SpectatorMonitor: ({ projection }: { projection: { model: string } }) => (
+    <div data-testid="projected-monitor">{projection.model}</div>
+  ),
+}))
+
 function revealSnsOptions(group: 'pulse' | 'respiratory') {
   fireEvent.pointerEnter(screen.getByTestId(`${group}-measurement-surface`), {
     pointerType: 'mouse',
@@ -92,7 +98,8 @@ describe('AdminPage', () => {
         headers: { 'x-session-host-token': 'host_token' },
       }),
     )
-    await waitFor(() => expect(routerReplace).toHaveBeenCalledWith('/'))
+    await waitFor(() => expect(screen.getByText('ended')).toBeInTheDocument())
+    expect(routerReplace).not.toHaveBeenCalled()
   })
 
   it('shows a live roster with connection dots and per-student progress', async () => {
@@ -153,12 +160,94 @@ describe('AdminPage', () => {
     expect(within(studentsPanel).getAllByLabelText('Connected')).toHaveLength(1)
     expect(within(studentsPanel).getAllByLabelText('Offline')).toHaveLength(1)
 
-    const aliceRow = within(studentsPanel).getByText('Alice').closest(
-      'div[class*="justify-between"]',
-    ) as HTMLElement
+    const aliceRow = screen.getByTestId('student-row-student-1')
     expect(within(aliceRow).getByText('Ack')).toHaveClass('text-ecg-green')
     expect(within(aliceRow).getByText('Arr')).not.toHaveClass('text-ecg-green')
     expect(within(aliceRow).getByText(/Shk 1/)).toBeInTheDocument()
+    expect(within(aliceRow).getByRole('button', { name: 'Spectate' })).toBeEnabled()
+    expect(within(studentsPanel).getAllByRole('button', { name: 'Spectate' })).toHaveLength(2)
+    expect(screen.queryByText('Live evaluation')).toBeNull()
+    expect(screen.getByText('Select a student to spectate')).toBeInTheDocument()
+  })
+
+  it('keeps Spectate available for a 30-trainee room', async () => {
+    const participants = Array.from({ length: 30 }, (_, index) => ({
+      id: `student-${index + 1}`,
+      nickname: `Student ${index + 1}`,
+      joined_at: '2026-09-03T12:00:00.000Z',
+      last_seen_at: new Date().toISOString(),
+    }))
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participants,
+      events: [],
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+
+    const studentsPanel = (await screen.findByText('Students')).parentElement as HTMLElement
+    await waitFor(() => {
+      expect(within(studentsPanel).getAllByRole('button', { name: 'Spectate' })).toHaveLength(30)
+    })
+    expect(studentsPanel.lastElementChild).toHaveClass('overflow-y-auto')
+  })
+
+  it('switches the embedded spectator without ever showing the previous trainee frame', async () => {
+    const user = userEvent.setup()
+    let resolveAlice: ((response: Response) => void) | undefined
+    let resolveBob: ((response: Response) => void) | undefined
+    const spectatorRequests: string[] = []
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/spectate/')) {
+        spectatorRequests.push(url)
+        return new Promise<Response>((resolve) => {
+          if (url.endsWith('/student-1')) resolveAlice = resolve
+          if (url.endsWith('/student-2')) resolveBob = resolve
+        })
+      }
+      return new Response(JSON.stringify({
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [
+          { id: 'student-1', nickname: 'Alice', joined_at: '', last_seen_at: new Date().toISOString() },
+          { id: 'student-2', nickname: 'Bob', joined_at: '', last_seen_at: new Date().toISOString() },
+        ],
+        events: [],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await screen.findByText('Alice')
+
+    await user.click(within(screen.getByTestId('student-row-student-1')).getByRole('button', { name: 'Spectate' }))
+    expect(screen.getByRole('button', { name: 'Stop Spectating' })).toHaveClass('text-pending-amber')
+    expect(screen.getByTestId('student-row-student-1')).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Connecting to Alice…')
+    expect(spectatorRequests).toEqual(['/api/session/ABC123/spectate/student-1'])
+
+    await user.click(within(screen.getByTestId('student-row-student-2')).getByRole('button', { name: 'Spectate' }))
+    expect(screen.queryByText('Connecting to Alice…')).toBeNull()
+    expect(screen.getAllByText('Connecting to Bob…')).toHaveLength(2)
+    expect(screen.queryByTestId('projected-monitor')).toBeNull()
+
+    resolveAlice?.(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
+      projection: { updatedAt: new Date().toISOString(), projection: { model: 'alice-frame' } },
+    }), { status: 200 }))
+    await act(async () => Promise.resolve())
+    expect(screen.queryByText('alice-frame')).toBeNull()
+
+    resolveBob?.(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participant: { nickname: 'Bob', last_seen_at: new Date().toISOString() },
+      projection: { updatedAt: new Date().toISOString(), projection: { model: 'bob-frame' } },
+    }), { status: 200 }))
+    expect(await screen.findByText('bob-frame')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Stop Spectating' }))
+    expect(screen.queryByTestId('projected-monitor')).toBeNull()
+    expect(screen.getByText('Select a student to spectate')).toBeInTheDocument()
   })
 
   it('lets a session instructor force a new attempt', async () => {

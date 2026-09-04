@@ -49,6 +49,11 @@ import { SessionLandingPage } from '@/components/session/SessionLandingPage'
 import { getCprHeartRate } from '@/types/vitals'
 import { useVfDisplayHeartRate } from '@/hooks/useVfDisplayHeartRate'
 import type { VfDisplaySync } from '@/lib/automaticHeartRate'
+import {
+  MONITOR_PROJECTION_VERSION,
+  type MonitorProjection,
+} from '@/types/monitorProjection'
+import type { PowerState } from '@/components/monitor/DeviceShell'
 
 const CALLER_INFO_ALERT_FLASH_MS = 2320
 
@@ -61,9 +66,11 @@ export type StudentEventRecord = {
 export function MonitorPage({
   onStudentEvent,
   vfDisplaySync,
+  onProjectionChange,
 }: {
   onStudentEvent?: (event: StudentEventRecord) => void
   vfDisplaySync?: VfDisplaySync | null
+  onProjectionChange?: (projection: MonitorProjection) => void
 } = {}) {
   const { date, time } = useMonitorClock()
 
@@ -112,6 +119,9 @@ export function MonitorPage({
   const isWagamiZ = activeDefibrillatorModel === 'wagamiZ'
   const callerInfoVariant: CallerInfoVariant =
     searchParams.get('callerInfoVariant') === 'classic' ? 'classic' : 'assignment'
+  const [devicePowerState, setDevicePowerState] = useState<PowerState>(
+    devBypass ? 'on' : 'off',
+  )
 
   const controller = useMonitorController({
     confirmed,
@@ -449,6 +459,132 @@ export function MonitorPage({
   )
   const vitalLogHasPagination = vitalLogTotalPages > 1
 
+  const visibleAlarms = useMemo(
+    () =>
+      isNibpReadingActive
+        ? alarm.activeAlarms.filter((channel) => channel !== 'bp')
+        : alarm.activeAlarms,
+    [alarm.activeAlarms, isNibpReadingActive],
+  )
+  // Timed defib phases are reconstructed from absolute timestamps by the
+  // spectator, so requestAnimationFrame progress does not generate network
+  // traffic on every painted frame.
+  const projectionDefibProgress =
+    defib.phaseStartedAt === null ? defib.progress : 0
+
+  const projection = useMemo<MonitorProjection>(
+    () => ({
+      version: MONITOR_PROJECTION_VERSION,
+      capturedAt: new Date().toISOString(),
+      model: activeDefibrillatorModel,
+      surface: showDispatchCallerPage ? 'dispatch' : 'monitor',
+      powerState: devicePowerState,
+      date,
+      time,
+      sessionTimer,
+      responseTimer: responseTimer.formatted,
+      countdownFormatted: countdown.formatted,
+      countdownDone: countdown.isDone,
+      gateSatisfied,
+      callerInfoVariant,
+      callerInfo: callerInfoConfirmed,
+      dispatchRoute: dispatchRouteConfirmed,
+      dispatch: dispatchState,
+      patientInfo,
+      confirmed,
+      confirmedVitalActive,
+      acceptedBp,
+      acceptedBpActive,
+      controller: controller.snapshot,
+      activeSelectedControl: controller.activeSelectedControl,
+      displayAge: controller.displayAge,
+      displaySex: controller.displaySex,
+      displayedHr,
+      displayedHrActive,
+      vfDisplayedHr,
+      displayedEtco2,
+      cprOverrideActive,
+      etco2Loading,
+      etco2Loaded,
+      nibp: {
+        enabled: bpButtonEnabled,
+        phase: nibpPhase,
+        displayValue: nibpDisplayValue,
+      },
+      alarms: visibleAlarms,
+      defib: {
+        state: defib.state,
+        energy: defib.energy,
+        shockCount: defib.shockCount,
+        progress: projectionDefibProgress,
+        phaseStartedAt: defib.phaseStartedAt,
+        phaseEndsAt: defib.phaseEndsAt,
+        cprStartTime: defib.cprStartTime,
+        lastDeliveredJoules: defib.lastDeliveredJoules,
+        canAnalyse: defib.canAnalyse,
+        canCharge: defib.canCharge,
+        canShock: defib.canShock,
+        canAdjustEnergy: defib.canAdjustEnergy,
+      },
+      mergedEventLog,
+      vitalLog,
+    }),
+    [
+      acceptedBp,
+      acceptedBpActive,
+      activeDefibrillatorModel,
+      bpButtonEnabled,
+      callerInfoConfirmed,
+      callerInfoVariant,
+      confirmed,
+      confirmedVitalActive,
+      controller.snapshot,
+      controller.activeSelectedControl,
+      controller.displayAge,
+      controller.displaySex,
+      countdown.formatted,
+      countdown.isDone,
+      cprOverrideActive,
+      date,
+      devicePowerState,
+      dispatchRouteConfirmed,
+      dispatchState,
+      displayedEtco2,
+      displayedHr,
+      displayedHrActive,
+      etco2Loaded,
+      etco2Loading,
+      gateSatisfied,
+      mergedEventLog,
+      nibpDisplayValue,
+      nibpPhase,
+      patientInfo,
+      responseTimer.formatted,
+      sessionTimer,
+      showDispatchCallerPage,
+      time,
+      vfDisplayedHr,
+      visibleAlarms,
+      vitalLog,
+      defib.canAdjustEnergy,
+      defib.canAnalyse,
+      defib.canCharge,
+      defib.canShock,
+      defib.cprStartTime,
+      defib.energy,
+      defib.lastDeliveredJoules,
+      projectionDefibProgress,
+      defib.phaseStartedAt,
+      defib.phaseEndsAt,
+      defib.shockCount,
+      defib.state,
+    ],
+  )
+
+  useEffect(() => {
+    onProjectionChange?.(projection)
+  }, [onProjectionChange, projection])
+
   useDefibAudio(defib.state, controller.isMuted || isWagamiZ)
 
   const handlePowerOn = () => {
@@ -546,11 +682,7 @@ export function MonitorPage({
             spo2={confirmedVitalActive.spo2 ? confirmed.spo2 : 'SpO2 OFF'}
             spo2Waveform={confirmed.spo2_waveform}
             spo2Unit={confirmedVitalActive.spo2 ? '%' : ''}
-            activeAlarms={
-              isNibpReadingActive
-                ? alarm.activeAlarms.filter((channel) => channel !== 'bp')
-                : alarm.activeAlarms
-            }
+            activeAlarms={visibleAlarms}
             searching={false}
             selected={controller.activeSelectedControl}
             nibpPhase={bpButtonEnabled ? nibpPhase : undefined}
@@ -653,6 +785,7 @@ export function MonitorPage({
     return (
       <WagamiZDevice
         initialPowerState={devMode === '2' ? 'on' : 'off'}
+        onPowerStateChange={setDevicePowerState}
         date={date}
         time={time}
         sessionTimer={sessionTimer}
@@ -683,6 +816,7 @@ export function MonitorPage({
       <DeviceShell
         screen={screen}
         initialPowerState={devBypass ? 'on' : 'off'}
+        onPowerStateChange={setDevicePowerState}
         powerLocked={powerLocked}
         lockScreen={standbyLockScreen}
         screenModal={

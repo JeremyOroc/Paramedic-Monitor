@@ -358,3 +358,59 @@ body {
 .leaflet-control-zoom a:hover {
   background: var(--color-dispatch-panel-soft) !important;
 }
+
+/* The embedded spectator renders the normal 1024px simulator canvas and scales
+   it as one object. This preserves the trainee layout instead of reflowing or
+   cropping controls inside the instructor's compact preview. */
+.embedded-spectator-viewport {
+  container-type: size;
+}
+
+.embedded-spectator-canvas {
+  --spectator-scale: 0.22;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--spectator-scale));
+  transform-origin: center;
+}
+
+@container (min-width: 260px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.24; }
+}
+
+@container (min-width: 300px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.28; }
+}
+
+@container (min-width: 340px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.32; }
+}
+
+@container (min-width: 380px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.36; }
+}
+
+@container (min-width: 420px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.4; }
+}
+
+@container (min-width: 460px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.44; }
+}
+
+@container (min-width: 500px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.48; }
+}
+
+@container (min-width: 540px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.52; }
+}
+
+@container (min-width: 580px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.56; }
+}
+
+@container (min-width: 620px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.58; }
+}

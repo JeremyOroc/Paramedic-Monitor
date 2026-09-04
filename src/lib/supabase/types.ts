@@ -180,16 +180,40 @@ export type Database = {
         Row: {
           id: string
           name: string
+          position: number
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           name: string
+          position?: number
           created_at?: string
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['scenario_folders']['Insert']>
+        Relationships: []
+      }
+      trainee_monitor_projections: {
+        Row: {
+          participant_id: string
+          session_id: string
+          attempt_version: number
+          stream_id: string
+          client_sequence: number
+          projection: unknown
+          updated_at: string
+        }
+        Insert: {
+          participant_id: string
+          session_id: string
+          attempt_version: number
+          stream_id: string
+          client_sequence?: number
+          projection?: unknown
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['trainee_monitor_projections']['Insert']>
         Relationships: []
       }
       saved_scenarios: {
@@ -247,6 +271,12 @@ export type Database = {
           ordered_scenario_ids: string[]
         }
         Returns: Database['public']['Tables']['saved_scenarios']['Row'][]
+      }
+      reorder_scenario_folders: {
+        Args: {
+          ordered_folder_ids: string[]
+        }
+        Returns: Database['public']['Tables']['scenario_folders']['Row'][]
       }
     }
     Enums: Record<never, never>

@@ -10,10 +10,16 @@ import { ScenarioLibraryPanel } from '../ScenarioLibraryPanel'
 
 const timestamp = '2026-08-18T10:00:00.000Z'
 
-function folder(id: string, name: string, scenarioCount: number): ScenarioFolder {
+function folder(
+  id: string,
+  name: string,
+  scenarioCount: number,
+  position: number,
+): ScenarioFolder {
   return {
     id,
     name,
+    position,
     scenario_count: scenarioCount,
     created_at: timestamp,
     updated_at: timestamp,
@@ -60,7 +66,7 @@ function summary(scenario: SavedScenario) {
 function createFetchMock(options: { empty?: boolean } = {}) {
   const folders = options.empty
     ? []
-    : [folder('general', 'General', 2), folder('trauma', 'Trauma', 0)]
+    : [folder('general', 'General', 2, 1), folder('trauma', 'Trauma', 0, 2)]
   const scenarios = options.empty
     ? []
     : [
@@ -95,6 +101,15 @@ function createFetchMock(options: { empty?: boolean } = {}) {
       scenario.position = scenarios.filter((item) => item.folder_id === body.folderId).length + 1
       return jsonResponse({ scenario })
     }
+    if (url === '/api/scenario-folders/order' && method === 'PATCH') {
+      const body = JSON.parse(String(init?.body)) as { folderIds: string[] }
+      const reordered = body.folderIds
+        .map((id) => folders.find((item) => item.id === id))
+        .filter((item): item is ScenarioFolder => item !== undefined)
+        .map((item, index) => ({ ...item, position: index + 1 }))
+      folders.splice(0, folders.length, ...reordered)
+      return jsonResponse({ folders: reordered })
+    }
     if (url.endsWith('/order') && method === 'PATCH') {
       const body = JSON.parse(String(init?.body)) as { scenarioIds: string[] }
       body.scenarioIds.forEach((id, index) => {
@@ -110,7 +125,7 @@ function createFetchMock(options: { empty?: boolean } = {}) {
     }
     if (url === '/api/scenario-folders' && method === 'POST') {
       const body = JSON.parse(String(init?.body)) as { name: string }
-      const created = folder('new-folder', body.name, 0)
+      const created = folder('new-folder', body.name, 0, folders.length + 1)
       folders.push(created)
       return jsonResponse({ folder: created }, 201)
     }
@@ -215,7 +230,7 @@ describe('ScenarioLibraryPanel', () => {
     const user = userEvent.setup()
     render(<Harness onLoad={onLoad} scenarioSelectionDisabled />)
 
-    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
     const row = await screen.findByRole('button', { name: 'Load Chest Pain' })
     expect(row).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('button', { name: 'New Scenario' })).toBeDisabled()
@@ -239,12 +254,12 @@ describe('ScenarioLibraryPanel', () => {
     const user = userEvent.setup()
     render(<Harness onLoad={onLoad} onUnload={onUnload} />)
 
-    const generalButton = await screen.findByRole('button', { name: /General/ })
+    const generalButton = await screen.findByRole('button', { name: /^General/ })
     expect(generalButton).toHaveAttribute('aria-expanded', 'false')
     expect(generalButton).toHaveAttribute('aria-current', 'true')
     await user.click(generalButton)
     await waitFor(() => expect(generalButton).toHaveAttribute('aria-expanded', 'true'))
-    const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
+    const generalSection = screen.getByRole('button', { name: /^General/ }).closest('section') as HTMLElement
     expect(within(generalSection).getByRole('button', { name: 'Rename' })).toBeInTheDocument()
     expect(within(generalSection).getByRole('button', { name: 'Delete' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Load' })).toBeNull()
@@ -263,7 +278,7 @@ describe('ScenarioLibraryPanel', () => {
     const onLoad = vi.fn()
     const user = userEvent.setup()
     render(<Harness onLoad={onLoad} />)
-    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
     const row = await screen.findByRole('button', { name: 'Load Chest Pain' })
 
     row.focus()
@@ -290,7 +305,7 @@ describe('ScenarioLibraryPanel', () => {
       />,
     )
 
-    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
     await user.click(await screen.findByRole('button', { name: 'Load Chest Pain' }))
 
     expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeEnabled()
@@ -309,8 +324,8 @@ describe('ScenarioLibraryPanel', () => {
     const user = userEvent.setup()
     render(<Harness />)
 
-    const general = await screen.findByRole('button', { name: /General/ })
-    const trauma = screen.getByRole('button', { name: /Trauma/ })
+    const general = await screen.findByRole('button', { name: /^General/ })
+    const trauma = screen.getByRole('button', { name: /^Trauma/ })
     expect(general).toHaveAttribute('aria-expanded', 'false')
     expect(trauma).toHaveAttribute('aria-expanded', 'false')
 
@@ -342,17 +357,38 @@ describe('ScenarioLibraryPanel', () => {
     await user.type(screen.getByLabelText('New folder name'), 'Airway')
     await user.click(screen.getByRole('button', { name: 'Create' }))
 
-    const airway = await screen.findByRole('button', { name: /Airway/ })
+    const airway = await screen.findByRole('button', { name: /^Airway/ })
     expect(airway).toHaveAttribute('aria-expanded', 'true')
     expect(airway).toHaveAttribute('aria-current', 'true')
     expect(screen.getByRole('region', { name: 'Airway scenarios' })).toBeInTheDocument()
+  })
+
+  it('uses document scrolling and persists folder Up/Down order', async () => {
+    const { fetchMock } = createFetchMock()
+    const user = userEvent.setup()
+    render(<Harness />)
+
+    const folderList = await screen.findByTestId('scenario-folder-list')
+    expect(folderList).not.toHaveClass('max-h-96')
+    expect(folderList).not.toHaveClass('overflow-y-auto')
+
+    await user.click(screen.getByRole('button', { name: 'Move Trauma up' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scenario-folders/order',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ folderIds: ['trauma', 'general'] }),
+      }),
+    ))
+    expect(screen.getAllByRole('button', { name: /^(General|Trauma)/ })[0])
+      .toHaveAccessibleName(/Trauma/)
   })
 
   it('persists Up/Down and drag ordering optimistically', async () => {
     const { fetchMock } = createFetchMock()
     const user = userEvent.setup()
     render(<Harness />)
-    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
     await screen.findByText('Chest Pain')
 
     await user.click(screen.getByRole('button', { name: 'Move Older Call up' }))
@@ -385,9 +421,9 @@ describe('ScenarioLibraryPanel', () => {
     const { fetchMock } = createFetchMock()
     const user = userEvent.setup()
     render(<Harness />)
-    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
     await screen.findByText('Chest Pain')
-    await user.click(screen.getByRole('button', { name: /Trauma/ }))
+    await user.click(screen.getByRole('button', { name: /^Trauma/ }))
 
     await user.selectOptions(screen.getByLabelText('Move Chest Pain'), 'trauma')
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
@@ -397,11 +433,11 @@ describe('ScenarioLibraryPanel', () => {
         body: JSON.stringify({ folderId: 'trauma' }),
       }),
     ))
-    const traumaSection = screen.getByRole('button', { name: /Trauma/ })
+    const traumaSection = screen.getByRole('button', { name: /^Trauma/ })
       .closest('section') as HTMLElement
     expect(await within(traumaSection).findByRole('button', { name: 'Load Chest Pain' }))
       .toBeInTheDocument()
-    const generalSection = screen.getByRole('button', { name: /General/ })
+    const generalSection = screen.getByRole('button', { name: /^General/ })
       .closest('section') as HTMLElement
     expect(within(generalSection).queryByRole('button', { name: 'Load Chest Pain' })).toBeNull()
   })
@@ -411,10 +447,10 @@ describe('ScenarioLibraryPanel', () => {
     const onFolderDeleted = vi.fn()
     const user = userEvent.setup()
     render(<Harness onFolderDeleted={onFolderDeleted} />)
-    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
     await screen.findByText('Chest Pain')
 
-    const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
+    const generalSection = screen.getByRole('button', { name: /^General/ }).closest('section') as HTMLElement
     await user.click(within(generalSection).getByRole('button', { name: 'Delete' }))
     let dialog = screen.getByRole('alertdialog', { name: 'Delete folder' })
     expect(dialog).toHaveTextContent('Delete "General" and its 2 scenarios? This cannot be undone.')
@@ -424,9 +460,9 @@ describe('ScenarioLibraryPanel', () => {
       { method: 'DELETE' },
     ))
     await waitFor(() => expect(onFolderDeleted).toHaveBeenCalledWith('general'))
-    expect(screen.getByRole('button', { name: /Trauma/ })).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByRole('button', { name: /^Trauma/ })).toHaveAttribute('aria-current', 'true')
 
-    const traumaSection = screen.getByRole('button', { name: /Trauma/ }).closest('section') as HTMLElement
+    const traumaSection = screen.getByRole('button', { name: /^Trauma/ }).closest('section') as HTMLElement
     await user.click(within(traumaSection).getByRole('button', { name: 'Delete' }))
     dialog = screen.getByRole('alertdialog', { name: 'Delete folder' })
     expect(dialog).toHaveTextContent('Delete "Trauma"? This folder is empty. This cannot be undone.')

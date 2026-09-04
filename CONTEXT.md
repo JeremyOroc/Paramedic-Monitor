@@ -24,6 +24,10 @@ _Avoid_: Selected scenario, active scenario
 Local scenario authoring state that has not yet been stored in the scenario library.
 _Avoid_: Unsaved scenario, temporary scenario
 
+**Scenario folder order**:
+The instructor-defined global sequence of scenario folders, independent of the order of saved scenarios inside each folder.
+_Avoid_: Alphabetical folder order, scenario order
+
 **Room**:
 The join-coded space one instructor opens for their trainees. It holds every attempt run in it and the evaluation record of each, and both end when the instructor closes it.
 _Avoid_: Session, lobby, class
@@ -31,6 +35,22 @@ _Avoid_: Session, lobby, class
 **Attempt**:
 A single instructor-led dispatch simulation run whose confirmed scenario and defibrillator model remain fixed until the attempt ends.
 _Avoid_: Drill, run, session
+
+**Spectator view**:
+A host-authorized, read-only reproduction of one trainee's current simulator presentation, shown either inside the Instructor Console or as a standalone page. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
+_Avoid_: Remote monitor, screen share, instructor monitor
+
+**Embedded Spectator**:
+The single selected trainee's Spectator view shown alongside the room controls inside the Instructor Console.
+_Avoid_: Preview, mini monitor, Live Evaluation
+
+**Trainee monitor projection**:
+A point-in-time description of the trainee-specific simulator state needed to reproduce a Spectator view, including local interaction and timed-progress state.
+_Avoid_: Event replay, screen capture, shared monitor state
+
+**Projection freshness**:
+How current a trainee monitor projection is relative to the trainee's latest accepted simulator state. It is distinct from trainee presence and the Spectator presentation's own connection to the server.
+_Avoid_: Connection status, participant presence
 
 **Evaluation record**:
 Everything a room stores about an attempt for the instructor to review afterward: each trainee action in order, the confirmed clinical state it was taken against, and each change the instructor sent. It presents; it does not grade.

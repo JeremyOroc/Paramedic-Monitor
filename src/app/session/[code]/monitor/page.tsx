@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
 import { MonitorPage } from '@/components/monitor/MonitorPage'
+import { useMonitorProjectionPublisher } from '@/hooks/useMonitorProjectionPublisher'
 import { useSessionMonitorSync } from '@/hooks/useSessionMonitorSync'
 import { useStudentActionQueue } from '@/hooks/useStudentActionQueue'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -56,11 +57,13 @@ export default function SessionMonitorPage() {
   // waits on the device and lands with the time and state version of the
   // press (docs/adr/0004).
   const recordStudentEvent = useStudentActionQueue({ code, participantToken, getClock })
+  const publishProjection = useMonitorProjectionPublisher({ code, participantToken })
 
   return (
     <MonitorPage
       key={attemptVersion}
       onStudentEvent={recordStudentEvent}
+      onProjectionChange={publishProjection}
       vfDisplaySync={vfDisplaySync}
     />
   )

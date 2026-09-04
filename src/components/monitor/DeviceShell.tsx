@@ -101,7 +101,7 @@ function DefibButton({
   )
 }
 
-type PowerState = 'on' | 'booting' | 'off'
+export type PowerState = 'on' | 'booting' | 'off'
 
 export type DefibControls = {
   state: DefibState
@@ -164,6 +164,12 @@ type DeviceShellProps = {
   captureLock?: boolean
   /** Initial power state — normal users boot 'off' (locked), dev bypass boots 'on'. */
   initialPowerState?: PowerState
+  /** Controlled power state used by the read-only spectator renderer. */
+  powerStateOverride?: PowerState
+  /** Reports every committed power transition for trainee projection. */
+  onPowerStateChange?: (state: PowerState) => void
+  /** Fits the shell inside a parent viewport instead of claiming the browser viewport. */
+  embedded?: boolean
   /** When true the power button is inert and the lock screen shows instead of the monitor. */
   powerLocked?: boolean
   /** Overlay shown while powered off AND locked (standby / dispatch screen). */
@@ -182,6 +188,9 @@ export function DeviceShell({
   twelveLeadActive = false,
   captureLock = false,
   initialPowerState = 'on',
+  powerStateOverride,
+  onPowerStateChange,
+  embedded = false,
   powerLocked = false,
   lockScreen,
   defib,
@@ -228,9 +237,17 @@ export function DeviceShell({
   const onToggleMute = audio?.onToggleMute ?? (() => {})
   const onPatientEvent = audio?.onPatientEvent
 
-  const [powerState, setPowerState] = useState<PowerState>(initialPowerState)
+  const [internalPowerState, setPowerState] = useState<PowerState>(initialPowerState)
+  const powerState = powerStateOverride ?? internalPowerState
   const bootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reportedPowerStateRef = useRef(powerState)
   const controlsEnabled = powerState === 'on' && !powerLocked
+
+  useEffect(() => {
+    if (reportedPowerStateRef.current === powerState) return
+    reportedPowerStateRef.current = powerState
+    onPowerStateChange?.(powerState)
+  }, [onPowerStateChange, powerState])
 
   // Removed jumpscare: former powered-on/off its_me and Golden Freddy state.
   // const [jumpscareActive, setJumpscareActive] = useState(false)
@@ -372,8 +389,16 @@ export function DeviceShell({
   }
 
   return (
-    <div className="grid h-screen w-screen min-w-[1024px] place-items-center overflow-hidden bg-[#101010]">
-      <div className="relative aspect-[1.36] h-[96vh] max-h-[calc(98vw/1.36)]">
+    <div className={cn(
+      'grid place-items-center overflow-hidden bg-[#101010]',
+      embedded
+        ? 'h-full w-full min-w-0 [container-type:size]'
+        : 'h-screen w-screen min-w-[1024px]',
+    )}>
+      <div className={cn(
+        'relative aspect-[1.36]',
+        embedded ? 'h-[96%] max-h-[calc(98cqw/1.36)]' : 'h-[96vh] max-h-[calc(98vw/1.36)]',
+      )}>
         <div className="absolute inset-0 overflow-hidden rounded-[72px] bg-[#06317f] shadow-[0_26px_55px_rgba(0,0,0,0.55),inset_0_0_0_12px_rgba(0,67,154,0.92),inset_0_0_30px_rgba(0,0,0,0.36)]">
           <div className="absolute left-[10%] top-[-2.6%] h-[7.5%] w-[22%] rounded-b-[18px] bg-[#f2f2f2] shadow-[inset_0_-8px_12px_rgba(0,0,0,0.18),0_4px_6px_rgba(0,0,0,0.22)]" />
           <PowerButton
