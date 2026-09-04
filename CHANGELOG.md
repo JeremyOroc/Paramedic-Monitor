@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-09-04] [merge/planning] — Integrate Attempt Names into account planning
+
+- Merged main's completed Attempt Names feature into the accounts branch and resolved the competing
+  top-of-file changelog additions without discarding either history.
+- Updated the account plan and current status so attempt naming is no longer treated as an unresolved
+  design question. The future Account-owned report flow must preserve its optional 60-character label
+  while replacing current host-token authorization.
+- No feature code changed during conflict resolution. Migration
+  `20260904120000_attempt_names.sql` remains unapplied.
+
 ## [2026-09-04] [instructor/server] — Attempt names
 
 - The instructor can name each attempt. The number stays and is what everything is keyed on; the name sits beside it: the Report tab picker reads `2 · Morning cohort`, the header, the copied text, and the console's status line carry it, and an unnamed attempt shows its number alone.

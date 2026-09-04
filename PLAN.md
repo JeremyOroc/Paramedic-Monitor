@@ -1514,8 +1514,10 @@ Ending a Room discards its temporary live-operation state, but every completed A
 persistent Evaluation record owned by the Room's Instructor Account. Reports survive the Room and
 remain separate from Personal and Template scenarios. There is one record per Attempt, containing
 all participating trainee nicknames and events rather than duplicating Instructor changes and patient
-history into one record per trainee. The report naming, student naming, retention, and deletion rules
-remain to be settled.
+history into one record per trainee. Attempt names are already implemented as optional, editable
+60-character labels shown beside the immutable Attempt number in the picker, header, copied text, and
+console status. The account work must preserve that behavior while replacing its current host-token
+authorization with Account ownership. Student naming, retention, and deletion remain to be settled.
 
 An Account may be signed in on multiple devices but may own only one non-ended Room at a time, and
 only one device may control that Room. Attempting to create another Room offers to reopen or end the
@@ -1532,11 +1534,11 @@ would make adding an institution boundary later require a destructive rewrite. T
 expansion seam remains part of the design interview; speculative multi-tenant infrastructure does not.
 
 The remaining design interview must settle whether public access needs even a lightweight boundary,
-Evaluation-record naming and student identity, report retention and deletion, account deletion,
-password policy and session behavior, and remaining rollout/data edge cases. No application or schema
+student identity within Evaluation records, report retention and deletion, account deletion, password
+policy and session behavior, and remaining rollout/data edge cases. No application or schema
 implementation begins until the complete contract is confirmed. The previous deferred account note
-and its assumption that the global library would remain until an external sale are superseded by
-this active design work.
+and its assumption that the global library would remain until an external sale are superseded by this
+active design work.
 
 ---
 

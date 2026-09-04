@@ -23,9 +23,11 @@ temporary, but each completed Attempt produces a persistent Account-owned Evalua
 registration has no application CAPTCHA or custom throttling for now; duplicate-email feedback stays
 generic. Each record covers all trainees in one Attempt. An Account may use several devices but has
 one active Room and one controlling device; legacy host-token Rooms expire at rollout. The landing
-page retains separate trainee Join and Instructor auth paths. A lightweight public-access boundary,
-report naming/retention, account deletion, password/session policy, and remaining rollout edges stay
-under interview. Multi-tenancy stays deferred. No application or schema code has started.
+page retains separate trainee Join and Instructor auth paths. Attempt naming is already implemented,
+currently host-token authorized, with its migration unapplied; the account phase will preserve it
+under Account ownership. A lightweight public-access boundary, student-name metadata, report
+retention, account deletion, password/session policy, and remaining rollout edges stay under
+interview. Multi-tenancy stays deferred. No account or ownership application/schema code has started.
 
 **Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04).** The Embedded Spectator now
 switches among Docked, a fixed bottom-right Floating mini-player, and browser-native Fullscreen while
