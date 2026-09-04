@@ -1157,6 +1157,11 @@ was stale, which bears on whether the attempt was fair.
 **Milestone:** A shock pressed during an eight-second wifi drop is in the record, at the right time,
 against the right patient, and flagged if the monitor was behind.
 
+**Code complete 2026-09-03.** One thing the plan did not say and the build settled: "never drop"
+means network failures and 5xx. A 4xx is a client bug and retrying it forever would jam every action
+behind it, so the queue drops it, logs it, and continues. The migration must be applied before the
+code is deployed, since both the review and the action path name the new columns.
+
 ---
 
 ### Phase 15 — Instructor Change Expansion

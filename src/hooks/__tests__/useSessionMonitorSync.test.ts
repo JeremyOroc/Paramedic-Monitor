@@ -57,9 +57,9 @@ describe('useSessionMonitorSync', () => {
       useSessionMonitorSync({ code: 'ABC123', intervalMs: 10 }),
     )
 
-    await vi.waitFor(() => expect(result.current?.seed).toBe(7))
-    expect(result.current?.epochMs).toBe(Date.parse('2026-08-25T12:00:00.000Z'))
-    expect(result.current?.serverOffsetMs).toEqual(expect.any(Number))
+    await vi.waitFor(() => expect(result.current.vfDisplaySync?.seed).toBe(7))
+    expect(result.current.vfDisplaySync?.epochMs).toBe(Date.parse('2026-08-25T12:00:00.000Z'))
+    expect(result.current.vfDisplaySync?.serverOffsetMs).toEqual(expect.any(Number))
     unmount()
   })
 
@@ -132,6 +132,51 @@ describe('useSessionMonitorSync', () => {
     fetchMock.mockImplementation(() => okJson(statePayload(1, 'active', 2)))
     await vi.waitFor(() => expect(onNewAttempt).toHaveBeenCalledWith(2))
     await vi.waitFor(() => expect(applySpy).toHaveBeenCalledTimes(2))
+    unmount()
+  })
+
+  it('names the version it holds on every poll after the first (docs/adr/0003)', async () => {
+    fetchMock.mockImplementation(() => okJson(statePayload(5)))
+    const { unmount } = renderHook(() =>
+      useSessionMonitorSync({ code: 'ABC123', intervalMs: 10 }),
+    )
+
+    await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2))
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/session/ABC123/state')
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/session/ABC123/state?since=5')
+    unmount()
+  })
+
+  it('does not re-apply state when the server says nothing moved', async () => {
+    fetchMock.mockImplementation(() => okJson(statePayload(5)))
+    const { unmount } = renderHook(() =>
+      useSessionMonitorSync({ code: 'ABC123', intervalMs: 10 }),
+    )
+    await vi.waitFor(() => expect(applySpy).toHaveBeenCalledTimes(1))
+
+    fetchMock.mockImplementation(() =>
+      okJson({
+        session: { status: 'active', active_attempt_version: 1 },
+        state: null,
+        unchanged: true,
+        serverReceivedAt: Date.now(),
+        serverNow: Date.now(),
+      }),
+    )
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(applySpy).toHaveBeenCalledTimes(1)
+    unmount()
+  })
+
+  it('exposes the version on screen and the measured clock offset for the action queue', async () => {
+    fetchMock.mockImplementation(() => okJson(statePayload(9)))
+    const { result, unmount } = renderHook(() =>
+      useSessionMonitorSync({ code: 'ABC123', intervalMs: 10 }),
+    )
+
+    expect(result.current.getClock()).toEqual({ stateVersion: null, clockOffsetMs: null })
+    await vi.waitFor(() => expect(result.current.getClock().stateVersion).toBe(9))
+    expect(result.current.getClock().clockOffsetMs).toEqual(expect.any(Number))
     unmount()
   })
 

@@ -135,6 +135,9 @@ export type Database = {
           payload: unknown
           occurred_at: string
           state_version: number | null
+          occurred_at_client: string | null
+          capture_sequence: number | null
+          clock_offset_ms: number | null
         }
         Insert: {
           id?: string
@@ -146,6 +149,9 @@ export type Database = {
           payload?: unknown
           occurred_at?: string
           state_version?: number | null
+          occurred_at_client?: string | null
+          capture_sequence?: number | null
+          clock_offset_ms?: number | null
         }
         Update: Partial<Database['public']['Tables']['student_events']['Insert']>
         Relationships: []
