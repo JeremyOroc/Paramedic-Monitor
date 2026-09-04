@@ -596,6 +596,27 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   })
 })
 
+describe('an ended room is closed to changes', () => {
+  const ENDED = { ...SESSION, status: 'ended' }
+
+  it('refuses a Send after End Room', async () => {
+    withResolver({ sessions: () => ({ data: ENDED }) })
+
+    await expect(updateSessionState(CODE, HOST_TOKEN, { hr: 40 })).rejects.toMatchObject({ status: 410 })
+    expect(currentStub.opsFor('session_state')).toHaveLength(0)
+    expect(currentStub.opsFor('session_state_history')).toHaveLength(0)
+  })
+
+  it('refuses a trainee action after End Room with the 4xx the queue drops on', async () => {
+    withResolver({ sessions: () => ({ data: ENDED }) })
+
+    await expect(
+      recordStudentEvent(CODE, PARTICIPANT_TOKEN, { kind: 'shock', label: 'Shock' }),
+    ).rejects.toMatchObject({ status: 410 })
+    expect(currentStub.opsFor('student_events')).toHaveLength(0)
+  })
+})
+
 describe('attempt completion (PLAN 12f)', () => {
   it('closes the outgoing attempt before bumping to the next one', async () => {
     const stub = withResolver({

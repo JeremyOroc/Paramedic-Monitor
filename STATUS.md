@@ -54,6 +54,9 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Completed
+- [x] **End Room feedback (2026-09-04):** a failed End Room request now shows why instead of leaving the
+      console silently on the admin page; an already-ended room shows a `Room ended` notice with a way
+      to create a new one; Sends and trainee actions on an ended room return 410. 4 tests; 1024 pass
 - [x] **Phase 15 — Instructor Change Expansion — CODE COMPLETE:**
   - [x] 15a `normalizeHistoryState` reads the waveforms, defibrillator model, every dispatch card
         field, the route addresses, and the response time; `diffStates` returns structured
