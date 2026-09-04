@@ -5,6 +5,98 @@
 
 ---
 
+## [2026-09-04] [planning/auth] — Accept open-signup risk and report grouping
+
+- Deferred application CAPTCHA and custom rate limits while recording that a one-college product is
+  not a technical access restriction: any internet user who finds the public deployment can register
+  as an Instructor after email verification. Supabase platform protections remain in force.
+- Kept duplicate-username registration feedback explicit while making duplicate-email failures
+  generic and directing the person toward sign-in or recovery.
+- Defined one persistent Evaluation record per Attempt across all participating trainees.
+- Limited each Account to one active Room and each Room to one controlling device, while allowing the
+  Account to remain signed in elsewhere.
+- Chose to expire legacy host-token Rooms at rollout and retained the split public landing page for
+  account-free trainee joining and Instructor authentication. No application or schema code started.
+
+## [2026-09-04] [planning/auth] — Accept public registration and persistent reports
+
+- Chose public self-registration: any verified email may create an Instructor Account. In-app
+  Administrators do not manage Accounts; Product operators perform account and rare role operations
+  directly through Supabase.
+- Accepted self-service email password recovery without Administrator or operator-selected passwords.
+- Accepted direct Room use of read-only Templates, explicit independent copies into `My Scenarios`,
+  and deliberate Template-edit mode for Administrators.
+- Assigned the entire existing global scenario library to Templates while preserving its folder and
+  scenario structure, order, contents, and identifiers.
+- Kept live Rooms temporary while retaining a persistent Account-owned Evaluation record for every
+  completed Attempt. Added ADRs 0011 and 0012. No application or schema code has started.
+
+## [2026-09-04] [planning/auth] — Accept account roles, ownership, and username sign-in
+
+- Revised the earlier optional-email requirement: Accounts now require verified email underneath
+  Supabase Auth while presenting username/password sign-in through a server-only identity bridge.
+- Fixed the application roles at Instructor and Administrator, with Administrators inheriting all
+  Instructor capabilities; authorization remains tied to immutable authenticated identities.
+- Split the scenario library into owner-only `My Scenarios` and the shared Administrator-maintained
+  `Templates` area, each with its own folders and ordering. Administrators do not ordinarily see
+  another Account's Personal scenarios.
+- Made the creating Account the long-term authority over its Rooms, replacing secret host-token URLs
+  as the permanent Instructor authorization mechanism while keeping trainees account-free.
+- Added ADRs 0009 and 0010. No application or schema code has started.
+
+## [2026-09-04] [planning/auth] — Accept the first account-design decisions
+
+- Selected Supabase Auth for the single-college release and limited Accounts to instructors and
+  Administrators; trainees retain the existing room-code-and-nickname participation flow.
+- Accepted required username/password credentials, optional email, trimmed case-insensitive username
+  uniqueness, preserved display capitalization, and no first-release self-service username changes.
+  Recorded that Supabase password login natively requires email or phone, leaving the safe username
+  mapping and support-assisted recovery mechanics open for the next interview round.
+- Defined `Zoid`, `Branden`, and `Jeremy` as reserved, explicitly provisioned Administrator identities
+  whose authority must never be inferred from username text.
+- Defined Templates as a permanent shared system collection: every Account may read, load, and make a
+  Personal copy, while only Administrators may create, edit, replace, or delete originals.
+- Updated the domain glossary and added ADRs 0007 and 0008. No application or schema code has started.
+
+## [2026-09-04] [planning/domain] — Bound the account release to one college
+
+- Narrowed the active account design to a simple single-college release. Institution records, tenant
+  memberships and switching, college-specific administration, domain-based college enrollment, and
+  per-college SSO are no longer initial implementation requirements.
+- Retained multi-college SaaS only as a future compatibility constraint: the design should preserve a
+  clean expansion seam without paying the cost of speculative multi-tenant infrastructure now.
+- Recomputed the unresolved design interview around the single-college boundary. No application or
+  schema implementation has started.
+
+## [2026-09-04] [planning/auth] — Prefer Supabase provisionally for multi-CEGEP identity
+
+- Recorded Supabase Auth as the provisional provider preference after confirming Canadian project
+  residency, RLS, custom RBAC claims, invitations, and multi-tenant SAML capabilities.
+- Kept the choice unaccepted pending the design interview and buyer requirements. Supabase supplies
+  the security primitives but not a Clerk-like institution product, so membership, roles, invitation
+  workflows, and administration remain application responsibilities. No implementation has started.
+
+## [2026-09-04] [planning/domain] — Reframe account design for a multi-CEGEP SaaS
+
+- Added the intended commercial trajectory to the account design: an initial CEGEP paramedic
+  department with roughly 50–100 students and twelve instructors, followed by additional CEGEPs.
+- Promoted institution membership, tenant isolation, school-domain onboarding, institution roles,
+  lifecycle administration, and possible SAML/OIDC SSO to provider-selection criteria. Kept SSO as
+  a buyer requirement to validate rather than inferring it solely from the use of school emails.
+- Reopened individual-only scenario ownership as an explicit design question. No auth provider,
+  domain model, application code, or schema has been accepted or implemented.
+
+## [2026-09-04] [planning/domain] — Begin accounts and scenario-ownership design
+
+- Brought the deferred account work forward as an active design interview: authenticated accounts,
+  account-owned personal scenarios, a shared `Templates` collection, administrator-only template
+  mutation, the three requested initial administrator usernames, and explicit duplicate-username
+  registration feedback.
+- Recorded the unresolved design frontier in `PLAN.md`, including participant scope, sign-in
+  identifier, secure administrator provisioning, personal-data authority, template-copy behavior,
+  legacy-library migration, tenancy, and the Supabase Auth versus Clerk decision. No application or
+  schema implementation has started, and no glossary or ADR decision has been asserted prematurely.
+
 ## [2026-09-04] [instructor] — Report shows BP only once the trainee reads it
 
 - The report's patient-state column showed the instructor's configured blood pressure from the moment it was sent, but NIBP is intermittent: the trainee's monitor reads `--/--` until they start the cuff. The column now reconstructs what was on screen from the `nibp_result` events, which are emitted in the same callback that puts a reading on the monitor. `acceptedBp`, the displayed value, is trainee-local and never reaches the record, so the events are the only source.

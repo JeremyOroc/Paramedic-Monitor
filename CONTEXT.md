@@ -13,8 +13,40 @@ The MacBook or desktop monitor that ordinarily presents the Instructor Console; 
 _Avoid_: Training display, dev display
 
 **Saved scenario**:
-A named instructor-authored clinical and dispatch snapshot stored in the scenario library.
-_Avoid_: Template, preset
+A named instructor-authored clinical and dispatch snapshot stored as either a Personal scenario or a Template scenario.
+_Avoid_: Preset
+
+**Account**:
+A verified instructor identity with a unique username and email that can authenticate, own Personal scenarios, and own Rooms. Trainees participate in Rooms without Accounts.
+_Avoid_: User, trainee account, student account
+
+**Instructor**:
+The ordinary Account role for preparing scenarios, creating Rooms, and conducting Attempts.
+_Avoid_: Teacher role, standard user
+
+**Administrator**:
+An Account role with every Instructor capability plus authority to maintain the shared Template scenarios.
+_Avoid_: Superuser, template owner
+
+**Product operator**:
+A maintainer who administers Accounts outside the application. A Product operator is not an application role and is distinct from an Administrator.
+_Avoid_: Administrator, instructor admin
+
+**Personal scenario**:
+A Saved scenario visible and mutable only to its owning Account rather than shared through Templates.
+_Avoid_: Private template, user scenario
+
+**Template scenario**:
+A shared Saved scenario in the permanent Templates collection, available to every Account and maintained by Administrators.
+_Avoid_: Preset, global scenario
+
+**My Scenarios**:
+The Account's private scenario-library area, containing its Personal scenarios and folders.
+_Avoid_: Personal folder, user library
+
+**Templates**:
+The fixed shared scenario-library area, containing Administrator-maintained Template scenarios and folders.
+_Avoid_: Template folder, shared library
 
 **Loaded scenario**:
 The saved scenario currently populating the Instructor Console authoring fields for review or editing.
@@ -25,11 +57,11 @@ Local scenario authoring state that has not yet been stored in the scenario libr
 _Avoid_: Unsaved scenario, temporary scenario
 
 **Scenario folder order**:
-The instructor-defined global sequence of scenario folders, independent of the order of saved scenarios inside each folder.
+The Account-defined sequence of folders in My Scenarios or Administrator-defined sequence in Templates, independent of the order of Saved scenarios inside each folder.
 _Avoid_: Alphabetical folder order, scenario order
 
 **Room**:
-The join-coded space one instructor opens for their trainees. It holds every attempt run in it and the evaluation record of each, and both end when the instructor closes it.
+The join-coded space owned by one Instructor Account and opened for trainees who join by nickname. It holds every Attempt run in it and the Evaluation record of each.
 _Avoid_: Session, lobby, class
 
 **Attempt**:
@@ -68,7 +100,7 @@ How current a trainee monitor projection is relative to the trainee's latest acc
 _Avoid_: Connection status, participant presence
 
 **Evaluation record**:
-Everything a room stores about an attempt for the instructor to review afterward: each trainee action in order, the confirmed clinical state it was taken against, and each change the instructor sent. It presents; it does not grade.
+The persistent Account-owned report of one completed Attempt across all participating trainees: each trainee action in order, the confirmed clinical state it was taken against, and each change the Instructor sent. It presents; it does not grade.
 _Avoid_: Report data, session log, history
 
 **Instructor change**:

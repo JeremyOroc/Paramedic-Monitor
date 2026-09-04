@@ -6,6 +6,27 @@
 ---
 
 ## Current Phase
+**Accounts & scenario ownership — DESIGN INTERVIEW IN PROGRESS (2026-09-04).** Supabase Auth and a
+single-college boundary are accepted. Only instructors and administrators receive Accounts; trainees
+keep the existing room-code-and-nickname flow. Registration requires a verified email, unique
+case-insensitive username, and password, while sign-in presents username/password through a
+server-only email-identity bridge. The only roles are Instructor and Administrator. `Zoid`, `Branden`,
+and `Jeremy` are reserved, deliberately provisioned Administrators whose authority is bound to
+immutable authenticated identities. `My Scenarios` is strictly owner-only; `Templates` is a separate
+fixed area with folders that every Account can read and only Administrators can mutate. Rooms are
+owned and controlled by their creating Account rather than permanently authorized through host-token
+URLs. Anyone with a verified email may self-register as an Instructor; Account administration and
+Administrator-role changes stay outside the app with Product operators using Supabase. Email recovery
+is self-service. Templates can start Rooms directly, modified Templates save only as independent
+Personal copies, and the current global library migrates intact into Templates. Rooms remain
+temporary, but each completed Attempt produces a persistent Account-owned Evaluation record. Public
+registration has no application CAPTCHA or custom throttling for now; duplicate-email feedback stays
+generic. Each record covers all trainees in one Attempt. An Account may use several devices but has
+one active Room and one controlling device; legacy host-token Rooms expire at rollout. The landing
+page retains separate trainee Join and Instructor auth paths. A lightweight public-access boundary,
+report naming/retention, account deletion, password/session policy, and remaining rollout edges stay
+under interview. Multi-tenancy stays deferred. No application or schema code has started.
+
 **Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04).** The Embedded Spectator now
 switches among Docked, a fixed bottom-right Floating mini-player, and browser-native Fullscreen while
 preserving one selected-only polling path and an inert uniformly scaled monitor. Permanent accessible

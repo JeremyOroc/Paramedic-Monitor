@@ -1405,13 +1405,87 @@ and Fullscreen modes with clean console logs.
 
 ---
 
-### Later — Instructor Accounts & Ownership
-Not a phase yet. The evaluation record currently lives as long as the room does, read before the
-instructor closes it, and that is the agreed operating assumption. Selling to a second college
-requires an **Instructor** as an account — Supabase Auth, `owner_id` on rooms and saved scenarios —
-both so a record can be reopened later and so one college cannot see another's scenario library.
-The scenario library is global today; every instructor sees every saved scenario. This lands before
-the first external sale, not before.
+### Next — Accounts & Scenario Ownership (DESIGN INTERVIEW IN PROGRESS)
+
+The 2026-09-04 requirement change brings accounts and scenario ownership forward. Accounts are for
+instructors and administrators only; trainees continue joining a room with its code and a nickname
+and do not register or sign in. Each account owns Personal scenarios, while the permanent shared
+`Templates` collection is available to every account. An account may load a Template scenario or
+save an independent Personal scenario from it, but only Administrators may create, edit, replace, or
+delete the shared original. `Templates` cannot be renamed, moved, or deleted.
+
+Supabase Auth is the accepted authentication provider. Registration requires a username, verified
+email address, and password. The sign-in form presents username and password; a server-only bridge
+resolves the normalized username to its underlying email identity and then uses Supabase password
+authentication. The browser must not receive the email mapping, privileged credentials, or different
+errors that reveal whether a submitted username exists. Native email recovery remains available.
+Usernames preserve display capitalization but are trimmed and unique without regard to case, so
+`Jeremy`, `jeremy`, and ` JEREMY ` conflict. A duplicate registration must clearly ask the registrant
+to choose another username, and self-service username changes are excluded from the first release.
+
+The administrator usernames `Zoid`, `Branden`, and `Jeremy` are reserved for three deliberately
+provisioned and verified initial accounts. Merely submitting one of those usernames must never grant
+administrator authority. Roles and authorization are attached to the immutable authenticated account
+identity, not inferred from username text. The only application roles are Instructor and
+Administrator; Administrators inherit every Instructor capability.
+
+Registration is public: anyone may submit a unique username, email address, and password, verify the
+email, and receive the Instructor role. Administrators do not manage Accounts inside the application.
+Product operators instead use Supabase directly to inspect, disable, reactivate, or otherwise support
+Accounts and to make the deliberately rare Administrator-role changes. The login page provides a
+self-service `Forgot password?` flow through the verified email; neither Administrators nor Product
+operators see or choose a user's replacement password. A duplicate username receives the required
+specific message; an email-related registration failure remains generic and directs the person to
+sign in or reset their password rather than confirming whether an email Account exists.
+
+The first release deliberately adds no application-level CAPTCHA or custom rate limiting, although
+Supabase's platform controls remain in force. This is an accepted initial risk to revisit later. The
+one-college product scope is not itself a technical access boundary: while registration stays public,
+any internet user who finds the deployment may register as an Instructor, read Templates, create a
+Room, and retain their own records after verifying an email.
+
+The scenario library has two fixed areas. `My Scenarios` contains folders, ordering, and Personal
+scenarios belonging only to the signed-in account; even Administrators receive no ordinary access to
+another account's Personal scenarios. `Templates` separately contains shared folders, ordering, and
+Template scenarios. Every account can read and use Templates, while only Administrators can mutate
+their folders, ordering, and scenarios. An Instructor may start a Room directly from a Template. Any
+attempt to save modifications uses an explicit `Save to My Scenarios` action that asks for a Personal
+folder and name and creates an independent copy. Administrators must deliberately enter Template-edit
+mode to change a shared original. At rollout, all existing global folders and scenarios move into
+Templates without changing folder order, scenario order, contents, or identifiers.
+
+Each Room belongs to the Instructor Account that creates it. Authenticated ownership replaces the
+private host-token URL as the long-term authority for opening and controlling the Instructor Console;
+trainees keep the existing code-and-nickname flow without Accounts. The rollout expires existing
+host-token Rooms instead of carrying that authorization path forward.
+
+Ending a Room discards its temporary live-operation state, but every completed Attempt becomes a
+persistent Evaluation record owned by the Room's Instructor Account. Reports survive the Room and
+remain separate from Personal and Template scenarios. There is one record per Attempt, containing
+all participating trainee nicknames and events rather than duplicating Instructor changes and patient
+history into one record per trainee. The report naming, student naming, retention, and deletion rules
+remain to be settled.
+
+An Account may be signed in on multiple devices but may own only one non-ended Room at a time, and
+only one device may control that Room. Attempting to create another Room offers to reopen or end the
+existing one. The account rollout expires all active legacy host-token Rooms rather than supporting
+two authorization systems. The public landing page remains split between account-free `Join a Room`
+for trainees and `Instructor` sign-in or registration; scenario management, Room creation, and saved
+reports are authenticated Instructor functions.
+
+The first account release targets one college only. A multi-college SaaS remains a possible future,
+not a committed product requirement. Institution records, tenant memberships, tenant switching,
+college-specific administration, domain-based college enrollment, and per-college SSO are therefore
+out of scope for this release. The initial design should stay simple while avoiding assumptions that
+would make adding an institution boundary later require a destructive rewrite. The exact future
+expansion seam remains part of the design interview; speculative multi-tenant infrastructure does not.
+
+The remaining design interview must settle whether public access needs even a lightweight boundary,
+Evaluation-record naming and student identity, report retention and deletion, account deletion,
+password policy and session behavior, and remaining rollout/data edge cases. No application or schema
+implementation begins until the complete contract is confirmed. The previous deferred account note
+and its assumption that the global library would remain until an external sale are superseded by
+this active design work.
 
 ---
 
