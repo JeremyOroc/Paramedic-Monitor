@@ -1,11 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 
-import { MonitorPage, type StudentEventRecord } from '@/components/monitor/MonitorPage'
-import { useSessionMonitorSync } from '@/hooks/useSessionMonitorSync'
+import { MonitorPage } from '@/components/monitor/MonitorPage'
 import { useMonitorProjectionPublisher } from '@/hooks/useMonitorProjectionPublisher'
+import { useSessionMonitorSync } from '@/hooks/useSessionMonitorSync'
+import { useStudentActionQueue } from '@/hooks/useStudentActionQueue'
 import { useMonitorStore } from '@/store/monitorStore'
 
 function participantStorageKey(code: string) {
@@ -42,7 +43,7 @@ export default function SessionMonitorPage() {
   // and remount the monitor so controller state (power, capture, etc.) resets.
   const [attemptVersion, setAttemptVersion] = useState(1)
   const resetStore = useMonitorStore((s) => s.reset)
-  const vfDisplaySync = useSessionMonitorSync({
+  const { vfDisplaySync, getClock } = useSessionMonitorSync({
     code,
     participantToken,
     onSessionInactive: () => router.replace(`/session/${code}/waiting`),
@@ -52,20 +53,10 @@ export default function SessionMonitorPage() {
     },
   })
 
-  const recordStudentEvent = useCallback(
-    (event: StudentEventRecord) => {
-      if (!participantToken) return
-      void fetch(`/api/session/${code}/student-event`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-session-participant-token': participantToken,
-        },
-        body: JSON.stringify(event),
-      })
-    },
-    [code, participantToken],
-  )
+  // Queued, not fired and forgotten: an action pressed during a wifi drop
+  // waits on the device and lands with the time and state version of the
+  // press (docs/adr/0004).
+  const recordStudentEvent = useStudentActionQueue({ code, participantToken, getClock })
   const publishProjection = useMonitorProjectionPublisher({ code, participantToken })
 
   return (

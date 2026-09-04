@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest'
 
 import {
+  SUMMARY_CLAUSE_LIMIT,
   buildEvaluationTimeline,
+  describeState,
   diffStates,
+  eventTimeMs,
   formatEventDetail,
+  summarizeChanges,
   formatOffset,
   normalizeHistoryState,
   type EvaluationTimelineInput,
@@ -36,6 +40,9 @@ function makeEvent(overrides: Partial<StudentEvent> = {}): StudentEvent {
     payload: {},
     occurred_at: at(0),
     state_version: null,
+    occurred_at_client: null,
+    capture_sequence: null,
+    clock_offset_ms: null,
     ...overrides,
   }
 }
@@ -55,7 +62,7 @@ function sharedState(
   extra: Record<string, unknown> = {},
 ) {
   return {
-    confirmed: { rhythm: 'nsr', hr: 88, bp_sys: 118, bp_dia: 76, spo2: 97, etco2: 35, ...confirmed },
+    confirmed: { rhythm: 'nsr', hr: 88, bp_sys: 118, bp_dia: 76, spo2: 97, etco2: 35, spo2_waveform: 'normal', etco2_waveform: 'normal', ...confirmed },
     confirmedVitalActive: { hr: true, bp_sys: true, bp_dia: true, spo2: true, etco2: false, ...active },
     ...extra,
   }
@@ -169,15 +176,16 @@ describe('normalizeHistoryState', () => {
 
 describe('diffStates', () => {
   const base = normalizeHistoryState(sharedState({}))
+  const diff = (a: typeof base, b: typeof base) => summarizeChanges(diffStates(a, b))
 
   it('reports a single changed vital and nothing else', () => {
     const next = normalizeHistoryState(sharedState({ hr: 112 }))
-    expect(diffStates(base, next)).toEqual(['HR 88 → 112'])
+    expect(diff(base, next)).toEqual(['HR 88 → 112'])
   })
 
   it('reports every field the instructor moved in one Send', () => {
     const next = normalizeHistoryState(sharedState({ rhythm: 'vf', hr: 112, bp_sys: 82, bp_dia: 48, spo2: 91 }))
-    expect(diffStates(base, next)).toEqual([
+    expect(diff(base, next)).toEqual([
       'rhythm NSR → VF',
       'HR 88 → 112',
       'BP sys 118 → 82',
@@ -188,30 +196,273 @@ describe('diffStates', () => {
 
   it('reports a channel switched off as a toggle, not a value change', () => {
     const next = normalizeHistoryState(sharedState({ spo2: 91 }, { spo2: false }))
-    expect(diffStates(base, next)).toEqual(['SpO2 off'])
+    expect(diff(base, next)).toEqual(['SpO2 off'])
   })
 
   it('reports CPR and monitor resets', () => {
     const withReset = normalizeHistoryState(sharedState({}, {}, { cprMode: 'regular', monitorResetVersion: 1 }))
     const previous = normalizeHistoryState(sharedState({}, {}, { cprMode: 'off', monitorResetVersion: 0 }))
-    expect(diffStates(previous, withReset)).toEqual(['CPR off → Regular', 'monitor reset'])
+    expect(diff(previous, withReset)).toEqual(['CPR off → Regular', 'monitor reset'])
   })
 
   it('reports the instructor switching scenario mid-attempt', () => {
     const before = normalizeHistoryState(sharedState({}, {}, { scenarioTitleConfirmed: 'Fall from ladder' }))
     const after = normalizeHistoryState(sharedState({}, {}, { scenarioTitleConfirmed: 'Cardiac arrest' }))
-    expect(diffStates(before, after)).toEqual(['scenario "Fall from ladder" → "Cardiac arrest"'])
+    expect(diff(before, after)).toEqual(['scenario "Fall from ladder" → "Cardiac arrest"'])
   })
 
   it('reports a scenario named for the first time, and one cleared', () => {
     const unnamed = normalizeHistoryState(sharedState({}))
     const named = normalizeHistoryState(sharedState({}, {}, { scenarioTitleConfirmed: 'Cardiac arrest' }))
-    expect(diffStates(unnamed, named)).toEqual(['scenario "untitled" → "Cardiac arrest"'])
-    expect(diffStates(named, unnamed)).toEqual(['scenario name cleared'])
+    expect(diff(unnamed, named)).toEqual(['scenario "untitled" → "Cardiac arrest"'])
+    expect(diff(named, unnamed)).toEqual(['scenario name cleared'])
   })
 
   it('is empty for a Send that changed nothing clinical', () => {
-    expect(diffStates(base, normalizeHistoryState(sharedState({})))).toEqual([])
+    expect(diff(base, normalizeHistoryState(sharedState({})))).toEqual([])
+  })
+})
+
+describe('eventTimeMs', () => {
+  const base = { occurred_at: at(100), occurred_at_client: null, clock_offset_ms: null }
+
+  it('uses the corrected client clock when the monitor supplied one', () => {
+    const time = eventTimeMs({ ...base, occurred_at_client: at(92), clock_offset_ms: 3_000 })
+    expect(time).toEqual({ at: startMs + 95_000, clientTimed: true })
+  })
+
+  it('falls back to the server clock without an offset, since an uncorrected client clock is on its own timeline', () => {
+    expect(eventTimeMs({ ...base, occurred_at_client: at(92) })).toEqual({
+      at: startMs + 100_000,
+      clientTimed: false,
+    })
+  })
+
+  it('falls back to the server clock for rows predating the columns', () => {
+    expect(eventTimeMs(base)).toEqual({ at: startMs + 100_000, clientTimed: false })
+  })
+
+  it('is null when neither clock parses', () => {
+    expect(eventTimeMs({ occurred_at: 'nope', occurred_at_client: 'nope', clock_offset_ms: 0 })).toBeNull()
+  })
+})
+
+describe('buildEvaluationTimeline — the trainee\'s clock (PLAN 14c, 14e)', () => {
+  it('places a replayed action at the moment it was pressed, not when it reached the server', () => {
+    const { rows } = build({
+      events: [
+        makeEvent({
+          kind: 'shock', label: 'Shock',
+          occurred_at: at(70),            // reached the server after the outage
+          occurred_at_client: at(40),     // pressed here...
+          clock_offset_ms: 2_000,         // ...on a clock 2s behind the server
+        }),
+      ],
+    })
+    expect(rows[0].offset).toBe('t+0:42')
+    expect((rows[0] as TimelineActionRow).clientTimed).toBe(true)
+  })
+
+  it('keeps two presses in one millisecond in the order the monitor counted them', () => {
+    const { rows } = build({
+      events: [
+        makeEvent({ id: 'second', kind: 'shock', label: 'Shock', occurred_at: at(10), occurred_at_client: at(10), clock_offset_ms: 0, capture_sequence: 2 }),
+        makeEvent({ id: 'first', kind: 'charge', label: 'Charge', occurred_at: at(10), occurred_at_client: at(10), clock_offset_ms: 0, capture_sequence: 1 }),
+      ],
+    })
+    expect(rows.map((row) => row.id)).toEqual(['first', 'second'])
+  })
+
+  it('marks an action taken on a monitor that had not received the latest Send', () => {
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({})),
+        makeState(2, 276, sharedState({ rhythm: 'vf', hr: 112 })),   // the Send the monitor missed
+      ],
+      events: [
+        makeEvent({ kind: 'analyze', label: 'Analyze', occurred_at: at(302), occurred_at_client: at(280), clock_offset_ms: 0, state_version: 1 }),
+      ],
+    })
+    const action = actions(rows)[0]
+    expect(action.behindBy).toBe(1)
+    // And it is judged against what it saw, not what it should have seen.
+    expect((action.context as TimelineStateContext).rhythm).toBe('NSR 88')
+  })
+
+  it('does not mark an action that was current, or one before any Send', () => {
+    const { rows } = build({
+      stateHistory: [makeState(1, 0, sharedState({})), makeState(2, 100, sharedState({ hr: 90 }))],
+      events: [
+        makeEvent({ occurred_at: at(50), state_version: 1 }),    // current at the time
+        makeEvent({ occurred_at: at(150), state_version: 2 }),   // current at the time
+        makeEvent({ occurred_at: at(150), state_version: null }), // predates any Send
+      ],
+    })
+    expect(actions(rows).map((row) => row.behindBy)).toEqual([0, 0, 0])
+  })
+
+  it('counts every Send the monitor missed, not only the last', () => {
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({})),
+        makeState(2, 10, sharedState({ hr: 90 })),
+        makeState(3, 20, sharedState({ hr: 100 })),
+      ],
+      events: [makeEvent({ occurred_at: at(30), state_version: 1 })],
+    })
+    expect(actions(rows)[0].behindBy).toBe(2)
+  })
+})
+
+describe('diffStates — the instructor\'s other inputs (PLAN 15a)', () => {
+  const base = normalizeHistoryState(sharedState({}, {}, {
+    callerInfoConfirmed: { problem: 'Fall from ladder', address: '145 Hymus', extra1Label: '', extra1: '' },
+    dispatchRouteConfirmed: { originAddress: 'John Abbott', destinationAddress: '145 Hymus', geometry: [], status: 'ready', runId: 'a' },
+    defibrillatorModelConfirmed: 'wagamiX',
+    dispatchConfirmedSeconds: 240,
+    dispatch: { runId: 'r1', startedAt: 1, countdownEndsAt: 2, callerEvents: [], acknowledgedAt: null },
+    cprOverrideActive: false,
+  }))
+  const with_ = (extra: Record<string, unknown>, confirmed: Record<string, unknown> = {}) =>
+    normalizeHistoryState(sharedState(confirmed, {}, {
+      callerInfoConfirmed: { problem: 'Fall from ladder', address: '145 Hymus', extra1Label: '', extra1: '' },
+      dispatchRouteConfirmed: { originAddress: 'John Abbott', destinationAddress: '145 Hymus', geometry: [], status: 'ready', runId: 'a' },
+      defibrillatorModelConfirmed: 'wagamiX',
+      dispatchConfirmedSeconds: 240,
+      dispatch: { runId: 'r1', startedAt: 1, countdownEndsAt: 2, callerEvents: [], acknowledgedAt: null },
+      cprOverrideActive: false,
+      ...extra,
+    }))
+
+  it('reports a waveform change', () => {
+    expect(diffStates(base, with_({}, { spo2_waveform: 'weak', etco2_waveform: 'obstructed' }))).toEqual([
+      expect.objectContaining({ group: 'patient', label: 'SpO2 waveform', before: 'Normal', after: 'Weak', summary: 'SpO2 waveform Normal → Weak' }),
+      expect.objectContaining({ group: 'patient', label: 'EtCO2 waveform', before: 'Normal', after: 'Obstructed' }),
+    ])
+  })
+
+  it('reports a defibrillator model change', () => {
+    expect(diffStates(base, with_({ defibrillatorModelConfirmed: 'wagamiZ' }))).toEqual([
+      expect.objectContaining({ group: 'device', summary: 'defibrillator Wagami X → Wagami Z' }),
+    ])
+  })
+
+  it('reports a response time change as minutes and seconds', () => {
+    expect(diffStates(base, with_({ dispatchConfirmedSeconds: 372 }))).toEqual([
+      expect.objectContaining({ group: 'timing', summary: 'response time 4:00 → 6:12' }),
+    ])
+  })
+
+  it('reports each dispatch card field by the console\'s own label', () => {
+    const next = with_({
+      callerInfoConfirmed: { problem: 'Fall from ladder', address: '145 Hymus', update: 'Now unresponsive', priority: 'P1', extra1Label: '', extra1: '' },
+    })
+    expect(diffStates(base, next)).toEqual([
+      expect.objectContaining({ group: 'dispatch', label: 'Priority', before: '(empty)', after: 'P1' }),
+      expect.objectContaining({ group: 'dispatch', label: 'Mise a jour', before: '(empty)', after: 'Now unresponsive' }),
+    ])
+  })
+
+  it('ignores an extra slot until it has a name', () => {
+    const unnamed = with_({ callerInfoConfirmed: { problem: 'Fall from ladder', address: '145 Hymus', extra1Label: '', extra1: 'stray' } })
+    expect(diffStates(base, unnamed)).toEqual([])
+    const named = with_({ callerInfoConfirmed: { problem: 'Fall from ladder', address: '145 Hymus', extra1Label: 'Allergies', extra1: 'penicillin' } })
+    expect(diffStates(base, named).map((c) => c.label)).toEqual(['Extra 1 name', 'Extra 1'])
+  })
+
+  it('reports the route by its addresses only', () => {
+    expect(diffStates(base, with_({
+      dispatchRouteConfirmed: { originAddress: 'John Abbott', destinationAddress: '2100 St-Jean', geometry: [{ lat: 1, lng: 2 }], status: 'loading', runId: 'b' },
+    }))).toEqual([expect.objectContaining({ group: 'route', label: 'destination', after: '2100 St-Jean' })])
+  })
+
+  it('describes a monitor reset as an event, not a counter', () => {
+    expect(diffStates(with_({ monitorResetVersion: 0 }), with_({ monitorResetVersion: 1 }))).toEqual([
+      expect.objectContaining({ group: 'care', label: 'monitor', before: 'running', after: 'reset', summary: 'monitor reset' }),
+    ])
+  })
+
+  it('never compares the fields the instructor did not set', () => {
+    const noise = with_({
+      dispatch: { runId: 'r2', startedAt: 99, countdownEndsAt: 100, callerEvents: [{ x: 1 }], acknowledgedAt: 5, arrivedAt: 6, transportedAt: 7 },
+      dispatchRouteConfirmed: { originAddress: 'John Abbott', destinationAddress: '145 Hymus', geometry: [{ lat: 1, lng: 2 }], status: 'failed', origin: { lat: 9, lng: 9 }, distanceMeters: 5, runId: 'zzz' },
+      cprOverrideActive: true,
+    })
+    expect(diffStates(base, noise)).toEqual([])
+  })
+})
+
+describe('summarizeChanges (PLAN 15b)', () => {
+  const change = (group: 'patient' | 'dispatch' | 'route' | 'care', label: string, summary = `${label} x → y`) =>
+    ({ group, label, before: 'x', after: 'y', summary })
+
+  it('names clinical changes and counts the dispatch card', () => {
+    expect(summarizeChanges([
+      change('patient', 'HR', 'HR 88 → 112'),
+      change('dispatch', 'Priority'),
+      change('dispatch', 'Mise a jour'),
+      change('dispatch', 'Adresse'),
+    ])).toEqual(['HR 88 → 112', 'dispatch card · 3 fields'])
+  })
+
+  it('names which route endpoints moved', () => {
+    expect(summarizeChanges([change('route', 'destination')])).toEqual(['route · destination'])
+    expect(summarizeChanges([change('route', 'origin'), change('route', 'destination')])).toEqual(['route · origin, destination'])
+    expect(summarizeChanges([change('dispatch', 'Adresse')])).toEqual(['dispatch card · 1 field'])
+  })
+
+  it('ends a long line in +n more', () => {
+    const many = Array.from({ length: SUMMARY_CLAUSE_LIMIT + 3 }, (_, i) => change('patient', `f${i}`, `f${i}`))
+    const out = summarizeChanges(many)
+    expect(out).toHaveLength(SUMMARY_CLAUSE_LIMIT)
+    expect(out.at(-1)).toBe('+4 more')
+  })
+})
+
+describe('describeState (PLAN 15c)', () => {
+  it('lays the opening scenario out by group and skips empty fields', () => {
+    const facts = describeState(normalizeHistoryState(sharedState({ hr: 124 }, { hr: false, etco2: false }, {
+      scenarioTitleConfirmed: 'Fall from ladder',
+      callerInfoConfirmed: { callNumber: '2026-1', priority: 'P1', problem: 'Male, 58', address: '145 Hymus', update: '', extra1Label: 'Allergies', extra1: 'none', extra2Label: '', extra2: 'stray' },
+      dispatchRouteConfirmed: { originAddress: 'John Abbott', destinationAddress: '145 Hymus' },
+      dispatchConfirmedSeconds: 240,
+      defibrillatorModelConfirmed: 'wagamiZ',
+      cprMode: 'weak',
+    })))
+    expect(facts).toEqual([
+      { group: 'Dispatch', label: 'Scenario', value: 'Fall from ladder' },
+      { group: 'Dispatch', label: 'Call #', value: '2026-1' },
+      { group: 'Dispatch', label: 'Priority', value: 'P1' },
+      { group: 'Dispatch', label: 'Adresse', value: '145 Hymus' },
+      { group: 'Dispatch', label: 'Probleme', value: 'Male, 58' },
+      { group: 'Dispatch', label: 'Allergies', value: 'none' },
+      { group: 'Dispatch', label: 'From', value: 'John Abbott' },
+      { group: 'Dispatch', label: 'Response time', value: '4:00' },
+      { group: 'Patient', label: 'Rhythm', value: 'NSR' },
+      { group: 'Patient', label: 'HR', value: '124 (off)' },
+      { group: 'Patient', label: 'BP', value: '118/76' },
+      { group: 'Patient', label: 'SpO2', value: '97' },
+      { group: 'Patient', label: 'SpO2 waveform', value: 'Normal' },
+      { group: 'Patient', label: 'EtCO2', value: '35 (off)' },
+      { group: 'Patient', label: 'EtCO2 waveform', value: 'Normal' },
+      { group: 'Patient', label: 'CPR', value: 'Weak' },
+      { group: 'Device', label: 'Defibrillator', value: 'Wagami Z' },
+    ])
+  })
+
+  it('populates the opening row and leaves later rows with their diff only', () => {
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({}, {}, { callerInfoConfirmed: { problem: 'Fall' } })),
+        makeState(2, 10, sharedState({ hr: 90 }, {}, { callerInfoConfirmed: { problem: 'Fall' } })),
+      ],
+    })
+    const [opening, later] = instructorRows(rows)
+    expect(opening.snapshot.length).toBeGreaterThan(0)
+    expect(opening.fieldChanges).toEqual([])
+    expect(later.snapshot).toEqual([])
+    expect(later.fieldChanges).toEqual([expect.objectContaining({ label: 'HR', before: '88', after: '90' })])
+    expect(later.changes).toEqual(['HR 88 → 90'])
   })
 })
 

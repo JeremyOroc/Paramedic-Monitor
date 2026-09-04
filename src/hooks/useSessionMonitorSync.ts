@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import type { VfDisplaySync } from '@/lib/automaticHeartRate'
 import { useMonitorStore, type SharedMonitorState } from '@/store/monitorStore'
@@ -14,8 +14,18 @@ type SessionStatePayload = {
     version?: number
     updated_at?: string
   } | null
+  /** Set when the server was told our version and nothing moved. */
+  unchanged?: boolean
   serverReceivedAt?: number
   serverNow?: number
+}
+
+/** What the monitor knows about now, read at the moment an action is pressed. */
+export type MonitorClock = {
+  /** The state version on screen, or null before the first Send arrives. */
+  stateVersion: number | null
+  /** Server minus client, in ms, from the most recent poll. Null until measured. */
+  clockOffsetMs: number | null
 }
 
 type UseSessionMonitorSyncOptions = {
@@ -45,6 +55,7 @@ export function useSessionMonitorSync({
   const [vfDisplaySync, setVfDisplaySync] = useState<VfDisplaySync | null>(null)
   const lastVersionRef = useRef<number | null>(null)
   const lastAttemptRef = useRef<number | null>(null)
+  const clockOffsetRef = useRef<number | null>(null)
   const onSessionInactiveRef = useRef(onSessionInactive)
   const onNewAttemptRef = useRef(onNewAttempt)
   useEffect(() => {
@@ -58,15 +69,33 @@ export function useSessionMonitorSync({
     async function pollState() {
       try {
         const requestStartedAt = Date.now()
-        const response = await fetch(`/api/session/${code}/state`, {
-          headers: participantToken
-            ? { 'x-session-participant-token': participantToken }
-            : undefined,
-        })
+        // Name the version we hold; an unchanged room answers without the
+        // blob (docs/adr/0003).
+        const since = lastVersionRef.current
+        const response = await fetch(
+          `/api/session/${code}/state${since !== null ? `?since=${since}` : ''}`,
+          {
+            headers: participantToken
+              ? { 'x-session-participant-token': participantToken }
+              : undefined,
+          },
+        )
         if (!response.ok) return
         const data = (await response.json()) as SessionStatePayload
         const responseReceivedAt = Date.now()
         if (cancelled) return
+
+        // Measured on every poll, not only when state changes: a queued action
+        // stamps the latest offset, and the room is usually unchanged.
+        if (
+          typeof data.serverReceivedAt === 'number' &&
+          typeof data.serverNow === 'number'
+        ) {
+          clockOffsetRef.current =
+            ((data.serverReceivedAt - requestStartedAt) +
+              (data.serverNow - responseReceivedAt)) /
+            2
+        }
 
         // Read the attempt before the status gate. A new attempt also drops the
         // room back to 'waiting', and bailing on status first would send the
@@ -88,6 +117,8 @@ export function useSessionMonitorSync({
           return
         }
 
+        if (data.unchanged) return
+
         const version = data.state?.version
         const shared = data.state?.state
         if (!shared || typeof version !== 'number') return
@@ -95,19 +126,11 @@ export function useSessionMonitorSync({
         lastVersionRef.current = version
         applySharedState(shared)
         const epochMs = Date.parse(data.state?.updated_at ?? '')
-        if (
-          Number.isFinite(epochMs) &&
-          typeof data.serverReceivedAt === 'number' &&
-          typeof data.serverNow === 'number'
-        ) {
-          const serverOffsetMs =
-            ((data.serverReceivedAt - requestStartedAt) +
-              (data.serverNow - responseReceivedAt)) /
-            2
+        if (Number.isFinite(epochMs) && clockOffsetRef.current !== null) {
           setVfDisplaySync({
             seed: version,
             epochMs,
-            serverOffsetMs,
+            serverOffsetMs: clockOffsetRef.current,
           })
         } else {
           setVfDisplaySync(null)
@@ -125,5 +148,13 @@ export function useSessionMonitorSync({
     }
   }, [applySharedState, code, intervalMs, participantToken])
 
-  return vfDisplaySync
+  const getClock = useCallback(
+    (): MonitorClock => ({
+      stateVersion: lastVersionRef.current,
+      clockOffsetMs: clockOffsetRef.current,
+    }),
+    [],
+  )
+
+  return { vfDisplaySync, getClock }
 }

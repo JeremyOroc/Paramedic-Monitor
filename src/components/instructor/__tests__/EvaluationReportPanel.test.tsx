@@ -31,6 +31,9 @@ function makeEvent(overrides: Partial<StudentEvent> = {}): StudentEvent {
     payload: {},
     occurred_at: at(0),
     state_version: null,
+    occurred_at_client: null,
+    capture_sequence: null,
+    clock_offset_ms: null,
     ...overrides,
   }
 }
@@ -170,6 +173,91 @@ describe('EvaluationReportPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Copy' }))
 
     expect(writeText.mock.calls[0][0]).toContain('scenario sent — "Fall from ladder"')
+  })
+
+  it('flags an action taken on a monitor that was behind, and copies the flag', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+    renderPanel({
+      stateHistory: [state(1, 0, {}), state(2, 276, { rhythm: 'vf', hr: 112 })],
+      events: [
+        makeEvent({ kind: 'analyze', label: 'Analyze', occurred_at: at(302), state_version: 1 }),
+        makeEvent({ kind: 'shock', label: 'Shock', occurred_at: at(310), state_version: 2 }),
+      ],
+    })
+
+    const [behind, current] = screen.getAllByTestId('report-row-action')
+    expect(behind).toHaveAttribute('data-behind', '1')
+    expect(behind).toHaveTextContent('← 1 behind')
+    expect(within(behind).getByText('← 1 behind')).toHaveClass('text-pending-amber')
+    expect(current).not.toHaveAttribute('data-behind')
+    expect(current).not.toHaveTextContent('behind')
+
+    await user.click(screen.getByRole('button', { name: 'Copy' }))
+    const copied = writeText.mock.calls[0][0] as string
+    expect(copied).toMatch(/analyze.*← 1 behind/)
+    expect(copied).not.toMatch(/shock.*behind/)
+  })
+
+  it('opens the scenario on the first instructor change and only the diff on later ones (PLAN 15c)', async () => {
+    const user = userEvent.setup()
+    const card = { problem: 'Male, 58, fall from ladder', address: '145 Hymus', priority: 'P1' }
+    renderPanel({
+      stateHistory: [
+        state(1, 0, {}, { scenarioTitleConfirmed: 'Fall from ladder', callerInfoConfirmed: card, defibrillatorModelConfirmed: 'wagamiX' }),
+        state(2, 276, { rhythm: 'vf', hr: 112 }, { scenarioTitleConfirmed: 'Fall from ladder', callerInfoConfirmed: { ...card, update: 'Now unresponsive' }, defibrillatorModelConfirmed: 'wagamiX' }),
+      ],
+    })
+
+    const [opening, later] = screen.getAllByTestId('report-row-instructor')
+    expect(screen.queryByTestId('report-row-detail')).not.toBeInTheDocument()
+
+    await user.click(within(opening).getByRole('button', { name: 'Expand instructor change' }))
+    const openingDetail = within(opening).getByTestId('report-row-detail')
+    expect(within(opening).getByRole('button', { name: 'Collapse instructor change' })).toHaveAttribute('aria-expanded', 'true')
+    expect(openingDetail).toHaveTextContent('Dispatch')
+    expect(openingDetail).toHaveTextContent('Male, 58, fall from ladder')
+    expect(openingDetail).toHaveTextContent('Patient')
+    expect(openingDetail).toHaveTextContent('Wagami X')
+
+    // The later row summarises the card change and, opened, shows only what moved.
+    expect(later).toHaveTextContent('rhythm NSR → VF · HR 88 → 112 · dispatch card · 1 field')
+    await user.click(within(later).getByRole('button', { name: 'Expand instructor change' }))
+    const laterDetail = within(later).getByTestId('report-row-detail')
+    expect(laterDetail).toHaveTextContent('Mise a jour')
+    expect(laterDetail).toHaveTextContent('Now unresponsive')
+    expect(laterDetail).not.toHaveTextContent('145 Hymus')
+    expect(laterDetail).not.toHaveTextContent('Wagami X')
+
+    await user.click(within(later).getByRole('button', { name: 'Collapse instructor change' }))
+    expect(within(later).queryByTestId('report-row-detail')).not.toBeInTheDocument()
+  })
+
+  it('keeps a row open when the poll replaces every row object', async () => {
+    const user = userEvent.setup()
+    const history = [state(1, 0, {}, { callerInfoConfirmed: { problem: 'Fall' } })]
+    const { rerender } = render(
+      <EvaluationReportPanel events={[]} stateHistory={history} attempts={ATTEMPTS} participants={PARTICIPANTS} attemptVersion={1} />,
+    )
+    await user.click(screen.getByRole('button', { name: 'Expand instructor change' }))
+    expect(screen.getByTestId('report-row-detail')).toBeInTheDocument()
+
+    // A fresh array with an equal row, as every 2.5s poll produces.
+    rerender(
+      <EvaluationReportPanel events={[makeEvent({ occurred_at: at(5), state_version: 1 })]} stateHistory={[...history]} attempts={[...ATTEMPTS]} participants={PARTICIPANTS} attemptVersion={1} />,
+    )
+    expect(screen.getByTestId('report-row-detail')).toBeInTheDocument()
+  })
+
+  it('gives no disclosure to action rows or to a Send that changed nothing', () => {
+    renderPanel({
+      stateHistory: [state(1, 0, {}), state(2, 10, {})],
+      events: [makeEvent({ occurred_at: at(5), state_version: 1 })],
+    })
+    const [, noChange] = screen.getAllByTestId('report-row-instructor')
+    expect(noChange).toHaveTextContent('sent (no change)')
+    expect(within(noChange).queryByRole('button')).not.toBeInTheDocument()
+    expect(within(screen.getByTestId('report-row-action')).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('warns that patient context is unavailable when no state was recorded', () => {

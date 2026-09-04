@@ -83,6 +83,22 @@
 - Defined persistent global folder order with the same drag/drop and accessible Up/Down controls as scenarios. Existing folders begin in their current case-insensitive alphabetical order; new folders append, renames preserve position, deletions compact positions, and active attempts keep ordering locked.
 - Chose a semantic, host-authorized Spectator view over literal screen streaming. It reproduces one trainee's full simulator presentation but excludes browser chrome, pointer/finger location, and exact waveform sweep pixels; the attempt retains one confirmed Wagami X/Z model for all trainees.
 - Added the Spectator view, Trainee monitor projection, Projection freshness, and Scenario folder order glossary terms; recorded the initial Phase 17 contract and testing scope. The remaining spectating decisions are still in interview and no application code has been changed.
+## [2026-09-03] [instructor] — Phase 15: instructor change expansion
+
+- Every instructor change in the Report tab now opens. The opening change shows the scenario as sent, grouped Dispatch / Patient / Device with empty fields absent. Every later change shows only the fields that Send moved, before → after, because real room data put 79% of the dispatch card as a repeat of the row above when every row rendered it in full.
+- Widened `diffStates` to everything the instructor sets: SpO2 and EtCO2 waveforms, defibrillator model, each dispatch card field under the console's own label, route origin and destination, and response time. It returns structured `FieldChange`s; `summarizeChanges` produces the one-line form, naming clinical changes and collapsing the dispatch card and route to a count, with `+n more` past six clauses. The dispatch clock's ids and deadlines, the route's polyline and status, the trainee's own stamps, and the legacy CPR mirror are never compared.
+- Added `describeState` for the opening snapshot and a native disclosure per instructor change with `aria-expanded`, held per row id so an open row survives the 2.5s poll. Action rows and Sends that changed nothing have no disclosure; the latter now read `sent (no change)`. Copy-to-clipboard is unchanged.
+- Waveform display names are defined in the timeline; the console's waveform selectors declare no labels of their own.
+- Added 16 tests. All 1020 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass.
+
+## [2026-09-03] [monitor/server] — Phase 14: sync and queue
+
+- Added `?since=<version>` to `GET /api/session/[code]/state`. The trainee's sync hook names the version it holds; when nothing moved the server reads only the version and answers `{ unchanged: true }` without the blob. Measured live at 13,677 → 315 bytes per unchanged poll. The clock offset is now measured on every poll, since a queued action stamps the latest one and the room is usually unchanged (`docs/adr/0003`).
+- Replaced the fire-and-forget `void fetch()` in `monitor/page.tsx` with an in-memory action queue (`src/lib/actionQueue.ts`, `useStudentActionQueue`). An action pressed during an outage waits and replays in press order with the time, sequence, on-screen state version, and clock offset stamped at the press. Network failures and 5xx retry with 1s→30s backoff and are never dropped; a 4xx is dropped and logged so a client bug cannot jam every action behind it (`docs/adr/0004`).
+- Added `occurred_at_client`, `capture_sequence`, and `clock_offset_ms` to `student_events` (migration `20260903120000_trainee_action_clock.sql`, not yet applied). `recordStudentEvent` accepts a claimed `stateVersion`, bounded at the version current at insert: a monitor may say it was behind, never that it saw a state the instructor had not sent.
+- The timeline now orders actions by corrected client clock when present, falls back to `occurred_at`, tiebreaks on `capture_sequence`, and marks an action taken on a stale monitor as `← n behind` so it reads as "had not received it yet" rather than "ignored it". The panel renders the marker in amber and includes it in copied text.
+- `useSessionMonitorSync` returns `{ vfDisplaySync, getClock }` rather than `vfDisplaySync` alone.
+- Added 38 tests. All 1004 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass. `?since=` verified end to end against the running app; the action path fails on the live database until the migration runs, which also means the migration must be applied before this code is deployed.
 
 ## [2026-09-03] [instructor] — Record which scenario an attempt was
 

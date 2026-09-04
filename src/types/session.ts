@@ -72,6 +72,17 @@ export type StudentEvent = {
    * predating migration 007, and for actions taken before the first Send.
    */
   state_version: number | null
+  /**
+   * The trainee's own clock (docs/adr/0004). `occurred_at` is when the server
+   * wrote the row; this is when the button was pressed, which differs by
+   * network latency normally and by the whole outage when an action was
+   * queued. `clock_offset_ms` is server-minus-client as the monitor measured
+   * it, so adding it recovers server time. Null on rows predating the columns.
+   */
+  occurred_at_client: string | null
+  /** Monotonic per monitor, so two presses in one millisecond keep their order. */
+  capture_sequence: number | null
+  clock_offset_ms: number | null
 }
 
 /**

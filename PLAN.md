@@ -1165,6 +1165,11 @@ was stale, which bears on whether the attempt was fair.
 **Milestone:** A shock pressed during an eight-second wifi drop is in the record, at the right time,
 against the right patient, and flagged if the monitor was behind.
 
+**Code complete 2026-09-03.** One thing the plan did not say and the build settled: "never drop"
+means network failures and 5xx. A 4xx is a client bug and retrying it forever would jam every action
+behind it, so the queue drops it, logs it, and continues. The migration must be applied before the
+code is deployed, since both the review and the action path name the new columns.
+
 ---
 
 ### Phase 15 — Instructor Change Expansion
@@ -1210,6 +1215,11 @@ only. Action rows do not expand; copy-to-clipboard is unchanged.
   row shows the full scenario, a later row shows only its diff, action rows have no disclosure
 
 **Milestone:** The instructor opens any of their own rows and sees exactly what that Send changed.
+
+**Code complete 2026-09-03.** Two things the build settled: the console's waveform selectors carry
+no display names, so the report defines Normal / Weak / Off and Normal / Hypoventilation /
+Obstructed / Off itself; and `diffStates` now returns structured changes with `summarizeChanges`
+producing the line, so the expansion and the summary read from one diff rather than two.
 
 ---
 

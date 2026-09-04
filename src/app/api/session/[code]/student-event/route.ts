@@ -14,6 +14,10 @@ export async function POST(request: Request, { params }: RouteContext) {
       kind?: string
       label?: string
       payload?: unknown
+      stateVersion?: number | null
+      occurredAtClient?: string | null
+      captureSequence?: number | null
+      clockOffsetMs?: number | null
     }
     const result = await recordStudentEvent(
       code,
@@ -22,6 +26,10 @@ export async function POST(request: Request, { params }: RouteContext) {
         kind: body.kind ?? '',
         label: body.label ?? '',
         payload: body.payload,
+        stateVersion: body.stateVersion,
+        occurredAtClient: body.occurredAtClient,
+        captureSequence: body.captureSequence,
+        clockOffsetMs: body.clockOffsetMs,
       },
     )
     return NextResponse.json(result)

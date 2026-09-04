@@ -41,6 +41,17 @@ export type StudentEventInput = {
   kind: string
   label: string
   payload?: unknown
+  /**
+   * The state version the monitor was showing when the button was pressed.
+   * Accepted when it is at or below the version current at insert, so a
+   * monitor may say it was behind but never that it saw a state the
+   * instructor had not sent. Omitted by older clients, in which case the
+   * current version is stamped as before.
+   */
+  stateVersion?: number | null
+  occurredAtClient?: string | null
+  captureSequence?: number | null
+  clockOffsetMs?: number | null
 }
 
 const MAX_MONITOR_PROJECTION_BYTES = 256 * 1024
@@ -559,7 +570,11 @@ export async function endSession(code: string, hostToken: string) {
   return data as SessionRecord
 }
 
-export async function getSessionStatus(code: string, participantToken?: string) {
+export async function getSessionStatus(
+  code: string,
+  participantToken?: string,
+  sinceVersion: number | null = null,
+) {
   const session = await getSessionByCode(code)
   const supabase = createServiceClient()
 
@@ -573,13 +588,29 @@ export async function getSessionStatus(code: string, participantToken?: string) 
       .eq('token_hash', hashSessionToken(participantToken))
   }
 
+  // A monitor that says which version it holds gets a version-only read when
+  // nothing moved. Room data shows one Send per ~13 minutes against a poll
+  // every 1.5s, so this is the answer roughly 534 polls in 535 -- and the
+  // blob it skips can be 30 KB of route polyline (docs/adr/0003).
+  if (sinceVersion !== null) {
+    const { data: head, error: headError } = await supabase
+      .from('session_state')
+      .select('version, updated_at')
+      .eq('session_id', session.id)
+      .maybeSingle()
+    if (headError) throw new SessionError(headError.message, 500)
+    if (head && head.version === sinceVersion) {
+      return { session, state: null, unchanged: true as const, version: head.version }
+    }
+  }
+
   const { data: state, error } = await supabase
     .from('session_state')
     .select('state, version, updated_at')
     .eq('session_id', session.id)
     .maybeSingle()
   if (error) throw new SessionError(error.message, 500)
-  return { session, state: state ?? null }
+  return { session, state: state ?? null, unchanged: false as const }
 }
 
 /**
@@ -683,8 +714,41 @@ export async function recordStudentEvent(
     .select('version')
     .eq('session_id', session.id)
     .maybeSingle()
-  const stateVersion =
+  const currentVersion =
     typeof currentState?.version === 'number' ? currentState.version : null
+
+  // A claim is the version the monitor was showing when the button was
+  // pressed. It may trail the current version -- the monitor was behind, and
+  // the report will say so -- but it may never lead it: nobody has seen a
+  // state the instructor has not sent. A claim above current is a client
+  // bug, and a 400 lets the queue drop it rather than retry it forever.
+  const claimed = input.stateVersion
+  let stateVersion = currentVersion
+  if (typeof claimed === 'number') {
+    if (!Number.isInteger(claimed) || claimed < 1) {
+      throw new SessionError(`Invalid state version: ${claimed}`, 400)
+    }
+    if (currentVersion === null || claimed > currentVersion) {
+      throw new SessionError(
+        `State version ${claimed} is ahead of the room (current ${currentVersion ?? 'none'})`,
+        400,
+      )
+    }
+    stateVersion = claimed
+  }
+
+  const occurredAtClient =
+    typeof input.occurredAtClient === 'string' && Number.isFinite(Date.parse(input.occurredAtClient))
+      ? input.occurredAtClient
+      : null
+  const captureSequence =
+    typeof input.captureSequence === 'number' && Number.isInteger(input.captureSequence)
+      ? input.captureSequence
+      : null
+  const clockOffsetMs =
+    typeof input.clockOffsetMs === 'number' && Number.isFinite(input.clockOffsetMs)
+      ? Math.round(input.clockOffsetMs)
+      : null
 
   const { data, error } = await supabase
     .from('student_events')
@@ -696,8 +760,13 @@ export async function recordStudentEvent(
       label,
       payload: input.payload ?? {},
       state_version: stateVersion,
+      occurred_at_client: occurredAtClient,
+      capture_sequence: captureSequence,
+      clock_offset_ms: clockOffsetMs,
     })
-    .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at, state_version')
+    .select(
+      'id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at, state_version, occurred_at_client, capture_sequence, clock_offset_ms',
+    )
     .single()
 
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to record event', 500)
@@ -744,7 +813,9 @@ export async function getReview(
 
   let eventsQuery = supabase
     .from('student_events')
-    .select('id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at, state_version')
+    .select(
+      'id, session_id, participant_id, attempt_version, kind, label, payload, occurred_at, state_version, occurred_at_client, capture_sequence, clock_offset_ms',
+    )
     .eq('session_id', session.id)
   if (attempt !== 'all') eventsQuery = eventsQuery.eq('attempt_version', attempt)
 

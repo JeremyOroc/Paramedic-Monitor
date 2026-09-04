@@ -15,7 +15,15 @@ export async function GET(request: Request, { params }: RouteContext) {
   try {
     const serverReceivedAt = Date.now()
     const { code } = await params
-    const result = await getSessionStatus(code, participantTokenFromRequest(request))
+    // `?since=<version>`: the monitor names the version it holds and gets a
+    // version-only answer when nothing moved.
+    const sinceRaw = new URL(request.url).searchParams.get('since')
+    const since = sinceRaw === null ? null : Number.parseInt(sinceRaw, 10)
+    const result = await getSessionStatus(
+      code,
+      participantTokenFromRequest(request),
+      since !== null && Number.isInteger(since) && since >= 1 ? since : null,
+    )
     return NextResponse.json({ ...result, serverReceivedAt, serverNow: Date.now() })
   } catch (error) {
     return jsonError(error)
