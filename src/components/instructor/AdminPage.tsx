@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
-import { EmbeddedSpectatorPanel } from '@/components/instructor/EmbeddedSpectatorPanel'
+import {
+  EmbeddedSpectatorPanel,
+  type SpectatorPresentationMode,
+} from '@/components/instructor/EmbeddedSpectatorPanel'
 import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
 import { DefibrillatorPanel } from '@/components/instructor/DefibrillatorPanel'
@@ -215,6 +218,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   )
   const [participants, setParticipants] = useState<ReviewParticipant[]>([])
   const [spectatedParticipantId, setSpectatedParticipantId] = useState<string | null>(null)
+  const [spectatorPresentationMode, setSpectatorPresentationMode] =
+    useState<SpectatorPresentationMode>('docked')
+  const spectatorButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const [studentEvents, setStudentEvents] = useState<StudentEvent[]>([])
   const [stateHistory, setStateHistory] = useState<SessionStateHistoryEntry[]>([])
   const [attempts, setAttempts] = useState<ParticipantAttempt[]>([])
@@ -225,6 +231,12 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // back is a deliberate, one-off read rather than something polled.
   const [pastReview, setPastReview] = useState<PastReview | null>(null)
   const [sessionError, setSessionError] = useState('')
+
+  const stopSpectating = useCallback((participantId: string) => {
+    setSpectatorPresentationMode('docked')
+    setSpectatedParticipantId(null)
+    window.setTimeout(() => spectatorButtonRefs.current.get(participantId)?.focus(), 0)
+  }, [])
 
   // History rides the poll only while the Report tab is showing it. Each row
   // is a full sent state, so on a long attempt it dwarfs the roster the poll
@@ -879,11 +891,17 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                             <span className="truncate">{participant.nickname}</span>
                           </span>
                           <button
+                            ref={(node) => {
+                              if (node) spectatorButtonRefs.current.set(participant.id, node)
+                              else spectatorButtonRefs.current.delete(participant.id)
+                            }}
                             type="button"
                             onClick={() => {
-                              setSpectatedParticipantId((current) =>
-                                current === participant.id ? null : participant.id,
-                              )
+                              if (selected) {
+                                stopSpectating(participant.id)
+                              } else {
+                                setSpectatedParticipantId(participant.id)
+                              }
                             }}
                             className={cn(
                               'shrink-0 border px-3 py-1 font-mono text-[10px] font-black uppercase tracking-wider',
@@ -912,9 +930,13 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             </div>
           </section>
           <EmbeddedSpectatorPanel
-            key={spectatedParticipantId ?? 'no-selection'}
             code={session.code}
             hostToken={session.hostToken}
+            mode={spectatorPresentationMode}
+            onModeChange={setSpectatorPresentationMode}
+            onStopSpectating={() => {
+              if (spectatedParticipantId) stopSpectating(spectatedParticipantId)
+            }}
             participant={
               participants.find((participant) => participant.id === spectatedParticipantId) ?? null
             }

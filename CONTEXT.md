@@ -41,8 +41,23 @@ A host-authorized, read-only reproduction of one trainee's current simulator pre
 _Avoid_: Remote monitor, screen share, instructor monitor
 
 **Embedded Spectator**:
-The single selected trainee's Spectator view shown alongside the room controls inside the Instructor Console.
+The single selected trainee's Spectator view inside the Instructor Console. It can be Docked,
+Floating, or Fullscreen without changing the selected trainee or starting another projection poll.
 _Avoid_: Preview, mini monitor, Live Evaluation
+
+**Docked Spectator**:
+The Embedded Spectator in its normal position beside the Instructor Console room controls.
+_Avoid_: Default window, inline player
+
+**Floating Spectator**:
+The same Embedded Spectator presented as a fixed bottom-right mini-player while the instructor uses
+the rest of the console. Its corner may become movable in a future enhancement.
+_Avoid_: Picture-in-picture, separate window, detached stream
+
+**Fullscreen Spectator**:
+The same Embedded Spectator occupying browser-native fullscreen and returning to its prior Docked or
+Floating mode when fullscreen ends.
+_Avoid_: Expanded preview, CSS fullscreen
 
 **Trainee monitor projection**:
 A point-in-time description of the trainee-specific simulator state needed to reproduce a Spectator view, including local interaction and timed-progress state.

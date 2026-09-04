@@ -6,6 +6,12 @@
 ---
 
 ## Current Phase
+**Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04).** The Embedded Spectator now
+switches among Docked, a fixed bottom-right Floating mini-player, and browser-native Fullscreen while
+preserving one selected-only polling path and an inert uniformly scaled monitor. Permanent accessible
+controls, return-mode and focus restoration, failure feedback, responsive safe-area sizing, reduced
+motion, and Stop from every mode are verified by tests and a real instructor/trainee browser flow.
+
 **Phase 17 — Instructor Spectator View — COMPLETE (2026-09-03).** The silent, inert Wagami X/Z
 semantic projection, standalone route, and Embedded Spectator are complete. The Instructor Console
 replaces Live Evaluation with one transiently selected, uniformly contained spectator beside a
@@ -756,6 +762,14 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Recently Completed
+- [x] **Phase 17 presentation modes — COMPLETE:**
+  - [x] Record the confirmed Docked, fixed Floating, and native Fullscreen behavior and lifecycle
+  - [x] Implement persistent accessible controls, mode return state, fullscreen rejection status,
+        safe-area-aware mini-player sizing, uniform fullscreen scaling, and reduced-motion handling
+  - [x] Preserve one projection hook while switching presentation modes and trainee identity
+  - [x] Complete integration, accessibility, full-suite, build, and rendered-browser verification:
+        1,059 tests, TypeScript, ESLint with 0 errors and 12 pre-existing warnings, production build,
+        and a live instructor/trainee Floating + Fullscreen browser flow with clean console logs
 - [x] **Phase 17 presentation enhancement — Embedded Spectator — COMPLETE:**
   - [x] Replace Live Evaluation with equal 480px-high room-control and Embedded Spectator columns
   - [x] Define vertically stacked room controls, bounded Students scrolling, and two-line roster rows

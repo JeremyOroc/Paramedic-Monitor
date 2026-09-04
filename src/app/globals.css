@@ -414,3 +414,91 @@ body {
 @container (min-width: 620px) {
   .embedded-spectator-canvas { --spectator-scale: 0.58; }
 }
+
+.spectator-mode-floating {
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: min(320px, calc(100vw - 32px));
+  height: min(250px, calc(100vh - 32px));
+  animation: spectator-floating-in 180ms ease-out;
+}
+
+.spectator-mode-docked {
+  animation: spectator-docked-in 180ms ease-out;
+}
+
+.spectator-mode-fullscreen,
+.spectator-mode-player:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  background: var(--color-monitor-bg);
+}
+
+@media (min-width: 1280px) {
+  .spectator-mode-floating {
+    width: min(360px, calc(100vw - 32px));
+    height: min(280px, calc(100vh - 32px));
+  }
+}
+
+@media (min-width: 1600px) {
+  .spectator-mode-floating {
+    width: min(400px, calc(100vw - 32px));
+    height: min(310px, calc(100vh - 32px));
+  }
+}
+
+@container (min-width: 700px) and (min-height: 560px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 0.72; }
+}
+
+@container (min-width: 900px) and (min-height: 680px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 0.9; }
+}
+
+@container (min-width: 1100px) and (min-height: 780px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 0.98; }
+}
+
+@container (min-width: 1300px) and (min-height: 850px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 1.08; }
+}
+
+@container (min-width: 1500px) and (min-height: 950px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 1.2; }
+}
+
+@container (min-width: 1800px) and (min-height: 1050px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 1.35; }
+}
+
+@keyframes spectator-floating-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spectator-docked-in {
+  from {
+    opacity: 0.72;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spectator-mode-floating,
+  .spectator-mode-docked {
+    animation: none;
+  }
+}
