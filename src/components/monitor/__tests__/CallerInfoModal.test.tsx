@@ -425,4 +425,11 @@ describe('CallerInfoModal', () => {
       'dispatch-tablet-frame-assignment',
     )
   })
+
+  it('contains a full-screen dispatch surface inside the spectator canvas', () => {
+    renderModal({ fullScreen: true, contained: true })
+
+    expect(screen.getByLabelText('Caller info')).toHaveClass('absolute', 'inset-0')
+    expect(screen.getByLabelText('Caller info')).not.toHaveClass('fixed')
+  })
 })

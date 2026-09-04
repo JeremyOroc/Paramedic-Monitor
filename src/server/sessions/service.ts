@@ -1,6 +1,13 @@
+import { randomUUID } from 'node:crypto'
+
 import { createServiceClient } from '@/lib/supabase/server'
 import { generateSessionCode, isValidSessionCode } from '@/lib/session'
 import { isStudentEventKind } from '@/types/session'
+import {
+  MONITOR_PROJECTION_VERSION,
+  type MonitorProjection,
+  type MonitorProjectionEnvelope,
+} from '@/types/monitorProjection'
 import { createSessionToken, hashSessionToken, verifySessionToken } from './tokens'
 
 /**
@@ -45,6 +52,47 @@ export type StudentEventInput = {
   occurredAtClient?: string | null
   captureSequence?: number | null
   clockOffsetMs?: number | null
+}
+
+const MAX_MONITOR_PROJECTION_BYTES = 256 * 1024
+
+export function isMonitorProjection(value: unknown): value is MonitorProjection {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const projection = value as Record<string, unknown>
+  const isRecord = (candidate: unknown): candidate is Record<string, unknown> =>
+    typeof candidate === 'object' && candidate !== null && !Array.isArray(candidate)
+  const route = projection.dispatchRoute
+  return (
+    projection.version === MONITOR_PROJECTION_VERSION &&
+    typeof projection.capturedAt === 'string' &&
+    (projection.model === 'wagamiX' || projection.model === 'wagamiZ') &&
+    (projection.surface === 'dispatch' || projection.surface === 'monitor') &&
+    isRecord(projection.controller) &&
+    isRecord(projection.confirmed) &&
+    isRecord(projection.confirmedVitalActive) &&
+    isRecord(projection.acceptedBp) &&
+    isRecord(projection.acceptedBpActive) &&
+    isRecord(projection.callerInfo) &&
+    isRecord(projection.dispatch) &&
+    isRecord(route) &&
+    Array.isArray(route.geometry) &&
+    isRecord(projection.patientInfo) &&
+    isRecord(projection.nibp) &&
+    isRecord(projection.defib) &&
+    Array.isArray(projection.alarms) &&
+    Array.isArray(projection.mergedEventLog) &&
+    Array.isArray(projection.vitalLog)
+  )
+}
+
+function validateMonitorProjection(value: unknown): MonitorProjection {
+  if (!isMonitorProjection(value)) {
+    throw new SessionError('Invalid monitor projection', 400)
+  }
+  if (Buffer.byteLength(JSON.stringify(value), 'utf8') > MAX_MONITOR_PROJECTION_BYTES) {
+    throw new SessionError('Monitor projection is too large', 413)
+  }
+  return value
 }
 
 /**
@@ -328,6 +376,137 @@ export async function verifyParticipant(
   if (!participant) throw new SessionError('Invalid participant token', 403)
   await ensureAttempt(session.id, participant.id, session.active_attempt_version)
   return { session, participant }
+}
+
+/** Starts a fresh browser-page stream. A later page load replaces the stream id,
+ * preventing delayed writes from an older tab from overwriting current state. */
+export async function startMonitorProjectionStream(
+  code: string,
+  participantToken: string,
+  value: unknown,
+): Promise<MonitorProjectionEnvelope> {
+  const projection = validateMonitorProjection(value)
+  const { session, participant } = await verifyParticipant(code, participantToken)
+  if (session.status === 'ended') throw new SessionError('Session has ended', 410)
+
+  const streamId = randomUUID()
+  const updatedAt = new Date().toISOString()
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('trainee_monitor_projections')
+    .upsert({
+      participant_id: participant.id,
+      session_id: session.id,
+      attempt_version: session.active_attempt_version,
+      stream_id: streamId,
+      client_sequence: 0,
+      projection,
+      updated_at: updatedAt,
+    })
+    .select('stream_id, client_sequence, attempt_version, projection, updated_at')
+    .single()
+
+  if (error || !data) {
+    throw new SessionError(error?.message ?? 'Unable to start monitor projection', 500)
+  }
+  return {
+    streamId: data.stream_id as string,
+    clientSequence: data.client_sequence as number,
+    attemptVersion: data.attempt_version as number,
+    updatedAt: data.updated_at as string,
+    projection: data.projection as MonitorProjection,
+  }
+}
+
+/** Publishes only if this page still owns the stream and its sequence advances. */
+export async function publishMonitorProjection(
+  code: string,
+  participantToken: string,
+  streamId: string,
+  clientSequence: number,
+  value: unknown,
+): Promise<MonitorProjectionEnvelope> {
+  const projection = validateMonitorProjection(value)
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(streamId)) {
+    throw new SessionError('Invalid projection stream', 400)
+  }
+  if (!Number.isSafeInteger(clientSequence) || clientSequence < 1) {
+    throw new SessionError('Invalid projection sequence', 400)
+  }
+
+  const { session, participant } = await verifyParticipant(code, participantToken)
+  if (session.status === 'ended') throw new SessionError('Session has ended', 410)
+  const updatedAt = new Date().toISOString()
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('trainee_monitor_projections')
+    .update({
+      client_sequence: clientSequence,
+      projection,
+      updated_at: updatedAt,
+    })
+    .eq('participant_id', participant.id)
+    .eq('session_id', session.id)
+    .eq('attempt_version', session.active_attempt_version)
+    .eq('stream_id', streamId)
+    .lt('client_sequence', clientSequence)
+    .select('stream_id, client_sequence, attempt_version, projection, updated_at')
+    .maybeSingle()
+
+  if (error) throw new SessionError(error.message, 500)
+  if (!data) throw new SessionError('Projection stream is stale', 409)
+  return {
+    streamId: data.stream_id as string,
+    clientSequence: data.client_sequence as number,
+    attemptVersion: data.attempt_version as number,
+    updatedAt: data.updated_at as string,
+    projection: data.projection as MonitorProjection,
+  }
+}
+
+export async function getMonitorProjectionForHost(
+  code: string,
+  hostToken: string,
+  participantId: string,
+) {
+  const session = await verifyHost(code, hostToken)
+  const supabase = createServiceClient()
+  const [participantResult, projectionResult] = await Promise.all([
+    supabase
+      .from('participants')
+      .select('id, session_id, nickname, joined_at, last_seen_at')
+      .eq('id', participantId)
+      .eq('session_id', session.id)
+      .maybeSingle(),
+    supabase
+      .from('trainee_monitor_projections')
+      .select('stream_id, client_sequence, attempt_version, projection, updated_at')
+      .eq('participant_id', participantId)
+      .eq('session_id', session.id)
+      .maybeSingle(),
+  ])
+
+  if (participantResult.error) throw new SessionError(participantResult.error.message, 500)
+  if (!participantResult.data) throw new SessionError('Student not found', 404)
+  if (projectionResult.error) throw new SessionError(projectionResult.error.message, 500)
+
+  const row = projectionResult.data
+  const projection =
+    row && row.attempt_version === session.active_attempt_version
+      ? {
+          streamId: row.stream_id as string,
+          clientSequence: row.client_sequence as number,
+          attemptVersion: row.attempt_version as number,
+          updatedAt: row.updated_at as string,
+          projection: row.projection as MonitorProjection,
+        }
+      : null
+
+  return {
+    session,
+    participant: participantResult.data as ParticipantRecord,
+    projection,
+  }
 }
 
 export async function startSession(code: string, hostToken: string) {

@@ -52,7 +52,14 @@ describe('WagamiZDevice', () => {
   it('boots from off for two seconds with a centered WAGAMI mark', () => {
     vi.useFakeTimers()
     const onPowerOn = vi.fn()
-    render(<WagamiZDevice {...DEFAULT_PROPS} onPowerOn={onPowerOn} />)
+    const onPowerStateChange = vi.fn()
+    render(
+      <WagamiZDevice
+        {...DEFAULT_PROPS}
+        onPowerOn={onPowerOn}
+        onPowerStateChange={onPowerStateChange}
+      />,
+    )
 
     const device = screen.getByTestId('wagami-z-device')
     expect(device).toHaveAttribute('data-power-state', 'off')
@@ -60,6 +67,7 @@ describe('WagamiZDevice', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation' }))
     expect(device).toHaveAttribute('data-power-state', 'booting')
+    expect(onPowerStateChange).toHaveBeenCalledWith('booting')
     expect(screen.getByTestId('wagami-z-boot-screen')).toHaveTextContent('WAGAMI')
     expect(onPowerOn).not.toHaveBeenCalled()
 
@@ -70,6 +78,7 @@ describe('WagamiZDevice', () => {
     expect(device).toHaveAttribute('data-power-state', 'on')
     expect(screen.getByTestId('mock-wagami-z-screen')).toBeInTheDocument()
     expect(onPowerOn).toHaveBeenCalledOnce()
+    expect(onPowerStateChange).toHaveBeenCalledWith('on')
   })
 
   it('powers off immediately and can reboot', () => {
@@ -94,6 +103,18 @@ describe('WagamiZDevice', () => {
     act(() => vi.advanceTimersByTime(2000))
     expect(screen.getByTestId('wagami-z-device')).toHaveAttribute('data-power-state', 'on')
     expect(onPowerOn).toHaveBeenCalledOnce()
+  })
+
+  it('renders a controlled spectator power state', () => {
+    render(
+      <WagamiZDevice
+        {...DEFAULT_PROPS}
+        initialPowerState="off"
+        powerStateOverride="on"
+      />,
+    )
+
+    expect(screen.getByTestId('mock-wagami-z-screen')).toBeInTheDocument()
   })
 
   it('keeps every physical control except power inert', () => {

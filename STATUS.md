@@ -6,6 +6,30 @@
 ---
 
 ## Current Phase
+**Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04).** The Embedded Spectator now
+switches among Docked, a fixed bottom-right Floating mini-player, and browser-native Fullscreen while
+preserving one selected-only polling path and an inert uniformly scaled monitor. Permanent accessible
+controls, return-mode and focus restoration, failure feedback, responsive safe-area sizing, reduced
+motion, and Stop from every mode are verified by tests and a real instructor/trainee browser flow.
+
+**Phase 17 — Instructor Spectator View — COMPLETE (2026-09-03).** The silent, inert Wagami X/Z
+semantic projection, standalone route, and Embedded Spectator are complete. The Instructor Console
+replaces Live Evaluation with one transiently selected, uniformly contained spectator beside a
+half-width room-control panel. Selected-only polling, safe switching, waiting/offline/ended states,
+and the retained standalone route are verified.
+
+**Phase 10 enhancement — folder scrolling and persistent folder order — COMPLETE AND DEPLOYED
+(2026-09-03).** Expanded scenario folders grow the library without a nested scrollbar. Folders now
+support persistent drag/drop and Up/Down ordering with alphabetical backfill, append-on-create,
+rename stability, delete compaction, rollback, and active-attempt locking.
+
+> **Deployed:** On 2026-09-03 the linked database migration history was reconciled after direct schema
+> verification, then `20260902160000_strip_history_route_geometry.sql` and
+> `20260903222810_instructor_spectator_and_folder_order.sql` were applied. Post-deployment queries
+> confirm complete migration parity, non-null unique folder positions, the reorder RPC, the RLS-secured
+> projection table, no anonymous projection access, and zero remaining historical route polylines.
+> The live `/api/scenario-folders` endpoint returns HTTP 200 with ordered folders and positions.
+
 **Phase 15 — Instructor Change Expansion — CODE COMPLETE (2026-09-03).** Every instructor change in
 the Report tab opens. The opening change shows the whole scenario as sent, grouped Dispatch / Patient
 / Device with empty fields absent; every later change shows only the fields that Send moved, before
@@ -57,6 +81,28 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 - [x] **End Room feedback (2026-09-04):** a failed End Room request now shows why instead of leaving the
       console silently on the admin page; an already-ended room shows a `Room ended` notice with a way
       to create a new one; Sends and trainee actions on an ended room return 410. 4 tests; 1024 pass
+- [x] **Phase 17 foundation — Spectator projection and standalone presentation — COMPLETE AND DEPLOYED:**
+  - [x] Added a standalone host-authorized Spectator presentation without putting secrets in the URL
+  - [x] Added versioned semantic monitor projections for dispatch, Wagami X/Z, power/boot, menus,
+        modals, selections, defibrillation, NIBP, calibration, timers, and logs
+  - [x] Added latest-only projection storage with per-page stream IDs, monotonic sequence rejection,
+        immediate coalesced publishing, retry, one-second reads, attempt clearing, and room cleanup
+  - [x] Added an isolated silent renderer with an inert pointer/keyboard/touch/focus boundary,
+        spectator-fitted device layout, and status handling for waiting, trainee offline, spectator
+        connection loss, new attempts, and ended rooms while preserving the latest valid frame
+  - [x] Added ADRs 0005/0006, domain terminology, typed service/API routes, migration coverage, and
+        explicit regressions for a 30-trainee roster and eight independently polling spectator views
+- [x] **Phase 10 enhancement — folder scrolling and persistent folder order — COMPLETE AND DEPLOYED:**
+  - [x] Removed the scenario library's fixed-height nested scrollbar so expanded folders grow into the
+        Instructor Console's outer document scroll
+  - [x] Added global persistent folder drag/drop and Up/Down controls, optimistic rollback,
+        alphabetical migration backfill, append-on-create, rename stability, delete compaction, and
+        active-attempt locking
+  - [x] Added generated types, a service-role-only reorder RPC, typed service/API coverage, and UI,
+        migration, rollback, and active-attempt tests
+  - [x] Full verification: 992 tests, TypeScript, Supabase schema lint, ESLint with 0 errors and the
+        12 pre-existing warnings, and the Next.js production build pass
+- [x] **Phase 15 — Instructor Change Expansion — CODE COMPLETE:**
 - [x] **Phase 15 — Instructor Change Expansion — CODE COMPLETE:**
   - [x] 15a `normalizeHistoryState` reads the waveforms, defibrillator model, every dispatch card
         field, the route addresses, and the response time; `diffStates` returns structured
@@ -718,9 +764,30 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 
 ---
 
-## In Progress
-- Nothing — #77 (Phase 14) is ready to merge; #78 (Phase 15) is stacked on it and retargets to
-  `main` once #77 merges
+## Recently Completed
+- [x] **Phase 17 presentation modes — COMPLETE:**
+  - [x] Record the confirmed Docked, fixed Floating, and native Fullscreen behavior and lifecycle
+  - [x] Implement persistent accessible controls, mode return state, fullscreen rejection status,
+        safe-area-aware mini-player sizing, uniform fullscreen scaling, and reduced-motion handling
+  - [x] Preserve one projection hook while switching presentation modes and trainee identity
+  - [x] Complete integration, accessibility, full-suite, build, and rendered-browser verification:
+        1,059 tests, TypeScript, ESLint with 0 errors and 12 pre-existing warnings, production build,
+        and a live instructor/trainee Floating + Fullscreen browser flow with clean console logs
+- [x] **Phase 17 presentation enhancement — Embedded Spectator — COMPLETE:**
+  - [x] Replace Live Evaluation with equal 480px-high room-control and Embedded Spectator columns
+  - [x] Define vertically stacked room controls, bounded Students scrolling, and two-line roster rows
+  - [x] Define single transient selection, direct switching, Stop Spectating, selected-only polling,
+        stable roster order, and selected-row styling
+  - [x] Define safe frame clearing on switch, enabled offline/waiting selection, lifecycle behavior,
+        compact status metadata, and uniformly contained black-background rendering
+  - [x] Preserve the standalone route for a possible different future use
+  - [x] Receive final confirmation of the complete design
+  - [x] Implement one abortable selected-only polling path shared with the standalone route
+  - [x] Keep full-screen dispatch overlays inside the preview and uniformly scale the complete
+        simulator canvas with black letterboxing and no crop/reflow
+  - [x] Keep the final frame after End Room by removing the instructor redirect
+  - [x] Verify 999 tests, TypeScript, ESLint with zero errors and 12 pre-existing warnings, the
+        production build, and a real instructor/trainee browser flow with clean console logs
 
 ---
 

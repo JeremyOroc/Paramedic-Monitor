@@ -7,11 +7,118 @@
 
 ## [2026-09-04] [instructor/server] — End Room reports failure instead of doing nothing
 
-- Reported by an instructor as "End Room doesn't end the room": the console stayed on the admin page. Reproduced with a component test: `endSession` in `AdminPage` had no `try/catch`, so a thrown fetch or a non-JSON error body rejected the handler unhandled, with no message and no navigation. Every failure now shows an amber line naming the reason and HTTP status. Server-side, End Room was already correct, verified by an API loop: status flips to `ended`, trainee polls report it, join and restart return 410.
-- Added a `Room ended` notice with a `Create a new room` button whenever the poll reports `ended`, since a room can end without this tab's click (expiry, another tab) and End Room then greys out with no way home.
+- Reported by an instructor as "End Room doesn't end the room": the console stayed on the admin page. Two causes, one of them intentional. The spectate work deliberately stopped navigating away after End Room so the mini-player and the Report tab stay useful, which reads as nothing happening. Separately, `endSession` had no `try/catch`, so a thrown fetch or a non-JSON error body rejected the handler unhandled with no message at all; every failure now shows an amber line naming the reason and HTTP status. Server-side, End Room was already correct, verified by an API loop: status flips to `ended`, trainee polls report it, join and restart return 410.
+- Added a `Room ended` notice with a `Create a new room` button whenever the room is ended, for any reason: this tab's End Room click, expiry, or another tab. It is the deliberate way home now that End Room itself stays put.
 - Hardened the server: `updateSessionState` and `recordStudentEvent` now return 410 on an ended room. Both accepted writes before, so an ended room could still take Sends and trainee actions; the queue treats the 4xx as permanent and drops the action, which is right for a room that no longer exists to act in.
 - 4 new tests. All 1024 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass.
 
+## [2026-09-04] [instructor/realtime] — Add spectator mini-player and native fullscreen
+
+- Added Docked, fixed bottom-right Floating mini-player, and browser-native Fullscreen presentation
+  modes to the existing Embedded Spectator without duplicating its selected-only polling hook or
+  projection renderer. The mini-player persists across console scrolling, tab changes, trainee
+  switches, attempts, and room ending; its vacated dock shows `Spectator pinned`.
+- Added permanent code-native controls for pin, return, fullscreen enter/exit, and Stop, with 36px
+  targets, names/tooltips, focus restoration, native Escape/fullscreen-change handling, disabled
+  unsupported states, and three-second rejection feedback. Stop exits fullscreen, clears selection,
+  and returns focus to the matching trainee row.
+- Added responsive safe-area mini-player sizing, uniform black-letterboxed fullscreen scaling, and
+  180ms reduced-motion-aware transitions. The standalone spectator route and all database/API
+  contracts remain unchanged; movable-corner behavior remains an explicit future enhancement.
+- Added component and console integration coverage for mode continuity, one-poll behavior, trainee
+  switching, native exit restoration, failures, controls, and focus. All 1,059 tests, TypeScript,
+  ESLint (0 errors; 12 pre-existing warnings), and the production build pass. A real instructor and
+  trainee browser flow rendered the live dispatch projection in Floating and Fullscreen modes, with
+  clean console logs and successful Stop/focus restoration.
+
+## [2026-09-04] [planning/instructor] — Confirm Embedded Spectator presentation modes
+
+- Added Docked, fixed bottom-right Floating mini-player, and browser-native Fullscreen modes to the
+  Phase 17 contract. All three reuse one selected trainee, inert renderer, and polling path.
+- Locked permanent accessible mode controls, native Escape restoration, unsupported/rejected
+  fullscreen behavior, focus restoration, safe-area-aware responsive sizing, reduced motion, and
+  lifecycle behavior across scrolling, tab changes, trainee switches, attempts, and room ending.
+- Kept corner dragging as a future-compatible enhancement; the initial mini-player is deliberately
+  fixed at bottom-right and reload clears all transient spectator presentation state.
+
+## [2026-09-03] [instructor/realtime] — Embed the selected trainee monitor in the console
+
+- Rebuilt the live-room header as equal 480px room-control and spectator columns. Room information,
+  actions, and the internally scrolling two-line roster now occupy the cyan-bordered left half; the
+  legacy Live Evaluation card is removed and the Report tab remains authoritative.
+- Replaced roster links with a single transient Spectate toggle. Selection receives a cyan treatment,
+  Stop Spectating is amber and immediate, and direct switching synchronously clears the prior frame
+  before the new trainee identity connects.
+- Added a shared abortable one-second spectator polling hook, with only the selected trainee active;
+  waiting, offline-without-monitor, connection-loss, New Attempt, and Room ended behavior preserve
+  identity and the latest valid frame as designed. End Room no longer redirects the instructor away.
+- Contained dispatch overlays and Wagami X/Z inside an inert 1024×753 canvas that scales uniformly
+  into the black preview with letterboxing and no crop or reflow. The standalone route remains and
+  now uses roster heartbeat freshness instead of projection-change time for offline status.
+- Added UI, lifecycle, switch-race, containment, 30-trainee, and standalone regressions. All 999 tests,
+  TypeScript, ESLint (0 errors; 12 pre-existing warnings), and the production build pass. A real
+  instructor/trainee browser run rendered the live dispatch mirror with clean console logs.
+
+## [2026-09-03] [planning/instructor] — Complete the Embedded Spectator design tree
+
+- Made Stop Spectating immediate and confirmation-free, with the right panel returning to its selection prompt. Switching trainees clears the old frame before the new identity appears and shows a targeted connecting state, preventing cross-student frame mislabelling.
+- Kept Spectate enabled for every roster entry. Connected trainees without a projection show Waiting; offline trainees without a saved frame show `Trainee offline · No monitor received`; selection never changes roster order.
+- Locked the two top columns to the same 480px desktop height. The selected row uses a cyan treatment and an amber Stop action, while the right half stays black with no macOS screenshot chrome and uniformly contains the complete trainee presentation.
+- Marked the Embedded Spectator design complete and pending final implementation confirmation; the deployed projection and standalone route remain intact.
+
+## [2026-09-03] [planning/instructor] — Define Embedded Spectator selection and lifecycle
+
+- Made spectator selection transient and intentional: the console starts with no selection, polls only the selected trainee once per second, cancels obsolete polling when stopping or switching, and never automatically switches students.
+- Kept the selected trainee through offline periods, New Attempt, and End Room. The last valid frame remains under the appropriate status; New Attempt resumes automatically when that trainee publishes again, while End Room remains until Stop Spectating or navigation.
+- Defined each half-width student entry as a two-line row with identity/action above progress, and required the miniature to preserve the complete trainee presentation through uniform scaling and black letterboxing rather than cropping or reflowing it.
+
+## [2026-09-03] [planning/instructor] — Redirect Spectating into the Instructor Console
+
+- Replaced the proposed new-tab roster behavior with a single Embedded Spectator in the right half of the room header. A selected trainee's button becomes `Stop Spectating`; selecting another trainee switches directly.
+- Defined the left half as a cyan-bordered, vertically stacked room-control panel: Room Code label, code plus Copy, status plus attempt, room actions, and a bounded scrolling Students list. Both top columns use the same approximately 460–500px desktop height.
+- Removed the legacy Live Evaluation card in favor of the existing Report tab. The right half is black, shows a subdued selection prompt while idle, and shows a compact trainee/model/connection header with the complete contained monitor while active.
+- Kept the standalone Spectator route for potential future use while removing it from the Instructor Console's normal interaction. Added `Embedded Spectator` to the domain language and reopened Phase 17's presentation milestone for the remaining design decisions.
+
+## [2026-09-03] [database/instructor] — Deploy folder ordering and Spectator storage
+
+- Applied `20260902160000_strip_history_route_geometry.sql` and `20260903222810_instructor_spectator_and_folder_order.sql` to the linked Supabase project after explicit approval of the historical route-geometry cleanup.
+- Verified full local/remote migration parity; every scenario folder has a non-null unique position, the atomic reorder function exists, and the latest-only trainee projection table has RLS enabled with no anonymous read privilege.
+- Confirmed the approved cleanup left zero historical route polylines and verified the running application's `/api/scenario-folders` endpoint returns HTTP 200 with all existing folders, scenario counts, and persisted positions. The reported `scenario_folders.position` error is resolved.
+
+## [2026-09-03] [database] — Reconcile linked migration history before Instructor Console deployment
+
+- Directly verified that the linked schema already contains every material effect of migrations `006_close_legacy_policies.sql` and `007_evaluation_record.sql`: evaluation history and event state-versioning exist, the action-kind constraint and participant uniqueness index exist, and the obsolete snapshots table is absent.
+- Marked only migrations `006` and `007` as applied in Supabase's migration-history table. Local and linked histories now agree through the last deployed scenario migration.
+- Confirmed with a clean `db push --dry-run` that only `20260902160000_strip_history_route_geometry.sql` and `20260903222810_instructor_spectator_and_folder_order.sql` remain pending. The actual push awaits explicit approval because the former permanently strips route geometry from historical evaluation-state copies.
+
+## [2026-09-03] [instructor/realtime/scenarios] — Add read-only spectating and persistent folder order
+
+- Added a `Spectate` action to every trainee row. Each action opens a separate host-authorized tab with a silent, inert semantic reproduction of that trainee's dispatch or active Wagami X/Z monitor, including power/boot state, menus, modals, selected controls, defibrillation, NIBP, calibration, timers, and logs.
+- Added participant-specific latest-only projections with stream IDs and monotonic sequences, immediate coalesced publishing/retry, one-second correctness polling, timestamp-driven timed states, attempt clearing, room cleanup, and distinct waiting, trainee-offline, spectator-connection-lost, and room-ended states that preserve the last valid frame where appropriate.
+- Removed the scenario library's nested scrollbar and added global persistent folder drag/drop and Up/Down controls, with alphabetical backfill, append-on-create, rename stability, delete compaction, optimistic rollback, and active-attempt locking.
+- Added ADRs, domain terms, generated Supabase types, host/participant API isolation, a service-role-only folder reorder RPC, a forward migration, and tests across the renderer, publisher, lifecycle, routes, services, migration, 30-trainee roster, and eight concurrent spectator views.
+- All 992 tests, TypeScript, Supabase schema lint, ESLint (0 errors; 12 pre-existing warnings), and the Next.js production build pass. Migration `20260903222810_instructor_spectator_and_folder_order.sql` is ready but not deployed because the configured database contains remote-only legacy migration versions absent from this checkout.
+
+## [2026-09-03] [planning/instructor] — Complete the Spectator projection contract
+
+- Excluded ephemeral hover/focus/press feedback from semantic mirroring while retaining every resulting or sustained simulator state.
+- Defined Spectator delivery as one latest projection per trainee, not a historical stream: failed writes coalesce to the newest state and retry, New Attempt clears it, and eventual room cleanup removes it. The evaluation record remains the audit history.
+- Distinguished `Trainee offline`, `Spectator connection lost`, and `Waiting for trainee monitor` so an instructor-side network failure cannot falsely label the trainee offline; the latest frame remains visible whenever one exists.
+- Required an always-visible, noninteractive trainee/model/connection/update strip, no trainee-side spectating indicator, no UI concurrency cap, and validation for 30 connected trainees with eight simultaneous Spectator tabs.
+
+## [2026-09-03] [planning/instructor] — Set Spectator delivery and lifecycle behavior
+
+- Set meaningful trainee transitions to publish immediately and the Spectator view to poll the latest projection once per second, with timestamp-driven timers between responses. Supabase Realtime remains deferred to its existing nudge phase.
+- Made Spectator playback silent and the simulator renderer itself inert to keyboard, pointer, and touch input while leaving ordinary browser controls available.
+- Kept every trainee's Spectate action enabled: a new view waits for its first projection, preserves the last frame under an offline banner after disconnect, follows waiting/New Attempt/dispatch automatically, and remains open on a Room ended state.
+- Allowed multiple trainee Spectator tabs and required each simulator surface to fit the instructor's tab rather than inherit clipping from the trainee's viewport; optional status metadata may still report trainee orientation and viewport.
+
+## [2026-09-03] [planning/instructor] — Begin Spectator view and folder-order design
+
+- Removed the fixed-height/nested-scroll requirement from the scenario-folder accordion: expanded folders grow the library box and the Instructor Console document owns surrounding scrolling.
+- Defined persistent global folder order with the same drag/drop and accessible Up/Down controls as scenarios. Existing folders begin in their current case-insensitive alphabetical order; new folders append, renames preserve position, deletions compact positions, and active attempts keep ordering locked.
+- Chose a semantic, host-authorized Spectator view over literal screen streaming. It reproduces one trainee's full simulator presentation but excludes browser chrome, pointer/finger location, and exact waveform sweep pixels; the attempt retains one confirmed Wagami X/Z model for all trainees.
+- Added the Spectator view, Trainee monitor projection, Projection freshness, and Scenario folder order glossary terms; recorded the initial Phase 17 contract and testing scope. The remaining spectating decisions are still in interview and no application code has been changed.
 ## [2026-09-03] [instructor] — Phase 15: instructor change expansion
 
 - Every instructor change in the Report tab now opens. The opening change shows the scenario as sent, grouped Dispatch / Patient / Device with empty fields absent. Every later change shows only the fields that Send moved, before → after, because real room data put 79% of the dispatch card as a repeat of the row above when every row rendered it in full.

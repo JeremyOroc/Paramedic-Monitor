@@ -4,6 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
+import {
+  EmbeddedSpectatorPanel,
+  type SpectatorPresentationMode,
+} from '@/components/instructor/EmbeddedSpectatorPanel'
 import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
 import { DefibrillatorPanel } from '@/components/instructor/DefibrillatorPanel'
@@ -135,8 +139,9 @@ function getResponseError(data: unknown, fallback: string): string {
 }
 
 export default function AdminPage({ session }: SessionAdminProps = {}) {
-  const router = useRouter()
   useStoreHydration()
+  // Only the "Room ended" notice navigates; End Room itself stays put.
+  const router = useRouter()
   const [tab, setTab] = useState<AdminTab>('scenarios')
   const [patientSelections, setPatientSelections] = useState<PatientInformationSelections>(
     EMPTY_PATIENT_INFORMATION_SELECTIONS,
@@ -215,6 +220,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const defibrillatorModelReady = !defibrillatorModelDirty && !defibrillatorModelPending
   const [sessionStatus, setSessionStatus] = useState<SessionStatusValue>('waiting')
   const [participants, setParticipants] = useState<ReviewParticipant[]>([])
+  const [spectatedParticipantId, setSpectatedParticipantId] = useState<string | null>(null)
+  const [spectatorPresentationMode, setSpectatorPresentationMode] =
+    useState<SpectatorPresentationMode>('docked')
+  const spectatorButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const [studentEvents, setStudentEvents] = useState<StudentEvent[]>([])
   const [stateHistory, setStateHistory] = useState<SessionStateHistoryEntry[]>([])
   const [attempts, setAttempts] = useState<ParticipantAttempt[]>([])
@@ -225,6 +234,12 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // back is a deliberate, one-off read rather than something polled.
   const [pastReview, setPastReview] = useState<PastReview | null>(null)
   const [sessionError, setSessionError] = useState('')
+
+  const stopSpectating = useCallback((participantId: string) => {
+    setSpectatorPresentationMode('docked')
+    setSpectatedParticipantId(null)
+    window.setTimeout(() => spectatorButtonRefs.current.get(participantId)?.focus(), 0)
+  }, [])
 
   // History rides the poll only while the Report tab is showing it. Each row
   // is a full sent state, so on a long attempt it dwarfs the roster the poll
@@ -342,8 +357,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       return
     }
     setSessionError('')
+    // Deliberately no navigation: the spectator mini-player and the Report
+    // tab stay useful after End Room (see the spectate work). The "Room
+    // ended" notice below is how the instructor leaves when ready.
     if (data.session?.status) setSessionStatus(data.session.status)
-    router.replace('/')
   }
 
   // Selecting the active attempt drops back to the live poll; selecting an
@@ -793,87 +810,95 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   return (
     <InstructorLayout>
       {session && (
-        <section className="grid gap-4 border border-cyan-bp/60 bg-cyan-bp/10 p-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div>
+        <div className="grid gap-4 lg:grid-cols-2" data-testid="session-overview-grid">
+          <section
+            aria-label="Room controls"
+            className="flex h-[480px] min-w-0 flex-col border border-cyan-bp/60 bg-cyan-bp/10 p-4"
+          >
+            <div className="shrink-0">
               <p className="font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp">
                 Room code
               </p>
               <RoomCodeCopy code={session.code} className="mt-2" />
-              <p className="text-sm text-neutral-300">
+              <p className="mt-2 text-sm text-neutral-300">
                 Status: <span className="font-bold uppercase">{sessionStatus}</span>
                 {' · '}Attempt <span className="font-bold">{attemptVersion}</span>
               </p>
             </div>
-            <button
-              type="button"
-              onClick={startSession}
-              title={
-                !dispatchArmed
-                  ? 'Save and Send the call info before starting'
-                  : !defibrillatorModelReady
-                    ? 'Save and Send the defibrillator model before starting'
-                    : undefined
-              }
-              disabled={
-                sessionStatus === 'active' ||
-                sessionStatus === 'ended' ||
-                !dispatchArmed ||
-                !defibrillatorModelReady
-              }
-              className="ml-auto border border-ecg-green bg-ecg-green px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Start / Dispatch
-            </button>
-            <button
-              type="button"
-              onClick={startNewAttempt}
-              disabled={sessionStatus !== 'active'}
-              className="border border-pending-amber bg-pending-amber/15 px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-pending-amber hover:bg-pending-amber hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              New Attempt
-            </button>
-            <button
-              type="button"
-              onClick={endSession}
-              disabled={sessionStatus === 'ended'}
-              className="border border-alarm-red bg-alarm-red/15 px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              End Room
-            </button>
-          </div>
-          {sessionError && <p className="text-sm font-semibold text-pending-amber">{sessionError}</p>}
-          {sessionStatus === 'ended' && (
-            // A room can end without this tab's End Room click: expiry, or a
-            // click from another tab. End Room greys out and the console sat
-            // here with no way out, which reads as "it didn't end."
-            <div
-              data-testid="room-ended-notice"
-              className="flex flex-wrap items-center justify-between gap-3 border border-alarm-red/50 bg-alarm-red/10 px-3 py-2"
-            >
-              <p className="font-mono text-xs uppercase tracking-wider text-alarm-red">
-                Room ended — no longer accepting trainees
-              </p>
+            <div className="mt-3 flex shrink-0 flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => router.replace('/')}
-                className="border border-neutral-700 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-cyan-bp hover:text-cyan-bp"
+                onClick={startSession}
+                title={
+                  !dispatchArmed
+                    ? 'Save and Send the call info before starting'
+                    : !defibrillatorModelReady
+                      ? 'Save and Send the defibrillator model before starting'
+                      : undefined
+                }
+                disabled={
+                  sessionStatus === 'active' ||
+                  sessionStatus === 'ended' ||
+                  !dispatchArmed ||
+                  !defibrillatorModelReady
+                }
+                className="border border-ecg-green bg-ecg-green px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Create a new room
+                Start / Dispatch
+              </button>
+              <button
+                type="button"
+                onClick={startNewAttempt}
+                disabled={sessionStatus !== 'active'}
+                className="border border-pending-amber bg-pending-amber/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-pending-amber hover:bg-pending-amber hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                New Attempt
+              </button>
+              <button
+                type="button"
+                onClick={endSession}
+                disabled={sessionStatus === 'ended'}
+                className="border border-alarm-red bg-alarm-red/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                End Room
               </button>
             </div>
-          )}
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="border border-neutral-800 bg-black/40 p-3">
+            {sessionError ? (
+              <p className="mt-2 shrink-0 text-sm font-semibold text-pending-amber">
+                {sessionError}
+              </p>
+            ) : null}
+            {sessionStatus === 'ended' && (
+              // A room can end without this tab's End Room click: expiry, or a
+              // click from another tab. End Room greys out and the console sat
+              // here with no way out, which reads as "it didn't end."
+              <div
+                data-testid="room-ended-notice"
+                className="flex flex-wrap items-center justify-between gap-3 border border-alarm-red/50 bg-alarm-red/10 px-3 py-2"
+              >
+                <p className="font-mono text-xs uppercase tracking-wider text-alarm-red">
+                  Room ended — no longer accepting trainees
+                </p>
+                <button
+                  type="button"
+                  onClick={() => router.replace('/')}
+                  className="border border-neutral-700 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-cyan-bp hover:text-cyan-bp"
+                >
+                  Create a new room
+                </button>
+              </div>
+            )}
+            <div className="mt-3 flex min-h-0 flex-1 flex-col border border-neutral-800 bg-black/40 p-3">
               <h2 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-400">
                 Students
               </h2>
-              <div className="mt-2 grid gap-2">
+              <div className="mt-2 grid min-h-0 flex-1 content-start gap-2 overflow-y-auto pr-1">
                 {participants.length === 0 ? (
                   <p className="text-sm text-neutral-500">No students joined yet.</p>
                 ) : (
                   participants.map((participant) => {
                     const connected = isConnected(participant.last_seen_at)
+                    const selected = spectatedParticipantId === participant.id
                     const progress = participantProgress(
                       studentEvents,
                       participant.id,
@@ -882,19 +907,50 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                     return (
                       <div
                         key={participant.id}
-                        className="flex flex-wrap items-center justify-between gap-2 border border-neutral-800 px-3 py-2 text-sm"
+                        data-testid={`student-row-${participant.id}`}
+                        aria-current={selected ? 'true' : undefined}
+                        className={cn(
+                          'grid gap-1 border px-3 py-2 text-sm',
+                          selected
+                            ? 'border-cyan-bp bg-cyan-bp/10'
+                            : 'border-neutral-800',
+                        )}
                       >
-                        <span className="flex items-center gap-2 font-bold text-white">
-                          <span
-                            role="status"
-                            aria-label={connected ? 'Connected' : 'Offline'}
+                        <div className="flex min-w-0 items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-2 font-bold text-white">
+                            <span
+                              role="status"
+                              aria-label={connected ? 'Connected' : 'Offline'}
+                              className={cn(
+                                'inline-block h-2 w-2 shrink-0 rounded-full',
+                                connected ? 'bg-ecg-green' : 'bg-neutral-600',
+                              )}
+                            />
+                            <span className="truncate">{participant.nickname}</span>
+                          </span>
+                          <button
+                            ref={(node) => {
+                              if (node) spectatorButtonRefs.current.set(participant.id, node)
+                              else spectatorButtonRefs.current.delete(participant.id)
+                            }}
+                            type="button"
+                            onClick={() => {
+                              if (selected) {
+                                stopSpectating(participant.id)
+                              } else {
+                                setSpectatedParticipantId(participant.id)
+                              }
+                            }}
                             className={cn(
-                              'inline-block h-2 w-2 rounded-full',
-                              connected ? 'bg-ecg-green' : 'bg-neutral-600',
+                              'shrink-0 border px-3 py-1 font-mono text-[10px] font-black uppercase tracking-wider',
+                              selected
+                                ? 'border-pending-amber bg-pending-amber/15 text-pending-amber hover:bg-pending-amber hover:text-black'
+                                : 'border-cyan-bp text-cyan-bp hover:bg-cyan-bp hover:text-black',
                             )}
-                          />
-                          {participant.nickname}
-                        </span>
+                          >
+                            {selected ? 'Stop Spectating' : 'Spectate'}
+                          </button>
+                        </div>
                         <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
                           <span className={cn(progress.acknowledged && 'text-ecg-green')}>Ack</span>
                           {' · '}
@@ -910,33 +966,20 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                 )}
               </div>
             </div>
-            <div className="max-h-56 overflow-auto border border-neutral-800 bg-black/40 p-3">
-              <h2 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-400">
-                Live evaluation
-              </h2>
-              <div className="mt-2 grid gap-2">
-                {studentEvents.length === 0 ? (
-                  <p className="text-sm text-neutral-500">No student events yet.</p>
-                ) : (
-                  studentEvents.slice(-12).map((event) => {
-                    const participant = participants.find((item) => item.id === event.participant_id)
-                    return (
-                      <div key={event.id} className="border border-neutral-800 px-3 py-2 text-sm">
-                        <span className="font-bold text-cyan-bp">
-                          {participant?.nickname ?? 'Student'}
-                        </span>{' '}
-                        <span className="text-white">{event.label}</span>
-                        <span className="ml-2 text-xs text-neutral-500">
-                          v{event.attempt_version}
-                        </span>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
+          </section>
+          <EmbeddedSpectatorPanel
+            code={session.code}
+            hostToken={session.hostToken}
+            mode={spectatorPresentationMode}
+            onModeChange={setSpectatorPresentationMode}
+            onStopSpectating={() => {
+              if (spectatedParticipantId) stopSpectating(spectatedParticipantId)
+            }}
+            participant={
+              participants.find((participant) => participant.id === spectatedParticipantId) ?? null
+            }
+          />
+        </div>
       )}
       <div className="flex items-center gap-3" data-testid="admin-save-send-actions">
         <SaveButton />

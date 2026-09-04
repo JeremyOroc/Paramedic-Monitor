@@ -10,6 +10,7 @@ import {
   listSavedScenarios,
   listScenarioFolders,
   renameScenarioFolder,
+  reorderScenarioFolders,
   reorderSavedScenarios,
   updateSavedScenario,
 } from '../service'
@@ -55,6 +56,7 @@ const timestamp = '2026-08-18T12:00:00.000Z'
 const general = {
   id: 'general',
   name: 'General',
+  position: 1,
   created_at: timestamp,
   updated_at: timestamp,
 }
@@ -75,13 +77,13 @@ describe('scenario library service', () => {
     createServiceClient.mockReset()
   })
 
-  it('sorts every folder case-insensitively and adds counts', async () => {
+  it('preserves persisted folder order and adds counts', async () => {
     mockClient([
       new QueryBuilder({
         data: [
-          { ...general, id: 'zebra', name: 'zebra' },
-          { ...general, id: 'alpha', name: 'Alpha' },
-          general,
+          { ...general, id: 'zebra', name: 'zebra', position: 1 },
+          { ...general, id: 'alpha', name: 'Alpha', position: 2 },
+          { ...general, position: 3 },
         ],
         error: null,
       }),
@@ -93,8 +95,8 @@ describe('scenario library service', () => {
 
     const folders = await listScenarioFolders()
 
-    expect(folders.map((folder) => folder.name)).toEqual(['Alpha', 'General', 'zebra'])
-    expect(folders.map((folder) => folder.scenario_count)).toEqual([2, 1, 0])
+    expect(folders.map((folder) => folder.name)).toEqual(['zebra', 'Alpha', 'General'])
+    expect(folders.map((folder) => folder.scenario_count)).toEqual([0, 2, 1])
   })
 
   it('maps case-insensitive folder uniqueness failures to a conflict', async () => {
@@ -213,6 +215,26 @@ describe('scenario library service', () => {
     expect(client.rpc).toHaveBeenNthCalledWith(2, 'reorder_saved_scenarios', {
       folder_to_reorder: 'trauma',
       ordered_scenario_ids: ['scenario-2', 'scenario-3'],
+    })
+  })
+
+  it('persists complete global folder order and restores scenario counts', async () => {
+    const counts = new QueryBuilder({ data: [{ folder_id: 'trauma' }], error: null })
+    const client = mockClient([counts])
+    client.rpc.mockResolvedValue({
+      data: [
+        { ...general, id: 'trauma', name: 'Trauma', position: 1 },
+        { ...general, position: 2 },
+      ],
+      error: null,
+    })
+
+    await expect(reorderScenarioFolders(['trauma', 'general'])).resolves.toMatchObject([
+      { id: 'trauma', position: 1, scenario_count: 1 },
+      { id: 'general', position: 2, scenario_count: 0 },
+    ])
+    expect(client.rpc).toHaveBeenCalledWith('reorder_scenario_folders', {
+      ordered_folder_ids: ['trauma', 'general'],
     })
   })
 })

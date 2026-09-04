@@ -847,15 +847,17 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 ### Phase 10 — Folder-Based Scenario Library
 **Goal:** Instructors can save, organize, reload, edit, move, and delete complete reusable scenario drafts from Supabase.
 
-**Status:** Complete and deployed on 2026-08-20 through repair migration `20260820194954_qualify_scenario_order_constraint.sql`.
+**Status:** Original phase complete and deployed on 2026-08-20 through repair migration
+`20260820194954_qualify_scenario_order_constraint.sql`. Document-only folder scrolling and global
+folder ordering were completed and deployed on 2026-09-03.
 
 **Steps:**
-1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a fixed-height folder accordion above the unchanged caller-info editor. Folder expansion is independent from the selected save destination: every folder starts collapsed on page load, zero or many folders may be open, expansion survives admin-tab switches, opening a folder selects it without closing others, and closing it does not clear its save destination. The first existing folder remains the initial highlighted save target, and newly created folders open and become selected.
+1. Rename Caller Info to the default `Scenarios` tab, place it before Monitor, and add a bordered folder accordion above the unchanged caller-info editor. The accordion has no fixed maximum height or nested scrollbar: opening folders expands the box, and the Instructor Console document provides the only scrolling around the library. Folder expansion is independent from the selected save destination: every folder starts collapsed on page load, zero or many folders may be open, expansion survives admin-tab switches, opening a folder selects it without closing others, and closing it does not clear its save destination. The first existing folder remains the initial highlighted save target, and newly created folders open and become selected.
 2. Preserve the existing `General` data as an ordinary folder and provide create, rename, and delete controls for every case-insensitively unique folder. Deleting any folder, including an empty folder, requires confirmation and cascade-deletes its scenarios; the library may contain zero folders.
 3. Save versioned authoring snapshots containing raw auto-sort text, monitor drafts and channel states, caller/dispatch inputs, SAMPLE/OPQRST state, and Patient Physical state. Runtime dispatch/CPR/calibration and Save/Send history are excluded.
 4. Add a Title field while placing `Save` and `Delete` actions on every scenario-library row instead of inside Caller Info. Save is enabled only for the loaded scenario when its authored title or snapshot differs from its baseline. Delete is available for any saved scenario and leaves a different loaded scenario and its editor values untouched. Blank titles use the smallest available `Scenario X` number.
 5. Load snapshots directly into editable drafts without sending to students. Track the loaded baseline so unchanged or reverted scenarios cannot be saved again. Scenario rows toggle load/unload, with dirty-discard confirmation and authoring-only clearing on unload. Deleting the loaded scenario preserves its editor values as a selected local scenario draft.
-6. Persist explicit scenario positions per folder. Support drag/drop and Up/Down ordering within a folder, plus cross-folder drag/drop and an accessible Move fallback that append moved scenarios.
+6. Persist explicit scenario positions per folder and explicit global positions for folders. Support drag/drop and accessible Up/Down ordering for both folders and scenarios, plus cross-folder scenario drag/drop and an accessible Move fallback that append moved scenarios. Backfill folder positions from the current case-insensitive alphabetical order; append new folders; preserve position when a folder is renamed; compact positions after deletion; and keep folder reordering locked with the rest of the library during an active attempt.
 7. Store folders and saved snapshots in dedicated RLS-protected tables accessed only through typed server APIs, leaving the legacy timed-state `scenarios` table unchanged.
 8. Add `New Scenario` beside `New Folder`. It creates one selected local draft row under the selected folder, expands that folder, and uses the live title or `Untitled Scenario` as its row label. Any authored field change, including title alone, enables draft Save. Starting another draft while dirty requires confirmation. Deleting a draft requires confirmation and clears it without a server request.
 9. Make the full Caller Info editor collapsible from an initially collapsed `−`/`+` header control without persisting the display preference.
@@ -866,13 +868,19 @@ rounded slower T-wave ramp whose softened peak is about half of the QRS height.
 #### Testing
 - Unit coverage for snapshot normalization, meaningful-content and dirty comparisons, and fallback-number allocation.
 - Migration/service/API coverage for ordinary General behavior, cascade deletion, empty-library auto-create, persisted ordering, concurrent reorder/move safety, validation, grants, and error responses.
-- Component and admin integration coverage for tab order, Instructor Console copy, initially collapsed independent folder expansion, multiple/all-closed states, selected closed-folder save targeting, expansion across tab switches, new-folder opening, unconditional folder-delete confirmation, deletion fallback, row toggle load/unload, selected-and-dirty row Save gating, loaded and unloaded row deletion, local draft creation/save/delete, virtual empty-library `Folder 1`, active-attempt action locking, per-folder drag/drop and Up/Down ordering, cross-folder append, styled dialog confirm/cancel/backdrop/Escape/focus behavior, Caller Info action removal/collapse, and four-tab restoration.
+- Component and admin integration coverage for tab order, Instructor Console copy, initially collapsed independent folder expansion, multiple/all-closed states, document-only scenario-library scrolling, selected closed-folder save targeting, expansion across tab switches, new-folder opening, persistent folder drag/drop and Up/Down ordering, folder-order rollback and active-attempt locking, unconditional folder-delete confirmation, deletion fallback, row toggle load/unload, selected-and-dirty row Save gating, loaded and unloaded row deletion, local draft creation/save/delete, virtual empty-library `Folder 1`, active-attempt action locking, per-folder scenario drag/drop and Up/Down ordering, cross-folder append, styled dialog confirm/cancel/backdrop/Escape/focus behavior, Caller Info action removal/collapse, and four-tab restoration.
 - Patient SNS component coverage verifies black/green confirmed styling, pending and missing states, exact Pulse/Respiratory result formatting and rounded derived counts, immediate Tap behavior, independent simultaneous 15s/30s countdowns, countdown cancellation, no `0s` flash, completion confirmation, result snapshots, tab-surviving absolute timing, and cancellation on scenario load/reset, refresh, and New Attempt. Skin/Extremities retains its existing single-toggle behavior.
 - Full Vitest, ESLint, production build, and rendered desktop overflow/interaction QA.
 
 **Milestone — COMPLETE (2026-08-20):** An instructor can manage a global folder library, remove any folder, persist custom scenario order, reload or unload complete editable drafts from scenario rows, save into an automatically created folder when the library is empty, and collapse Caller Info without bypassing the normal Save → Send workflow.
 
 **Instructor Console safety enhancement — COMPLETE (2026-08-29):** Scenario creation now begins from an explicit selected local draft row; saved rows own dirty-gated Save and confirmed Delete actions; every Scenarios-tab confirmation uses the accessible styled dialog; active attempts lock all library mutations; and the obsolete development copy and Caller Info actions are removed.
+
+**Folder scrolling and ordering enhancement — COMPLETE AND DEPLOYED (2026-09-03):** The folder
+accordion grows with its open contents and relies on the Instructor Console document scroll. Global
+folder order persists through drag/drop and Up/Down actions, with deterministic backfill/create/rename/
+delete behavior and active-attempt locking. Migration `20260903222810_instructor_spectator_and_folder_order.sql`
+is deployed to the linked project and verified through the live folder API.
 
 ---
 
@@ -1233,6 +1241,167 @@ value both arrive with scale.
   supervised classroom.
 - Every Realtime client resyncs on reconnect by polling, because a broadcast dropped during an
   outage is gone.
+
+---
+
+### Phase 17 — Instructor Spectator View
+**Goal:** From every trainee row in the Instructor Console, the instructor can select one trainee and
+observe that trainee's current simulator presentation in an adjacent Embedded Spectator without being
+able to control it.
+
+**Status:** Complete as of 2026-09-03. The projection, standalone presentation, and remote schema are
+deployed, and the revised Embedded Spectator presentation is implemented in the Instructor Console.
+
+**Decided 2026-09-03:** The Spectator view is a semantic reproduction, not literal screen capture or
+video streaming. It covers the complete simulator presentation, including dispatch, the selected
+device, power/boot state, menus, modals, selections, defibrillation state, NIBP and calibration
+progress, timers, and logs. It does not reproduce browser chrome, pointer/finger location, or exact
+pixel phase of animated waveform sweeps. The confirmed defibrillator model remains fixed per attempt,
+not assigned per trainee, so each Spectator view follows the attempt's Wagami X or Wagami Z choice.
+
+The implementation must use a participant-specific Trainee monitor projection rather than infer the
+screen from the sparse evaluation event stream. The read-only renderer must be isolated from the
+Instructor Console's persisted monitor store so opening a same-origin tab cannot mutate or rehydrate
+the instructor's authoring state. Spectator reads are host-authorized and verify that the target
+trainee belongs to the room; host or participant secrets never appear in the Spectator URL.
+
+Each meaningful trainee transition publishes immediately. The Spectator view polls the authoritative
+latest projection once per second, while absolute phase and deadline timestamps let timers and timed
+progress animate smoothly between responses. This phase does not pull forward Supabase Realtime;
+the future Realtime nudge in Phase 16 may accelerate the same correctness path without replacing it.
+
+Every roster row exposes a Spectate toggle for the single Embedded Spectator. Selecting a trainee
+changes that row's action to `Stop Spectating`; selecting another trainee switches directly and
+restores the previous row's `Spectate` label. The standalone Spectator route remains available for a
+possible different future use, but the Instructor Console no longer opens it in a new tab. Spectator
+selection is transient: the console always starts and reloads with no selected trainee. Only the
+selected trainee is polled, once per second; stopping or switching cancels the obsolete polling path.
+Stop Spectating is immediate and confirmation-free. Switching clears the previous frame before the
+new identity appears, then shows `Connecting to <name>…` until that trainee's response arrives.
+Every roster trainee remains selectable, including offline trainees and those with no projection.
+A selected offline trainee without a saved frame shows `Trainee offline · No monitor received`; a
+connected trainee without a projection shows `Waiting for trainee monitor`.
+
+The Instructor Console's current full-width room section becomes two equal desktop columns of the
+same fixed 480px height. The cyan border encloses only the left half. Its contents stack in this
+order: Room Code label; room-code value with Copy; status and attempt; Start/Dispatch, New Attempt,
+and End Room actions; then Students. Only the Students list scrolls when it exceeds the available
+height. Each trainee uses a compact two-line row: connection, name, and Spectate action above; Ack,
+Arr, Txp, Shk, and Med progress below. The legacy Live Evaluation card is removed; the Report tab
+remains the evaluation record. Roster order remains stable through selection and connection changes.
+The selected row receives a cyan border and subtle cyan-black background; its action uses a
+non-destructive amber `Stop Spectating` treatment.
+
+The right half uses the console's black background and contains the Embedded Spectator. With no
+selection it shows a subdued centered `Select a student to spectate` message. With a selection it
+shows a compact student/model/connection header above the complete proportionally contained device,
+without cropping or internal reflow. Black letterboxing is allowed so the miniature preserves the
+same spatial relationships as the trainee presentation. The macOS screenshot-window chrome from the
+visual reference is not part of the product; the right half contains only its compact header and the
+trainee presentation on black. The last-update time is omitted while live
+and shown only when the projection is stale. Before the first projection, the presentation shows a
+`Waiting for trainee monitor` state. If the trainee disconnects, it preserves the last frame under a
+clear offline/connection-lost banner and never switches trainees automatically. It follows the
+selected trainee through the waiting state, resets on New Attempt without clearing the selection,
+resumes on dispatch, and remains on a read-only `Room ended` state after End Room until the instructor
+stops spectating or leaves the page.
+
+Spectator playback is always silent. All simulator controls are removed from keyboard focus and
+ignore pointer and touch input through the projection-driven renderer itself, while ordinary browser
+controls remain available. The device surface fits the instructor's Spectator viewport instead of
+reproducing clipping from the trainee's physical screen; small status metadata may report the
+trainee's viewport and orientation without changing the mirrored simulator state.
+
+Short-lived hover, focus, pointer-down, and touch-highlight feedback is outside the projection
+contract, like pointer location; every resulting or sustained simulator state remains inside it.
+Projection publication is latest-state delivery rather than an audit stream: when writes fail, the
+trainee client coalesces obsolete intermediate projections, retains the newest projection, and
+retries until it is accepted. The evaluation record continues to preserve meaningful trainee actions
+independently.
+
+The server stores one latest projection per trainee and no projection history. New Attempt clears the
+current projection, and eventual room cleanup removes it with the room. A failed Spectator request is
+reported as `Spectator connection lost`, distinct from `Trainee offline` when trainee presence expires
+and `Waiting for trainee monitor` when no projection exists. Each state preserves the latest available
+frame when there is one.
+
+An always-visible, noninteractive strip outside the simulated device identifies the trainee, confirmed
+Wagami model, and connection state, adding the last successful update only when the projection is
+stale. Opening or closing a Spectator view does not add an indicator to the trainee's monitor. The
+first implementation has no UI-enforced concurrency cap and is designed and tested for at least 30
+connected trainees in one room and eight simultaneously open Spectator tabs for one instructor.
+
+#### Presentation-mode enhancement (confirmed 2026-09-04)
+
+The Embedded Spectator has three transient presentation modes that all reuse the same selected
+trainee, projection renderer, and one-second polling path:
+
+- **Docked:** the normal 480px console preview beside the room controls. Permanent Pin and Enter
+  fullscreen controls sit at bottom-right.
+- **Floating:** a fixed, non-draggable mini-player at bottom-right while the vacated dock displays
+  `Spectator pinned`. It begins around 320x250 near the minimum desktop width, grows to 360x280 at
+  ordinary desktop widths and at most 400x310 on large screens, and respects 16px/safe-area offsets.
+  Return to dock is top-left, Stop is top-right, and Enter fullscreen is bottom-right. A future change
+  may make its transient corner position draggable; the initial corner is intentionally fixed.
+- **Fullscreen:** browser-native fullscreen for the same player, with Stop at top-right and Exit
+  fullscreen at bottom-right. Native Escape exits fullscreen and returns to the mode from which it
+  was entered. If the Fullscreen API is unavailable the control is disabled with an explanatory
+  tooltip; a rejected request leaves the current mode intact and announces `Fullscreen unavailable`
+  for approximately three seconds. There is no simulated CSS fullscreen fallback.
+
+The floating mini-player remains visible across console document scrolling, console tab changes,
+trainee switches, New Attempt, and End Room. Switching trainees retains the current docked/floating
+mode while the existing identity-safe projection handoff clears the former frame. Stop from any mode
+clears the transient selection, restores Docked as the next mode, and returns focus to the stopped
+trainee's roster button when it remains mounted. Reload continues to clear all spectator state.
+
+Mode controls are permanent rather than hover-only, use code-native 16–18px icons in 36px targets,
+have accessible names, native tooltips, and visible focus treatment, and retain standard Tab,
+Enter, and Space button behavior. The monitor canvas remains inert and uniformly contained with
+black letterboxing in every mode; it must never crop, stretch, or internally reflow. Mode transitions
+use a 160–200ms fade/scale motion that is removed for `prefers-reduced-motion`.
+
+#### Testing
+- Projection coverage for every trainee-visible surface and local/timed state that affects it.
+- Host authorization, room/participant isolation, freshness/version ordering, and lifecycle behavior.
+- Latest-only coalescing and retry behavior under failed, delayed, duplicated, and out-of-order writes.
+- One Spectate toggle per trainee row, single-selection switching, stop behavior, selected-row state,
+  transient/no-selection startup, unavailable/stale states, and active-model parity.
+- Identity-safety coverage verifies a previous trainee frame disappears before the next trainee's
+  name or frame can render, including slow and failed switch requests.
+- Distinct waiting, trainee-offline, Spectator-disconnected, and room-ended states with the latest frame preserved where applicable.
+- Read-only interaction tests proving pointer, keyboard, touch, and focus cannot mutate the projection or simulator.
+- Compact containment checks for dispatch, Wagami X, and Wagami Z in the Embedded Spectator at the
+  supported Instructor Console viewports, with uniform scaling, allowed letterboxing, no internal
+  reflow, and no clipping or escape from the right panel.
+- Polling tests verify exactly one selected participant is requested, obsolete requests cannot replace
+  a newly selected trainee, and Stop Spectating halts projection polling.
+- Load coverage for 30 connected trainees and eight concurrently polling Spectator views.
+- Presentation-mode coverage verifies Docked ↔ Floating, Docked/Floating ↔ native Fullscreen,
+  native Escape restoration, unsupported and rejected fullscreen requests, one-player/one-poll
+  continuity, floating trainee switching, Stop behavior, focus restoration, permanent controls,
+  safe-area sizing, and reduced-motion behavior.
+
+**Standalone milestone — COMPLETE AND DEPLOYED (2026-09-03):** An instructor can observe one
+trainee's live simulator state in a separate, inert page without changing either the trainee's state
+or the Instructor Console's persisted state.
+
+**Embedded milestone — COMPLETE (2026-09-03):** The Instructor Console presents one selected
+trainee's complete inert simulator state beside the room controls, while the Report tab owns
+evaluation history. The implementation shares one abortable selected-only polling hook with the
+standalone route, contains full-screen dispatch overlays inside a fixed simulator canvas, and scales
+that canvas uniformly with black letterboxing. Verification passed 999 tests, TypeScript, ESLint
+with zero errors and the 12 pre-existing warnings, a production build, and an end-to-end browser run
+with a real instructor room and trainee projection.
+
+**Presentation-mode milestone — COMPLETE (2026-09-04):** The same Embedded Spectator can be pinned
+as a fixed bottom-right Floating mini-player or expanded through browser-native Fullscreen, then
+returned to its prior Docked/Floating mode without replacing its selected-only projection path.
+Permanent accessible controls, focus restoration, native fullscreen exit handling, error feedback,
+responsive safe-area sizing, reduced motion, and Stop from every mode are implemented. Verification
+passed 1,059 tests, TypeScript, ESLint with zero errors and the 12 pre-existing warnings, a production
+build, and a real instructor/trainee browser flow showing the live dispatch projection in Floating
+and Fullscreen modes with clean console logs.
 
 ---
 

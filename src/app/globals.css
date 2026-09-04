@@ -358,3 +358,147 @@ body {
 .leaflet-control-zoom a:hover {
   background: var(--color-dispatch-panel-soft) !important;
 }
+
+/* The embedded spectator renders the normal 1024px simulator canvas and scales
+   it as one object. This preserves the trainee layout instead of reflowing or
+   cropping controls inside the instructor's compact preview. */
+.embedded-spectator-viewport {
+  container-type: size;
+}
+
+.embedded-spectator-canvas {
+  --spectator-scale: 0.22;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(var(--spectator-scale));
+  transform-origin: center;
+}
+
+@container (min-width: 260px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.24; }
+}
+
+@container (min-width: 300px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.28; }
+}
+
+@container (min-width: 340px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.32; }
+}
+
+@container (min-width: 380px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.36; }
+}
+
+@container (min-width: 420px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.4; }
+}
+
+@container (min-width: 460px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.44; }
+}
+
+@container (min-width: 500px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.48; }
+}
+
+@container (min-width: 540px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.52; }
+}
+
+@container (min-width: 580px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.56; }
+}
+
+@container (min-width: 620px) {
+  .embedded-spectator-canvas { --spectator-scale: 0.58; }
+}
+
+.spectator-mode-floating {
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  width: min(320px, calc(100vw - 32px));
+  height: min(250px, calc(100vh - 32px));
+  animation: spectator-floating-in 180ms ease-out;
+}
+
+.spectator-mode-docked {
+  animation: spectator-docked-in 180ms ease-out;
+}
+
+.spectator-mode-fullscreen,
+.spectator-mode-player:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  max-height: none;
+  background: var(--color-monitor-bg);
+}
+
+@media (min-width: 1280px) {
+  .spectator-mode-floating {
+    width: min(360px, calc(100vw - 32px));
+    height: min(280px, calc(100vh - 32px));
+  }
+}
+
+@media (min-width: 1600px) {
+  .spectator-mode-floating {
+    width: min(400px, calc(100vw - 32px));
+    height: min(310px, calc(100vh - 32px));
+  }
+}
+
+@container (min-width: 700px) and (min-height: 560px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 0.72; }
+}
+
+@container (min-width: 900px) and (min-height: 680px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 0.9; }
+}
+
+@container (min-width: 1100px) and (min-height: 780px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 0.98; }
+}
+
+@container (min-width: 1300px) and (min-height: 850px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 1.08; }
+}
+
+@container (min-width: 1500px) and (min-height: 950px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 1.2; }
+}
+
+@container (min-width: 1800px) and (min-height: 1050px) {
+  .spectator-mode-fullscreen .embedded-spectator-canvas { --spectator-scale: 1.35; }
+}
+
+@keyframes spectator-floating-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes spectator-docked-in {
+  from {
+    opacity: 0.72;
+    transform: scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spectator-mode-floating,
+  .spectator-mode-docked {
+    animation: none;
+  }
+}

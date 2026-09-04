@@ -113,6 +113,13 @@ describe('DeviceShell', () => {
     expect(document.querySelector('video[src="/videos/golden_freddy.mp4"]')).not.toBeInTheDocument()
   }
 
+  it('drops the desktop minimum width when embedded in a spectator canvas', () => {
+    const { container } = render(<DeviceShell {...makeProps()} embedded />)
+
+    expect(container.firstElementChild).toHaveClass('min-w-0', 'h-full', 'w-full')
+    expect(container.firstElementChild).not.toHaveClass('min-w-[1024px]')
+  })
+
   it('renders the WAGAMI wordmark', () => {
     render(<DeviceShell {...makeProps()} />)
     expect(screen.getByText('WAGAMI')).toBeInTheDocument()
@@ -123,18 +130,33 @@ describe('DeviceShell', () => {
     expect(screen.getByText('monitor-screen')).toBeInTheDocument()
   })
 
+  it('renders a controlled spectator power state', () => {
+    render(
+      <DeviceShell
+        {...makeProps({ initialPowerState: 'on' })}
+        powerStateOverride="off"
+      />,
+    )
+
+    expect(screen.queryByText('monitor-screen')).toBeNull()
+  })
+
   it('toggles the physical power button between on and off', () => {
     vi.useFakeTimers()
-    render(<DeviceShell {...makeProps()} />)
+    const onPowerStateChange = vi.fn()
+    render(<DeviceShell {...makeProps()} onPowerStateChange={onPowerStateChange} />)
     const power = screen.getByRole('button', { name: 'Power' })
     expect(power).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(power)
     expect(power).toHaveAttribute('aria-pressed', 'false')
+    expect(onPowerStateChange).toHaveBeenCalledWith('off')
     fireEvent.click(power) // → booting
     expect(power).toHaveAttribute('aria-pressed', 'false')
+    expect(onPowerStateChange).toHaveBeenCalledWith('booting')
     // Advance past the 2-second boot timer.
     act(() => { vi.advanceTimersByTime(2000) })
     expect(power).toHaveAttribute('aria-pressed', 'true')
+    expect(onPowerStateChange).toHaveBeenCalledWith('on')
   })
 
   it('keeps the powered-off screen black after power-off', () => {

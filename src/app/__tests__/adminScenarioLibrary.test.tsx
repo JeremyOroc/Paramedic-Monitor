@@ -103,7 +103,7 @@ describe('AdminPage scenario library integration', () => {
     expect(screen.queryByText('Global Supabase library')).toBeNull()
     expect(screen.queryByText(/Open .*another tab to see the monitor/)).toBeNull()
 
-    const generalFolderButton = await screen.findByRole('button', { name: /General/ })
+    const generalFolderButton = await screen.findByRole('button', { name: /^General/ })
     expect(generalFolderButton).toHaveAttribute('aria-expanded', 'false')
     await user.click(generalFolderButton)
     await waitFor(() => expect(screen.getByText('Chest Pain')).toBeInTheDocument())
@@ -140,7 +140,7 @@ describe('AdminPage scenario library integration', () => {
     await user.clear(fc)
     await user.type(fc, '160')
     await user.click(screen.getByRole('button', { name: 'Scenarios' }))
-    expect(screen.getByRole('button', { name: /General/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: /^General/ })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeEnabled()
 
     await user.click(screen.getByRole('button', { name: 'Unload Chest Pain' }))
@@ -196,7 +196,7 @@ describe('AdminPage scenario library integration', () => {
     })
     const user = userEvent.setup()
     render(<AdminPage />)
-    await waitFor(() => expect(screen.getByRole('button', { name: /General/ })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('button', { name: /^General/ })).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'New Scenario' }))
     expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
@@ -212,7 +212,7 @@ describe('AdminPage scenario library integration', () => {
       ([url, init]) => String(url) === '/api/scenarios' && init?.method === 'POST',
     )
     expect(JSON.parse(String(createCall?.[1]?.body))).toMatchObject({ folderId: 'general' })
-    expect(screen.getByRole('button', { name: /General/ })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: /^General/ })).toHaveAttribute('aria-expanded', 'true')
     expect(await screen.findByRole('button', { name: 'Save Scenario 1' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Delete Scenario 1' })).toBeEnabled()
 
@@ -292,7 +292,7 @@ describe('AdminPage scenario library integration', () => {
         autoCreateFolder: true,
       })
     })
-    expect(await screen.findByRole('button', { name: /Folder 1/ })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: /^Folder 1/ })).toHaveAttribute(
       'aria-expanded',
       'true',
     )
@@ -326,7 +326,7 @@ describe('AdminPage scenario library integration', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
     await user.click(await screen.findByRole('button', { name: 'Load Chest Pain' }))
     const loadDialog = screen.getByRole('alertdialog', { name: 'Discard scenario changes' })
     await user.click(within(loadDialog).getByRole('button', { name: 'Discard' }))
@@ -334,7 +334,7 @@ describe('AdminPage scenario library integration', () => {
     await waitFor(() => expect(useMonitorStore.getState().draft.hr).toBe(145))
     expect(useMonitorStore.getState().confirmed.hr).toBe(99)
 
-    const generalSection = screen.getByRole('button', { name: /General/ }).closest('section') as HTMLElement
+    const generalSection = screen.getByRole('button', { name: /^General/ }).closest('section') as HTMLElement
     await user.click(within(generalSection).getByRole('button', { name: 'Delete' }))
     const folderDialog = screen.getByRole('alertdialog', { name: 'Delete folder' })
     await user.click(within(folderDialog).getByRole('button', { name: 'Delete' }))
@@ -382,7 +382,7 @@ describe('AdminPage scenario library integration', () => {
     const user = userEvent.setup()
     render(<AdminPage />)
 
-    await user.click(await screen.findByRole('button', { name: /General/ }))
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
     await user.click(await screen.findByRole('button', { name: 'Load Chest Pain' }))
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
     await waitFor(() => expect(screen.getByLabelText('Scenario title')).toHaveValue('Chest Pain'))
