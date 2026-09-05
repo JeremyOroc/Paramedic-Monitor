@@ -1456,7 +1456,7 @@ and Fullscreen modes with clean console logs.
 
 ---
 
-### Next — Accounts & Scenario Ownership (DESIGN INTERVIEW IN PROGRESS)
+### Next — Accounts & Scenario Ownership (PHASE 1 CODE COMPLETE — MIGRATION UNAPPLIED)
 
 The 2026-09-04 requirement change brings accounts and scenario ownership forward. Accounts are for
 instructors and administrators only; trainees continue joining a room with its code and a nickname
@@ -1473,6 +1473,8 @@ errors that reveal whether a submitted username exists. Native email recovery re
 Usernames preserve display capitalization but are trimmed and unique without regard to case, so
 `Jeremy`, `jeremy`, and ` JEREMY ` conflict. A duplicate registration must clearly ask the registrant
 to choose another username, and self-service username changes are excluded from the first release.
+Usernames contain 3–30 characters, start and end with a letter or number, and otherwise permit only
+letters, numbers, periods, underscores, and hyphens. Spaces are not allowed.
 
 The administrator usernames `Zoid`, `Branden`, and `Jeremy` are reserved for three deliberately
 provisioned and verified initial accounts. Merely submitting one of those usernames must never grant
@@ -1480,20 +1482,40 @@ administrator authority. Roles and authorization are attached to the immutable a
 identity, not inferred from username text. The only application roles are Instructor and
 Administrator; Administrators inherit every Instructor capability.
 
-Registration is public: anyone may submit a unique username, email address, and password, verify the
-email, and receive the Instructor role. Administrators do not manage Accounts inside the application.
-Product operators instead use Supabase directly to inspect, disable, reactivate, or otherwise support
-Accounts and to make the deliberately rare Administrator-role changes. The login page provides a
-self-service `Forgot password?` flow through the verified email; neither Administrators nor Product
-operators see or choose a user's replacement password. A duplicate username receives the required
-specific message; an email-related registration failure remains generic and directs the person to
-sign in or reset their password rather than confirming whether an email Account exists.
+Self-registration requires a single shared Instructor registration code in addition to a unique
+username, verified email address, and password. The code is a lightweight gate for the one-college
+release, not an institution, membership, or tenant model. Anyone who obtains the code may register
+as an Instructor; the application does not attempt to prove college affiliation. Administrators do
+not manage Accounts inside the application. Product operators instead use Supabase directly to
+inspect, disable, reactivate, or otherwise support Accounts and to make the deliberately rare
+Administrator-role changes. The login page provides a self-service `Forgot password?` flow through
+the verified email; neither Administrators nor Product operators see or choose a user's replacement
+password. A duplicate username receives the required specific message; an email-related registration
+failure remains generic and directs the person to sign in or reset their password rather than
+confirming whether an email Account exists.
+
+An unverified registration is a Pending Account: it cannot use authenticated application areas but
+reserves its username until verification or deliberate Product-operator deletion. The user may
+request another confirmation email; no scheduled cleanup or automatic username release exists in
+the first release. Registration and its profile creation must be race-safe so two concurrent requests
+cannot claim the same case-insensitive username, and a partially failed registration cannot leave an
+authenticated Account without its protected profile.
+
+After registration, a dedicated `Check your email` state offers resend. Opening the verification link
+establishes the session and enters the Instructor home. A Pending Account that attempts sign-in sees
+`Verify your email to continue` with the same resend route. If Auth identity creation succeeds but the
+required Account profile fails, the server immediately removes the incomplete identity and returns a
+retryable registration error. A cleanup failure quarantines the identity from sign-in and raises an
+operator-visible failure rather than leaving a usable profile-less Account.
 
 The first release deliberately adds no application-level CAPTCHA or custom rate limiting, although
-Supabase's platform controls remain in force. This is an accepted initial risk to revisit later. The
-one-college product scope is not itself a technical access boundary: while registration stays public,
-any internet user who finds the deployment may register as an Instructor, read Templates, create a
-Room, and retain their own records after verifying an email.
+Supabase's platform controls remain in force. The shared registration code is the only application-
+level signup boundary and is an intentionally temporary implementation rather than the permanent
+enrollment architecture. It must be reconsidered before a second college or broader public rollout.
+Use one high-entropy, case-sensitive code stored only in server-side deployment configuration and
+validate it only within the registration request. The client receives only a generic invalid-code
+error and no endpoint reveals or preflights the value. Product operators rotate it through deployment
+configuration; rotation affects future registration only and does not change existing Accounts.
 
 The scenario library has two fixed areas. `My Scenarios` contains folders, ordering, and Personal
 scenarios belonging only to the signed-in account; even Administrators receive no ordinary access to
@@ -1510,21 +1532,248 @@ private host-token URL as the long-term authority for opening and controlling th
 trainees keep the existing code-and-nickname flow without Accounts. The rollout expires existing
 host-token Rooms instead of carrying that authorization path forward.
 
-Ending a Room discards its temporary live-operation state, but every completed Attempt becomes a
-persistent Evaluation record owned by the Room's Instructor Account. Reports survive the Room and
-remain separate from Personal and Template scenarios. There is one record per Attempt, containing
-all participating trainee nicknames and events rather than duplicating Instructor changes and patient
-history into one record per trainee. Attempt names are already implemented as optional, editable
-60-character labels shown beside the immutable Attempt number in the picker, header, copied text, and
-console status. The account work must preserve that behavior while replacing its current host-token
-authorization with Account ownership. Student naming, retention, and deletion remain to be settled.
+An Evaluation record is created when an Attempt starts and autosaves throughout the Attempt. It stays
+Incomplete until New Attempt or End Room completes it, so an interrupted Room does not erase the
+work already recorded. Ending a Room discards its temporary live-operation state, but its Evaluation
+records persist under the Room's Instructor Account. There is one record per Attempt containing all
+participating trainee nicknames and events rather than duplicating Instructor changes and patient
+history into one record per trainee. The Instructor may attach an optional repeatable list of Student
+names to the record; those names are independent of join nicknames and remain editable afterwards.
+A record accepts at most 100 Student names, each trimmed to 100 characters. Blank entries are removed,
+capitalization is preserved, and duplicates are allowed because different students may share a name.
+Within those bounds, entries are free-form. The interface labels them `Student names` and does not
+show inline privacy, approved-identifier, or data-entry guidance. This accepted UI choice does not
+remove the college's separate obligation to approve collection, notice, access, retention, and
+deletion practices before production use.
+Attempt names are already implemented as optional, editable 60-character labels shown beside the
+immutable Attempt number in the picker, header, copied text, and console status. The account work
+must preserve that behavior while replacing its current host-token authorization with Account
+ownership. At Attempt start, the record also stores an immutable Evaluation scenario snapshot of the
+scenario name, confirmed defibrillator model, and report-relevant configuration, so later source
+scenario edits or deletion cannot rewrite the historical record.
+
+`Reports` is an authenticated owner-only area listing complete and Incomplete Evaluation records.
+It supports searching by Attempt name, scenario, Student name, and date; opening a record; editing
+its Attempt name and Student names; copying its timeline; and permanently deleting it. Records have
+no automatic expiry and remain until their Instructor deletes them. PDF export, external sharing,
+grading, comments, and bulk export are excluded from the first release. If an Incomplete record's
+Room has ended or expired, its owner may explicitly Mark complete; this does not change or synthesize
+timeline events and records that completion was manual. The system never silently completes an
+abandoned Attempt merely because its Room expired.
+Permanent deletion uses a confirmation dialog naming the Attempt label/number, scenario, and date and
+stating that recovery is impossible. A separate `Delete report permanently` action confirms it; typed
+name confirmation is not required.
 
 An Account may be signed in on multiple devices but may own only one non-ended Room at a time, and
-only one device may control that Room. Attempting to create another Room offers to reopen or end the
-existing one. The account rollout expires all active legacy host-token Rooms rather than supporting
-two authorization systems. The public landing page remains split between account-free `Join a Room`
-for trainees and `Instructor` sign-in or registration; scenario management, Room creation, and saved
-reports are authenticated Instructor functions.
+only one device may control that Room. The browser that creates or reopens a Room becomes its Room
+controller. Other signed-in devices remain read-only and may use a confirmed `Take control` action;
+the takeover immediately invalidates the former controller's ability to Send, start Attempts, rename
+reports, or end the Room while leaving observation available. Attempting to create another Room
+offers to reopen or end the existing one. A Room expires 24 hours after creation, disconnects
+trainees, releases the active-Room slot, and leaves the current Evaluation record Incomplete for
+manual completion or deletion. The account rollout expires all active legacy host-token Rooms rather
+than supporting two authorization systems. The public landing page remains split between account-free
+`Join a Room` for trainees and `Instructor` sign-in or registration; scenario management, Room
+creation, and saved reports are authenticated Instructor functions. Browser sessions use Supabase's
+normal persistent session behavior across browser restarts, with an obvious Sign out action for the
+current device and no custom inactivity timeout in the first release.
+
+Room codes are six case-insensitive uppercase characters drawn from an alphabet that excludes
+ambiguous `0/O` and `1/I`. Creation retries transparently on a database uniqueness collision. The
+public join route applies a short per-IP limit to repeated failed code attempts; this protects the
+Room's only trainee credential and is separate from the decision not to add custom signup throttling.
+
+The canonical application authorization record is a protected Account profile keyed by the immutable
+Supabase Auth user ID and containing role and enabled/disabled status. Usernames and user-editable Auth
+metadata never authorize access, and role/status is not trusted solely from a potentially stale JWT.
+Least-privilege grants, RLS, and protected server routes enforce active Account status, owner access
+to Personal scenarios/Rooms/Reports, authenticated Template reads, and Administrator-only Template
+mutation. The service-role key remains server-only. Every allow and deny path receives database policy
+tests as well as API tests. Disabling an Account takes effect for existing browser sessions immediately:
+even if a previously issued Supabase access token has not expired, protected reads and mutations fail,
+the active Room ends, and the application returns the browser to sign-in with an Account-disabled
+message.
+
+The application imposes no password composition, rotation, or other custom password rules. Supabase
+uses an eight-character provider-level minimum. Provider validation errors are surfaced clearly by
+the registration form.
+
+The first Account page shows the immutable username, verified email, and current role. It allows a
+signed-in Account to change its password and sign out the current device. Username and email changes
+require Product-operator assistance; self-service email change is excluded from the first release.
+
+Account offboarding separates reversible disablement from permanent deletion. Disabling blocks
+login, ends any active Room, and retains Personal scenarios and Reports. A distinct, deliberate
+Product-operator deletion removes the Account, its Personal scenarios, and its Reports; shared
+Templates remain. At rollout, all pre-account Rooms and their associated report data are deleted
+because they have no trustworthy Account owner. Only the existing scenario library is migrated into
+Templates.
+
+Scenario deletion preserves the existing confirmation and folder-cascade behavior under the new
+ownership rules: owners may delete Personal scenarios/folders, and only Administrators may delete
+Templates/Template folders. Deletion cannot affect active Rooms, independent Personal copies, or
+immutable Evaluation scenario snapshots. Every Template create, edit, move, and delete writes a
+lightweight append-only audit entry containing the Administrator, timestamp, action, affected entity
+ID, and name. The first release does not provide version restoration.
+The audit log has no application UI in the first release and is inspected only by Product operators
+through Supabase.
+
+Keeping Reports until their Instructor deletes them is the development and pilot default, not a
+final institutional retention commitment. Production use by the college is blocked until the college
+approves a written retention period and deletion process; the resulting manual or automatic policy
+must then be reflected in the product and operational documentation.
+
+Local development may use Supabase's development email tooling. External Instructor signup cannot
+launch until custom transactional SMTP and a sending domain are configured for verification and
+password-recovery delivery.
+
+An email outage does not block normal password sign-in for verified Accounts, but new verification
+and password recovery wait for delivery to recover. Product operators may resend or switch SMTP
+providers but never reveal, choose, or manually reset passwords.
+
+Development and production use separate Supabase projects. Real Instructor or Student information is
+never copied into development, automated tests, screenshots, or seed data; migrations are exercised
+against synthetic data before production.
+
+Development and internal evaluation begin on Supabase Free. A paid plan is not an automatic classroom
+requirement: before scheduled college use, the developers perform an explicit readiness review and
+may retain Free if an independently operated backup/recovery process and the accepted availability
+expectation are adequate. Supabase Pro remains an available upgrade rather than a committed purchase.
+The independent dump frequency, encryption, off-site destination, responsible developers, retention,
+restore rehearsal, and handling of Free-tier inactivity pauses remain launch blockers.
+
+If production remains on Free, developer-operated disaster recovery must cover the application
+schema/data, Supabase Auth identities, and their immutable ownership mappings; backing up only exposed
+application tables is insufficient. Nightly automation writes encrypted backups to private,
+institution-approved off-site storage, retains 30 daily and 12 monthly copies, alerts two designated
+developers on failure, and completes a documented whole-project restore rehearsal quarterly. The
+implementation must be verified against current Supabase tooling because the ordinary CLI dump
+excludes managed schemas such as `auth` by default.
+
+When Free serves scheduled classrooms, a designated developer performs a production registration,
+login, Room, and report smoke test at least one business day before the next class after any break of
+five or more days. If the college cannot accept this dependency or possible reactivation delay, the
+readiness review requires an upgrade rather than representing Free as equivalent availability.
+
+The Reports list sorts newest first and loads 25 records per page. Case-insensitive search covers
+Attempt name, scenario name, and Student names. All, Complete, and Incomplete status filters combine
+with an optional date range and the search text. Report timestamps are stored in UTC and displayed in
+`America/Toronto`, respecting daylight-saving time; copied timelines include the applicable EST or
+EDT abbreviation.
+
+Students receive no self-service report discovery, correction, deletion, or export because they do
+not have Accounts. A student data request is routed through the college, which identifies the
+responsible Instructor and record. Product operators then extract, correct, or delete the specifically
+identified data through Supabase. This operational path does not add general report export or sharing
+to the application.
+
+Report creation, Student-name edits, Attempt-name edits, manual completion, deletion, and Product-
+operator corrections write privacy-minimized audit rows containing actor, action, report ID, and
+timestamp but no Student names or report contents. Ordinary report views are not logged.
+
+The initial `Zoid`, `Branden`, and `Jeremy` Administrator Accounts are created and email-verified
+manually by Product operators during deployment, using email addresses supplied privately at that
+time. Operators assign Administrator authority to the resulting immutable Auth user IDs; no username
+or registration input can promote itself.
+
+After authentication, `/instructor` is the persistent Instructor home with three primary areas:
+`Console`, `Reports`, and `Account`. Console reuses the existing Instructor Console, contains the
+scenario library and Create/Reopen/End Room controls, and remains usable for scenario authoring when
+no Room is active. Reports and Account expose the already-defined report and identity functions
+without creating a redundant dashboard. A new Account's `My Scenarios` starts empty and retains the
+existing virtual `Folder 1` behavior until its first Personal scenario is saved; Templates are not
+automatically copied.
+
+Template and report audit entries use a one-year pilot retention period, then purge. The college's
+approved production policy may replace that period. Product operators own technical incident
+containment, Account disabling, evidence preservation, and database investigation. Before production,
+the college names its privacy contact and remains responsible for notification decisions; a written
+contact-and-response runbook is a launch requirement.
+
+Account rollout occurs in a scheduled maintenance window with Room creation and joining disabled.
+Operators first take the agreed backup, then apply and verify migrations, migrate the existing
+scenario library into Templates, remove unowned legacy Rooms/reports, configure secrets and SMTP,
+provision the three Administrators, run the acceptance suite, and only then reopen the application.
+Before any new Account data exists, failure may restore the pre-migration backup and previous app.
+After new Accounts, Personal scenarios, or Reports exist, the system stays in maintenance and uses a
+reviewed forward fix or data-preserving recovery rather than blindly restoring over new data.
+
+A server-side Account-system feature gate defaults off during deployment and exposes maintenance
+without deleting or reverting schema. It is enabled only after migrations, secrets, Administrator
+provisioning, SMTP, restore evidence, and acceptance checks pass. Critical failed Account cleanup,
+backup, migration, and repeated SMTP delivery failures write sanitized operational-failure records
+and email a developer distribution list. User-facing errors remain generic and contain no secrets or
+personal data.
+
+The release-acceptance gate covers registration code, duplicate usernames, verification, sign-in,
+recovery, disabled Accounts, Instructor/Administrator permissions, cross-Account isolation, Template
+auditing, Room takeover/expiry/joining, Attempt/report persistence, manual completion, deletion,
+migration counts, backup restoration, custom SMTP, and supported desktop/iPad browser flows.
+
+Implementation proceeds in seven tested phases: (1) Account schema, authorization helpers, RLS, and
+policy tests; (2) registration, verification, sign-in, recovery, and Account UI; (3) Personal/Template
+scenario ownership and audit migration; (4) Account-owned Rooms, controller takeover, and expiry;
+(5) persistent Reports, Student names, snapshots, search, and auditing; (6) `/instructor` navigation
+and full interaction/browser testing; and (7) backup tooling, SMTP, rollout scripts, acceptance, and
+operational documentation. Each phase updates `PLAN.md`, `STATUS.md`, and `CHANGELOG.md` and is not
+complete without its tests.
+
+#### Account implementation Phase 1 — Account authorization foundation (CODE COMPLETE 2026-09-04)
+
+Phase 1 adds only the protected Account profile, reserved Administrator usernames, database
+authorization helpers, least-privilege grants, and row-level security. It does not add registration,
+sign-in pages, scenario ownership, Room ownership, or Reports. The profile is keyed by the immutable
+Supabase Auth user ID. Display usernames are trimmed, validated, and unique case-insensitively;
+`Zoid`, `Branden`, and `Jeremy` are reserved for manually provisioned Administrator profiles, but a
+username never confers authority. Active role and enabled/disabled status are read from the profile
+row on every protected database decision instead of from user-editable metadata or a stale JWT.
+
+##### Testing
+
+- Run database policy tests with synthetic Auth users for enabled Instructor, enabled Administrator,
+  disabled Account, another Account, and anonymous access.
+- Cover both allowed self-access and denied cross-Account access, disabled access, profile mutation,
+  reserved-name misuse, invalid usernames, and case-insensitive duplicate usernames.
+- Keep a migration-contract test in the application suite so the required constraints, indexes,
+  grants, helper security, and RLS policies cannot silently disappear.
+- Run the complete Vitest suite, TypeScript, ESLint, and a production build before marking Phase 1
+  complete. The migration remains local until the existing development-project migration-history
+  drift is reviewed; Phase 1 does not mutate the linked project as part of local implementation.
+
+#### Account implementation Phase 2 — Authentication and Account UI (CODE COMPLETE 2026-09-04)
+
+Phase 2 adds server-mediated registration, username/password sign-in, email verification and resend,
+password recovery, session refresh, protected Instructor entry, current-device sign-out, and the
+first Account page. The server-only registration code and username-to-email bridge never expose the
+registration secret, service-role credential, or email mapping to the browser. Registration creates
+the Auth identity first, claims the username through the database uniqueness constraint, and removes
+the incomplete Auth identity if profile creation fails; a failed removal triggers an immediate ban
+attempt and a sanitized operational error. Existing host-token Rooms remain operational until the
+account-owned Room migration in Phase 4.
+
+##### Testing
+
+- Unit-test username, email, password, registration-code, redirect, and same-origin validation.
+- Test registration success, duplicate/reserved usernames, generic email failures, provider password
+  errors, identity cleanup, and cleanup-failure quarantine without logging credentials or personal data.
+- Test sign-in success, generic invalid credentials, Pending verification, disabled Accounts, resend,
+  recovery, callback exchange, password change, current-device sign-out, and protected-page redirects.
+- Test each client form's pending, success, error, navigation, and accessibility behavior.
+- Exercise the flows against an isolated local Supabase stack with synthetic identities, then run the
+  complete Vitest suite, TypeScript, ESLint, and a production build. Do not apply either Account
+  migration to the linked project until its migration-history drift is reviewed.
+
+Phase 2 is code-complete. Cookie-aware Supabase SSR clients and scoped Proxy refresh support the
+server-rendered flow. Same-origin, no-store API routes mediate registration, sign-in, verification
+resend, recovery, password changes, and local sign-out. Registration enforces the server-only shared
+code and case-insensitive username reservation, keeps email mapping private, removes a partial Auth
+identity when profile creation fails, and attempts an immediate long ban with sanitized logging when
+deletion fails. The callback accepts PKCE codes and token-hash email links, permits only local
+Instructor destinations, and rejects missing, disabled, or unverified profiles. `/instructor` now
+has public login/register/check-email/recovery states plus live-profile-protected Account and reset
+pages. The Account page keeps username/email immutable in-app, displays role, changes password, and
+signs out the current device. The pre-account host-token Create Room path remains explicitly visible
+and operational until Phase 4.
 
 The first account release targets one college only. A multi-college SaaS remains a possible future,
 not a committed product requirement. Institution records, tenant memberships, tenant switching,
@@ -1533,12 +1782,13 @@ out of scope for this release. The initial design should stay simple while avoid
 would make adding an institution boundary later require a destructive rewrite. The exact future
 expansion seam remains part of the design interview; speculative multi-tenant infrastructure does not.
 
-The remaining design interview must settle whether public access needs even a lightweight boundary,
-student identity within Evaluation records, report retention and deletion, account deletion, password
-policy and session behavior, and remaining rollout/data edge cases. No application or schema
-implementation begins until the complete contract is confirmed. The previous deferred account note
-and its assumption that the global library would remain until an external sale are superseded by this
-active design work.
+The user explicitly confirmed this complete documented contract on 2026-09-04 as the shared
+implementation baseline and authorized implementation. Phases 1 and 2 are code-complete locally with
+the isolated database, pgTAP suite, generated-schema TypeScript additions, Supabase Auth flow, and
+Account UI. The Account migration remains unapplied to the linked project pending review of the
+existing migration-history drift. Phase 3 is next. The previous deferred account note and its
+assumption that the global library would remain
+until an external sale are superseded by this design.
 
 ---
 

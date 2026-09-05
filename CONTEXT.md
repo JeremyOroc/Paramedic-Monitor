@@ -20,6 +20,11 @@ _Avoid_: Preset
 A verified instructor identity with a unique username and email that can authenticate, own Personal scenarios, and own Rooms. Trainees participate in Rooms without Accounts.
 _Avoid_: User, trainee account, student account
 
+**Pending Account**:
+An Instructor registration whose email has not yet been verified. It cannot enter authenticated
+product areas but reserves its username until verification or Product-operator deletion.
+_Avoid_: Inactive Account, invited user
+
 **Instructor**:
 The ordinary Account role for preparing scenarios, creating Rooms, and conducting Attempts.
 _Avoid_: Teacher role, standard user
@@ -100,8 +105,42 @@ How current a trainee monitor projection is relative to the trainee's latest acc
 _Avoid_: Connection status, participant presence
 
 **Evaluation record**:
-The persistent Account-owned report of one completed Attempt across all participating trainees: each trainee action in order, the confirmed clinical state it was taken against, and each change the Instructor sent. It presents; it does not grade.
+The persistent Account-owned report of one Attempt across all participating trainees. It is created
+when the Attempt starts, autosaves each trainee action, confirmed clinical state, and Instructor
+change, and remains Incomplete until New Attempt or End Room completes it. It presents; it does not
+grade.
 _Avoid_: Report data, session log, history
+
+**Student name**:
+An optional Instructor-entered name attached to an Evaluation record for identifying a learner. It
+is independent of the nickname a trainee used to join the Room and is not an Account. A record may
+hold up to 100 Student names of up to 100 characters each; blank entries are discarded and duplicate
+names are allowed. Entries are otherwise free-form and the application gives no inline privacy or
+institution-approved-identifier guidance.
+_Avoid_: Trainee nickname, student Account, participant identity
+
+**Room controller**:
+The single signed-in browser authorized to mutate an Account-owned Room. Other devices for the same
+Account may observe the Room or explicitly take control, which makes the previous controller
+read-only.
+_Avoid_: Room owner, host token, primary Account
+
+**Reports**:
+The authenticated area containing the signed-in Instructor's complete and Incomplete Evaluation
+records, retained until that Instructor permanently deletes them.
+_Avoid_: Archive, room history, saved Rooms
+
+**Incomplete Evaluation record**:
+An Evaluation record whose Attempt started but was not completed through New Attempt or End Room.
+It remains reviewable and editable in Reports. After its Room has ended or expired, its owner may
+manually complete it without altering the recorded timeline.
+_Avoid_: Draft report, live Room
+
+**Evaluation scenario snapshot**:
+The immutable scenario name, confirmed defibrillator model, and report-relevant configuration stored
+with an Evaluation record when its Attempt starts. It keeps the record intelligible if the source
+Personal scenario or Template is later edited or deleted.
+_Avoid_: Linked scenario, current scenario
 
 **Instructor change**:
 One Send by the instructor as the evaluation record shows it: the difference from the previous Send in that attempt. Every Send is its own instructor change, including a correction seconds after the last one; the opening Send is the one instructor change with nothing before it.

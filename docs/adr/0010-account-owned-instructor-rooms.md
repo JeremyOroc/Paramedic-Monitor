@@ -14,5 +14,11 @@ continue joining with only a Room code and nickname.
 - Instructor Room operations must verify the authenticated owner rather than possession of a URL
   token.
 - One Account may own only one non-ended Room, and only one signed-in device controls it at a time.
+- The creating or reopening browser becomes the controller. Another Account device may explicitly
+  Take control; the former controller immediately loses mutation permission but may keep observing.
+- Rooms expire 24 hours after creation. Expiry releases the active-Room slot and leaves the current
+  Evaluation record Incomplete rather than claiming the Attempt completed.
+- Room codes use six case-insensitive uppercase characters without `0/O` or `1/I`, retry uniqueness
+  collisions, and apply a short per-IP limit to repeated failed public joins.
 - The initial rollout expires active legacy Rooms rather than retaining host tokens as a second
   authorization path.
