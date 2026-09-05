@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-09-05] [session/operations] — Correct the protected database health check
+
+- Changed `/api/health` to query the protected `sessions` table with the server-only Supabase secret
+  client. Migration 006 intentionally removed the anonymous table grant, so the former publishable-key
+  query returned `permission denied` before RLS could produce the expected empty result.
+- Kept anonymous access closed and added route regressions for successful, degraded, and missing-secret
+  responses. The endpoint reports only coarse database state and never returns or logs the secret.
+- Verified the real local endpoint against the linked Supabase project (HTTP 200, `database: ok`), all
+  1,140 Vitest tests with four workers, TypeScript, ESLint, and the final whitespace check.
+
 ## [2026-09-04] [auth/ui] — Complete Supabase authentication and the Account UI
 
 - Added cookie-aware Supabase SSR clients and scoped Next.js Proxy session refresh for Auth and

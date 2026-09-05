@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { createClient } from '@/lib/supabase/server'
+import { createServiceClient } from '@/lib/supabase/server'
 
 /**
  * Health check for external monitoring.
@@ -9,11 +9,12 @@ import { createClient } from '@/lib/supabase/server'
  * A plain page load can return 200 with the database completely down, so this
  * exists to make that distinction visible to an uptime monitor.
  *
- * Uses the anon client deliberately. RLS blocks public reads (migrations 004
- * and 006), so the count comes back as 0 rather than a row count -- that's
- * fine. What we care about is whether the request errors, which proves DNS,
- * TLS, PostgREST and Postgres are all answering. A missing or broken table
- * still errors here.
+ * Uses the server-only secret client. Migration 006 deliberately revoked the
+ * anon role's table grant so room codes cannot be enumerated; Postgres checks
+ * that grant before RLS, which means an anon health query fails instead of
+ * returning zero rows. The secret stays inside this Route Handler and lets the
+ * check prove that DNS, TLS, PostgREST, Postgres, and the server credential are
+ * all working without reopening public access to `sessions`.
  *
  * Targets `sessions` rather than `scenarios`: `scenarios` backs a deferred
  * feature and could reasonably be dropped one day, which would turn this check
@@ -30,7 +31,7 @@ export async function GET() {
   const startedAt = Date.now()
 
   try {
-    const supabase = createClient()
+    const supabase = createServiceClient()
     const { error } = await supabase
       .from('sessions')
       .select('*', { head: true, count: 'exact' })

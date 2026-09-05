@@ -85,6 +85,12 @@ real local Auth check proved confirmation-required signup, confirmed sign-in, en
 immediate RLS denial after disablement. Multi-tenancy stays deferred. Phase 3 Personal/Template
 scenario ownership is next.
 
+**Operational health check — CORRECTED (2026-09-05).** `/api/health` now checks the protected
+`sessions` table with the server-only Supabase secret client. It no longer depends on the deliberately
+revoked anonymous table grant, and route regressions cover healthy, degraded, and configuration-error
+responses without exposing the secret or reopening room-code reads. The live local endpoint returns
+HTTP 200 with `database: ok`; all 1,140 tests, TypeScript, and ESLint pass.
+
 **Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04).** The Embedded Spectator now
 switches among Docked, a fixed bottom-right Floating mini-player, and browser-native Fullscreen while
 preserving one selected-only polling path and an inert uniformly scaled monitor. Permanent accessible

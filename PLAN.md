@@ -977,7 +977,9 @@ migration 004 only revisited the session-slice tables. `NEXT_PUBLIC_SUPABASE_ANO
 every browser, so `sessions: public read` exposed every room code — and a room code is the entire
 join credential. Drop all seven leftover policies. Drop `vitals_snapshots` (zero reads/writes in
 `src/`; superseded by `session_state`). Repoint the health check off `scenarios` onto `sessions`,
-which is never going away — `scenarios` stays for the deferred timed-state builder.
+which is never going away — `scenarios` stays for the deferred timed-state builder. The health Route
+Handler uses the server-only secret client because migration 006 revokes the `anon` table grant
+before RLS can return an empty result; the credential never reaches the browser.
 
 #### 12b — Instructor-side state history (migration 007)
 New append-only `session_state_history (id, session_id, attempt_version, version, state, applied_at)`.
@@ -1022,6 +1024,8 @@ computable.
   review filtered by attempt, truncation flag set at the cap
 - Component tests: each newly instrumented control emits its event with the right payload
 - Migration review: no policy left on `sessions`/`scenarios` reachable by `anon`
+- Health-route tests: the server-only secret client checks `sessions`, returns 200 on success, and
+  preserves sanitized 503 responses for query and configuration failures
 
 **Milestone:** An evaluator can reconstruct a full per-trainee, per-attempt timeline of actions
 against patient state, and the anon key can no longer read a room code.
