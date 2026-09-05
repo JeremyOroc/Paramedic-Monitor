@@ -5,6 +5,35 @@
 
 ---
 
+## [2026-09-05] [instructor/ui] — Add draggable Floating Spectator corners
+
+- Added an always-visible, keyboard-accessible header grip that moves the Floating Spectator among
+  all four viewport corners. Primary mouse, pen, and touch drags begin after 6px, follow the pointer
+  without rerendering the monitor, stay inside the viewport, preview the targeted quadrant, and snap
+  the complete player to safe-area-aware anchors on release.
+- Added interruption safety for Escape, pointer cancellation, resize/orientation, visibility, mode,
+  room, and participant changes; arrow-key adjacency and live corner announcements; reduced-motion
+  handling; and bottom-right reset after Stop Spectating or reload. Corner choice otherwise survives
+  scrolling, console tabs, trainee switches, attempts, Docked/Floating, Fullscreen, and room ending.
+- Preserved the single inert player and projection poll. Added component and Instructor Console
+  coverage for geometry, gestures, input filtering, all corners, announcements, cancellation, and
+  lifecycle retention. All 1,091 tests, the TypeScript production build, and ESLint pass. A live
+  1280×720 instructor-room run verified exact 16px anchors, full 360×280 resting size, real pointer
+  and keyboard movement, visible focus/controls, and clean browser logs.
+
+## [2026-09-05] [planning/instructor] — Confirm draggable Floating Spectator corners
+
+- Replaced the deliberately fixed bottom-right Floating Spectator contract with a bottom-right-default
+  player that can be dragged by mouse, pen, or touch and moved by keyboard among all four viewport
+  corners. A 6px threshold, player-center quadrant selection, target preview, safe-area anchoring,
+  cancellation semantics, position announcements, and reduced-motion behavior are now explicit.
+- The pinned corner persists across scrolling, console tabs, trainee switches, Docked/Floating and
+  Fullscreen round-trips, New Attempt, and End Room. Stop Spectating or reload resets the next player
+  to bottom-right. The existing player, inert monitor, selection, and polling path remain unchanged.
+- Approved a narrow exception to the Tailwind-only styling convention for temporary pointer-drag
+  coordinates; every resting position remains a static stylesheet-defined corner. This localized,
+  reversible presentation behavior does not warrant an ADR.
+
 ## [2026-09-04] [instructor/server] — Attempt names
 
 - The instructor can name each attempt. The number stays and is what everything is keyed on; the name sits beside it: the Report tab picker reads `2 · Morning cohort`, the header, the copied text, and the console's status line carry it, and an unnamed attempt shows its number alone.

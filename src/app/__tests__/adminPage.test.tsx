@@ -274,6 +274,13 @@ describe('AdminPage', () => {
       'data-spectator-mode',
       'floating',
     )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move spectator mini-player' }), {
+      key: 'ArrowUp',
+    })
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-right',
+    )
 
     await user.click(within(screen.getByTestId('student-row-student-2')).getByRole('button', { name: 'Spectate' }))
     expect(screen.queryByText('Connecting to Alice…')).toBeNull()
@@ -282,6 +289,10 @@ describe('AdminPage', () => {
     expect(screen.getByLabelText('Spectating Bob')).toHaveAttribute(
       'data-spectator-mode',
       'floating',
+    )
+    expect(screen.getByLabelText('Spectating Bob')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-right',
     )
 
     resolveAlice?.(new Response(JSON.stringify({

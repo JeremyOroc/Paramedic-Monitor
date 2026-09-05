@@ -1382,29 +1382,36 @@ stale. Opening or closing a Spectator view does not add an indicator to the trai
 first implementation has no UI-enforced concurrency cap and is designed and tested for at least 30
 connected trainees in one room and eight simultaneously open Spectator tabs for one instructor.
 
-#### Presentation-mode enhancement (confirmed 2026-09-04)
+#### Presentation-mode enhancement (confirmed 2026-09-04, corner movement updated 2026-09-05)
 
 The Embedded Spectator has three transient presentation modes that all reuse the same selected
 trainee, projection renderer, and one-second polling path:
 
 - **Docked:** the normal 480px console preview beside the room controls. Permanent Pin and Enter
   fullscreen controls sit at bottom-right.
-- **Floating:** a fixed, non-draggable mini-player at bottom-right while the vacated dock displays
-  `Spectator pinned`. It begins around 320x250 near the minimum desktop width, grows to 360x280 at
-  ordinary desktop widths and at most 400x310 on large screens, and respects 16px/safe-area offsets.
-  Return to dock is top-left, Stop is top-right, and Enter fullscreen is bottom-right. A future change
-  may make its transient corner position draggable; the initial corner is intentionally fixed.
+- **Floating:** a corner-pinned mini-player while the vacated dock displays `Spectator pinned`. It
+  begins at bottom-right around 320x250 near the minimum desktop width, grows to 360x280 at ordinary
+  desktop widths and at most 400x310 on large screens, and respects 16px/safe-area offsets at all four
+  corners. Return to dock is top-left, Stop is top-right, and Enter fullscreen is bottom-right.
+  An always-visible 36px header grip moves the player with primary-pointer mouse, pen, and touch input
+  after a 6px threshold. During a drag the complete player follows the pointer within the viewport,
+  previews the quadrant targeted by its center, then animates to that corner on release. Escape,
+  pointer cancellation, viewport changes, participant/mode changes, or page visibility changes restore
+  the prior corner. Arrow keys move the focused grip to an adjacent corner and an unobtrusive live
+  status announces the committed corner. Reduced-motion preference removes the snap animation.
 - **Fullscreen:** browser-native fullscreen for the same player, with Stop at top-right and Exit
   fullscreen at bottom-right. Native Escape exits fullscreen and returns to the mode from which it
   was entered. If the Fullscreen API is unavailable the control is disabled with an explanatory
   tooltip; a rejected request leaves the current mode intact and announces `Fullscreen unavailable`
   for approximately three seconds. There is no simulated CSS fullscreen fallback.
 
-The floating mini-player remains visible across console document scrolling, console tab changes,
-trainee switches, New Attempt, and End Room. Switching trainees retains the current docked/floating
-mode while the existing identity-safe projection handoff clears the former frame. Stop from any mode
-clears the transient selection, restores Docked as the next mode, and returns focus to the stopped
-trainee's roster button when it remains mounted. Reload continues to clear all spectator state.
+The floating mini-player and its pinned corner remain stable across console document scrolling,
+console tab changes, trainee switches, Docked/Floating and Fullscreen round-trips, New Attempt, and
+End Room. Switching trainees retains the current docked/floating mode and corner while the existing
+identity-safe projection handoff clears the former frame. Stop from any mode clears the transient
+selection, restores Docked as the next mode, resets the next Floating Spectator to bottom-right, and
+returns focus to the stopped trainee's roster button when it remains mounted. Reload continues to
+clear all spectator state.
 
 Mode controls are permanent rather than hover-only, use code-native 16–18px icons in 36px targets,
 have accessible names, native tooltips, and visible focus treatment, and retain standard Tab,
@@ -1432,6 +1439,10 @@ use a 160–200ms fade/scale motion that is removed for `prefers-reduced-motion`
   native Escape restoration, unsupported and rejected fullscreen requests, one-player/one-poll
   continuity, floating trainee switching, Stop behavior, focus restoration, permanent controls,
   safe-area sizing, and reduced-motion behavior.
+- Floating-corner coverage verifies the 6px pointer threshold, free pointer following, viewport
+  containment, quadrant selection, all four safe-area anchors, Escape/pointer/resize/mode cancellation,
+  primary-pointer filtering, keyboard adjacency, live announcements, corner lifecycle retention and
+  Stop/reload reset, target feedback, snap animation, and reduced-motion behavior.
 
 **Standalone milestone — COMPLETE AND DEPLOYED (2026-09-03):** An instructor can observe one
 trainee's live simulator state in a separate, inert page without changing either the trainee's state
@@ -1445,14 +1456,25 @@ that canvas uniformly with black letterboxing. Verification passed 999 tests, Ty
 with zero errors and the 12 pre-existing warnings, a production build, and an end-to-end browser run
 with a real instructor room and trainee projection.
 
-**Presentation-mode milestone — COMPLETE (2026-09-04):** The same Embedded Spectator can be pinned
-as a fixed bottom-right Floating mini-player or expanded through browser-native Fullscreen, then
+**Presentation-mode milestone — COMPLETE (2026-09-04; corners updated 2026-09-05):** The same
+Embedded Spectator can be pinned as a movable-corner Floating mini-player or expanded through
+browser-native Fullscreen, then
 returned to its prior Docked/Floating mode without replacing its selected-only projection path.
 Permanent accessible controls, focus restoration, native fullscreen exit handling, error feedback,
 responsive safe-area sizing, reduced motion, and Stop from every mode are implemented. Verification
 passed 1,059 tests, TypeScript, ESLint with zero errors and the 12 pre-existing warnings, a production
 build, and a real instructor/trainee browser flow showing the live dispatch projection in Floating
 and Fullscreen modes with clean console logs.
+
+**Floating-corner milestone — COMPLETE (2026-09-05):** The Floating Spectator now follows a primary
+mouse, pen, or touch pointer after a 6px threshold and pins to the quadrant containing its center on
+release. The same permanent grip moves it by arrow key, announces each committed corner, previews the
+pointer target, restores the prior corner after interrupted gestures, and retains its corner through
+the agreed console and presentation lifecycle before Stop or reload resets it to bottom-right. Final
+positions remain stylesheet-defined and safe-area aware; only transient drag coordinates use element
+CSS variables. Verification passed 1,091 tests, the TypeScript production build, ESLint, and a live
+1280×720 instructor-room browser flow with exact 16px corner offsets, full 360×280 size, real pointer
+and keyboard movement, and clean browser logs.
 
 ---
 

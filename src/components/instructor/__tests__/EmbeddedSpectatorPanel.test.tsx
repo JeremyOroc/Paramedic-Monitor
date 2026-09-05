@@ -4,7 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
 import {
+  adjacentSpectatorCorner,
   EmbeddedSpectatorPanel,
+  spectatorCornerFromPoint,
+  type SpectatorCorner,
   type SpectatorPresentationMode,
 } from '@/components/instructor/EmbeddedSpectatorPanel'
 
@@ -40,11 +43,65 @@ const originalFullscreenElement = Object.getOwnPropertyDescriptor(
   'fullscreenElement',
 )
 const originalExitFullscreen = Object.getOwnPropertyDescriptor(document, 'exitFullscreen')
+const originalInnerWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth')
+const originalInnerHeight = Object.getOwnPropertyDescriptor(window, 'innerHeight')
 
 const modeProps = {
   mode: 'docked' as const,
   onModeChange: () => {},
   onStopSpectating: () => {},
+}
+
+class TestPointerEvent extends MouseEvent {
+  readonly pointerId: number
+  readonly isPrimary: boolean
+
+  constructor(type: string, init: PointerEventInit = {}) {
+    super(type, init)
+    this.pointerId = init.pointerId ?? 0
+    this.isPrimary = init.isPrimary ?? false
+  }
+}
+
+function installPointerEventMock() {
+  vi.stubGlobal('PointerEvent', TestPointerEvent)
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 768 })
+}
+
+function mockFloatingGeometry(player: HTMLElement) {
+  return vi.spyOn(player, 'getBoundingClientRect').mockImplementation(() => {
+    const corner = (player.dataset.spectatorCorner ?? 'bottom-right') as SpectatorCorner
+    const x = corner.endsWith('left') ? 16 : 688
+    const y = corner.startsWith('top') ? 16 : 502
+    const dragX = Number.parseFloat(
+      player.style.getPropertyValue('--spectator-drag-x'),
+    ) || 0
+    const dragY = Number.parseFloat(
+      player.style.getPropertyValue('--spectator-drag-y'),
+    ) || 0
+    const left = x + dragX
+    const top = y + dragY
+    return {
+      bottom: top + 250,
+      height: 250,
+      left,
+      right: left + 320,
+      top,
+      width: 320,
+      x: left,
+      y: top,
+      toJSON: () => ({}),
+    }
+  })
+}
+
+function mockWaitingProjection() {
+  return vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+    session: { status: 'active', active_attempt_version: 1 },
+    participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
+    projection: null,
+  }), { status: 200 }))
 }
 
 function installFullscreenMock() {
@@ -101,10 +158,40 @@ function SpectatorHarness({
   )
 }
 
+function RestartableSpectatorHarness() {
+  const [mode, setMode] = useState<SpectatorPresentationMode>('floating')
+  const [selectedParticipant, setSelectedParticipant] = useState<typeof participant | null>(
+    participant,
+  )
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedParticipant(participant)
+          setMode('floating')
+        }}
+      >
+        Spectate Alice again
+      </button>
+      <EmbeddedSpectatorPanel
+        code="ABC123"
+        hostToken="host-token"
+        participant={selectedParticipant}
+        mode={mode}
+        onModeChange={setMode}
+        onStopSpectating={() => setSelectedParticipant(null)}
+      />
+    </>
+  )
+}
+
 describe('EmbeddedSpectatorPanel', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
     for (const [target, property, descriptor] of [
       [Element.prototype, 'requestFullscreen', originalRequestFullscreen],
       [document, 'fullscreenEnabled', originalFullscreenEnabled],
@@ -114,6 +201,195 @@ describe('EmbeddedSpectatorPanel', () => {
       if (descriptor) Object.defineProperty(target, property, descriptor)
       else Reflect.deleteProperty(target, property)
     }
+    if (originalInnerWidth) Object.defineProperty(window, 'innerWidth', originalInnerWidth)
+    if (originalInnerHeight) Object.defineProperty(window, 'innerHeight', originalInnerHeight)
+  })
+
+  it('maps pointer centers and arrow keys across the four corners', () => {
+    expect(spectatorCornerFromPoint(100, 100, 1000, 800)).toBe('top-left')
+    expect(spectatorCornerFromPoint(900, 100, 1000, 800)).toBe('top-right')
+    expect(spectatorCornerFromPoint(100, 700, 1000, 800)).toBe('bottom-left')
+    expect(spectatorCornerFromPoint(900, 700, 1000, 800)).toBe('bottom-right')
+    expect(adjacentSpectatorCorner('bottom-right', 'ArrowUp')).toBe('top-right')
+    expect(adjacentSpectatorCorner('top-right', 'ArrowLeft')).toBe('top-left')
+    expect(adjacentSpectatorCorner('top-left', 'ArrowDown')).toBe('bottom-left')
+    expect(adjacentSpectatorCorner('bottom-left', 'ArrowRight')).toBe('bottom-right')
+    expect(adjacentSpectatorCorner('top-left', 'ArrowUp')).toBe('top-left')
+  })
+
+  it('provides a keyboard-accessible grip for all four pinned corners', () => {
+    mockWaitingProjection()
+    render(<SpectatorHarness initialMode="floating" />)
+
+    const player = screen.getByLabelText('Spectating Alice')
+    const handle = screen.getByRole('button', { name: 'Move spectator mini-player' })
+    expect(handle).toHaveAttribute('title', 'Move spectator mini-player')
+    expect(handle).toHaveAttribute(
+      'aria-keyshortcuts',
+      'ArrowUp ArrowDown ArrowLeft ArrowRight Escape',
+    )
+    expect(player).toHaveAttribute('data-spectator-corner', 'bottom-right')
+
+    fireEvent.keyDown(handle, { key: 'ArrowUp' })
+    expect(player).toHaveAttribute('data-spectator-corner', 'top-right')
+    expect(screen.getByText('Mini-player pinned top right')).toBeInTheDocument()
+    fireEvent.keyDown(handle, { key: 'ArrowLeft' })
+    expect(player).toHaveAttribute('data-spectator-corner', 'top-left')
+    fireEvent.keyDown(handle, { key: 'ArrowDown' })
+    expect(player).toHaveAttribute('data-spectator-corner', 'bottom-left')
+    fireEvent.keyDown(handle, { key: 'ArrowRight' })
+    expect(player).toHaveAttribute('data-spectator-corner', 'bottom-right')
+  })
+
+  it('follows the primary pointer after 6px and pins by the player center quadrant', () => {
+    installPointerEventMock()
+    mockWaitingProjection()
+    render(<SpectatorHarness initialMode="floating" />)
+
+    const player = screen.getByLabelText('Spectating Alice')
+    const handle = screen.getByRole('button', { name: 'Move spectator mini-player' })
+    mockFloatingGeometry(player)
+
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 800,
+      clientY: 600,
+      isPrimary: true,
+      pointerId: 1,
+    })
+    fireEvent.pointerMove(handle, {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      isPrimary: true,
+      pointerId: 1,
+    })
+
+    expect(player).toHaveAttribute('data-spectator-drag-state', 'dragging')
+    expect(player.style.getPropertyValue('--spectator-drag-x')).toBe('-688px')
+    expect(player.style.getPropertyValue('--spectator-drag-y')).toBe('-500px')
+    expect(screen.getByTestId('spectator-corner-target')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-left',
+    )
+
+    fireEvent.pointerUp(handle, {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      isPrimary: true,
+      pointerId: 1,
+    })
+
+    expect(player).toHaveAttribute('data-spectator-corner', 'top-left')
+    expect(player).toHaveAttribute('data-spectator-drag-state', 'snapping')
+    expect(screen.queryByTestId('spectator-corner-target')).toBeNull()
+    expect(screen.getByText('Mini-player pinned top left')).toBeInTheDocument()
+  })
+
+  it('ignores sub-threshold, secondary, and non-primary pointer gestures', () => {
+    installPointerEventMock()
+    mockWaitingProjection()
+    render(<SpectatorHarness initialMode="floating" />)
+
+    const player = screen.getByLabelText('Spectating Alice')
+    const handle = screen.getByRole('button', { name: 'Move spectator mini-player' })
+    mockFloatingGeometry(player)
+
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 800,
+      clientY: 600,
+      isPrimary: true,
+      pointerId: 1,
+    })
+    fireEvent.pointerMove(handle, {
+      button: 0,
+      clientX: 805,
+      clientY: 600,
+      isPrimary: true,
+      pointerId: 1,
+    })
+    fireEvent.pointerUp(handle, {
+      button: 0,
+      clientX: 805,
+      clientY: 600,
+      isPrimary: true,
+      pointerId: 1,
+    })
+    fireEvent.pointerDown(handle, {
+      button: 2,
+      clientX: 800,
+      clientY: 600,
+      isPrimary: true,
+      pointerId: 2,
+    })
+    fireEvent.pointerMove(handle, {
+      button: 2,
+      clientX: 100,
+      clientY: 100,
+      isPrimary: true,
+      pointerId: 2,
+    })
+    fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 800,
+      clientY: 600,
+      isPrimary: false,
+      pointerId: 3,
+    })
+    fireEvent.pointerMove(handle, {
+      button: 0,
+      clientX: 100,
+      clientY: 100,
+      isPrimary: false,
+      pointerId: 3,
+    })
+
+    expect(player).toHaveAttribute('data-spectator-corner', 'bottom-right')
+    expect(player).toHaveAttribute('data-spectator-drag-state', 'idle')
+    expect(screen.queryByTestId('spectator-corner-target')).toBeNull()
+  })
+
+  it('restores the prior corner when Escape, pointer cancellation, or resize interrupts a drag', () => {
+    installPointerEventMock()
+    mockWaitingProjection()
+    render(<SpectatorHarness initialMode="floating" />)
+
+    const player = screen.getByLabelText('Spectating Alice')
+    const handle = screen.getByRole('button', { name: 'Move spectator mini-player' })
+    mockFloatingGeometry(player)
+
+    const startDrag = (pointerId: number) => {
+      fireEvent.pointerDown(handle, {
+        button: 0,
+        clientX: 800,
+        clientY: 600,
+        isPrimary: true,
+        pointerId,
+      })
+      fireEvent.pointerMove(handle, {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        isPrimary: true,
+        pointerId,
+      })
+    }
+
+    startDrag(1)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(player).toHaveAttribute('data-spectator-corner', 'bottom-right')
+    expect(screen.queryByTestId('spectator-corner-target')).toBeNull()
+
+    startDrag(2)
+    fireEvent.pointerCancel(handle, { isPrimary: true, pointerId: 2 })
+    expect(player).toHaveAttribute('data-spectator-corner', 'bottom-right')
+
+    startDrag(3)
+    fireEvent(window, new Event('resize'))
+    expect(player).toHaveAttribute('data-spectator-corner', 'bottom-right')
+    expect(screen.queryByTestId('spectator-corner-target')).toBeNull()
   })
 
   it('renders the empty black half without starting a poll', () => {
@@ -231,6 +507,14 @@ describe('EmbeddedSpectatorPanel', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Return spectator to dock' })).toHaveFocus())
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move spectator mini-player' }), {
+      key: 'ArrowUp',
+    })
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-right',
+    )
+
     await user.click(screen.getByRole('button', { name: 'Return spectator to dock' }))
     expect(screen.queryByText('Spectator pinned')).toBeNull()
     expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
@@ -238,6 +522,13 @@ describe('EmbeddedSpectatorPanel', () => {
       'docked',
     )
     await waitFor(() => expect(screen.getByRole('button', { name: 'Pin spectator mini-player' })).toHaveFocus())
+
+    await user.click(screen.getByRole('button', { name: 'Pin spectator mini-player' }))
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-right',
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('returns fullscreen to the mode it was entered from', async () => {
@@ -250,6 +541,13 @@ describe('EmbeddedSpectatorPanel', () => {
     }), { status: 200 }))
 
     render(<SpectatorHarness initialMode="floating" />)
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move spectator mini-player' }), {
+      key: 'ArrowUp',
+    })
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-right',
+    )
     await user.click(screen.getByRole('button', { name: 'Enter spectator fullscreen' }))
     await waitFor(() => expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
       'data-spectator-mode',
@@ -262,6 +560,10 @@ describe('EmbeddedSpectatorPanel', () => {
       'data-spectator-mode',
       'floating',
     ))
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-right',
+    )
     expect(screen.getByText('Spectator pinned')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Enter spectator fullscreen' })).toHaveFocus())
   })
@@ -373,5 +675,27 @@ describe('EmbeddedSpectatorPanel', () => {
 
     expect(screen.getByText('Select a student to spectate')).toBeInTheDocument()
     expect(screen.queryByText('Spectator pinned')).toBeNull()
+  })
+
+  it('resets the next floating player to bottom-right after Stop Spectating', async () => {
+    const user = userEvent.setup()
+    mockWaitingProjection()
+    render(<RestartableSpectatorHarness />)
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move spectator mini-player' }), {
+      key: 'ArrowLeft',
+    })
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-corner',
+      'bottom-left',
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Stop spectating' }))
+    await user.click(screen.getByRole('button', { name: 'Spectate Alice again' }))
+
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-corner',
+      'bottom-right',
+    )
   })
 })

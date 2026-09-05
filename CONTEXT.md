@@ -50,8 +50,9 @@ The Embedded Spectator in its normal position beside the Instructor Console room
 _Avoid_: Default window, inline player
 
 **Floating Spectator**:
-The same Embedded Spectator presented as a fixed bottom-right mini-player while the instructor uses
-the rest of the console. Its corner may become movable in a future enhancement.
+The same Embedded Spectator presented as a corner-pinned mini-player while the instructor uses the
+rest of the console. It begins at bottom-right and can be dragged or moved by keyboard among all four
+corners without becoming a separate window.
 _Avoid_: Picture-in-picture, separate window, detached stream
 
 **Fullscreen Spectator**:
