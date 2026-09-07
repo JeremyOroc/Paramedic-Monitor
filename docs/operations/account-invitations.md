@@ -4,6 +4,9 @@ The single-college release admits Instructor Accounts only through Supabase invi
 public registration page or shared registration code. Product operators perform these steps; ordinary
 Administrators do not manage Accounts inside the application.
 
+Classroom use also requires the verified [custom SMTP runbook](./custom-smtp.md); Supabase's default
+mail service is retained only for development and approved team-address testing.
+
 ## One-time hosted-project configuration
 
 1. In Supabase, open **Authentication → URL Configuration**.

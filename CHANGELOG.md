@@ -5,6 +5,45 @@
 
 ---
 
+## [2026-09-07] [operations/security] — Complete Phase 7 launch-readiness tooling locally
+
+- Added an explicit safe-off `MAINTENANCE_MODE` boundary. When enabled, current application pages
+  redirect to a clear non-cacheable maintenance screen, application APIs return sanitized HTTP 503
+  responses with `Retry-After`, and `/api/health` remains available; disabling the flag restores the
+  existing Supabase session-refresh and application paths.
+- Added a nightly/manual GitHub workflow and fail-closed scripts for current Supabase roles/schema/data
+  exports, Auth/ownership verification, checksums, pre-upload `age` encryption, provider-neutral
+  off-site upload, exact 30-daily/12-monthly rotation, two-developer sanitized failure alerts, and a
+  guarded non-production restore rehearsal with content-free evidence and restored-count comparison.
+- Added `20260907194832_phase_7_audit_retention.sql`, which replaces the former unrestricted
+  report-only purge access with one service-only function that refuses cutoffs inside the approved
+  one-year pilot floor and purges both privacy-minimized Account audit stores only after a successful
+  backup.
+- Added operator runbooks for custom Auth SMTP/DNS, backup custody and quarterly recovery, deployment
+  maintenance/forward-fix boundaries, incident/privacy coordination, safe Account offboarding, Free
+  post-break readiness, and the complete classroom release gate. Secrets and backup artifacts remain
+  excluded from source control.
+- Verified a clean migration replay, 128 pgTAP assertions, schema lint with no errors, hosted advisors
+  with no error-level findings, all 1,232 Vitest tests with one opt-in integration test skipped,
+  TypeScript, ESLint with zero errors and the 12 existing warnings, Bash syntax checks, the production
+  build, rendered maintenance behavior, exact maintenance-mode HTTP responses, and restored normal-mode
+  smoke checks. Production remains unchanged; operator-supplied SMTP, backup, alert, privacy-contact,
+  deployment, and acceptance gates are documented for after merge.
+
+## [2026-09-07] [operations] — Start Phase 7 production operations
+
+- Recorded Phase 6 as production-verified after its matching application and Room-grant migration
+  were deployed and all eight health, navigation, compatibility, live-Room, responsive, and cleanup
+  acceptance sections passed.
+- Opened `phase/7-production-operations` from the merged production revision and documented the
+  confirmed final-phase scope: maintenance mode, encrypted whole-project logical backups, guarded
+  restore rehearsals, scheduled off-site retention, SMTP/readiness/incident/offboarding runbooks, and
+  complete release acceptance.
+- Revised the pre-rollout feature-gate default for the already-live system: explicit
+  `MAINTENANCE_MODE=true` enters maintenance, while an unset value preserves the verified production
+  service instead of causing an accidental outage. Added the Phase 7 testing gate; no external
+  credentials or production configuration are committed.
+
 ## [2026-09-07] [navigation/sessions] — Complete Phase 6 authenticated navigation locally
 
 - Made `/instructor` the canonical protected Console, retained `/admin` as a compatibility redirect,

@@ -1915,7 +1915,7 @@ component coverage and the production build pass. The matching application branc
 operator on 2026-09-07. Phase 6 supplies the unified authenticated navigation and complete
 cross-area browser verification.
 
-#### Account implementation Phase 6 — Instructor navigation and full interaction verification (CODE COMPLETE LOCALLY 2026-09-07)
+#### Account implementation Phase 6 — Instructor navigation and full interaction verification (PRODUCTION VERIFIED 2026-09-07)
 
 Phase 6 makes `/instructor` the canonical authenticated Console and gives Console, Reports, and
 Account one consistent primary navigation. The existing `/admin` URL remains a backwards-compatible
@@ -1959,6 +1959,66 @@ no horizontal overflow, no framework error overlay, and an empty browser warning
 available browser surface could not be resized to a desktop viewport, so a wider rendered smoke test
 remains part of the post-deployment acceptance check; responsive component coverage and the production
 build pass.
+
+The Product operator merged and deployed Phase 6 together with its corrective Room-grant migration,
+then passed all eight production acceptance sections on 2026-09-07: health, canonical Console,
+cross-area navigation, `/admin` compatibility, live-Room database access, live-Room navigation,
+responsive layout, and end/report/sign-out cleanup. The wider production check is therefore complete.
+
+#### Account implementation Phase 7 — Production operations and launch readiness (CODE COMPLETE 2026-09-07)
+
+Phase 7 closes the repository-side operational requirements for the single-college release. Because
+the Account system is already deployed and production-verified, maintenance is an explicit server-side
+`MAINTENANCE_MODE` whose safe default is off; changing it to `true` blocks application workflows with
+a clear maintenance response while preserving `/api/health`. This supersedes the pre-rollout plan for
+an unset Account feature gate to default off, which would now cause an accidental outage on a normal
+deployment.
+
+Developer-operated recovery uses Supabase's current three-part logical export: roles, schema, and
+data. The data export includes managed Auth rows required to preserve immutable Account ownership.
+The tooling verifies the expected Auth and application content, creates checksums and a manifest,
+encrypts the archive before it leaves temporary storage, uploads through a provider-neutral `rclone`
+remote, retains exactly 30 daily and 12 monthly encrypted copies, and never commits secrets or backup
+artifacts. Restore rehearsal tooling requires an explicit non-production target and refuses a target
+that matches the protected production host.
+
+Repository runbooks cover custom SMTP and DNS, invitation/recovery testing, backup configuration and
+quarterly restore evidence, Free-tier pre-class readiness after five-day breaks, deployment and
+maintenance, forward-fix recovery, Account offboarding, incident/privacy coordination, audit
+retention, and the complete release-acceptance gate. External SMTP credentials, encrypted off-site
+storage configuration, two developer alert recipients, and the college privacy contact remain
+operator-supplied launch configuration rather than repository secrets.
+
+##### Testing
+
+- Add unit coverage for maintenance-mode parsing, allowed health/static paths, maintenance page/API
+  responses, cache prevention, and the existing Supabase session-refresh path when maintenance is off.
+- Add contract and executable dry-run tests for required backup variables, official roles/schema/data
+  dump commands, Auth inclusion checks, encryption-before-upload, checksums, 30-daily/12-monthly
+  rotation, guarded non-production restore, sanitized failure output, and workflow scheduling.
+- Test runbook completeness for SMTP, DNS, backup ownership, restore evidence, Free-tier wake-up,
+  incident/privacy contacts, offboarding, rollback/forward-fix boundaries, and acceptance evidence.
+- Replay every migration, run pgTAP, error-level schema lint and database advisors, then run the full
+  Vitest suite, TypeScript, ESLint, production build, maintenance-mode HTTP/rendered checks, and the
+  normal health/application path before marking repository implementation complete.
+
+Phase 7 repository implementation passed a clean replay of every migration, all 128 pgTAP
+assertions, Supabase schema lint with no errors, all 1,232 Vitest tests with one opt-in integration
+test skipped, TypeScript, ESLint with zero errors and the 12 existing warnings, Bash syntax checks,
+the executable synthetic backup/restore safety path, and the Next.js production build. Rendered and
+HTTP verification confirmed the maintenance screen, page redirects with no-store/Retry-After,
+sanitized API 503 responses, an available healthy database check, and complete restoration of the
+normal landing/protected-route behavior after the flag was disabled.
+
+Read-only hosted advisors reported no error-level findings. The remaining Auth warning is leaked
+password protection, which Supabase documents as Pro-only and therefore remains a paid-plan
+hardening option for the approved Free pilot. INFO-only no-policy notices correspond to deliberately
+server-only tables whose browser grants are revoked and whose boundaries have pgTAP coverage;
+pre-existing low-volume index suggestions remain observation items. Advisors must be rerun after the
+Phase 7 migration is deployed. Production configuration is intentionally not performed by this
+branch: the custom SMTP/DNS setup, private backup destination and secrets, two-recipient alert path,
+quarterly non-production restore evidence, named college privacy contact, and full release checklist
+remain external classroom-launch gates.
 
 ---
 
