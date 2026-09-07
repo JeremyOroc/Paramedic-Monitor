@@ -1,0 +1,77 @@
+name: Encrypted Supabase Backup
+
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-supabase-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SUPABASE_DB_URL: ${{ secrets.PRODUCTION_SUPABASE_DB_URL }}
+      PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_SUPABASE_PROJECT_REF }}
+      BACKUP_PROJECT_SLUG: paramedic-monitor
+      BACKUP_AGE_RECIPIENT: ${{ secrets.BACKUP_AGE_RECIPIENT }}
+      BACKUP_RCLONE_REMOTE: ${{ secrets.BACKUP_RCLONE_REMOTE }}
+      RCLONE_CONFIG: ${{ runner.temp }}/rclone.conf
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate required backup configuration
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.BACKUP_RCLONE_CONFIG_B64 }}
+        run: |
+          set -euo pipefail
+          for variable_name in SUPABASE_DB_URL PRODUCTION_PROJECT_REF BACKUP_AGE_RECIPIENT BACKUP_RCLONE_REMOTE RCLONE_CONFIG_B64; do
+            if [ -z "${!variable_name:-}" ]; then
+              echo "::error::Missing required backup secret: ${variable_name}"
+              exit 1
+            fi
+          done
+
+      - name: Install pinned database CLI and backup tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes age postgresql-client rclone
+          install -d "${RUNNER_TEMP}/ops-bin"
+          printf '#!/usr/bin/env bash\nexec npx --yes supabase@2.109.1 "$@"\n' > "${RUNNER_TEMP}/ops-bin/supabase"
+          chmod 755 "${RUNNER_TEMP}/ops-bin/supabase"
+          echo "${RUNNER_TEMP}/ops-bin" >> "${GITHUB_PATH}"
+
+      - name: Configure private off-site destination
+        env:
+          RCLONE_CONFIG_B64: ${{ secrets.BACKUP_RCLONE_CONFIG_B64 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$RCLONE_CONFIG_B64" | base64 --decode > "$RCLONE_CONFIG"
+          chmod 600 "$RCLONE_CONFIG"
+
+      - name: Export, verify, encrypt, upload, and rotate
+        run: scripts/operations/backup-supabase.sh
+
+      - name: Notify two developers when backup fails
+        if: failure()
+        continue-on-error: true
+        env:
+          OPS_ALERT_SMTP_URL: ${{ secrets.OPS_ALERT_SMTP_URL }}
+          OPS_ALERT_SMTP_USERNAME: ${{ secrets.OPS_ALERT_SMTP_USERNAME }}
+          OPS_ALERT_SMTP_PASSWORD: ${{ secrets.OPS_ALERT_SMTP_PASSWORD }}
+          OPS_ALERT_FROM: ${{ secrets.OPS_ALERT_FROM }}
+          OPS_ALERT_TO: ${{ secrets.OPS_ALERT_TO }}
+          OPS_EVENT_CODE: backup_failed
+          OPS_RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: scripts/operations/notify-operations.sh
+
+      - name: Remove temporary provider configuration
+        if: always()
+        run: rm -f -- "$RCLONE_CONFIG"

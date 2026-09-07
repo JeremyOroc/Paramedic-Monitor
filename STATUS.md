@@ -6,7 +6,7 @@
 ---
 
 ## Current Phase
-**Accounts & scenario ownership — PHASE 6 CODE COMPLETE LOCALLY (2026-09-07).**
+**Accounts & scenario ownership — PHASE 7 CODE COMPLETE (2026-09-07).**
 The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
 implemented shared-code self-registration flow. Public registration and its deployment secret are
 removed; verified invited instructors complete a unique username and password in the app
@@ -139,7 +139,22 @@ sign-out/sign-in persistence. The existing verified `JeremyTest` Auth identity w
 renamed to reserved username `Jeremy` and assigned Administrator authority by immutable user ID;
 production sign-in and Administrator-only shared Template controls passed. Phase 4 account-owned
 Room authorization is production-verified; Phase 5 persistent Reports are deployed; Phase 6
-navigation and cross-area verification are complete locally and await deployment.
+navigation and cross-area verification are production-verified after all eight acceptance sections
+passed. Phase 7 production operations and launch-readiness tooling are complete locally on
+`phase/7-production-operations`. The branch adds safe-off server maintenance mode, a rendered
+maintenance response, nightly encrypted Supabase logical backup automation with 30 daily/12 monthly
+retention, guarded non-production restore rehearsals, two-developer sanitized failure alerts, a
+one-year Account-audit retention primitive, and the complete SMTP/backup/deployment/incident/
+offboarding/release runbooks. A clean migration replay, 128 pgTAP assertions, schema lint with no
+errors, hosted advisors with no error-level findings, 1,232 Vitest tests with one opt-in integration
+test skipped, TypeScript, ESLint with zero errors and the 12 existing warnings, Bash syntax checks,
+production build, rendered maintenance QA, exact maintenance HTTP responses, and normal-mode smoke
+checks pass. No production migration or external configuration was changed. Before classroom launch,
+operators must merge and deploy the reviewed migration/application together, set
+`MAINTENANCE_MODE=false`, configure custom SMTP/DNS and the GitHub backup/alert secrets, run the first
+encrypted backup and non-production restore rehearsal, name the college privacy contact, rerun hosted
+advisors, and complete the release-acceptance checklist. Supabase's remaining leaked-password warning
+is a documented Pro-only hardening option; INFO-only server-table and legacy index notices are tracked.
 The linked database now reports complete local/remote
 migration parity and a no-op migration dry run; direct verification confirmed both Account tables,
 all three reserved usernames, RLS, the self-read policy, protected client grants, triggers, and private
