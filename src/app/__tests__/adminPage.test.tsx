@@ -651,11 +651,11 @@ describe('AdminPage', () => {
   }
 
   /** A room with one trainee in it, which is the ordinary case. */
-  function mockRoom(participants: unknown[] = [TRAINEE]) {
+  function mockRoom(participants: unknown[] = [TRAINEE], events: unknown[] = []) {
     return vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
       const url = String(input)
       const body = url.includes('/review')
-        ? { session: { status: 'active', active_attempt_version: 1 }, participants, events: [] }
+        ? { session: { status: 'active', active_attempt_version: 1 }, participants, events }
         : { session: { status: 'active' }, state: { version: 1 } }
       return new Response(JSON.stringify(body), {
         status: 200,
@@ -663,6 +663,21 @@ describe('AdminPage', () => {
       })
     })
   }
+
+  const medEvent = (label: string, attemptVersion = 1) => ({
+    id: `event-${label}-${Math.random()}`,
+    session_id: 'session-1',
+    participant_id: TRAINEE.id,
+    attempt_version: attemptVersion,
+    kind: 'medication',
+    label,
+    payload: {},
+    occurred_at: '2026-09-07T10:01:00.000Z',
+    state_version: null,
+    occurred_at_client: null,
+    capture_sequence: null,
+    clock_offset_ms: null,
+  })
 
   const instructorPosts = (fetchMock: ReturnType<typeof mockRoom>) =>
     fetchMock.mock.calls
@@ -748,6 +763,132 @@ describe('AdminPage', () => {
     // working with an empty room -- there is just nothing to log against.
     expect(letterS).toHaveAttribute('aria-pressed', 'true')
     expect(instructorPosts(fetchMock)).toEqual([])
+  })
+
+  it('tallies every dose of a med given this attempt, whoever logged it', async () => {
+    const user = userEvent.setup()
+    // Two Epi already in the record: one the trainee pressed on the monitor,
+    // one the instructor logged. The grid counts the run, not its own presses.
+    mockRoom([TRAINEE], [medEvent('Epi'), medEvent('Epi'), medEvent('Nitro')])
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Epi given 2 times' })).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: 'Nitro given 1 time' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'O2' })).not.toHaveAttribute('data-count')
+  })
+
+  it('leaves a dose from another attempt out of the tally', async () => {
+    const user = userEvent.setup()
+    mockRoom([TRAINEE], [medEvent('Epi', 1), medEvent('Epi', 2)])
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+
+    // The room is on attempt 1, so the attempt-2 row is somebody else's run.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Epi given 1 time' })).toBeInTheDocument(),
+    )
+  })
+
+  it('moves the tally under the finger rather than waiting for the poll', async () => {
+    const user = userEvent.setup()
+    // The write is held open, so the only thing that can move this count is the
+    // optimistic press. The poll keeps returning the one pre-existing dose.
+    let releaseWrite: () => void = () => {}
+    const writeHeld = new Promise<void>((resolve) => {
+      releaseWrite = resolve
+    })
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/instructor-event')) {
+        await writeHeld
+        return new Response(JSON.stringify({ event: {} }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      const body = url.includes('/review')
+        ? {
+            session: { status: 'active', active_attempt_version: 1 },
+            participants: [TRAINEE],
+            events: [medEvent('Nitro')],
+          }
+        : { session: { status: 'active' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Nitro given 1 time' })).toBeInTheDocument(),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Nitro given 1 time' }))
+
+    // In flight, and already counted.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Nitro given 2 times' })).toBeInTheDocument(),
+    )
+
+    // Once it lands the polled record takes over the tally with no double count.
+    await act(async () => {
+      releaseWrite()
+      await writeHeld
+    })
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Nitro given 1 time' })).toBeInTheDocument(),
+    )
+  })
+
+  it('takes the optimistic dose back when the write fails', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.endsWith('/instructor-event')) {
+        return new Response(JSON.stringify({ error: 'Participant is not in this session' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      const body = url.includes('/review')
+        ? {
+            session: { status: 'active', active_attempt_version: 1 },
+            participants: [TRAINEE],
+            events: [medEvent('Nitro')],
+          }
+        : { session: { status: 'active' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Nitro given 1 time' })).toBeInTheDocument(),
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Nitro given 1 time' }))
+
+    // A tally claiming a dose the record never got would be worse than no tally.
+    await waitFor(() =>
+      expect(screen.getByTestId('medication-recorder-error')).toHaveTextContent(
+        'Participant is not in this session',
+      ),
+    )
+    expect(screen.getByRole('button', { name: 'Nitro given 1 time' })).toBeInTheDocument()
   })
 
   it('sends the staged history and findings without exposing them in the poll body', async () => {

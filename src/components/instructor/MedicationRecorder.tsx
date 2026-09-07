@@ -12,6 +12,13 @@ export type MedicationRecorderProps = {
   participantId: string | null
   onParticipantChange: (participantId: string) => void
   onRecord: (medication: string) => void
+  /**
+   * How many times each med has been given this attempt, by name. Absent or
+   * zero means none. Counts every dose in the run, not only the ones logged
+   * here -- a drug is a drug whether the trainee reached the monitor or the
+   * instructor pressed it for them.
+   */
+  counts: Readonly<Record<string, number>>
   /** Why recording is impossible right now, or null when it is possible. */
   unavailableReason: string | null
   /** The last failure, surfaced next to the grid rather than swallowed. */
@@ -39,6 +46,7 @@ export function MedicationRecorder({
   participantId,
   onParticipantChange,
   onRecord,
+  counts,
   unavailableReason,
   error,
 }: MedicationRecorderProps) {
@@ -104,26 +112,55 @@ export function MedicationRecorder({
       ) : null}
 
       <div className="grid min-h-0 flex-1 grid-cols-2 content-start gap-1 overflow-y-auto">
-        {medications.map((medication) => (
-          <button
-            key={medication}
-            type="button"
-            disabled={disabled}
-            onClick={() => record(medication)}
-            className={cn(
-              'flex min-h-9 items-center justify-center border px-1 py-1 text-center font-mono text-[11px] font-bold leading-tight',
-              'transition-[background-color,border-color,color] duration-150 motion-reduce:transition-none',
-              'focus:outline-none focus:ring-2 focus:ring-ecg-green',
-              'disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900/40 disabled:text-neutral-700',
-              'xl:[@media(min-height:800px)]:min-h-11 xl:[@media(min-height:800px)]:text-xs',
-              flashed === medication
-                ? 'border-ecg-green bg-ecg-green text-black'
-                : 'border-neutral-700 bg-neutral-900 text-neutral-300 enabled:hover:border-ecg-green enabled:hover:text-ecg-green',
-            )}
-          >
-            {medication}
-          </button>
-        ))}
+        {medications.map((medication) => {
+          const given = counts[medication] ?? 0
+          return (
+            <button
+              key={medication}
+              type="button"
+              disabled={disabled}
+              onClick={() => record(medication)}
+              data-count={given > 0 ? String(given) : undefined}
+              // Spelled out rather than left to the name computation, which
+              // trims each text node and would run the two together.
+              aria-label={
+                given > 0
+                  ? `${medication} given ${given} ${given === 1 ? 'time' : 'times'}`
+                  : medication
+              }
+              className={cn(
+                'flex min-h-9 items-center justify-center gap-1.5 border px-1 py-1 text-center font-mono text-[11px] font-bold leading-tight',
+                'transition-[background-color,border-color,color] duration-150 motion-reduce:transition-none',
+                'focus:outline-none focus:ring-2 focus:ring-ecg-green',
+                'disabled:cursor-not-allowed disabled:border-neutral-800 disabled:bg-neutral-900/40 disabled:text-neutral-700',
+                'xl:[@media(min-height:800px)]:min-h-11 xl:[@media(min-height:800px)]:text-xs',
+                flashed === medication
+                  ? 'border-ecg-green bg-ecg-green text-black'
+                  : given > 0
+                    ? 'border-ecg-green/60 bg-neutral-900 text-ecg-green enabled:hover:border-ecg-green'
+                    : 'border-neutral-700 bg-neutral-900 text-neutral-300 enabled:hover:border-ecg-green enabled:hover:text-ecg-green',
+              )}
+            >
+              <span className="min-w-0 truncate">{medication}</span>
+              {given > 0 ? (
+                // The tally is the confirmation that outlives the flash: an
+                // instructor who looks away mid-drill still sees how many doses
+                // this run has had. Hidden from the name, which says it in words.
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'grid h-4 min-w-4 shrink-0 place-items-center px-1 text-[10px] font-black tabular-nums',
+                    flashed === medication
+                      ? 'bg-black/20 text-black'
+                      : 'bg-ecg-green/20 text-ecg-green',
+                  )}
+                >
+                  {given}
+                </span>
+              ) : null}
+            </button>
+          )
+        })}
       </div>
 
       {/* Announced rather than only coloured: the flash is the whole

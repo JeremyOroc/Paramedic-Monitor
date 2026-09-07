@@ -897,6 +897,8 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 - [x] **Phase 16 — Instructor-Recorded Actions — CODE COMPLETE, MIGRATION NOT APPLIED (2026-09-07):**
   - [x] Med grid as the middle column of Monitor & Patient SNS: all twelve meds unpaged, derived
         from the monitor's `MED_PAGES` so the console and the monitor cannot drift
+  - [x] Per-med tally of doses given this attempt, counting the whole run rather than only console
+        presses, incremented optimistically and rolled back on a failed write
   - [x] SAMPLE and OPQRST presses logged in both directions, reading as a sentence a debrief quotes
   - [x] Both credited to the trainee and marked `by instructor`, not split into a second stream
   - [x] Host-authenticated `POST /api/session/[code]/instructor-event`; participant scoped to the
@@ -905,7 +907,7 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
         strand a stale id; picker only when there is a choice; disabled with a stated reason
   - [x] SAMPLE/OPQRST answers and Pulse/Respiratory/Skin findings reach the report, stripped from
         the `session_state` the trainee polls and kept only in `session_state_history`
-  - [x] Verified 1,205 tests passing, TypeScript clean, ESLint 0 errors and 12 pre-existing
+  - [x] Verified 1,214 tests passing, TypeScript clean, ESLint 0 errors and 12 pre-existing
         warnings (none in the changed files), production build clean with the new route registered
   - [ ] **Apply `20260908120000_instructor_recorded_actions.sql`** — until it runs, the live
         `student_events_kind_check` rejects `sample_ask` and `opqrst_ask`, so every checklist press

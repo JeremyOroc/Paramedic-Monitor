@@ -20,6 +20,7 @@ function renderRecorder(overrides: Partial<React.ComponentProps<typeof Medicatio
       participantId="p1"
       onParticipantChange={onParticipantChange}
       onRecord={onRecord}
+      counts={{}}
       unavailableReason={null}
       {...overrides}
     />,
@@ -89,6 +90,7 @@ describe('MedicationRecorder', () => {
         participantId="p1"
         onParticipantChange={vi.fn()}
         onRecord={vi.fn()}
+        counts={{}}
         unavailableReason={null}
       />,
     )
@@ -104,6 +106,52 @@ describe('MedicationRecorder', () => {
     const { onParticipantChange } = renderRecorder({ participants, participantId: 'p1' })
     await user.selectOptions(screen.getByLabelText('Credit to'), 'p2')
     expect(onParticipantChange).toHaveBeenCalledExactlyOnceWith('p2')
+  })
+
+  describe('the given tally', () => {
+    it('shows no badge for a med nobody has given', () => {
+      renderRecorder()
+      expect(screen.getByRole('button', { name: 'Nitro' })).not.toHaveAttribute('data-count')
+    })
+
+    it('shows the count and says it out loud', () => {
+      renderRecorder({ counts: { Nitro: 3, Epi: 1 } })
+      expect(screen.getByRole('button', { name: 'Nitro given 3 times' })).toHaveAttribute(
+        'data-count',
+        '3',
+      )
+      // Singular, because "given 1 times" is the sort of thing that ends up in
+      // a debrief screenshot.
+      expect(screen.getByRole('button', { name: 'Epi given 1 time' })).toBeInTheDocument()
+    })
+
+    it('marks a med that has been given so it reads apart from an untouched one', () => {
+      renderRecorder({ counts: { Nitro: 2 } })
+      expect(screen.getByRole('button', { name: 'Nitro given 2 times' })).toHaveClass(
+        'text-ecg-green',
+      )
+      expect(screen.getByRole('button', { name: 'O2' })).toHaveClass('text-neutral-300')
+    })
+
+    it('keeps the tally visible while a press is still lit', async () => {
+      const user = userEvent.setup()
+      renderRecorder({ counts: { Nitro: 2 } })
+      const button = screen.getByRole('button', { name: 'Nitro given 2 times' })
+      await user.click(button)
+      // The flash is transient; the tally is what survives it.
+      expect(button).toHaveClass('bg-ecg-green')
+      expect(button).toHaveAttribute('data-count', '2')
+    })
+
+    it('counts a med the trainee gave on the monitor, not only console presses', () => {
+      // The prop is the run tally, so the instructor sees three Epi whoever
+      // logged them.
+      renderRecorder({ counts: { Epi: 3 } })
+      expect(screen.getByRole('button', { name: 'Epi given 3 times' })).toHaveAttribute(
+        'data-count',
+        '3',
+      )
+    })
   })
 
   it('surfaces a failure instead of leaving the press looking successful', async () => {

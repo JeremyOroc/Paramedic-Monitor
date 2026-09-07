@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
@@ -248,6 +248,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // room and so most of them.
   const [creditedChoice, setCreditedChoice] = useState<string | null>(null)
   const [instructorEventError, setInstructorEventError] = useState('')
+  // Presses the record has not caught up with yet. The roster poll is the
+  // source of truth for the tally, but it is 2.5s behind a press, and a button
+  // whose count moves a beat later reads as a button that did not work.
+  const [pendingMedications, setPendingMedications] = useState<Record<string, number>>({})
 
   const stopSpectating = useCallback((participantId: string) => {
     setSpectatorPresentationMode('docked')
@@ -559,6 +563,59 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       }
     },
     [creditedParticipantId, refreshReview, session],
+  )
+
+  /**
+   * How many times each med has been given this attempt.
+   *
+   * Counts every dose in the run rather than only the ones logged here: a drug
+   * is a drug whether the trainee reached the monitor or the instructor pressed
+   * it for them, and the instructor is watching for "has this patient had three
+   * Epi", not "how many did I type". Scoped to the live attempt from
+   * `studentEvents` rather than `report.events`, which follows the evaluator
+   * into past attempts while this grid always records into the current one.
+   */
+  const medicationCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const event of studentEvents) {
+      if (event.kind !== 'medication') continue
+      if (event.attempt_version !== attemptVersion) continue
+      counts[event.label] = (counts[event.label] ?? 0) + 1
+    }
+    for (const [medication, pending] of Object.entries(pendingMedications)) {
+      counts[medication] = (counts[medication] ?? 0) + pending
+    }
+    return counts
+  }, [attemptVersion, pendingMedications, studentEvents])
+
+  /**
+   * A med press, counted optimistically so the tally moves under the finger.
+   *
+   * The pending entry is released once the write has settled either way --
+   * `recordInstructorAction` refreshes the record before it resolves, so a
+   * success hands straight over to the polled count with no flicker, and a
+   * failure takes the optimistic dose back off rather than leaving a tally
+   * claiming a drug the record never got.
+   */
+  const recordMedication = useCallback(
+    async (medication: string) => {
+      setPendingMedications((current) => ({
+        ...current,
+        [medication]: (current[medication] ?? 0) + 1,
+      }))
+      try {
+        await recordInstructorAction('medication', medication)
+      } finally {
+        setPendingMedications((current) => {
+          const next = { ...current }
+          const remaining = (next[medication] ?? 1) - 1
+          if (remaining > 0) next[medication] = remaining
+          else delete next[medication]
+          return next
+        })
+      }
+    },
+    [recordInstructorAction],
   )
 
   /**
@@ -1282,9 +1339,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             participants={participants}
             participantId={creditedParticipantId}
             onParticipantChange={setCreditedChoice}
-            onRecord={(medication) =>
-              void recordInstructorAction('medication', medication)
-            }
+            onRecord={(medication) => void recordMedication(medication)}
+            counts={medicationCounts}
             unavailableReason={instructorRecordingUnavailable}
             error={instructorEventError}
           />

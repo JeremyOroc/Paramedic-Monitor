@@ -1869,6 +1869,16 @@ and the checklists. It offers all twelve meds from `ALL_MEDICATIONS`, derived fr
 shows two vocabularies for one drill. Flat, not paged: paging exists to fit four soft keys, and the
 console has a column.
 
+Each button carries a running tally of how many times that med has been given this attempt. It counts
+every dose in the run, not only the ones logged here: a drug is a drug whether the trainee reached the
+monitor or the instructor pressed it for them, and the instructor is watching for "has this patient had
+three Epi", not "how many did I type". Derived from the live `studentEvents` rather than
+`report.events`, which follows the evaluator into past attempts while the grid always records into the
+current one, so a New Attempt resets the tally for free. A press counts optimistically and releases
+once the write settles — the poll is 2.5s behind a press, and a count that moves a beat later reads as
+a button that did not work; a failed write takes the optimistic dose back off rather than leaving a
+tally claiming a drug the record never got.
+
 Credit defaults to the room's single trainee and is resolved against the live roster on every render,
 never stored, so a trainee leaving or a New Attempt cannot strand a stale id. A picker appears only
 when there is genuinely a choice. With nobody to credit the grid disables itself and says why; the
@@ -1901,9 +1911,12 @@ degrade to blanks, which is what an old row honestly means.
   warning on an instructor row
 - Component: all twelve meds unpaged, press records, visual and screen-reader confirmation, the
   confirmation moves to the newest press, disabled with a reason and no callback, picker hidden for
-  one trainee, failure surfaced
+  one trainee, failure surfaced, tally absent at zero and singular at one, a given med reads apart
+  from an untouched one, the tally survives the flash
 - Integration: med press posts host-authenticated with the right body, both checklist directions
-  post, an empty room still highlights but logs nothing, the Send carries `instructorOnly`
+  post, an empty room still highlights but logs nothing, the Send carries `instructorOnly`, the tally
+  counts monitor and console doses alike, excludes other attempts, moves under the finger while the
+  write is held open, hands over to the polled count without double counting, and rolls back on failure
 - Report: marker rendered and absent on monitor rows, ask sentences, marker in the copied stream,
   staged history and findings in the opening expansion
 
