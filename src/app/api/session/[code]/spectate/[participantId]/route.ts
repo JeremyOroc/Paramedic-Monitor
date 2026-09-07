@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 
-import { hostTokenFromRequest, jsonError } from '@/server/sessions/http'
-import { getMonitorProjectionForHost } from '@/server/sessions/service'
+import { requireRoomAccount } from '@/server/sessions/access'
+import { jsonError } from '@/server/sessions/http'
+import { getMonitorProjectionForOwner } from '@/server/sessions/service'
 
 type RouteContext = {
   params: Promise<{ code: string; participantId: string }>
@@ -10,9 +11,10 @@ type RouteContext = {
 export async function GET(request: Request, { params }: RouteContext) {
   try {
     const { code, participantId } = await params
-    const result = await getMonitorProjectionForHost(
+    const account = await requireRoomAccount()
+    const result = await getMonitorProjectionForOwner(
       code,
-      hostTokenFromRequest(request),
+      account,
       participantId,
     )
     return NextResponse.json(result)

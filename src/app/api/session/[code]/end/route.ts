@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-import { hostTokenFromRequest, jsonError } from '@/server/sessions/http'
+import { requireRoomAccount } from '@/server/sessions/access'
+import { controllerTokenFromRequest, jsonError } from '@/server/sessions/http'
 import { endSession } from '@/server/sessions/service'
 
 type RouteContext = {
@@ -10,7 +11,8 @@ type RouteContext = {
 export async function POST(request: Request, { params }: RouteContext) {
   try {
     const { code } = await params
-    const session = await endSession(code, hostTokenFromRequest(request))
+    const account = await requireRoomAccount()
+    const session = await endSession(code, account, controllerTokenFromRequest(request))
     return NextResponse.json({ session })
   } catch (error) {
     return jsonError(error)

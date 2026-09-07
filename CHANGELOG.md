@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-09-07] [sessions/auth] — Complete Phase 4 Account-owned Rooms locally
+
+- Replaced public host-token Room creation with authenticated Account ownership. The migration removes
+  legacy temporary Rooms, requires immutable Auth-user owners and 24-hour expiry, enforces one live
+  Room per Account, hides browser-controller hashes behind server routes, and ends live Rooms/current
+  attempts when an Account is disabled.
+- Added authenticated console Room creation, reopen or confirmed end-and-replace handling, clean
+  instructor URLs, browser-local rotating controller tokens, and confirmed same-Account takeover.
+  Secondary devices remain live read-only observers; every mutation rejects the previous controller
+  immediately after takeover. Trainee Room-code-and-nickname joining is unchanged.
+- Protected review and spectator reads by Account ownership, retained read-only roster/report polling,
+  removed legacy host headers/storage from the spectator path, and kept ended Rooms linked back to the
+  authenticated console.
+- Verified a clean migration replay, all 83 pgTAP assertions, Supabase schema lint, 1,180 Vitest tests
+  with one opt-in integration test skipped, TypeScript, ESLint with zero errors and the 12 pre-existing
+  warnings, and the production build. Rendered QA confirmed public Join/Instructor-sign-in only,
+  anonymous console redirect, and no browser console warnings. Production remains unchanged until the
+  application and destructive temporary-Room migration are deployed together.
+
+## [2026-09-07] [sessions] — Start Phase 4 account-owned Room implementation
+
+- Recorded the approved Phase 4 implementation and testing contract: immutable Account ownership,
+  one active Room per Account, controller takeover fencing, 24-hour expiry, disabled-Account cleanup,
+  legacy host-token retirement, and unchanged account-free trainee joining.
+- Created the timestamped `20260907090849_phase_4_account_owned_rooms.sql` migration and began work on
+  the `phase/4-account-owned-rooms` branch. No production migration has been applied.
+
 ## [2026-09-07] [scenarios/ops] — Verify Phase 3 in production
 
 - Merged the Personal/Template ownership branch and deployed

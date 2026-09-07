@@ -78,6 +78,10 @@ export function createSupabaseStub(resolve: Resolver) {
         op.filters.push({ op: 'eq', column, value })
         return builder
       },
+      in(column: string, value: unknown[]) {
+        op.filters.push({ op: 'in', column, value })
+        return builder
+      },
       lt(column: string, value: unknown) {
         op.filters.push({ op: 'lt', column, value })
         return builder

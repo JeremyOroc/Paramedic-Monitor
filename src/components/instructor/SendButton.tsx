@@ -15,9 +15,10 @@ import { cn } from '@/lib/utils'
 
 type SendButtonProps = {
   onSent?: () => Promise<void> | void
+  forceDisabled?: boolean
 }
 
-export function SendButton({ onSent }: SendButtonProps) {
+export function SendButton({ onSent, forceDisabled = false }: SendButtonProps) {
   const saved = useMonitorStore((s) => s.saved)
   const confirmed = useMonitorStore((s) => s.confirmed)
   const savedVitalActive = useMonitorStore((s) => s.savedVitalActive)
@@ -53,7 +54,7 @@ export function SendButton({ onSent }: SendButtonProps) {
           setStatus('error')
         }
       }}
-      disabled={disabled || status === 'sending'}
+      disabled={forceDisabled || disabled || status === 'sending'}
       className={cn(
         'px-4 py-2 border font-mono font-bold uppercase tracking-wider text-sm',
         'border-pending-amber bg-pending-amber text-black hover:brightness-110',

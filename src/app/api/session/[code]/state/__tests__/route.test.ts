@@ -1,8 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getSessionStatus } from '@/server/sessions/service'
+import { requireRoomAccount } from '@/server/sessions/access'
+import { getSessionStatus, updateSessionState } from '@/server/sessions/service'
 
-import { GET } from '../route'
+import { GET, POST } from '../route'
+
+const account = {
+  user_id: 'account-1',
+  username: 'Jeremy',
+  role: 'administrator' as const,
+  status: 'enabled' as const,
+  email: 'jeremy@example.ca',
+}
+
+vi.mock('@/server/sessions/access', () => ({
+  requireRoomAccount: vi.fn(),
+}))
 
 vi.mock('@/server/sessions/service', () => ({
   getSessionStatus: vi.fn(),
@@ -13,6 +26,7 @@ describe('GET /api/session/[code]/state', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-25T16:30:00.000Z'))
+    vi.mocked(requireRoomAccount).mockResolvedValue(account)
   })
 
   afterEach(() => {
@@ -79,5 +93,44 @@ describe('GET /api/session/[code]/state', () => {
 
     expect(getSessionStatus).toHaveBeenNthCalledWith(1, 'ABC123', '', null)
     expect(getSessionStatus).toHaveBeenNthCalledWith(2, 'ABC123', '', null)
+  })
+
+  it('uses the authenticated account and current controller for instructor updates', async () => {
+    vi.mocked(updateSessionState).mockResolvedValue({
+      session: {
+        id: 'session-1',
+        code: 'ABC123',
+        owner_user_id: account.user_id,
+        status: 'active',
+        active_attempt_version: 1,
+        created_at: '2026-08-25T16:00:00.000Z',
+        expires_at: '2026-08-26T16:00:00.000Z',
+      },
+      state: {
+        state: { confirmed: { hr: 80 } },
+        version: 5,
+        updated_at: '2026-08-25T16:30:00.000Z',
+      },
+    })
+
+    const response = await POST(
+      new Request('http://localhost/api/session/ABC123/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-room-controller-token': 'controller-secret',
+        },
+        body: JSON.stringify({ state: { confirmed: { hr: 80 } } }),
+      }),
+      { params: Promise.resolve({ code: 'ABC123' }) },
+    )
+
+    expect(response.status).toBe(200)
+    expect(updateSessionState).toHaveBeenCalledWith(
+      'ABC123',
+      account,
+      'controller-secret',
+      { confirmed: { hr: 80 } },
+    )
   })
 })
