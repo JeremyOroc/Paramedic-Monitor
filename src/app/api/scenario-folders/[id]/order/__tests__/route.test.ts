@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const reorderSavedScenarios = vi.hoisted(() => vi.fn())
+const account = vi.hoisted(() => ({
+  user_id: 'user-1', username: 'Instructor.One', email: 'one@example.test',
+  role: 'instructor' as const, status: 'enabled' as const,
+}))
 
 vi.mock('@/server/scenarios/access', () => ({
-  requireScenarioLibraryAccess: vi.fn(),
+  requireScenarioLibraryAccess: vi.fn().mockResolvedValue(account),
 }))
 vi.mock('@/server/scenarios/service', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/server/scenarios/service')>()),
@@ -41,6 +45,10 @@ describe('scenario folder order route', () => {
         { id: 'one', folder_id: 'general', position: 2 },
       ],
     })
-    expect(reorderSavedScenarios).toHaveBeenCalledWith('general', ['two', 'one'])
+    expect(reorderSavedScenarios).toHaveBeenCalledWith(
+      account,
+      'general',
+      ['two', 'one'],
+    )
   })
 })

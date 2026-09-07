@@ -6,7 +6,7 @@
 ---
 
 ## Current Phase
-**Accounts & scenario ownership — PHASE 2 INVITE HANDOFF CORRECTED (2026-09-06); HOSTED RE-TEST PENDING.**
+**Accounts & scenario ownership — PHASE 3 CODE COMPLETE; PHASE 4 NOT STARTED (2026-09-07).**
 The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
 implemented shared-code self-registration flow. Public registration and its deployment secret are
 removed; verified invited instructors complete a unique username and password in the app
@@ -90,8 +90,20 @@ localhost smoke test returned HTTP 200 for health, invitation-only login, and in
 both retired public registration routes returned HTTP 404. The earlier isolated Auth check proved
 confirmed sign-in, enabled self-read, and immediate RLS denial after disablement; its invite-based
 replacement remains opt-in. Multi-tenancy stays deferred. Phase 3 Personal/Template
-scenario ownership is next. Production health and invitation routing are confirmed; Product operators
-must deploy the handoff correction and repeat one real Dashboard invitation acceptance/login smoke test.
+scenario ownership is code-complete locally. Production health, invitation routing, real Dashboard
+invitation acceptance, and a subsequent username/password sign-in are confirmed; legacy API keys are
+deactivated after those replacement-key checks passed.
+The Phase 3 migration converts the existing library to shared Templates in place, adds immutable
+Auth-ID Personal ownership, enabled-account reads, Administrator-only Template writes, scoped
+ordering, cascade cleanup, explicit Data API grants, and an operator-only content-free Template audit
+log. Scenario APIs now use the caller's cookie-backed Supabase session so RLS is authoritative. The
+console renders fixed My Scenarios and Templates areas, read-only Instructor Template controls,
+Personal-copy saves, and confirmed Administrator shared edits. A clean local migration replay,
+54 pgTAP assertions, schema lint, 1,162 Vitest tests with one opt-in integration test skipped,
+TypeScript, ESLint with zero errors and 12 pre-existing warnings, the production build, and rendered
+Administrator/Instructor browser flows pass. Global local signup remains disabled while the email
+provider stays enabled; invited login returned 200 and anonymous signup returned 422. The migration
+is not deployed to production yet because the matching application branch must be merged first.
 The linked database now reports complete local/remote
 migration parity and a no-op migration dry run; direct verification confirmed both Account tables,
 all three reserved usernames, RLS, the self-read policy, protected client grants, triggers, and private

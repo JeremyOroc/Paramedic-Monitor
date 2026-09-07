@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const reorderScenarioFolders = vi.hoisted(() => vi.fn())
+const account = vi.hoisted(() => ({
+  user_id: 'user-1', username: 'Instructor.One', email: 'one@example.test',
+  role: 'instructor' as const, status: 'enabled' as const,
+}))
 
 vi.mock('@/server/scenarios/access', () => ({
-  requireScenarioLibraryAccess: vi.fn(),
+  requireScenarioLibraryAccess: vi.fn().mockResolvedValue(account),
 }))
 vi.mock('@/server/scenarios/service', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/server/scenarios/service')>()),
@@ -30,7 +34,7 @@ describe('global scenario folder order route', () => {
     ])
     const reordered = await PATCH(new Request('http://localhost/api/scenario-folders/order', {
       method: 'PATCH',
-      body: JSON.stringify({ folderIds: ['two', 'one'] }),
+      body: JSON.stringify({ libraryKind: 'personal', folderIds: ['two', 'one'] }),
     }))
 
     expect(reordered.status).toBe(200)
@@ -40,6 +44,10 @@ describe('global scenario folder order route', () => {
         { id: 'one', name: 'One', position: 2, scenario_count: 1 },
       ],
     })
-    expect(reorderScenarioFolders).toHaveBeenCalledWith(['two', 'one'])
+    expect(reorderScenarioFolders).toHaveBeenCalledWith(
+      account,
+      'personal',
+      ['two', 'one'],
+    )
   })
 })

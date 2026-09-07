@@ -6,16 +6,20 @@ import { reorderScenarioFolders } from '@/server/scenarios/service'
 
 export async function PATCH(request: Request) {
   try {
-    await requireScenarioLibraryAccess(request)
-    const body = await request.json() as { folderIds?: unknown }
+    const account = await requireScenarioLibraryAccess(request)
+    const body = await request.json() as { folderIds?: unknown; libraryKind?: unknown }
     if (
       !Array.isArray(body.folderIds) ||
-      body.folderIds.some((folderId) => typeof folderId !== 'string')
+      body.folderIds.some((folderId) => typeof folderId !== 'string') ||
+      (body.libraryKind !== 'personal' && body.libraryKind !== 'template')
     ) {
-      return NextResponse.json({ error: 'folderIds must be an array of IDs' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'folderIds and a valid libraryKind are required' },
+        { status: 400 },
+      )
     }
     return NextResponse.json({
-      folders: await reorderScenarioFolders(body.folderIds),
+      folders: await reorderScenarioFolders(account, body.libraryKind, body.folderIds),
     })
   } catch (error) {
     return scenarioJsonError(error)

@@ -184,6 +184,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   )
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
   const [loadedScenarioFolderId, setLoadedScenarioFolderId] = useState<string | null>(null)
+  const [loadedScenarioLibraryKind, setLoadedScenarioLibraryKind] =
+    useState<SavedScenario['library_kind'] | null>(null)
+  const [loadedScenarioCanEdit, setLoadedScenarioCanEdit] = useState(false)
   const [scenarioBaseline, setScenarioBaseline] = useState<ScenarioBaseline | null>(null)
   const [scenarioDraftActive, setScenarioDraftActive] = useState(false)
   const [scenarioRefreshVersion, setScenarioRefreshVersion] = useState(0)
@@ -543,6 +546,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setScenarioTitle('')
     setLoadedScenarioId(null)
     setLoadedScenarioFolderId(null)
+    setLoadedScenarioLibraryKind(null)
+    setLoadedScenarioCanEdit(false)
     setScenarioBaseline(null)
     setScenarioDraftActive(false)
     setScenarioError('')
@@ -559,6 +564,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setScenarioTitle('')
     setLoadedScenarioId(null)
     setLoadedScenarioFolderId(null)
+    setLoadedScenarioLibraryKind(null)
+    setLoadedScenarioCanEdit(false)
     setScenarioBaseline(null)
     setScenarioDraftActive(false)
     setScenarioError('')
@@ -582,6 +589,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setScenarioTitle(scenario.title)
     setLoadedScenarioId(scenario.id)
     setLoadedScenarioFolderId(scenario.folder_id)
+    setLoadedScenarioLibraryKind(scenario.library_kind)
+    setLoadedScenarioCanEdit(scenario.can_edit)
     setScenarioBaseline({ title: scenario.title, snapshot: scenario.snapshot })
     setScenarioDraftActive(false)
     setScenarioError('')
@@ -669,24 +678,29 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     })
   }
 
-  const handleSaveScenario = async () => {
+  const persistScenario = async (personalDestinationFolderId?: string | null) => {
     if (saveScenarioDisabled || scenarioAction !== 'idle') return
     setScenarioAction('saving')
     setScenarioError('')
-    const autoCreatingFolder = !loadedScenarioId && !selectedScenarioFolderId
+    const savingCopy = personalDestinationFolderId !== undefined
+    const destinationFolderId = savingCopy
+      ? personalDestinationFolderId
+      : selectedScenarioFolderId || null
+    const updatingExisting = Boolean(loadedScenarioId && !savingCopy)
+    const autoCreatingFolder = !updatingExisting && destinationFolderId === null
     try {
-      const endpoint = loadedScenarioId
+      const endpoint = updatingExisting
         ? `/api/scenarios/${loadedScenarioId}`
         : '/api/scenarios'
       const response = await fetch(endpoint, {
-        method: loadedScenarioId ? 'PATCH' : 'POST',
+        method: updatingExisting ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          loadedScenarioId
+          updatingExisting
             ? { title: scenarioTitle, snapshot: currentScenarioSnapshot }
             : {
-                ...(selectedScenarioFolderId
-                  ? { folderId: selectedScenarioFolderId }
+                ...(destinationFolderId
+                  ? { folderId: destinationFolderId }
                   : { autoCreateFolder: true }),
                 title: scenarioTitle,
                 snapshot: currentScenarioSnapshot,
@@ -706,6 +720,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       setScenarioTitle(scenario.title)
       setLoadedScenarioId(scenario.id)
       setLoadedScenarioFolderId(scenario.folder_id)
+      setLoadedScenarioLibraryKind(scenario.library_kind)
+      setLoadedScenarioCanEdit(scenario.can_edit)
       setSelectedScenarioFolderId(scenario.folder_id)
       setScenarioDraftActive(false)
       if (autoCreatingFolder) {
@@ -718,6 +734,23 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     } finally {
       setScenarioAction('idle')
     }
+  }
+
+  const handleSaveScenario = (personalDestinationFolderId?: string | null) => {
+    if (
+      personalDestinationFolderId === undefined &&
+      loadedScenarioLibraryKind === 'template' &&
+      loadedScenarioCanEdit
+    ) {
+      setScenarioConfirmation({
+        title: 'Update shared Template',
+        description: `Save these changes to "${scenarioTitle.trim() || 'Untitled Scenario'}" for every Account?`,
+        confirmLabel: 'Update Template',
+        onConfirm: () => void persistScenario(),
+      })
+      return
+    }
+    void persistScenario(personalDestinationFolderId)
   }
 
   const deleteScenario = async (scenario: SavedScenarioSummary) => {
@@ -733,6 +766,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       if (loadedScenarioId === scenario.id) {
         setLoadedScenarioId(null)
         setLoadedScenarioFolderId(null)
+        setLoadedScenarioLibraryKind(null)
+        setLoadedScenarioCanEdit(false)
         setSelectedScenarioFolderId(scenario.folder_id)
         setScenarioBaseline(null)
         setScenarioDraftActive(true)
@@ -1176,7 +1211,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             onFolderDeleted={handleScenarioFolderDeleted}
             onLoadedScenarioFolderChange={setLoadedScenarioFolderId}
             onNewScenario={handleNewScenario}
-            onSaveScenario={() => void handleSaveScenario()}
+            onSaveScenario={handleSaveScenario}
             onDeleteScenario={handleDeleteScenario}
             onDeleteDraft={handleDeleteDraft}
             scenarioSelectionDisabled={sessionStatus === 'active'}
