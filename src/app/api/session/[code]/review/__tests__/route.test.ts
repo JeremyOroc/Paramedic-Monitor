@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const account = vi.hoisted(() => ({ user_id: 'account-id' }))
+
+vi.mock('@/server/sessions/access', () => ({
+  requireRoomAccount: vi.fn(async () => account),
+}))
+
 vi.mock('@/server/sessions/http', () => ({
-  hostTokenFromRequest: vi.fn(() => 'host_token'),
+  controllerTokenFromRequest: vi.fn(() => 'controller_token'),
   jsonError: vi.fn((error: Error & { status?: number }) =>
     Response.json({ error: error.message }, { status: error.status ?? 500 }),
   ),
@@ -34,47 +40,47 @@ describe('GET /api/session/[code]/review', () => {
   it('defaults to the active attempt when no attempt is requested', async () => {
     await GET(request(), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', -1, { includeHistory: false })
+    expect(getReview).toHaveBeenCalledWith(CODE, account, -1, { includeHistory: false })
   })
 
   it('passes an explicitly requested attempt through', async () => {
     await GET(request('?attempt=2'), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', 2, { includeHistory: false })
+    expect(getReview).toHaveBeenCalledWith(CODE, account, 2, { includeHistory: false })
   })
 
   it('supports a whole-session export', async () => {
     await GET(request('?attempt=all'), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', 'all', { includeHistory: false })
+    expect(getReview).toHaveBeenCalledWith(CODE, account, 'all', { includeHistory: false })
   })
 
   it('falls back to the active attempt on an unparseable value', async () => {
     // A junk query string must not silently widen the review to every attempt.
     await GET(request('?attempt=banana'), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', -1, { includeHistory: false })
+    expect(getReview).toHaveBeenCalledWith(CODE, account, -1, { includeHistory: false })
   })
 
   it('asks for history only when the console says it is looking at it (PLAN 13f)', async () => {
     await GET(request('?include=history'), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', -1, { includeHistory: true })
+    expect(getReview).toHaveBeenCalledWith(CODE, account, -1, { includeHistory: true })
   })
 
   it('combines an attempt with the history flag', async () => {
     await GET(request('?attempt=2&include=history'), context)
 
-    expect(getReview).toHaveBeenCalledWith(CODE, 'host_token', 2, { includeHistory: true })
+    expect(getReview).toHaveBeenCalledWith(CODE, account, 2, { includeHistory: true })
   })
 
   it('reports service failures with their status', async () => {
     vi.mocked(getReview).mockRejectedValue(
-      Object.assign(new Error('Invalid host token'), { status: 403 }),
+      Object.assign(new Error('Room not found'), { status: 404 }),
     )
 
     const response = await GET(request(), context)
 
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(404)
   })
 })

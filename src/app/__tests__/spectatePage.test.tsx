@@ -14,10 +14,6 @@ vi.mock('@/components/instructor/SpectatorMonitor', () => ({
 describe('SpectatePage', () => {
   beforeEach(() => {
     localStorage.clear()
-    localStorage.setItem(
-      'paramedic-monitor.host.ABC123',
-      JSON.stringify({ hostToken: 'host-token' }),
-    )
   })
 
   afterEach(() => vi.restoreAllMocks())

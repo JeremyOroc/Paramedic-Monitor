@@ -8,6 +8,7 @@ function makeSession(overrides: Partial<SessionRecord> = {}): SessionRecord {
   return {
     id: 'session-id',
     code: 'ABC123',
+    owner_user_id: 'account-id',
     status: 'active',
     active_attempt_version: 1,
     created_at: '2026-07-04T10:00:00.000Z',

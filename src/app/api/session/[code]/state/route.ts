@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 
 import {
-  hostTokenFromRequest,
+  controllerTokenFromRequest,
   jsonError,
   participantTokenFromRequest,
 } from '@/server/sessions/http'
 import { getSessionStatus, updateSessionState } from '@/server/sessions/service'
+import { requireRoomAccount } from '@/server/sessions/access'
 
 type RouteContext = {
   params: Promise<{ code: string }>
@@ -34,9 +35,11 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const { code } = await params
     const body = await request.json() as { state?: unknown }
+    const account = await requireRoomAccount()
     const result = await updateSessionState(
       code,
-      hostTokenFromRequest(request),
+      account,
+      controllerTokenFromRequest(request),
       body.state ?? {},
     )
     return NextResponse.json(result)

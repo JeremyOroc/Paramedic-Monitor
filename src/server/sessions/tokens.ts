@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'crypto'
 
-export type TokenKind = 'host' | 'participant'
+export type TokenKind = 'controller' | 'participant'
 
 export function createSessionToken(kind: TokenKind): string {
   return `${kind}_${randomBytes(24).toString('base64url')}`

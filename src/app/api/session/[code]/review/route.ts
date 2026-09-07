@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-import { hostTokenFromRequest, jsonError } from '@/server/sessions/http'
+import { requireRoomAccount } from '@/server/sessions/access'
+import { jsonError } from '@/server/sessions/http'
 import { getReview } from '@/server/sessions/service'
 
 type RouteContext = {
@@ -21,9 +22,10 @@ export async function GET(request: Request, { params }: RouteContext) {
         : requested === null
           ? -1
           : Number.parseInt(requested, 10)
+    const account = await requireRoomAccount()
     const result = await getReview(
       code,
-      hostTokenFromRequest(request),
+      account,
       attempt === 'all' || Number.isFinite(attempt) ? attempt : -1,
       { includeHistory },
     )
