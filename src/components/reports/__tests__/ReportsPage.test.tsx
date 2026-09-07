@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ReportsPage } from '../ReportsPage'
 
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }))
+
 const SUMMARY = {
   id: '51000000-0000-4000-8000-000000000001',
   source_room_code: 'ABC234',
@@ -53,9 +55,13 @@ describe('ReportsPage', () => {
     render(<ReportsPage />)
 
     expect(await screen.findByText('1 records')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Reports' })).toHaveClass('text-2xl', 'font-bold', 'text-ecg-green')
+    expect(screen.queryByText('Persistent Evaluation records for your Account.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Instructor console')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Console' })).toHaveAttribute('href', '/instructor')
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'Account' })).toHaveAttribute('href', '/instructor/account')
+    expect(screen.getByRole('button', { name: 'Sign Out' })).toBeInTheDocument()
     expect(screen.getByText('Cardiac arrest')).toBeInTheDocument()
     await user.type(screen.getByPlaceholderText('Attempt, scenario, or Student'), 'Alice')
     await user.selectOptions(screen.getByLabelText('Status'), 'incomplete')

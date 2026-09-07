@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-09-07] [ui] — Unify Console, Reports, and Account page shells
+
+- Extended the shared Instructor layout with active-area and title configuration, then moved Reports
+  and Account onto that full-width Console shell. Their former eyebrow and supporting copy are gone;
+  both titles now use the same green size and weight as Instructor Console, and Account is no longer
+  centered in a maximum-width card.
+- Added current-device Sign Out directly below Account in the shared top-right header, including
+  disabled state, redirect/refresh behavior, and visible failure feedback. Console, Reports, Account,
+  and the live Room Console inherit the same action while their existing workflows remain unchanged.
+- Added component regressions for exact copy, shared geometry, active-area state, Sign Out success and
+  failure, and full-width Account content. Verified 1,235 runnable Vitest tests, TypeScript, the
+  production build, and ESLint with zero errors and the 12 existing warnings. Rendered browser QA was
+  unavailable because neither the Browser plugin nor Playwright is installed.
+
+## [2026-09-07] [planning/ui] — Approve consistent authenticated page shell
+
+- Replaced the earlier Phase 6 requirement to preserve distinct responsive content widths with one
+  Console-based full-width shell for the local Console, Reports, and Account pages. The approved
+  refinement also places Sign Out directly below Account in the shared top-right navigation and
+  reduces the Reports and Account headers to titles matching the Instructor Console treatment.
+- Added the matching component test gate before implementation. Live Room Console layout and all
+  existing Reports and Account workflows remain unchanged.
+
 ## [2026-09-07] [operations/security] — Complete Phase 7 launch-readiness tooling locally
 
 - Added an explicit safe-off `MAINTENANCE_MODE` boundary. When enabled, current application pages
