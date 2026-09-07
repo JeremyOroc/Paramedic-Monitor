@@ -1460,7 +1460,7 @@ and Fullscreen modes with clean console logs.
 
 ---
 
-### Next — Accounts & Scenario Ownership (PHASES 1–2 CODE COMPLETE — HOSTED CONFIG/MIGRATIONS UNAPPLIED)
+### Next — Accounts & Scenario Ownership (PHASES 1–2 CODE COMPLETE — DATABASE DEPLOYED; HOSTED AUTH CONFIG PENDING)
 
 The 2026-09-04 requirement change brings accounts and scenario ownership forward. Accounts are for
 instructors and administrators only; trainees continue joining a room with its code and a nickname
@@ -1727,8 +1727,9 @@ row on every protected database decision instead of from user-editable metadata 
 - Keep a migration-contract test in the application suite so the required constraints, indexes,
   grants, helper security, and RLS policies cannot silently disappear.
 - Run the complete Vitest suite, TypeScript, ESLint, and a production build before marking Phase 1
-  complete. The migration remains local until the existing development-project migration-history
-  drift is reviewed; Phase 1 does not mutate the linked project as part of local implementation.
+  complete. The migration was initially held locally while linked-project migration-history drift was
+  reviewed. On 2026-09-06, direct schema inspection verified the two already-present changes, their
+  history was repaired, and the Account migration was deployed and verified.
 
 #### Account implementation Phase 2 — Authentication and Account UI (INVITE-ONLY REVISION CODE COMPLETE 2026-09-05)
 
@@ -1749,8 +1750,9 @@ Room migration in Phase 4.
   recovery, invite callback exchange, password change, current-device sign-out, and protected redirects.
 - Test each client form's pending, success, error, navigation, and accessibility behavior.
 - Exercise the flows against an isolated local Supabase stack with synthetic identities, then run the
-  complete Vitest suite, TypeScript, ESLint, and a production build. Do not apply either Account
-  migration to the linked project until its migration-history drift is reviewed.
+  complete Vitest suite, TypeScript, ESLint, and a production build. The linked-project history review
+  and Account authorization deployment completed on 2026-09-06; hosted Auth configuration and a real
+  Dashboard invitation smoke test remain separate launch gates.
 
 Phase 2's original shared-code self-registration is superseded by the confirmed invitation-only
 revision. Cookie-aware Supabase SSR clients and scoped Proxy refresh retain the server-rendered flow.
@@ -1774,9 +1776,9 @@ implementation baseline and authorized implementation. Phases 1 and 2 are code-c
 the isolated database, pgTAP suite, generated-schema TypeScript additions, Supabase Auth flow, and
 Account UI. The invite-only revision passed 1,146 Vitest tests with one opt-in integration test
 skipped, TypeScript, ESLint with zero errors and the 12 pre-existing warnings, and a production build.
-The Account migration remains unapplied to the linked project pending review of the existing
-migration-history drift, and the hosted Site URL, redirect allow-list, public-signup switch, and real
-invitation smoke test remain operational deployment steps. Phase 3 is next. The previous deferred account note and its
+The linked database now has complete migration parity and the deployed Account authorization objects.
+The hosted Site URL, redirect allow-list, public-signup switch, and real invitation smoke test remain
+operational deployment steps. Phase 3 is next. The previous deferred account note and its
 assumption that the global library would remain
 until an external sale are superseded by this design.
 

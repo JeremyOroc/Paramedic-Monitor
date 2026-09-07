@@ -17,10 +17,10 @@ enabled profile. Existing host-token Rooms remain operational until Phase 4. The
 authorization foundation includes protected profiles keyed by Auth user ID, normalized
 case-insensitive usernames, reserved Administrator names, live enabled/Administrator helpers,
 least-privilege grants, RLS, and 24 executable allow/deny database policy assertions. The Account
-authorization foundation is complete; scenario, Room, and report ownership remain later phases. The migration was
-applied and linted successfully only in an isolated local Supabase stack. It has not been applied to
-the linked project because the remote schema contains later structures whose migration versions are
-not all recorded; that drift must be reviewed before deployment.
+authorization foundation is complete and deployed to the linked Supabase project; scenario, Room,
+and report ownership remain later phases. On 2026-09-06, direct schema inspection proved the trainee
+action-clock and Attempt-name migrations had already been applied manually, their two missing history
+records were repaired, and the Account authorization migration was then applied normally.
 Supabase Auth and a
 single-college boundary are accepted. Only instructors and administrators receive Accounts; trainees
 keep the existing room-code-and-nickname flow. Product operators invite approved instructors through
@@ -54,7 +54,8 @@ existing-session access immediately. Legacy
 host-token Rooms and their reports are deleted at rollout. Disabling an Account ends its Room but
 preserves owned data; deliberate permanent deletion removes its Personal scenarios and Reports while
 Templates remain. Attempt naming is already implemented, currently host-token
-authorized, with its migration unapplied; the account phase will preserve it under Account ownership.
+authorized, with its schema and migration history now aligned; the account phase will preserve it
+under Account ownership.
 Student names remain free-form without inline privacy guidance. Scenario deletion cannot affect live
 Rooms, Personal copies, or report snapshots, and Template mutations receive an operator-only
 Supabase audit log.
@@ -86,8 +87,11 @@ both retired public registration routes returned HTTP 404. The earlier isolated 
 confirmed sign-in, enabled self-read, and immediate RLS denial after disablement; its invite-based
 replacement remains opt-in. Multi-tenancy stays deferred. Phase 3 Personal/Template
 scenario ownership is next. Before hosted use, Product operators must deploy this revision, configure
-the production Auth Site URL/redirect allow-list, disable hosted public signup, reconcile and apply the
-Account migration, and complete one real Dashboard invitation acceptance/login smoke test.
+the production Auth Site URL/redirect allow-list, disable hosted public signup, and complete one real
+Dashboard invitation acceptance/login smoke test. The linked database now reports complete local/remote
+migration parity and a no-op migration dry run; direct verification confirmed both Account tables,
+all three reserved usernames, RLS, the self-read policy, protected client grants, triggers, and private
+authorization helpers. `/api/health` returned HTTP 200 with `database: ok` after deployment.
 
 **Operational health check — CORRECTED (2026-09-05).** `/api/health` now checks the protected
 `sessions` table with the server-only Supabase secret client. It no longer depends on the deliberately

@@ -5,6 +5,22 @@
 
 ---
 
+## [2026-09-06] [database/operations] — Reconcile migration history and deploy Account authorization
+
+- Audited the linked Supabase project before mutation. The trainee action-clock columns and
+  `session_attempts` table already matched their migration files exactly, while their migration-history
+  rows were missing; repaired only versions `20260903120000` and `20260904120000` as applied.
+- Confirmed by dry run that only `20260904200300_phase_1_account_authorization.sql` remained, then
+  applied that additive migration after the user explicitly accepted proceeding without a backup
+  because the project contains disposable test data.
+- Verified complete local/remote migration parity and a no-op final dry run. Direct database checks
+  confirmed both Account tables, `Branden`/`Jeremy`/`Zoid` reservations, RLS, the enabled-self-read
+  policy, denied anonymous/profile mutations, triggers, and private authorization helpers.
+- Supabase advisors reported only informational existing notices plus the expected no-client-policy
+  notice for the protected reserved-name table and the naturally unused new empty-table index.
+  `/api/health` returned HTTP 200 with `database: ok` after deployment. The CLI's separate pg-delta
+  catalog-cache warning did not affect the applied migration or verified remote state.
+
 ## [2026-09-05] [auth/ui] — Complete invite-only Instructor onboarding
 
 - Removed public registration, verification-resend, registration-code UI/API routes, and the
