@@ -1,5 +1,5 @@
-import AdminPage from '@/components/instructor/AdminPage'
+import { redirect } from 'next/navigation'
 
 export default function Page() {
-  return <AdminPage />
+  redirect('/instructor')
 }

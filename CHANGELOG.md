@@ -5,6 +5,233 @@
 
 ---
 
+## [2026-09-07] [merge/instructor] — Integrate draggable Spectator corners
+
+- Resolved the documentation merge by retaining the complete Accounts and production-operations
+  history alongside the Phase 17 draggable-corner planning and implementation records.
+- Kept Accounts Phase 7 as the current project phase and preserved the completed four-corner
+  mini-player behavior in status. No application code changed during conflict resolution.
+- Verified all 1,241 runnable Vitest tests and ESLint with zero errors and the 12 existing warnings;
+  Git reports no unresolved paths and the staged merge diff passes its whitespace check.
+
+## [2026-09-07] [ui] — Unify Console, Reports, and Account page shells
+
+- Extended the shared Instructor layout with active-area and title configuration, then moved Reports
+  and Account onto that full-width Console shell. Their former eyebrow and supporting copy are gone;
+  both titles now use the same green size and weight as Instructor Console, and Account is no longer
+  centered in a maximum-width card.
+- Added current-device Sign Out directly below Account in the shared top-right header, including
+  disabled state, redirect/refresh behavior, and visible failure feedback. Console, Reports, Account,
+  and the live Room Console inherit the same action while their existing workflows remain unchanged.
+- Added component regressions for exact copy, shared geometry, active-area state, Sign Out success and
+  failure, and full-width Account content. Verified 1,235 runnable Vitest tests, TypeScript, the
+  production build, and ESLint with zero errors and the 12 existing warnings. Rendered browser QA was
+  unavailable because neither the Browser plugin nor Playwright is installed.
+
+## [2026-09-07] [planning/ui] — Approve consistent authenticated page shell
+
+- Replaced the earlier Phase 6 requirement to preserve distinct responsive content widths with one
+  Console-based full-width shell for the local Console, Reports, and Account pages. The approved
+  refinement also places Sign Out directly below Account in the shared top-right navigation and
+  reduces the Reports and Account headers to titles matching the Instructor Console treatment.
+- Added the matching component test gate before implementation. Live Room Console layout and all
+  existing Reports and Account workflows remain unchanged.
+
+## [2026-09-07] [operations/security] — Complete Phase 7 launch-readiness tooling locally
+
+- Added an explicit safe-off `MAINTENANCE_MODE` boundary. When enabled, current application pages
+  redirect to a clear non-cacheable maintenance screen, application APIs return sanitized HTTP 503
+  responses with `Retry-After`, and `/api/health` remains available; disabling the flag restores the
+  existing Supabase session-refresh and application paths.
+- Added a nightly/manual GitHub workflow and fail-closed scripts for current Supabase roles/schema/data
+  exports, Auth/ownership verification, checksums, pre-upload `age` encryption, provider-neutral
+  off-site upload, exact 30-daily/12-monthly rotation, two-developer sanitized failure alerts, and a
+  guarded non-production restore rehearsal with content-free evidence and restored-count comparison.
+- Added `20260907194832_phase_7_audit_retention.sql`, which replaces the former unrestricted
+  report-only purge access with one service-only function that refuses cutoffs inside the approved
+  one-year pilot floor and purges both privacy-minimized Account audit stores only after a successful
+  backup.
+- Added operator runbooks for custom Auth SMTP/DNS, backup custody and quarterly recovery, deployment
+  maintenance/forward-fix boundaries, incident/privacy coordination, safe Account offboarding, Free
+  post-break readiness, and the complete classroom release gate. Secrets and backup artifacts remain
+  excluded from source control.
+- Verified a clean migration replay, 128 pgTAP assertions, schema lint with no errors, hosted advisors
+  with no error-level findings, all 1,232 Vitest tests with one opt-in integration test skipped,
+  TypeScript, ESLint with zero errors and the 12 existing warnings, Bash syntax checks, the production
+  build, rendered maintenance behavior, exact maintenance-mode HTTP responses, and restored normal-mode
+  smoke checks. Production remains unchanged; operator-supplied SMTP, backup, alert, privacy-contact,
+  deployment, and acceptance gates are documented for after merge.
+
+## [2026-09-07] [operations] — Start Phase 7 production operations
+
+- Recorded Phase 6 as production-verified after its matching application and Room-grant migration
+  were deployed and all eight health, navigation, compatibility, live-Room, responsive, and cleanup
+  acceptance sections passed.
+- Opened `phase/7-production-operations` from the merged production revision and documented the
+  confirmed final-phase scope: maintenance mode, encrypted whole-project logical backups, guarded
+  restore rehearsals, scheduled off-site retention, SMTP/readiness/incident/offboarding runbooks, and
+  complete release acceptance.
+- Revised the pre-rollout feature-gate default for the already-live system: explicit
+  `MAINTENANCE_MODE=true` enters maintenance, while an unset value preserves the verified production
+  service instead of causing an accidental outage. Added the Phase 7 testing gate; no external
+  credentials or production configuration are committed.
+
+## [2026-09-07] [navigation/sessions] — Complete Phase 6 authenticated navigation locally
+
+- Made `/instructor` the canonical protected Console, retained `/admin` as a compatibility redirect,
+  and added one accessible Console/Reports/Account navigation across the local Console, live Room,
+  Reports, and Account surfaces. Active-page semantics, visible keyboard focus, compact wrapping, and
+  touch-sized targets are covered by component and route tests.
+- Exercised the complete rendered cross-area flow, including Room create/conflict/reopen and live
+  waiting-room access. Corrected narrow-screen overflow in the clinical tabs, scenario library,
+  Vitals, and Patient/SNS controls without changing their desktop layouts.
+- Corrected the Phase 6 start assumption that no migration was needed. Clean-install QA exposed
+  missing service-role DML privileges on four temporary live-Room tables, so
+  `20260907163444_grant_live_room_service_access.sql` now applies exact least-privilege server grants
+  while keeping browser roles out. Added migration-contract and pgTAP regression coverage.
+- Verified a clean migration replay, 120 pgTAP assertions, error-level schema lint, database advisors
+  with no error-level findings, all 1,203 Vitest tests with one opt-in integration test skipped,
+  TypeScript, ESLint with zero errors and the 12 existing warnings, and the production build. The
+  available 319×748 browser passed routing, navigation, Room, compact-overflow, overlay, and console
+  checks; a wider rendered smoke test remains for post-deployment acceptance. Production is unchanged.
+
+## [2026-09-07] [navigation] — Start Phase 6 authenticated Instructor shell
+
+- Recorded the Product operator's Phase 5 merge and report-migration deployment and opened
+  `phase/6-instructor-navigation` from that merged revision.
+- Confirmed `/instructor` as the canonical Console, `/admin` as a backwards-compatible redirect, and
+  one accessible Console/Reports/Account navigation across the local Console, live Room Console,
+  Reports, and Account surfaces without changing Room authorization or report persistence.
+- Added the Phase 6 testing gate for protected/canonical routing, active navigation semantics,
+  regression coverage, full application verification, and rendered desktop/compact cross-area and
+  live-Room browser checks. Phase 6 requires no database migration.
+
+## [2026-09-07] [reports] — Complete Phase 5 persistent Evaluation reports locally
+
+- Added one durable, Account-owned Evaluation report per started Attempt. Database triggers snapshot
+  the scenario and confirmed defibrillator model, backfill pre-start participant/timeline data,
+  autosave subsequent trainee actions and instructor states, synchronize Attempt names, complete on
+  New Attempt, and deliberately leave passive-expiry reports Incomplete. Explicit End Room and Account
+  disablement complete the current report without changing its timeline.
+- Added owner-only report listing and detail APIs with 25-row newest-first pagination, All/Complete/
+  Incomplete filters, Toronto-local date bounds, and search across Attempt, scenario, and Student
+  names. Immutable ownership/snapshots, column-level grants, RLS, manual-only browser completion,
+  Account-deletion cascade, and content-free mutation auditing enforce the persistence boundary.
+- Added the protected Reports UI with metadata editing, repeatable Student names, Toronto timestamps,
+  EST/EDT timeline copying, manual completion, and contextual unrecoverable-deletion confirmation.
+  Account and Reports surfaces link back to the console without introducing the Phase 6 navigation
+  shell early.
+- Verified a clean replay of every migration, 118 pgTAP assertions, error-level Supabase schema lint,
+  all 1,199 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors
+  and the 12 existing warnings, and the Next.js production build. Rendered local QA at 319×748 passed
+  sign-in, list/detail loading, metadata persistence, manual completion, filtering, deletion-dialog,
+  timeline, no-horizontal-overflow, and console-health checks. Production is unchanged.
+
+## [2026-09-07] [reports/sessions] — Start Phase 5 persistent Evaluation reports
+
+- Confirmed Phase 4 in production after the complete owner/controller/trainee acceptance checklist
+  passed, including the provisioned `Jeremy` Administrator flow.
+- Opened `phase/5-persistent-reports` from the merged production revision and recorded the approved
+  implementation contract for Account-owned, per-Attempt Evaluation records, immutable scenario
+  snapshots, autosaved timelines, Student-name metadata, report search/edit/completion/deletion, and
+  privacy-minimized auditing.
+- Added the Phase 5 testing gate covering migration replay, RLS and audit assertions, service/API and
+  component behavior, TypeScript, lint, production build, and rendered report workflows. No production
+  migration has been applied.
+
+## [2026-09-07] [sessions/auth] — Complete Phase 4 Account-owned Rooms locally
+
+- Replaced public host-token Room creation with authenticated Account ownership. The migration removes
+  legacy temporary Rooms, requires immutable Auth-user owners and 24-hour expiry, enforces one live
+  Room per Account, hides browser-controller hashes behind server routes, and ends live Rooms/current
+  attempts when an Account is disabled.
+- Added authenticated console Room creation, reopen or confirmed end-and-replace handling, clean
+  instructor URLs, browser-local rotating controller tokens, and confirmed same-Account takeover.
+  Secondary devices remain live read-only observers; every mutation rejects the previous controller
+  immediately after takeover. Trainee Room-code-and-nickname joining is unchanged.
+- Protected review and spectator reads by Account ownership, retained read-only roster/report polling,
+  removed legacy host headers/storage from the spectator path, and kept ended Rooms linked back to the
+  authenticated console.
+- Verified a clean migration replay, all 83 pgTAP assertions, Supabase schema lint, 1,180 Vitest tests
+  with one opt-in integration test skipped, TypeScript, ESLint with zero errors and the 12 pre-existing
+  warnings, and the production build. Rendered QA confirmed public Join/Instructor-sign-in only,
+  anonymous console redirect, and no browser console warnings. Production remains unchanged until the
+  application and destructive temporary-Room migration are deployed together.
+
+## [2026-09-07] [sessions] — Start Phase 4 account-owned Room implementation
+
+- Recorded the approved Phase 4 implementation and testing contract: immutable Account ownership,
+  one active Room per Account, controller takeover fencing, 24-hour expiry, disabled-Account cleanup,
+  legacy host-token retirement, and unchanged account-free trainee joining.
+- Created the timestamped `20260907090849_phase_4_account_owned_rooms.sql` migration and began work on
+  the `phase/4-account-owned-rooms` branch. No production migration has been applied.
+
+## [2026-09-07] [scenarios/ops] — Verify Phase 3 in production
+
+- Merged the Personal/Template ownership branch and deployed
+  `20260907032643_phase_3_scenario_ownership.sql` with the matching application release.
+- Passed the complete ten-step production smoke test: health, invited Instructor access, fixed
+  Personal and Template areas, read-only Template behavior, independent Personal copying, and
+  sign-out/sign-in persistence all behaved as designed.
+- Deliberately provisioned the existing verified `JeremyTest` Auth identity as the reserved `Jeremy`
+  Administrator by immutable user ID. Production sign-in displayed the Administrator role, and
+  Administrator-only shared Template creation, update confirmation, and cleanup passed.
+- Closed Account implementation Phase 3 in production. Phase 4 account-owned Room authorization is
+  the next implementation phase.
+
+## [2026-09-07] [scenarios/auth] — Complete Personal and Template scenario ownership
+
+- Added the Phase 3 ownership migration. Existing folder/scenario IDs, content, and order become
+  shared Templates in place; Personal folders belong to immutable Auth user IDs and cascade only when
+  their Account is deliberately deleted. Scoped constraints and invoker-security RPCs preserve
+  independent ordering and prevent movement between Personal and Template areas.
+- Replaced the privileged scenario-library data path with the caller's cookie-backed Supabase client.
+  Enabled Accounts can read Templates and only their own Personal library; only Administrators can
+  mutate Templates. Anonymous, disabled, cross-owner, and non-Administrator writes are denied by
+  explicit grants plus RLS. Content-free Template mutation audit rows are inaccessible to app roles.
+- Split the console into fixed My Scenarios and Templates areas. Instructors receive read-only
+  Template controls and save modified Templates as independent Personal copies; Administrators can
+  create Template folders/scenarios and must confirm a shared Template update. The empty Personal
+  virtual Folder 1 remains first-save-only.
+- Corrected local invite-only Auth configuration so global signup remains disabled while the
+  email/password provider stays enabled. Local verification returned 200 for an invited Account login
+  and 422 for an anonymous signup attempt, matching the already-confirmed hosted behavior.
+- Verified every migration replays cleanly, all 54 pgTAP assertions and Supabase schema lint pass,
+  all 1,162 Vitest tests pass with one opt-in integration test skipped, TypeScript passes, ESLint has
+  zero errors and the 12 pre-existing warnings, and the production build passes. Rendered local
+  Administrator and Instructor flows verified Template creation, shared-update confirmation,
+  read-only controls, and Template-to-Personal copying with no browser console warnings or errors.
+  The production migration remains undeployed until this matching application branch is merged.
+
+## [2026-09-06] [auth/ui] — Persist standard Dashboard invitation sessions
+
+- Fixed the standard Supabase Dashboard invitation handoff, whose accepted link returns credentials
+  in the URL fragment while the cookie-aware SSR browser client is configured for PKCE. The handoff
+  now consumes a complete access/refresh token pair and persists it before opening Instructor setup.
+- Removed the credential fragment from the visible URL and browser history before asynchronous Auth
+  work. Partial, provider-error, expired, and non-invited flows retain the generic failure UI, while a
+  previously persisted cookie session remains a supported retry path.
+- Added regressions for fragment persistence, erase-before-persist ordering, malformed/error fragments,
+  cookie-session fallback, non-invited identities, and thrown provider failures. Verified all 1,151
+  Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and the 12
+  pre-existing warnings, the production build, and the rendered invalid-token path in local Chrome.
+
+## [2026-09-06] [database/operations] — Reconcile migration history and deploy Account authorization
+
+- Audited the linked Supabase project before mutation. The trainee action-clock columns and
+  `session_attempts` table already matched their migration files exactly, while their migration-history
+  rows were missing; repaired only versions `20260903120000` and `20260904120000` as applied.
+- Confirmed by dry run that only `20260904200300_phase_1_account_authorization.sql` remained, then
+  applied that additive migration after the user explicitly accepted proceeding without a backup
+  because the project contains disposable test data.
+- Verified complete local/remote migration parity and a no-op final dry run. Direct database checks
+  confirmed both Account tables, `Branden`/`Jeremy`/`Zoid` reservations, RLS, the enabled-self-read
+  policy, denied anonymous/profile mutations, triggers, and private authorization helpers.
+- Supabase advisors reported only informational existing notices plus the expected no-client-policy
+  notice for the protected reserved-name table and the naturally unused new empty-table index.
+  `/api/health` returned HTTP 200 with `database: ok` after deployment. The CLI's separate pg-delta
+  catalog-cache warning did not affect the applied migration or verified remote state.
+
 ## [2026-09-05] [instructor/ui] — Add draggable Floating Spectator corners
 
 - Added an always-visible, keyboard-accessible header grip that moves the Floating Spectator among
@@ -34,6 +261,205 @@
   coordinates; every resting position remains a static stylesheet-defined corner. This localized,
   reversible presentation behavior does not warrant an ADR.
 
+## [2026-09-05] [auth/ui] — Complete invite-only Instructor onboarding
+
+- Removed public registration, verification-resend, registration-code UI/API routes, and the
+  deployment secret. Disabled signup in the checked-in Supabase configuration and added a hosted
+  configuration/runbook that keeps the production switch and real invitation test explicit.
+- Added support for standard Supabase Dashboard invitation links and customized token-hash callbacks.
+  A live verified invite session now reaches a dedicated setup form that sets the password and claims
+  a case-insensitively unique username; ordinary invitees receive only the fixed Instructor role.
+- Preserved pre-provisioned Administrator profiles by immutable Auth user ID, rejected disabled or
+  non-invited identities, kept profile-less partial setup outside product areas, and retained the
+  server-only username-to-email login bridge and generic recovery behavior.
+- Added invite/config/API/service/callback/page/component regressions. Verified 54 focused tests, all
+  1,146 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and
+  the 12 pre-existing warnings, and the webpack production build. A localhost smoke test returned
+  HTTP 200 for health/login/invite handoff, exposed the invitation-only copy, and returned HTTP 404
+  for both removed public registration routes.
+
+## [2026-09-05] [planning/auth] — Replace shared-code registration with invite-only onboarding
+
+- Confirmed that the single-college release admits Accounts only through Product-operator Supabase
+  invitations. Superseded ADR 0013, added ADR 0018, and replaced the Pending Account term with Invited
+  Account.
+- Removed the planned public registration/code boundary. Verified invite recipients will choose a
+  unique username and password in the application, receive only the Instructor role, and remain
+  outside product areas if profile creation has not completed. Reserved Administrator identities and
+  rare role assignment remain manual and immutable-ID based.
+- Marked the Phase 2 invite-only revision in progress before application changes, as required by the
+  project workflow.
+
+## [2026-09-05] [session/operations] — Correct the protected database health check
+
+- Changed `/api/health` to query the protected `sessions` table with the server-only Supabase secret
+  client. Migration 006 intentionally removed the anonymous table grant, so the former publishable-key
+  query returned `permission denied` before RLS could produce the expected empty result.
+- Kept anonymous access closed and added route regressions for successful, degraded, and missing-secret
+  responses. The endpoint reports only coarse database state and never returns or logs the secret.
+- Verified the real local endpoint against the linked Supabase project (HTTP 200, `database: ok`), all
+  1,140 Vitest tests with four workers, TypeScript, ESLint, and the final whitespace check.
+
+## [2026-09-04] [auth/ui] — Complete Supabase authentication and the Account UI
+
+- Added cookie-aware Supabase SSR clients and scoped Next.js Proxy session refresh for Auth and
+  Instructor routes, while retaining server-side live-profile authorization at protected pages and
+  mutations.
+- Added server-mediated Instructor registration with the shared case-sensitive deployment code,
+  case-insensitive username collision/reservation checks, generic email-conflict handling, required
+  verification, and database-authoritative race handling. Partial provisioning deletes the Auth user;
+  failed deletion triggers immediate quarantine and privacy-minimized operator logging.
+- Added username/password sign-in through a private username-to-email bridge, verification resend,
+  non-enumerating password recovery, PKCE/token-hash callback exchange with local redirect validation,
+  password update, and current-device sign-out.
+- Added responsive login, register, check-email, recovery, reset-password, and protected Account
+  pages. The Account page exposes immutable username and verified email, live role, password change,
+  and sign-out. The landing page links to Instructor sign-in while retaining legacy Create Room until
+  the Account-owned Room phase.
+- Added unit and component coverage for validation, provisioning cleanup/quarantine, reserved and
+  duplicate usernames, provider failures, pending and disabled Accounts, generic recovery/resend,
+  callback safety, API origin enforcement, protected redirects, form behavior, password change, and
+  local sign-out. Added an opt-in local Supabase integration test.
+- Verified 1,137 Vitest tests, TypeScript, ESLint with zero errors and the 12 existing warnings, a
+  production build, 24 pgTAP authorization assertions, and a real local Supabase confirmation,
+  sign-in, enabled-read, and disabled-denial flow. The linked project remains unchanged pending its
+  migration-history reconciliation.
+
+## [2026-09-04] [auth/database] — Complete the Account authorization foundation
+
+- Added the protected `account_profiles` table keyed by immutable Supabase Auth user ID, with trimmed
+  3–30-character usernames, stored case-insensitive normalization and uniqueness, constrained
+  Instructor/Administrator roles, constrained enabled/disabled status, timestamps, and cascade cleanup.
+- Reserved `Zoid`, `Branden`, and `Jeremy` in protected database data and enforced that ordinary
+  Instructor profiles cannot claim them. The guard never derives or assigns authority from username
+  text; only a deliberately written Administrator role on an Auth user ID can use a reserved name.
+- Added private invoker-security helpers that evaluate enabled and Administrator status from the live
+  RLS-protected profile instead of Auth metadata or JWT role claims. Authenticated Accounts receive
+  enabled self-read only and cannot insert, update, promote, or delete profiles; anonymous callers
+  receive no profile or helper access.
+- Initialized checked-in local Supabase configuration with the accepted eight-character password
+  minimum and email confirmation requirement. Added a full transactional pgTAP suite plus a Vitest
+  migration-contract test and updated the database TypeScript types.
+- The first pgTAP run exposed a generated-column timing bypass in the reserved-name trigger; changed
+  it to normalize the submitted username directly before considering Phase 1 complete.
+- Verified a clean local replay of every migration, 24 pgTAP policy assertions, public/private schema
+  lint with no errors, all 1,090 Vitest tests, TypeScript, ESLint with zero errors and the 12 existing
+  warnings, and the production build. The Account migration remains unapplied to the linked project
+  until its existing migration-history drift is reviewed.
+
+## [2026-09-04] [planning/auth] — Confirm the account implementation baseline
+
+- Received explicit confirmation of the complete single-college Accounts, scenario ownership, Room,
+  Reports, authorization, privacy, recovery, and rollout contract after eleven decision rounds.
+- Closed the design interview and marked the seven-phase plan implementation-ready.
+- No application or schema code started; implementation still requires a separate request.
+
+## [2026-09-04] [planning/auth] — Close the account-design decision frontier
+
+- Required Free-tier disaster recovery to include application data, Auth identities, and immutable
+  ownership mappings through nightly encrypted off-site backups retaining 30 daily and 12 monthly
+  copies, two-developer failure alerts, and quarterly whole-project restore rehearsals.
+- Added the pre-class Free-tier readiness check after five-day breaks and preserved Pro as the required
+  response when the college cannot accept reactivation dependency or delay.
+- Added a default-off server-side account feature gate plus sanitized email alerts for critical
+  Account-cleanup, backup, migration, and repeated SMTP failures.
+- Accepted the seven-phase schema/auth/scenario/Room/report/UI/operations implementation order, with
+  tests and planning/status/changelog updates in every phase.
+- The decision frontier is closed and awaits final shared-understanding confirmation. No application
+  or schema code started.
+
+## [2026-09-04] [planning/auth] — Define staged account launch and product shell
+
+- Made Supabase Free the development/internal-evaluation starting point while keeping Pro optional;
+  a documented readiness review must prove that independent backups and availability are sufficient
+  before Free may serve scheduled classrooms.
+- Established `/instructor` as the persistent Console/Reports/Account home and kept new Personal
+  libraries empty with the existing virtual `Folder 1` rather than cloning Templates.
+- Set one-year pilot audit retention and split incident work between Product-operator technical
+  response and the college's named privacy contact and notification authority.
+- Required a maintenance-window rollout with backup, ordered migration and provisioning checks,
+  comprehensive acceptance, pre-data rollback, and data-preserving recovery after new Accounts exist.
+- No application or schema code started.
+
+## [2026-09-04] [planning/auth] — Define auth failure and launch-safety behavior
+
+- Added Check-email, resend, verification callback, Pending sign-in, and partial-provisioning cleanup
+  flows; cleanup failures quarantine the Auth identity rather than permitting a profile-less Account.
+- Kept six-character Room codes while removing ambiguous characters, making entry case-insensitive,
+  retrying collisions, and throttling repeated failed public joins.
+- Added contextual permanent-report deletion confirmation and privacy-minimized auditing for report
+  creation and consequential mutations without logging ordinary reads or Student content.
+- Isolated development and production data and prohibited password bypasses during SMTP outages.
+- Selected Supabase Free plus independent logical dumps for initial production instead of managed
+  backups/PITR; the operational backup contract and Free-tier classroom availability risk remain open.
+- No application or schema code started.
+
+## [2026-09-04] [planning/auth] — Close account and report operating edges
+
+- Defined 3–30-character usernames and Pending Accounts that reserve their username until email
+  verification or Product-operator deletion, with resend support and race-safe profile creation.
+- Required disabled Accounts to lose protected access immediately even from previously issued
+  sessions, and limited the first Account page to identity/role display, password change, and Sign out.
+- Fixed Reports at newest-first 25-row pagination with combined search/status/date filters, UTC storage,
+  and Toronto-local display/copy timestamps.
+- Kept Template audit inspection in Supabase rather than adding an Administrator UI, routed student
+  data requests through the college to Product operators, and confirmed manual immutable-ID
+  provisioning for the three initial Administrators.
+- No application or schema code started.
+
+## [2026-09-04] [planning/auth] — Define Room control and production safeguards
+
+- Kept the existing 24-hour Room lifetime and defined explicit controlling-device takeover: the new
+  controller gains mutation authority immediately while the previous browser becomes read-only.
+- Made a protected immutable-ID Account profile the canonical role/status source, backed by
+  least-privilege grants, RLS, server checks, and allow/deny tests rather than usernames, user-editable
+  metadata, or solely cached JWT claims.
+- Accepted free-form Student-name entries without inline privacy guidance, while making the current
+  owner-delete retention behavior provisional until the college approves a production policy.
+- Preserved confirmed cascade deletion for Personal and Template libraries without affecting active
+  Rooms, independent copies, or report snapshots; added a lightweight append-only audit requirement
+  for every Administrator Template mutation.
+- Made custom transactional SMTP and a sending domain prerequisites for external Instructor signup.
+  No application or schema code started.
+
+## [2026-09-04] [planning/auth] — Set credential floor and persistent-data boundaries
+
+- Set passwords to an eight-character minimum with no application composition or rotation rules.
+  Defined the shared Instructor registration code as a high-entropy, case-sensitive, server-configured
+  temporary gate whose rotation affects only future registration.
+- Bounded report Student-name metadata at 100 entries of 100 characters while preserving case and
+  allowing duplicates, and required an immutable report scenario snapshot at Attempt start.
+- Allowed owners to manually complete an abandoned Incomplete record after its Room ends or expires
+  without changing its timeline.
+- Separated reversible Account disablement from deliberate permanent deletion, and chose to remove
+  unowned pre-account Rooms and report data at rollout while migrating only scenarios into Templates.
+- No application or schema code started.
+
+## [2026-09-04] [planning/auth] — Gate registration and define report lifecycle
+
+- Replaced unrestricted Instructor signup with one shared registration code for the single-college
+  release, while keeping Account operations in Supabase and deferring tenants, invitations, CAPTCHA,
+  and custom throttling.
+- Made the existing Attempt label the report name and added an optional repeatable Student-name list
+  that is intentionally independent of trainees' join nicknames.
+- Defined an autosaving Evaluation record from Attempt start, Incomplete until New Attempt or End
+  Room, plus an owner-only Reports area with search, metadata editing, timeline copy, permanent
+  deletion, and retention until the owner deletes it.
+- Accepted persistent Supabase browser sessions, current-device Sign out, and no custom inactivity
+  timeout. Recorded “no password requirements” as no application composition or rotation rules while
+  keeping Supabase's unavoidable minimum length open for explicit confirmation.
+- Superseded ADR 0011 with ADR 0013 and expanded ADR 0012. No application or schema code started.
+
+## [2026-09-04] [merge/planning] — Integrate Attempt Names into account planning
+
+- Merged main's completed Attempt Names feature into the accounts branch and resolved the competing
+  top-of-file changelog additions without discarding either history.
+- Updated the account plan and current status so attempt naming is no longer treated as an unresolved
+  design question. The future Account-owned report flow must preserve its optional 60-character label
+  while replacing current host-token authorization.
+- No feature code changed during conflict resolution. Migration
+  `20260904120000_attempt_names.sql` remains unapplied.
+
 ## [2026-09-04] [instructor/server] — Attempt names
 
 - The instructor can name each attempt. The number stays and is what everything is keyed on; the name sits beside it: the Report tab picker reads `2 · Morning cohort`, the header, the copied text, and the console's status line carry it, and an unnamed attempt shows its number alone.
@@ -41,6 +467,98 @@
 - `PATCH /api/session/[code]/attempt/[version]` with `{ label }`, host token required; trimmed, capped at 60 characters, empty clears. Any attempt in the room can be renamed at any time, including an ended one. `getReview` returns every attempt's name, unfiltered, so the picker lists them all; they ride the existing poll.
 - A text field beside the picker in the Report tab, host only, saves on Enter or blur and only when the name changed. The console applies the response locally so the picker and status line update before the next poll.
 - Added 14 tests. All 1085 tests, TypeScript, ESLint (0 errors, 12 pre-existing warnings), and the production build pass. The migration is not yet applied.
+
+## [2026-09-04] [planning/auth] — Accept open-signup risk and report grouping
+
+- Deferred application CAPTCHA and custom rate limits while recording that a one-college product is
+  not a technical access restriction: any internet user who finds the public deployment can register
+  as an Instructor after email verification. Supabase platform protections remain in force.
+- Kept duplicate-username registration feedback explicit while making duplicate-email failures
+  generic and directing the person toward sign-in or recovery.
+- Defined one persistent Evaluation record per Attempt across all participating trainees.
+- Limited each Account to one active Room and each Room to one controlling device, while allowing the
+  Account to remain signed in elsewhere.
+- Chose to expire legacy host-token Rooms at rollout and retained the split public landing page for
+  account-free trainee joining and Instructor authentication. No application or schema code started.
+
+## [2026-09-04] [planning/auth] — Accept public registration and persistent reports
+
+- Chose public self-registration: any verified email may create an Instructor Account. In-app
+  Administrators do not manage Accounts; Product operators perform account and rare role operations
+  directly through Supabase.
+- Accepted self-service email password recovery without Administrator or operator-selected passwords.
+- Accepted direct Room use of read-only Templates, explicit independent copies into `My Scenarios`,
+  and deliberate Template-edit mode for Administrators.
+- Assigned the entire existing global scenario library to Templates while preserving its folder and
+  scenario structure, order, contents, and identifiers.
+- Kept live Rooms temporary while retaining a persistent Account-owned Evaluation record for every
+  completed Attempt. Added ADRs 0011 and 0012. No application or schema code has started.
+
+## [2026-09-04] [planning/auth] — Accept account roles, ownership, and username sign-in
+
+- Revised the earlier optional-email requirement: Accounts now require verified email underneath
+  Supabase Auth while presenting username/password sign-in through a server-only identity bridge.
+- Fixed the application roles at Instructor and Administrator, with Administrators inheriting all
+  Instructor capabilities; authorization remains tied to immutable authenticated identities.
+- Split the scenario library into owner-only `My Scenarios` and the shared Administrator-maintained
+  `Templates` area, each with its own folders and ordering. Administrators do not ordinarily see
+  another Account's Personal scenarios.
+- Made the creating Account the long-term authority over its Rooms, replacing secret host-token URLs
+  as the permanent Instructor authorization mechanism while keeping trainees account-free.
+- Added ADRs 0009 and 0010. No application or schema code has started.
+
+## [2026-09-04] [planning/auth] — Accept the first account-design decisions
+
+- Selected Supabase Auth for the single-college release and limited Accounts to instructors and
+  Administrators; trainees retain the existing room-code-and-nickname participation flow.
+- Accepted required username/password credentials, optional email, trimmed case-insensitive username
+  uniqueness, preserved display capitalization, and no first-release self-service username changes.
+  Recorded that Supabase password login natively requires email or phone, leaving the safe username
+  mapping and support-assisted recovery mechanics open for the next interview round.
+- Defined `Zoid`, `Branden`, and `Jeremy` as reserved, explicitly provisioned Administrator identities
+  whose authority must never be inferred from username text.
+- Defined Templates as a permanent shared system collection: every Account may read, load, and make a
+  Personal copy, while only Administrators may create, edit, replace, or delete originals.
+- Updated the domain glossary and added ADRs 0007 and 0008. No application or schema code has started.
+
+## [2026-09-04] [planning/domain] — Bound the account release to one college
+
+- Narrowed the active account design to a simple single-college release. Institution records, tenant
+  memberships and switching, college-specific administration, domain-based college enrollment, and
+  per-college SSO are no longer initial implementation requirements.
+- Retained multi-college SaaS only as a future compatibility constraint: the design should preserve a
+  clean expansion seam without paying the cost of speculative multi-tenant infrastructure now.
+- Recomputed the unresolved design interview around the single-college boundary. No application or
+  schema implementation has started.
+
+## [2026-09-04] [planning/auth] — Prefer Supabase provisionally for multi-CEGEP identity
+
+- Recorded Supabase Auth as the provisional provider preference after confirming Canadian project
+  residency, RLS, custom RBAC claims, invitations, and multi-tenant SAML capabilities.
+- Kept the choice unaccepted pending the design interview and buyer requirements. Supabase supplies
+  the security primitives but not a Clerk-like institution product, so membership, roles, invitation
+  workflows, and administration remain application responsibilities. No implementation has started.
+
+## [2026-09-04] [planning/domain] — Reframe account design for a multi-CEGEP SaaS
+
+- Added the intended commercial trajectory to the account design: an initial CEGEP paramedic
+  department with roughly 50–100 students and twelve instructors, followed by additional CEGEPs.
+- Promoted institution membership, tenant isolation, school-domain onboarding, institution roles,
+  lifecycle administration, and possible SAML/OIDC SSO to provider-selection criteria. Kept SSO as
+  a buyer requirement to validate rather than inferring it solely from the use of school emails.
+- Reopened individual-only scenario ownership as an explicit design question. No auth provider,
+  domain model, application code, or schema has been accepted or implemented.
+
+## [2026-09-04] [planning/domain] — Begin accounts and scenario-ownership design
+
+- Brought the deferred account work forward as an active design interview: authenticated accounts,
+  account-owned personal scenarios, a shared `Templates` collection, administrator-only template
+  mutation, the three requested initial administrator usernames, and explicit duplicate-username
+  registration feedback.
+- Recorded the unresolved design frontier in `PLAN.md`, including participant scope, sign-in
+  identifier, secure administrator provisioning, personal-data authority, template-copy behavior,
+  legacy-library migration, tenancy, and the Supabase Auth versus Clerk decision. No application or
+  schema implementation has started, and no glossary or ADR decision has been asserted prematurely.
 
 ## [2026-09-04] [instructor] — Report shows BP only once the trainee reads it
 

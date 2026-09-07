@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 
 import { SpectatorMonitor } from '@/components/instructor/SpectatorMonitor'
@@ -8,44 +7,13 @@ import { useSpectatorProjection } from '@/hooks/useSpectatorProjection'
 import { isConnected } from '@/lib/sessionRoster'
 import { cn } from '@/lib/utils'
 
-function hostStorageKey(code: string) {
-  return `paramedic-monitor.host.${code.toUpperCase()}`
-}
-
 export default function SpectatePage() {
   const params = useParams<{ code: string; participantId: string }>()
   const code = params.code.toUpperCase()
-  const [hostToken, setHostToken] = useState('')
-  const [resolved, setResolved] = useState(false)
   const { data, connectionLost, connecting, now } = useSpectatorProjection({
     code,
-    hostToken,
     participantId: params.participantId,
   })
-
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(hostStorageKey(code))
-      const stored = raw ? (JSON.parse(raw) as { hostToken?: string }) : null
-      setHostToken(stored?.hostToken ?? '')
-    } catch {
-      setHostToken('')
-    }
-    setResolved(true)
-  }, [code])
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  if (!resolved) return <main className="h-screen bg-black" />
-  if (!hostToken) {
-    return (
-      <main className="grid h-screen place-items-center bg-black px-6 text-white">
-        <p className="border border-alarm-red/70 bg-alarm-red/10 p-5 font-mono uppercase text-alarm-red">
-          Instructor access required
-        </p>
-      </main>
-    )
-  }
 
   const envelope = data?.projection ?? null
   const traineeOffline = data ? !isConnected(data.participant.last_seen_at, now) : false

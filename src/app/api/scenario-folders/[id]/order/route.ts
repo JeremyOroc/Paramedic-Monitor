@@ -8,7 +8,7 @@ type RouteContext = { params: Promise<{ id: string }> }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   try {
-    await requireScenarioLibraryAccess(request)
+    const account = await requireScenarioLibraryAccess(request)
     const { id } = await params
     const body = await request.json() as { scenarioIds?: unknown }
     if (
@@ -22,7 +22,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     }
 
     return NextResponse.json({
-      scenarios: await reorderSavedScenarios(id, body.scenarioIds),
+      scenarios: await reorderSavedScenarios(account, id, body.scenarioIds),
     })
   } catch (error) {
     return scenarioJsonError(error)

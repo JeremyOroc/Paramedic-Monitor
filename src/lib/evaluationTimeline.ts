@@ -142,6 +142,8 @@ export type EvaluationTimelineInput = {
   /** Only id and nickname are used, so a roster row from any shape fits. */
   participants: readonly Pick<SessionParticipant, 'id' | 'nickname'>[]
   attemptVersion: number
+  /** Persistent reports use the actual Room transition to active as t+0. */
+  baselineAt?: string
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -667,7 +669,8 @@ export function buildEvaluationTimeline(
     ...history.map((item) => item.at),
   ].sort((a, b) => a - b)[0]
 
-  const baselineMs = attemptStart ?? firstRecorded ?? null
+  const explicitBaseline = parseTime(input.baselineAt)
+  const baselineMs = explicitBaseline ?? attemptStart ?? firstRecorded ?? null
 
   const states = new Map<number, NormalizedState>()
   for (const item of history) {
@@ -750,7 +753,7 @@ export function buildEvaluationTimeline(
       id: event.id,
       offsetMs: baselineMs === null ? 0 : at - baselineMs,
       offset: formatOffset(baselineMs === null ? 0 : at - baselineMs),
-      occurredAt: event.occurred_at,
+      occurredAt: new Date(at).toISOString(),
       context,
       inAlarm: context.kind === 'state' && context.alarms.length > 0,
       eventKind: event.kind,

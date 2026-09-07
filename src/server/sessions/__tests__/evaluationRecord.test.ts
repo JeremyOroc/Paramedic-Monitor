@@ -12,6 +12,7 @@ import {
 
 vi.mock('@/lib/supabase/server', () => ({
   createServiceClient: vi.fn(() => currentStub.client),
+  createAuthenticatedClient: vi.fn(async () => currentStub.client),
 }))
 
 import {
@@ -19,7 +20,7 @@ import {
   REVIEW_EVENT_LIMIT,
   endSession,
   getReview,
-  getMonitorProjectionForHost,
+  getMonitorProjectionForOwner,
   getSessionStatus,
   joinSession,
   publishMonitorProjection,
@@ -31,13 +32,15 @@ import {
   updateSessionState,
 } from '../service'
 
-const HOST_TOKEN = 'host_token'
+const CONTROLLER_TOKEN = 'controller_token'
 const PARTICIPANT_TOKEN = 'participant_token'
 const CODE = 'ABC234'
+const ACCOUNT = { user_id: 'account-id' }
 
 const SESSION = {
   id: 'session-id',
   code: CODE,
+  owner_user_id: ACCOUNT.user_id,
   status: 'active',
   active_attempt_version: 3,
   created_at: '2026-08-27T10:00:00.000Z',
@@ -69,8 +72,8 @@ function baseResolver(overrides: Partial<Record<string, TableResolver>> = {}): R
     switch (op.table) {
       case 'sessions':
         return { data: SESSION }
-      case 'session_hosts':
-        return { data: { token_hash: hashSessionToken(HOST_TOKEN) } }
+      case 'session_controllers':
+        return { data: { token_hash: hashSessionToken(CONTROLLER_TOKEN) } }
       case 'participants':
         return { data: PARTICIPANT }
       case 'participant_attempts':
@@ -182,7 +185,7 @@ describe('latest trainee monitor projection (PLAN 17)', () => {
       }),
     })
 
-    const result = await getMonitorProjectionForHost(CODE, HOST_TOKEN, PARTICIPANT.id)
+    const result = await getMonitorProjectionForOwner(CODE, ACCOUNT, PARTICIPANT.id)
 
     expect(result.participant).toMatchObject({ id: PARTICIPANT.id, nickname: 'Sarah' })
     expect(result.projection).toBeNull()
@@ -198,7 +201,7 @@ describe('updateSessionState — instructor-side history (PLAN 12b)', () => {
           : { data: { version: 7 } },
     })
 
-    await updateSessionState(CODE, HOST_TOKEN, { hr: 40 })
+    await updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, { hr: 40 })
 
     const [history] = stub.opsFor('session_state_history')
     expect(history.method).toBe('insert')
@@ -218,7 +221,7 @@ describe('updateSessionState — instructor-side history (PLAN 12b)', () => {
           : { data: { version: 7 } },
     })
 
-    await updateSessionState(CODE, HOST_TOKEN, {})
+    await updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, {})
 
     const upsert = stub.opsFor('session_state').find((op) => op.method === 'upsert')
     const [history] = stub.opsFor('session_state_history')
@@ -237,7 +240,7 @@ describe('updateSessionState — instructor-side history (PLAN 12b)', () => {
       session_state_history: () => ({ error: { message: 'history down' } }),
     })
 
-    const result = await updateSessionState(CODE, HOST_TOKEN, {})
+    const result = await updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, {})
 
     expect(result.state).toMatchObject({ version: 8 })
     expect(consoleError).toHaveBeenCalled()
@@ -294,7 +297,7 @@ describe('updateSessionState — history stores what was sent, not what the map 
           : { data: { version: 7 } },
     })
 
-    await updateSessionState(CODE, HOST_TOKEN, state)
+    await updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, state)
 
     const upsert = stub.opsFor('session_state').find((op) => op.method === 'upsert')
     const [history] = stub.opsFor('session_state_history')
@@ -584,7 +587,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   it('scopes to the active attempt by default', async () => {
     const stub = reviewResolver([])
 
-    const result = await getReview(CODE, HOST_TOKEN)
+    const result = await getReview(CODE, ACCOUNT)
 
     const events = stub.opsFor('student_events')[0]
     expect(filterValue(events, 'attempt_version')).toBe(SESSION.active_attempt_version)
@@ -594,7 +597,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   it('scopes to an explicitly requested past attempt', async () => {
     const stub = reviewResolver([])
 
-    await getReview(CODE, HOST_TOKEN, 1)
+    await getReview(CODE, ACCOUNT, 1)
 
     expect(filterValue(stub.opsFor('student_events')[0], 'attempt_version')).toBe(1)
   })
@@ -602,7 +605,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   it('drops the attempt filter for a whole-session export', async () => {
     const stub = reviewResolver([])
 
-    const result = await getReview(CODE, HOST_TOKEN, 'all')
+    const result = await getReview(CODE, ACCOUNT, 'all')
 
     expect(filterValue(stub.opsFor('student_events')[0], 'attempt_version')).toBeUndefined()
     expect(result.attemptVersion).toBe('all')
@@ -611,7 +614,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   it('asks for one row beyond the cap so truncation is detectable', async () => {
     const stub = reviewResolver([])
 
-    await getReview(CODE, HOST_TOKEN)
+    await getReview(CODE, ACCOUNT)
 
     expect(stub.opsFor('student_events')[0].limit).toBe(REVIEW_EVENT_LIMIT + 1)
   })
@@ -619,7 +622,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   it('reports truncation and trims to the cap instead of hiding it', async () => {
     reviewResolver(makeEvents(REVIEW_EVENT_LIMIT + 1))
 
-    const result = await getReview(CODE, HOST_TOKEN)
+    const result = await getReview(CODE, ACCOUNT)
 
     expect(result.truncated).toBe(true)
     expect(result.events).toHaveLength(REVIEW_EVENT_LIMIT)
@@ -628,7 +631,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   it('reports a complete record as untruncated', async () => {
     reviewResolver(makeEvents(3))
 
-    const result = await getReview(CODE, HOST_TOKEN)
+    const result = await getReview(CODE, ACCOUNT)
 
     expect(result.truncated).toBe(false)
     expect(result.events).toHaveLength(3)
@@ -637,7 +640,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   it('returns the state history the evaluator joins actions against when asked', async () => {
     reviewResolver([])
 
-    const result = await getReview(CODE, HOST_TOKEN, -1, { includeHistory: true })
+    const result = await getReview(CODE, ACCOUNT, -1, { includeHistory: true })
 
     expect(result.stateHistory).toEqual([{ version: 7, attempt_version: 3, state: {} }])
   })
@@ -647,7 +650,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
     // while the Report tab is open, and each row is a whole sent state.
     const stub = reviewResolver([])
 
-    const result = await getReview(CODE, HOST_TOKEN)
+    const result = await getReview(CODE, ACCOUNT)
 
     expect(stub.opsFor('session_state_history')).toHaveLength(0)
     expect(result.stateHistory).toEqual([])
@@ -656,7 +659,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
   it('still scopes history to the requested attempt when included', async () => {
     const stub = reviewResolver([])
 
-    await getReview(CODE, HOST_TOKEN, 1, { includeHistory: true })
+    await getReview(CODE, ACCOUNT, 1, { includeHistory: true })
 
     expect(filterValue(stub.opsFor('session_state_history')[0], 'attempt_version')).toBe(1)
   })
@@ -686,7 +689,7 @@ describe('getReview — evaluation record assembly (PLAN 12f)', () => {
     })
     currentStub = stub
 
-    await getReview(CODE, HOST_TOKEN, -1, { includeHistory: true })
+    await getReview(CODE, ACCOUNT, -1, { includeHistory: true })
 
     expect(seenAtFirstResolve).toEqual(
       expect.arrayContaining(['participants', 'student_events', 'session_state_history', 'participant_attempts']),
@@ -700,7 +703,7 @@ describe('an ended room is closed to changes', () => {
   it('refuses a Send after End Room', async () => {
     withResolver({ sessions: () => ({ data: ENDED }) })
 
-    await expect(updateSessionState(CODE, HOST_TOKEN, { hr: 40 })).rejects.toMatchObject({ status: 410 })
+    await expect(updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, { hr: 40 })).rejects.toMatchObject({ status: 410 })
     expect(currentStub.opsFor('session_state')).toHaveLength(0)
     expect(currentStub.opsFor('session_state_history')).toHaveLength(0)
   })
@@ -725,7 +728,7 @@ describe('renameAttempt — attempt names', () => {
         op.method === 'upsert' ? { data: { attempt_version: 2, label: 'Morning cohort' } } : undefined,
     })
 
-    const result = await renameAttempt(CODE, HOST_TOKEN, 2, '  Morning   cohort ')
+    const result = await renameAttempt(CODE, ACCOUNT, CONTROLLER_TOKEN, 2, '  Morning   cohort ')
 
     expect(upserted()).toMatchObject({
       session_id: SESSION.id,
@@ -740,25 +743,25 @@ describe('renameAttempt — attempt names', () => {
       session_attempts: (op) => (op.method === 'upsert' ? { data: { attempt_version: 1, label: '' } } : undefined),
     })
 
-    await renameAttempt(CODE, HOST_TOKEN, 1, 'x'.repeat(ATTEMPT_LABEL_MAX + 20))
+    await renameAttempt(CODE, ACCOUNT, CONTROLLER_TOKEN, 1, 'x'.repeat(ATTEMPT_LABEL_MAX + 20))
     expect((upserted()?.label as string).length).toBe(ATTEMPT_LABEL_MAX)
 
-    await renameAttempt(CODE, HOST_TOKEN, 1, '   ')
+    await renameAttempt(CODE, ACCOUNT, CONTROLLER_TOKEN, 1, '   ')
     expect(currentStub.opsFor('session_attempts').at(-1)?.payload?.label).toBe('')
   })
 
   it('rejects an attempt the room has not reached, or a malformed one', async () => {
     withResolver({})
     // SESSION.active_attempt_version is 3.
-    await expect(renameAttempt(CODE, HOST_TOKEN, 4, 'x')).rejects.toMatchObject({ status: 400 })
-    await expect(renameAttempt(CODE, HOST_TOKEN, 0, 'x')).rejects.toMatchObject({ status: 400 })
-    await expect(renameAttempt(CODE, HOST_TOKEN, 1.5, 'x')).rejects.toMatchObject({ status: 400 })
+    await expect(renameAttempt(CODE, ACCOUNT, CONTROLLER_TOKEN, 4, 'x')).rejects.toMatchObject({ status: 400 })
+    await expect(renameAttempt(CODE, ACCOUNT, CONTROLLER_TOKEN, 0, 'x')).rejects.toMatchObject({ status: 400 })
+    await expect(renameAttempt(CODE, ACCOUNT, CONTROLLER_TOKEN, 1.5, 'x')).rejects.toMatchObject({ status: 400 })
     expect(currentStub.opsFor('session_attempts')).toHaveLength(0)
   })
 
-  it('requires the host token', async () => {
+  it('requires the current browser controller token', async () => {
     withResolver({})
-    await expect(renameAttempt(CODE, '', 1, 'x')).rejects.toMatchObject({ status: 401 })
+    await expect(renameAttempt(CODE, ACCOUNT, '', 1, 'x')).rejects.toMatchObject({ status: 409 })
   })
 
   it('returns every attempt name with the review', async () => {
@@ -770,7 +773,7 @@ describe('renameAttempt — attempt names', () => {
       session_attempts: () => ({ data: [{ attempt_version: 1, label: 'Warm-up' }, { attempt_version: 3, label: 'Exam' }] }),
     })
 
-    const result = await getReview(CODE, HOST_TOKEN)
+    const result = await getReview(CODE, ACCOUNT)
 
     expect(result.attemptLabels).toEqual([
       { attempt_version: 1, label: 'Warm-up' },
@@ -790,7 +793,7 @@ describe('attempt completion (PLAN 12f)', () => {
           : { data: SESSION },
     })
 
-    await startNewAttempt(CODE, HOST_TOKEN)
+    await startNewAttempt(CODE, ACCOUNT, CONTROLLER_TOKEN)
 
     const close = stub.opsFor('participant_attempts').find((op) => op.method === 'update')
     expect(close?.payload?.completed_at).toEqual(expect.any(String))
@@ -803,10 +806,14 @@ describe('attempt completion (PLAN 12f)', () => {
         op.method === 'update' ? { data: { ...SESSION, status: 'ended' } } : { data: SESSION },
     })
 
-    await endSession(CODE, HOST_TOKEN)
+    await endSession(CODE, ACCOUNT, CONTROLLER_TOKEN)
 
     const close = stub.opsFor('participant_attempts').find((op) => op.method === 'update')
     expect(close?.payload?.completed_at).toEqual(expect.any(String))
+    expect(stub.opsFor('evaluation_reports')[0]).toMatchObject({
+      method: 'update',
+      payload: { status: 'complete', completion_method: 'room_ended' },
+    })
   })
 
   it('only closes attempts that are still open', async () => {
@@ -815,7 +822,7 @@ describe('attempt completion (PLAN 12f)', () => {
         op.method === 'update' ? { data: { ...SESSION, status: 'ended' } } : { data: SESSION },
     })
 
-    await endSession(CODE, HOST_TOKEN)
+    await endSession(CODE, ACCOUNT, CONTROLLER_TOKEN)
 
     const close = stub.opsFor('participant_attempts').find((op) => op.method === 'update')
     expect(close?.filters).toContainEqual({ op: 'is', column: 'completed_at', value: null })

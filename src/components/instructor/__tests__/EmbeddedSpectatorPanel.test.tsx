@@ -149,7 +149,6 @@ function SpectatorHarness({
   return (
     <EmbeddedSpectatorPanel
       code="ABC123"
-      hostToken="host-token"
       participant={selectedParticipant}
       mode={mode}
       onModeChange={setMode}
@@ -398,7 +397,6 @@ describe('EmbeddedSpectatorPanel', () => {
     render(
       <EmbeddedSpectatorPanel
         code="ABC123"
-        hostToken="host-token"
         participant={null}
         {...modeProps}
       />,
@@ -420,7 +418,7 @@ describe('EmbeddedSpectatorPanel', () => {
       }), { status: 200 }))
 
     const { unmount } = render(
-      <EmbeddedSpectatorPanel code="ABC123" hostToken="host-token" participant={participant} {...modeProps} />,
+      <EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />,
     )
     expect(await screen.findByRole('status')).toHaveTextContent('Waiting for trainee monitor')
     unmount()
@@ -434,11 +432,13 @@ describe('EmbeddedSpectatorPanel', () => {
       projection: null,
     }), { status: 200 }))
     render(
-      <EmbeddedSpectatorPanel code="ABC123" hostToken="host-token" participant={participant} {...modeProps} />,
+      <EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />,
     )
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Trainee offline · No monitor received',
-    )
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Trainee offline · No monitor received',
+      )
+    })
   })
 
   it('contains the full frame in one inert uniformly-scaled canvas', async () => {
@@ -452,7 +452,7 @@ describe('EmbeddedSpectatorPanel', () => {
     }), { status: 200 }))
 
     const { container } = render(
-      <EmbeddedSpectatorPanel code="ABC123" hostToken="host-token" participant={participant} {...modeProps} />,
+      <EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />,
     )
 
     expect(await screen.findByTestId('projected-monitor')).toHaveAttribute('data-embedded', 'true')
@@ -477,7 +477,7 @@ describe('EmbeddedSpectatorPanel', () => {
     }), { status: 200 }))
 
     render(
-      <EmbeddedSpectatorPanel code="ABC123" hostToken="host-token" participant={participant} {...modeProps} />,
+      <EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />,
     )
 
     expect(await screen.findByTestId('projected-monitor')).toBeInTheDocument()

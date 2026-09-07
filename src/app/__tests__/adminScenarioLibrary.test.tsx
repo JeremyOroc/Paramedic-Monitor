@@ -17,6 +17,9 @@ vi.mock('next/navigation', () => ({
 const general = {
   id: 'general',
   name: 'General',
+  library_kind: 'personal' as const,
+  can_edit: true,
+  position: 1,
   scenario_count: 1,
   created_at: '2026-08-18T10:00:00.000Z',
   updated_at: '2026-08-18T10:00:00.000Z',
@@ -40,6 +43,8 @@ function savedScenario(): SavedScenario {
     folder_id: 'general',
     scenario_number: 1,
     title: 'Chest Pain',
+    library_kind: 'personal',
+    can_edit: true,
     position: 1,
     snapshot,
     created_at: '2026-08-18T10:00:00.000Z',
@@ -60,6 +65,8 @@ function scenarioSummary(scenario: SavedScenario) {
     folder_id: scenario.folder_id,
     scenario_number: scenario.scenario_number,
     title: scenario.title,
+    library_kind: scenario.library_kind,
+    can_edit: scenario.can_edit,
     position: scenario.position,
     created_at: scenario.created_at,
     updated_at: scenario.updated_at,
@@ -78,7 +85,9 @@ describe('AdminPage scenario library integration', () => {
     const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
-      if (url === '/api/scenario-folders') return jsonResponse({ folders: [general] })
+      if (url === '/api/scenario-folders') {
+        return jsonResponse({ folders: [general], role: 'instructor' })
+      }
       if (url === '/api/scenarios?folderId=general') {
         return jsonResponse({ scenarios: [scenarioSummary(stored)] })
       }

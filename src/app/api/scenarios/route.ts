@@ -10,12 +10,12 @@ import {
 
 export async function GET(request: Request) {
   try {
-    await requireScenarioLibraryAccess(request)
+    const account = await requireScenarioLibraryAccess(request)
     const folderId = new URL(request.url).searchParams.get('folderId')
     if (!folderId) {
       return NextResponse.json({ error: 'folderId is required' }, { status: 400 })
     }
-    return NextResponse.json({ scenarios: await listSavedScenarios(folderId) })
+    return NextResponse.json({ scenarios: await listSavedScenarios(account, folderId) })
   } catch (error) {
     return scenarioJsonError(error)
   }
@@ -23,7 +23,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await requireScenarioLibraryAccess(request)
+    const account = await requireScenarioLibraryAccess(request)
     const body = await request.json() as {
       folderId?: unknown
       autoCreateFolder?: unknown
@@ -46,6 +46,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         scenario: await createSavedScenario(
+          account,
           selectedFolder ? body.folderId as string : null,
           body.title,
           snapshot,

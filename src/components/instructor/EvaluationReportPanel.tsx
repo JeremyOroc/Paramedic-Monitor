@@ -24,11 +24,15 @@ type EvaluationReportPanelProps = {
   attempts: readonly ParticipantAttempt[]
   participants: readonly Pick<SessionParticipant, 'id' | 'nickname'>[]
   attemptVersion: number
+  /** Persistent report Attempt start; live reviews continue using participant timing. */
+  baselineAt?: string
   onAttemptVersionChange?: (version: number) => void
   /** Instructor-given names by attempt number. The number always shows; the name sits beside it. */
   attemptLabels?: readonly AttemptLabel[]
   /** Present only for the host; the rename field renders when it is. */
   onRenameAttempt?: (version: number, label: string) => void
+  /** Adds an absolute local timestamp and zone abbreviation to copied rows. */
+  copyTimeZone?: string
   truncated?: boolean
 }
 
@@ -104,20 +108,42 @@ function InstructorChangeDetail({ row }: { row: TimelineInstructorRow }) {
 }
 
 /** The stream as plain text, for pasting into a debrief, headed by which attempt it was. */
-function toPlainText(rows: readonly TimelineRow[], showNames: boolean, heading: string): string {
+export function formatTimelineCopyTime(occurredAt: string, timeZone: string): string {
+  const parsed = new Date(occurredAt)
+  if (!Number.isFinite(parsed.getTime())) return occurredAt
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+    timeZoneName: 'short',
+  }).format(parsed)
+}
+
+function toPlainText(
+  rows: readonly TimelineRow[],
+  showNames: boolean,
+  heading: string,
+  timeZone?: string,
+): string {
   const body = rows
     .map((row) => {
+      const when = timeZone ? `${formatTimelineCopyTime(row.occurredAt, timeZone)}\t` : ''
       if (row.kind === 'instructor') {
         const what = row.opening
           ? openingLabel(row.scenarioTitle)
           : row.changes.length > 0
             ? row.changes.join(' · ')
             : 'sent (no change)'
-        return `${row.offset}\tINSTRUCTOR\t${what}\t${contextText(row.context)}`
+        return `${when}${row.offset}\tINSTRUCTOR\t${what}\t${contextText(row.context)}`
       }
       const who = showNames ? `${row.participantName}\t` : ''
       const behind = row.behindBy > 0 ? `\t← ${row.behindBy} behind` : ''
-      return `${row.offset}\t${who}${row.eventKind}\t${row.detail}\t${contextText(row.context)}${behind}`
+      return `${when}${row.offset}\t${who}${row.eventKind}\t${row.detail}\t${contextText(row.context)}${behind}`
     })
     .join('\n')
   return `${heading}\n${body}`
@@ -129,9 +155,11 @@ export function EvaluationReportPanel({
   attempts,
   participants,
   attemptVersion,
+  baselineAt,
   onAttemptVersionChange,
   attemptLabels = [],
   onRenameAttempt,
+  copyTimeZone,
   truncated = false,
 }: EvaluationReportPanelProps) {
   const [copied, setCopied] = useState(false)
@@ -155,8 +183,9 @@ export function EvaluationReportPanel({
         attempts,
         participants,
         attemptVersion,
+        baselineAt,
       }),
-    [attempts, attemptVersion, events, participants, stateHistory],
+    [attempts, attemptVersion, baselineAt, events, participants, stateHistory],
   )
 
   // One trainee per session is the operating assumption, so the name column
@@ -195,7 +224,7 @@ export function EvaluationReportPanel({
 
   const copy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(toPlainText(timeline.rows, showNames, heading))
+      await navigator.clipboard.writeText(toPlainText(timeline.rows, showNames, heading, copyTimeZone))
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -203,7 +232,7 @@ export function EvaluationReportPanel({
       // on screen to read from.
       setCopied(false)
     }
-  }, [heading, showNames, timeline.rows])
+  }, [copyTimeZone, heading, showNames, timeline.rows])
 
   const actionCount = timeline.rows.filter((row) => row.kind === 'action').length
   // Every action resolving to no state is what an unapplied migration 007 looks

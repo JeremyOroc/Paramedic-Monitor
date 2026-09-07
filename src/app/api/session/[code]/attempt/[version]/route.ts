@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-import { hostTokenFromRequest, jsonError } from '@/server/sessions/http'
+import { requireRoomAccount } from '@/server/sessions/access'
+import { controllerTokenFromRequest, jsonError } from '@/server/sessions/http'
 import { renameAttempt } from '@/server/sessions/service'
 
 type RouteContext = {
@@ -13,9 +14,11 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     const { code, version } = await params
     const body = (await request.json().catch(() => ({}))) as { label?: unknown }
     const label = typeof body.label === 'string' ? body.label : ''
+    const account = await requireRoomAccount()
     const result = await renameAttempt(
       code,
-      hostTokenFromRequest(request),
+      account,
+      controllerTokenFromRequest(request),
       Number.parseInt(version, 10),
       label,
     )

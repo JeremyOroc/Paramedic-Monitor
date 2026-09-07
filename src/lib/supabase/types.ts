@@ -5,13 +5,128 @@
 export type Database = {
   public: {
     Tables: {
+      account_profiles: {
+        Row: {
+          user_id: string
+          username: string
+          normalized_username: string
+          role: 'instructor' | 'administrator'
+          status: 'enabled' | 'disabled'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          username: string
+          normalized_username?: never
+          role?: 'instructor' | 'administrator'
+          status?: 'enabled' | 'disabled'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          username?: string
+          normalized_username?: never
+          role?: 'instructor' | 'administrator'
+          status?: 'enabled' | 'disabled'
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reserved_account_usernames: {
+        Row: {
+          username: string
+          normalized_username: string
+          created_at: string
+        }
+        Insert: {
+          username: string
+          normalized_username?: never
+          created_at?: string
+        }
+        Update: {
+          username?: string
+          normalized_username?: never
+          created_at?: string
+        }
+        Relationships: []
+      }
+      evaluation_reports: {
+        Row: {
+          id: string
+          owner_user_id: string
+          source_session_id: string
+          source_room_code: string
+          attempt_version: number
+          attempt_label: string
+          scenario_name: string
+          defibrillator_model: 'wagamiX' | 'wagamiZ' | null
+          scenario_snapshot: unknown
+          participants: unknown
+          participant_attempts: unknown
+          events: unknown
+          state_history: unknown
+          student_names: string[]
+          status: 'incomplete' | 'complete'
+          completion_method: 'attempt_transition' | 'room_ended' | 'manual' | 'account_disabled' | null
+          started_at: string
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          owner_user_id: string
+          source_session_id: string
+          source_room_code: string
+          attempt_version: number
+          attempt_label?: string
+          scenario_name?: string
+          defibrillator_model?: 'wagamiX' | 'wagamiZ' | null
+          scenario_snapshot?: unknown
+          participants?: unknown
+          participant_attempts?: unknown
+          events?: unknown
+          state_history?: unknown
+          student_names?: string[]
+          status?: 'incomplete' | 'complete'
+          completion_method?: 'attempt_transition' | 'room_ended' | 'manual' | 'account_disabled' | null
+          started_at?: string
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['evaluation_reports']['Insert']>
+        Relationships: []
+      }
+      evaluation_report_audit_log: {
+        Row: {
+          id: string
+          report_id: string
+          actor_user_id: string
+          action: 'create' | 'attempt_name_update' | 'student_names_update' | 'manual_completion' | 'delete' | 'product_correction'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          report_id: string
+          actor_user_id: string
+          action: 'create' | 'attempt_name_update' | 'student_names_update' | 'manual_completion' | 'delete' | 'product_correction'
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['evaluation_report_audit_log']['Insert']>
+        Relationships: []
+      }
       sessions: {
         Row: {
           id: string
           code: string
           status: 'waiting' | 'active' | 'ended'
           active_attempt_version: number
-          expires_at: string | null
+          owner_user_id: string
+          expires_at: string
           created_at: string
         }
         Insert: {
@@ -19,7 +134,8 @@ export type Database = {
           code: string
           status?: 'waiting' | 'active' | 'ended'
           active_attempt_version?: number
-          expires_at?: string | null
+          owner_user_id: string
+          expires_at?: string
           created_at?: string
         }
         Update: {
@@ -27,25 +143,26 @@ export type Database = {
           code?: string
           status?: 'waiting' | 'active' | 'ended'
           active_attempt_version?: number
-          expires_at?: string | null
+          owner_user_id?: string
+          expires_at?: string
           created_at?: string
         }
         Relationships: []
       }
-      session_hosts: {
+      session_controllers: {
         Row: {
-          id: string
           session_id: string
           token_hash: string
-          created_at: string
+          claim_version: number
+          claimed_at: string
         }
         Insert: {
-          id?: string
           session_id: string
           token_hash: string
-          created_at?: string
+          claim_version?: number
+          claimed_at?: string
         }
-        Update: Partial<Database['public']['Tables']['session_hosts']['Insert']>
+        Update: Partial<Database['public']['Tables']['session_controllers']['Insert']>
         Relationships: []
       }
       session_state: {
@@ -196,6 +313,8 @@ export type Database = {
         Row: {
           id: string
           name: string
+          library_kind: 'personal' | 'template'
+          owner_user_id: string | null
           position: number
           created_at: string
           updated_at: string
@@ -203,11 +322,43 @@ export type Database = {
         Insert: {
           id?: string
           name: string
+          library_kind?: 'personal' | 'template'
+          owner_user_id?: string | null
           position?: number
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['scenario_folders']['Insert']>
+        Update: {
+          id?: string
+          name?: string
+          library_kind?: 'personal' | 'template'
+          owner_user_id?: string | null
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      template_scenario_audit_log: {
+        Row: {
+          id: string
+          actor_user_id: string
+          action: 'create' | 'update' | 'move' | 'reorder' | 'delete'
+          entity_type: 'folder' | 'scenario'
+          entity_id: string
+          entity_name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          actor_user_id: string
+          action: 'create' | 'update' | 'move' | 'reorder' | 'delete'
+          entity_type: 'folder' | 'scenario'
+          entity_id: string
+          entity_name: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['template_scenario_audit_log']['Insert']>
         Relationships: []
       }
       trainee_monitor_projections: {
@@ -290,9 +441,22 @@ export type Database = {
       }
       reorder_scenario_folders: {
         Args: {
+          library_scope: 'personal' | 'template'
           ordered_folder_ids: string[]
         }
         Returns: Database['public']['Tables']['scenario_folders']['Row'][]
+      }
+      search_evaluation_reports: {
+        Args: {
+          p_owner: string
+          p_status?: 'all' | 'complete' | 'incomplete'
+          p_query?: string
+          p_from?: string | null
+          p_to?: string | null
+          p_offset?: number
+          p_limit?: number
+        }
+        Returns: unknown
       }
     }
     Enums: Record<never, never>

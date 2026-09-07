@@ -4,8 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-import { useMonitorStore } from '@/store/monitorStore'
-
 function participantStorageKey(code: string) {
   return `paramedic-monitor.participant.${code.toUpperCase()}`
 }
@@ -16,24 +14,6 @@ export function SessionLandingPage() {
   const [nickname, setNickname] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-
-  const createRoom = async () => {
-    setBusy(true)
-    setError('')
-    try {
-      const response = await fetch('/api/session/create', { method: 'POST' })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error ?? 'Unable to create room')
-      // The admin console persists across sessions; a new room must start
-      // from a blank drill (no leftover dispatch countdown, vitals, or gate).
-      useMonitorStore.getState().reset()
-      router.push(data.instructorUrl)
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to create room')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const joinRoom = async () => {
     const normalizedCode = code.trim().toUpperCase()
@@ -120,14 +100,12 @@ export function SessionLandingPage() {
               </p>
             )}
             <div className="mt-2 grid gap-3 border-t border-neutral-800 pt-4">
-              <button
-                type="button"
-                onClick={createRoom}
-                disabled={busy}
-                className="border border-neutral-700 bg-black px-5 py-3 font-mono text-xs font-black uppercase tracking-wider text-ecg-green hover:border-ecg-green hover:bg-ecg-green/10 disabled:opacity-50"
+              <Link
+                href="/instructor/login"
+                className="border border-cyan-bp px-5 py-3 text-center font-mono text-xs font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/10"
               >
-                Create Room
-              </button>
+                Instructor sign in
+              </Link>
             </div>
             <Link
               href="/?dev=1"

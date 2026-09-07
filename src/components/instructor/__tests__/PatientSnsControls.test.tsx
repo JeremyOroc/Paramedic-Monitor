@@ -85,7 +85,8 @@ describe('PatientSnsControls', () => {
     })
 
     expect(controls).toHaveClass(
-      'grid-cols-3',
+      'grid-cols-1',
+      'min-[420px]:grid-cols-3',
       'xl:[@media(min-height:800px)]:gap-3',
     )
     expect(screen.getByTestId('pulse-measurement-surface')).toHaveClass(

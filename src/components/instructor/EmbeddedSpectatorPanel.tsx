@@ -28,7 +28,6 @@ type EmbeddedSpectatorParticipant = {
 
 type EmbeddedSpectatorPanelProps = {
   code: string
-  hostToken: string
   participant: EmbeddedSpectatorParticipant | null
   mode: SpectatorPresentationMode
   onModeChange: (mode: SpectatorPresentationMode) => void
@@ -171,7 +170,6 @@ function focusAfterRender(ref: RefObject<HTMLButtonElement | null>) {
 
 export function EmbeddedSpectatorPanel({
   code,
-  hostToken,
   participant,
   mode,
   onModeChange,
@@ -197,7 +195,6 @@ export function EmbeddedSpectatorPanel({
   const [cornerAnnouncement, setCornerAnnouncement] = useState('')
   const { data, connectionLost, connecting, now } = useSpectatorProjection({
     code,
-    hostToken,
     participantId: participant?.id ?? null,
   })
   const fullscreenSupported =

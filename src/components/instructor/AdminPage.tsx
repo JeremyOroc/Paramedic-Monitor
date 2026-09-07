@@ -25,6 +25,7 @@ import {
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
 import { RoomCodeCopy } from '@/components/session/RoomCodeCopy'
+import { RoomLauncher } from '@/components/session/RoomLauncher'
 import {
   CALLER_INFO_AUTO_SORT_FIELDS,
   parseCallerInfoAutoSort,
@@ -93,7 +94,9 @@ const AUTO_SORT_VITAL_FIELDS: ReadonlyArray<NumericVitalField> = [
 type SessionAdminProps = {
   session?: {
     code: string
-    hostToken: string
+    controllerToken: string
+    canControl?: boolean
+    onTakeControl?: () => void
   }
 }
 
@@ -184,6 +187,9 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   )
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
   const [loadedScenarioFolderId, setLoadedScenarioFolderId] = useState<string | null>(null)
+  const [loadedScenarioLibraryKind, setLoadedScenarioLibraryKind] =
+    useState<SavedScenario['library_kind'] | null>(null)
+  const [loadedScenarioCanEdit, setLoadedScenarioCanEdit] = useState(false)
   const [scenarioBaseline, setScenarioBaseline] = useState<ScenarioBaseline | null>(null)
   const [scenarioDraftActive, setScenarioDraftActive] = useState(false)
   const [scenarioRefreshVersion, setScenarioRefreshVersion] = useState(0)
@@ -237,6 +243,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // back is a deliberate, one-off read rather than something polled.
   const [pastReview, setPastReview] = useState<PastReview | null>(null)
   const [sessionError, setSessionError] = useState('')
+  const canControlRoom = session?.canControl ?? true
 
   const stopSpectating = useCallback((participantId: string) => {
     setSpectatorPresentationMode('docked')
@@ -252,7 +259,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     if (!session) return
     const response = await fetch(
       `/api/session/${session.code}/review${includeHistory ? '?include=history' : ''}`,
-      { headers: { 'x-session-host-token': session.hostToken } },
+      { cache: 'no-store' },
     )
     const data = await response.json()
     if (!response.ok) {
@@ -290,7 +297,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const startSession = async () => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     // Re-stamp and push the dispatch clock before opening the room, so trainees
     // arriving on the very first status poll already have travel time measured
     // from now rather than from whenever the call was staged.
@@ -303,7 +310,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     }
     const response = await fetch(`/api/session/${session.code}/start`, {
       method: 'POST',
-      headers: { 'x-session-host-token': session.hostToken },
+      headers: { 'x-room-controller-token': session.controllerToken },
     })
     const data = await response.json()
     if (!response.ok) {
@@ -315,10 +322,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   }
 
   const startNewAttempt = async () => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     const response = await fetch(`/api/session/${session.code}/attempt`, {
       method: 'POST',
-      headers: { 'x-session-host-token': session.hostToken },
+      headers: { 'x-room-controller-token': session.controllerToken },
     })
     const data = await response.json()
     if (!response.ok) {
@@ -339,7 +346,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   }
 
   const endSession = async () => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     // A thrown fetch (offline, a non-JSON 500 from the host) used to reject
     // this handler unhandled: no message, no navigation, the button did
     // nothing. Every failure now says so.
@@ -347,7 +354,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     try {
       const response = await fetch(`/api/session/${session.code}/end`, {
         method: 'POST',
-        headers: { 'x-session-host-token': session.hostToken },
+        headers: { 'x-room-controller-token': session.controllerToken },
       })
       data = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -379,7 +386,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       }
       const response = await fetch(
         `/api/session/${session.code}/review?attempt=${version}&include=history`,
-        { headers: { 'x-session-host-token': session.hostToken } },
+        { cache: 'no-store' },
       )
       const data = await response.json()
       if (!response.ok) {
@@ -404,14 +411,14 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // status line update at once rather than on the next poll.
   const renameAttempt = useCallback(
     async (version: number, label: string) => {
-      if (!session) return
+      if (!session || !canControlRoom) return
       let data: { attempt?: AttemptLabel; error?: string }
       try {
         const response = await fetch(`/api/session/${session.code}/attempt/${version}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-session-host-token': session.hostToken,
+            'x-room-controller-token': session.controllerToken,
           },
           body: JSON.stringify({ label }),
         })
@@ -436,7 +443,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         current ? { ...current, attemptLabels: apply(current.attemptLabels) } : current,
       )
     },
-    [session],
+    [canControlRoom, session],
   )
 
   const report = pastReview ?? {
@@ -452,12 +459,12 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     attemptLabels.find((entry) => entry.attempt_version === attemptVersion)?.label ?? ''
 
   const sendSessionState = useCallback(async () => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     const response = await fetch(`/api/session/${session.code}/state`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-session-host-token': session.hostToken,
+        'x-room-controller-token': session.controllerToken,
       },
       body: JSON.stringify({
         state: {
@@ -470,7 +477,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
-  }, [getSharedState, scenarioTitle, session])
+  }, [canControlRoom, getSharedState, scenarioTitle, session])
 
   // CPR override and full instructor resets bypass Save → Send, so in a
   // session they must push shared state themselves — the Send button stays
@@ -479,7 +486,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
   const immediatePushRef = useRef<{ cprMode: CprMode; resetVersion: number } | null>(null)
   useEffect(() => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     const prev = immediatePushRef.current
     immediatePushRef.current = { cprMode, resetVersion: monitorResetVersion }
     if (!prev) return
@@ -489,7 +496,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         caught instanceof Error ? caught.message : 'Unable to send session state',
       )
     })
-  }, [cprMode, monitorResetVersion, sendSessionState, session])
+  }, [canControlRoom, cprMode, monitorResetVersion, sendSessionState, session])
 
   const currentScenarioSnapshot = createScenarioSnapshot({
     defibrillatorModel: defibrillatorModelDraft,
@@ -543,6 +550,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setScenarioTitle('')
     setLoadedScenarioId(null)
     setLoadedScenarioFolderId(null)
+    setLoadedScenarioLibraryKind(null)
+    setLoadedScenarioCanEdit(false)
     setScenarioBaseline(null)
     setScenarioDraftActive(false)
     setScenarioError('')
@@ -559,6 +568,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setScenarioTitle('')
     setLoadedScenarioId(null)
     setLoadedScenarioFolderId(null)
+    setLoadedScenarioLibraryKind(null)
+    setLoadedScenarioCanEdit(false)
     setScenarioBaseline(null)
     setScenarioDraftActive(false)
     setScenarioError('')
@@ -582,6 +593,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     setScenarioTitle(scenario.title)
     setLoadedScenarioId(scenario.id)
     setLoadedScenarioFolderId(scenario.folder_id)
+    setLoadedScenarioLibraryKind(scenario.library_kind)
+    setLoadedScenarioCanEdit(scenario.can_edit)
     setScenarioBaseline({ title: scenario.title, snapshot: scenario.snapshot })
     setScenarioDraftActive(false)
     setScenarioError('')
@@ -669,24 +682,29 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     })
   }
 
-  const handleSaveScenario = async () => {
+  const persistScenario = async (personalDestinationFolderId?: string | null) => {
     if (saveScenarioDisabled || scenarioAction !== 'idle') return
     setScenarioAction('saving')
     setScenarioError('')
-    const autoCreatingFolder = !loadedScenarioId && !selectedScenarioFolderId
+    const savingCopy = personalDestinationFolderId !== undefined
+    const destinationFolderId = savingCopy
+      ? personalDestinationFolderId
+      : selectedScenarioFolderId || null
+    const updatingExisting = Boolean(loadedScenarioId && !savingCopy)
+    const autoCreatingFolder = !updatingExisting && destinationFolderId === null
     try {
-      const endpoint = loadedScenarioId
+      const endpoint = updatingExisting
         ? `/api/scenarios/${loadedScenarioId}`
         : '/api/scenarios'
       const response = await fetch(endpoint, {
-        method: loadedScenarioId ? 'PATCH' : 'POST',
+        method: updatingExisting ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(
-          loadedScenarioId
+          updatingExisting
             ? { title: scenarioTitle, snapshot: currentScenarioSnapshot }
             : {
-                ...(selectedScenarioFolderId
-                  ? { folderId: selectedScenarioFolderId }
+                ...(destinationFolderId
+                  ? { folderId: destinationFolderId }
                   : { autoCreateFolder: true }),
                 title: scenarioTitle,
                 snapshot: currentScenarioSnapshot,
@@ -706,6 +724,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       setScenarioTitle(scenario.title)
       setLoadedScenarioId(scenario.id)
       setLoadedScenarioFolderId(scenario.folder_id)
+      setLoadedScenarioLibraryKind(scenario.library_kind)
+      setLoadedScenarioCanEdit(scenario.can_edit)
       setSelectedScenarioFolderId(scenario.folder_id)
       setScenarioDraftActive(false)
       if (autoCreatingFolder) {
@@ -718,6 +738,23 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     } finally {
       setScenarioAction('idle')
     }
+  }
+
+  const handleSaveScenario = (personalDestinationFolderId?: string | null) => {
+    if (
+      personalDestinationFolderId === undefined &&
+      loadedScenarioLibraryKind === 'template' &&
+      loadedScenarioCanEdit
+    ) {
+      setScenarioConfirmation({
+        title: 'Update shared Template',
+        description: `Save these changes to "${scenarioTitle.trim() || 'Untitled Scenario'}" for every Account?`,
+        confirmLabel: 'Update Template',
+        onConfirm: () => void persistScenario(),
+      })
+      return
+    }
+    void persistScenario(personalDestinationFolderId)
   }
 
   const deleteScenario = async (scenario: SavedScenarioSummary) => {
@@ -733,6 +770,8 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       if (loadedScenarioId === scenario.id) {
         setLoadedScenarioId(null)
         setLoadedScenarioFolderId(null)
+        setLoadedScenarioLibraryKind(null)
+        setLoadedScenarioCanEdit(false)
         setSelectedScenarioFolderId(scenario.folder_id)
         setScenarioBaseline(null)
         setScenarioDraftActive(true)
@@ -856,6 +895,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
 
   return (
     <InstructorLayout>
+      {!session ? <RoomLauncher /> : null}
       {session && (
         <div className="grid gap-4 lg:grid-cols-2" data-testid="session-overview-grid">
           <section
@@ -877,6 +917,15 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               </p>
             </div>
             <div className="mt-3 flex shrink-0 flex-wrap gap-2">
+              {!canControlRoom && sessionStatus !== 'ended' ? (
+                <button
+                  type="button"
+                  onClick={session.onTakeControl}
+                  className="border border-cyan-bp bg-cyan-bp/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp hover:text-black"
+                >
+                  Take control
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={startSession}
@@ -890,6 +939,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                 disabled={
                   sessionStatus === 'active' ||
                   sessionStatus === 'ended' ||
+                  !canControlRoom ||
                   !dispatchArmed ||
                   !defibrillatorModelReady
                 }
@@ -900,7 +950,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               <button
                 type="button"
                 onClick={startNewAttempt}
-                disabled={sessionStatus !== 'active'}
+                disabled={sessionStatus !== 'active' || !canControlRoom}
                 className="border border-pending-amber bg-pending-amber/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-pending-amber hover:bg-pending-amber hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
               >
                 New Attempt
@@ -908,7 +958,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               <button
                 type="button"
                 onClick={endSession}
-                disabled={sessionStatus === 'ended'}
+                disabled={sessionStatus === 'ended' || !canControlRoom}
                 className="border border-alarm-red bg-alarm-red/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
               >
                 End Room
@@ -932,7 +982,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                 </p>
                 <button
                   type="button"
-                  onClick={() => router.replace('/')}
+                  onClick={() => router.replace('/instructor')}
                   className="border border-neutral-700 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-cyan-bp hover:text-cyan-bp"
                 >
                   Create a new room
@@ -1020,7 +1070,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           </section>
           <EmbeddedSpectatorPanel
             code={session.code}
-            hostToken={session.hostToken}
             mode={spectatorPresentationMode}
             onModeChange={setSpectatorPresentationMode}
             onStopSpectating={() => {
@@ -1034,10 +1083,13 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       )}
       <div className="flex items-center gap-3" data-testid="admin-save-send-actions">
         <SaveButton />
-        <SendButton onSent={session ? sendSessionState : undefined} />
+        <SendButton
+          onSent={session ? sendSessionState : undefined}
+          forceDisabled={Boolean(session && !canControlRoom)}
+        />
       </div>
       <div
-        className="grid grid-cols-5 border border-neutral-800 bg-neutral-950 p-1"
+        className="grid grid-cols-2 border border-neutral-800 bg-neutral-950 p-1 sm:grid-cols-3 lg:grid-cols-5"
         data-testid="admin-tab-list"
       >
         <button
@@ -1045,7 +1097,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('scenarios')}
           aria-pressed={tab === 'scenarios'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'scenarios'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1058,7 +1110,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('monitor')}
           aria-pressed={tab === 'monitor'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'monitor'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1071,7 +1123,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('physical')}
           aria-pressed={tab === 'physical'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'physical'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1084,7 +1136,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('defibrillators')}
           aria-pressed={tab === 'defibrillators'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'defibrillators'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1097,7 +1149,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('report')}
           aria-pressed={tab === 'report'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'report'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1176,7 +1228,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             onFolderDeleted={handleScenarioFolderDeleted}
             onLoadedScenarioFolderChange={setLoadedScenarioFolderId}
             onNewScenario={handleNewScenario}
-            onSaveScenario={() => void handleSaveScenario()}
+            onSaveScenario={handleSaveScenario}
             onDeleteScenario={handleDeleteScenario}
             onDeleteDraft={handleDeleteDraft}
             scenarioSelectionDisabled={sessionStatus === 'active'}

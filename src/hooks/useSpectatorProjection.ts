@@ -25,20 +25,18 @@ type TaggedSpectatorState = {
 
 type UseSpectatorProjectionOptions = {
   code: string
-  hostToken: string
   participantId: string | null
 }
 
 export function useSpectatorProjection({
   code,
-  hostToken,
   participantId,
 }: UseSpectatorProjectionOptions) {
   const [state, setState] = useState<TaggedSpectatorState | null>(null)
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
-    if (!participantId || !hostToken) return
+    if (!participantId) return
 
     const controller = new AbortController()
     let timer: ReturnType<typeof setTimeout> | null = null
@@ -47,11 +45,7 @@ export function useSpectatorProjection({
       try {
         const response = await fetch(
           `/api/session/${code}/spectate/${participantId}`,
-          {
-            headers: { 'x-session-host-token': hostToken },
-            cache: 'no-store',
-            signal: controller.signal,
-          },
+          { cache: 'no-store', signal: controller.signal },
         )
         if (!response.ok) throw new Error('Spectator request failed')
         const data = (await response.json()) as SpectateResponse
@@ -77,7 +71,7 @@ export function useSpectatorProjection({
       controller.abort()
       if (timer) clearTimeout(timer)
     }
-  }, [code, hostToken, participantId])
+  }, [code, participantId])
 
   useEffect(() => {
     if (!participantId) return
@@ -90,7 +84,7 @@ export function useSpectatorProjection({
   return {
     data: current?.data ?? null,
     connectionLost: current?.connectionLost ?? false,
-    connecting: Boolean(participantId && hostToken && current === null),
+    connecting: Boolean(participantId && current === null),
     now,
   }
 }

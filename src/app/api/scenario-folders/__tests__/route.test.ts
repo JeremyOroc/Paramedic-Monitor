@@ -6,9 +6,16 @@ const scenarioService = vi.hoisted(() => ({
   renameScenarioFolder: vi.fn(),
   deleteScenarioFolder: vi.fn(),
 }))
+const account = vi.hoisted(() => ({
+  user_id: 'user-1',
+  username: 'Instructor.One',
+  email: 'one@example.test',
+  role: 'instructor' as const,
+  status: 'enabled' as const,
+}))
 
 vi.mock('@/server/scenarios/access', () => ({
-  requireScenarioLibraryAccess: vi.fn(),
+  requireScenarioLibraryAccess: vi.fn().mockResolvedValue(account),
 }))
 vi.mock('@/server/scenarios/service', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/server/scenarios/service')>()),
@@ -30,12 +37,19 @@ describe('scenario folder routes', () => {
     const list = await GET(new Request('http://localhost/api/scenario-folders'))
     const create = await POST(new Request('http://localhost/api/scenario-folders', {
       method: 'POST',
-      body: JSON.stringify({ name: ' Cardiac ' }),
+      body: JSON.stringify({ name: ' Cardiac ', libraryKind: 'personal' }),
     }))
 
-    expect(await list.json()).toEqual({ folders: [{ id: 'general', name: 'General' }] })
+    expect(await list.json()).toEqual({
+      folders: [{ id: 'general', name: 'General' }],
+      role: 'instructor',
+    })
     expect(create.status).toBe(201)
-    expect(scenarioService.createScenarioFolder).toHaveBeenCalledWith(' Cardiac ')
+    expect(scenarioService.createScenarioFolder).toHaveBeenCalledWith(
+      account,
+      ' Cardiac ',
+      'personal',
+    )
   })
 
   it('validates names and routes rename/delete operations', async () => {
@@ -58,6 +72,11 @@ describe('scenario folder routes', () => {
     )
 
     expect(await renamed.json()).toEqual({ folder: { id: 'trauma', name: 'Major Trauma' } })
+    expect(scenarioService.renameScenarioFolder).toHaveBeenCalledWith(
+      account,
+      'trauma',
+      'Major Trauma',
+    )
     expect(deleted.status).toBe(204)
     expect(scenarioService.deleteScenarioFolder).toHaveBeenCalledWith('trauma')
   })

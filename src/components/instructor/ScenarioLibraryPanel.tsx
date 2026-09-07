@@ -36,13 +36,14 @@ type ScenarioLibraryPanelProps = {
   onFolderDeleted: (folderId: string) => void
   onLoadedScenarioFolderChange: (folderId: string) => void
   onNewScenario: () => void
-  onSaveScenario: () => void
+  onSaveScenario: (personalDestinationFolderId?: string | null) => void
   onDeleteScenario: (scenario: SavedScenarioSummary) => void
   onDeleteDraft: () => void
   scenarioSelectionDisabled?: boolean
 }
 
 type MutationStatus = 'idle' | 'working'
+type LibraryKind = ScenarioFolder['library_kind']
 type DropTarget = { scenarioId: string; edge: 'before' | 'after' }
 type FolderDropTarget = { folderId: string; edge: 'before' | 'after' }
 
@@ -119,6 +120,7 @@ type ScenarioRowActionsProps = {
   deleteDisabled: boolean
   saving: boolean
   deleting: boolean
+  saveLabel?: string
   onSave: () => void
   onDelete: () => void
 }
@@ -129,6 +131,7 @@ function ScenarioRowActions({
   deleteDisabled,
   saving,
   deleting,
+  saveLabel = 'Save',
   onSave,
   onDelete,
 }: ScenarioRowActionsProps) {
@@ -145,7 +148,7 @@ function ScenarioRowActions({
         disabled={saveDisabled}
         className="border border-ecg-green bg-neutral-900 px-3 py-2 font-mono text-[10px] font-bold uppercase text-ecg-green hover:bg-ecg-green/10 focus:outline-none focus:ring-2 focus:ring-ecg-green disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
       >
-        {saving ? 'Saving' : 'Save'}
+        {saving ? 'Saving' : saveLabel}
       </button>
       <button
         type="button"
@@ -237,12 +240,14 @@ export function ScenarioLibraryPanel({
   scenarioSelectionDisabled = false,
 }: ScenarioLibraryPanelProps) {
   const [folders, setFolders] = useState<ScenarioFolder[]>([])
+  const [role, setRole] = useState<'instructor' | 'administrator'>('instructor')
   const [scenariosByFolderId, setScenariosByFolderId] = useState<
     Record<string, SavedScenarioListResponse['scenarios']>
   >({})
   const [loadingFolderIds, setLoadingFolderIds] = useState<Set<string>>(() => new Set())
   const [newFolderName, setNewFolderName] = useState('')
   const [creatingFolder, setCreatingFolder] = useState(false)
+  const [newFolderLibraryKind, setNewFolderLibraryKind] = useState<LibraryKind>('personal')
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [status, setStatus] = useState<MutationStatus>('idle')
@@ -255,8 +260,13 @@ export function ScenarioLibraryPanel({
   const loadFolders = useCallback(async () => {
     const data = await requestJson<ScenarioFolderListResponse>('/api/scenario-folders')
     setFolders(data.folders)
+    setRole(data.role)
     const selectedExists = data.folders.some((folder) => folder.id === selectedFolderId)
-    if (!selectedExists) onSelectedFolderChange(data.folders[0]?.id ?? '')
+    if (!selectedExists) {
+      onSelectedFolderChange(
+        data.folders.find((folder) => folder.library_kind === 'personal')?.id ?? '',
+      )
+    }
     return data.folders
   }, [onSelectedFolderChange, selectedFolderId])
 
@@ -335,7 +345,10 @@ export function ScenarioLibraryPanel({
       const data = await requestJson<{ folder: ScenarioFolder }>('/api/scenario-folders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newFolderName }),
+        body: JSON.stringify({
+          name: newFolderName,
+          libraryKind: newFolderLibraryKind,
+        }),
       })
       setNewFolderName('')
       setCreatingFolder(false)
@@ -371,7 +384,9 @@ export function ScenarioLibraryPanel({
       })
       const remainingFolders = await loadFolders()
       if (selectedFolderId === folder.id) {
-        onSelectedFolderChange(remainingFolders[0]?.id ?? '')
+        onSelectedFolderChange(
+          remainingFolders.find((candidate) => candidate.library_kind === 'personal')?.id ?? '',
+        )
       }
     })
   }
@@ -448,10 +463,17 @@ export function ScenarioLibraryPanel({
   }
 
   const persistFolderOrder = async (
+    libraryKind: LibraryKind,
     previous: ScenarioFolder[],
     next: ScenarioFolder[],
   ) => {
-    setFolders(next)
+    const mergeScope = (scoped: ScenarioFolder[]) => {
+      const otherScope = folders.filter((folder) => folder.library_kind !== libraryKind)
+      return libraryKind === 'personal'
+        ? [...scoped, ...otherScope]
+        : [...otherScope, ...scoped]
+    }
+    setFolders(mergeScope(next))
     setStatus('working')
     setError('')
     try {
@@ -460,12 +482,15 @@ export function ScenarioLibraryPanel({
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ folderIds: next.map((folder) => folder.id) }),
+          body: JSON.stringify({
+            libraryKind,
+            folderIds: next.map((folder) => folder.id),
+          }),
         },
       )
-      setFolders(data.folders)
+      setFolders(mergeScope(data.folders))
     } catch (caught) {
-      setFolders(previous)
+      setFolders(mergeScope(previous))
       setError(caught instanceof Error ? caught.message : 'Unable to reorder folders')
     } finally {
       setStatus('idle')
@@ -474,16 +499,44 @@ export function ScenarioLibraryPanel({
 
   const moveFolderBy = (folderId: string, delta: -1 | 1) => {
     if (controlsDisabled) return
-    const currentIndex = folders.findIndex((folder) => folder.id === folderId)
-    const target = folders[currentIndex + delta]
+    const folder = folders.find((candidate) => candidate.id === folderId)
+    if (!folder?.can_edit) return
+    const scopedFolders = folders.filter(
+      (candidate) => candidate.library_kind === folder.library_kind,
+    )
+    const currentIndex = scopedFolders.findIndex((candidate) => candidate.id === folderId)
+    const target = scopedFolders[currentIndex + delta]
     if (currentIndex < 0 || !target) return
     const next = reorderFolderList(
-      folders,
+      scopedFolders,
       folderId,
       target.id,
       delta < 0 ? 'before' : 'after',
     )
-    void persistFolderOrder(folders, next)
+    void persistFolderOrder(folder.library_kind, scopedFolders, next)
+  }
+
+  const startNewScenario = () => {
+    const personalFolder = folders.find((folder) => folder.library_kind === 'personal')
+    onSelectedFolderChange(personalFolder?.id ?? '')
+    if (personalFolder) onExpandedFolderChange(personalFolder.id, true)
+    onNewScenario()
+  }
+
+  const startNewTemplateScenario = () => {
+    const selectedTemplate = folders.find(
+      (folder) => folder.id === selectedFolderId && folder.library_kind === 'template',
+    )
+    const templateFolder = selectedTemplate ?? folders.find(
+      (folder) => folder.library_kind === 'template',
+    )
+    if (!templateFolder) {
+      setError('Create a Template folder before creating a Template scenario')
+      return
+    }
+    onSelectedFolderChange(templateFolder.id)
+    onExpandedFolderChange(templateFolder.id, true)
+    onNewScenario()
   }
 
   const loadScenario = async (scenarioId: string) => {
@@ -522,8 +575,20 @@ export function ScenarioLibraryPanel({
         ? folderDropTarget.edge
         : 'before'
       setFolderDropTarget(null)
-      const next = reorderFolderList(folders, draggedFolderId, folderId, edge)
-      if (next !== folders) void persistFolderOrder(folders, next)
+      const targetFolder = folders.find((candidate) => candidate.id === folderId)
+      const draggedFolder = folders.find((candidate) => candidate.id === draggedFolderId)
+      if (
+        !targetFolder?.can_edit ||
+        !draggedFolder?.can_edit ||
+        targetFolder.library_kind !== draggedFolder.library_kind
+      ) return
+      const scopedFolders = folders.filter(
+        (candidate) => candidate.library_kind === targetFolder.library_kind,
+      )
+      const next = reorderFolderList(scopedFolders, draggedFolderId, folderId, edge)
+      if (next !== scopedFolders) {
+        void persistFolderOrder(targetFolder.library_kind, scopedFolders, next)
+      }
       return
     }
     const scenarioId = event.dataTransfer.getData('text/scenario-id')
@@ -531,16 +596,25 @@ export function ScenarioLibraryPanel({
       (scenariosByFolderId[expandedFolderId] ?? [])
         .some((scenario) => scenario.id === scenarioId),
     )
-    if (scenarioId && sourceFolderId) {
+    const sourceFolder = folders.find((candidate) => candidate.id === sourceFolderId)
+    const targetFolder = folders.find((candidate) => candidate.id === folderId)
+    if (
+      scenarioId &&
+      sourceFolderId &&
+      sourceFolder?.can_edit &&
+      targetFolder?.can_edit &&
+      sourceFolder.library_kind === targetFolder.library_kind
+    ) {
       void moveScenario(scenarioId, sourceFolderId, folderId)
     }
   }
 
   const handleFolderDragOver = (event: DragEvent<HTMLElement>, folderId: string) => {
     event.preventDefault()
+    const folder = folders.find((candidate) => candidate.id === folderId)
     const transferTypes = Array.from(event.dataTransfer.types ?? [])
     if (
-      controlsDisabled ||
+      controlsDisabled || !folder?.can_edit ||
       (transferTypes.length > 0 && !transferTypes.includes('text/folder-id'))
     ) return
     const bounds = event.currentTarget.getBoundingClientRect()
@@ -593,17 +667,19 @@ export function ScenarioLibraryPanel({
   }
 
   const draftTitle = scenarioDraftTitle.trim() || 'Untitled Scenario'
+  const personalFolders = folders.filter((folder) => folder.library_kind === 'personal')
+  const templateFolders = folders.filter((folder) => folder.library_kind === 'template')
   const controlsDisabled =
     status === 'working' || scenarioAction !== 'idle' || scenarioSelectionDisabled
 
   return (
-    <section className="border border-neutral-800 bg-neutral-950 p-4" aria-label="Scenarios library">
-      <div className="flex items-center justify-between gap-3 border-b border-neutral-800 pb-3">
+    <section className="min-w-0 border border-neutral-800 bg-neutral-950 p-4" aria-label="Scenarios library">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 pb-3">
         <h2 className="text-sm uppercase tracking-wider text-neutral-400">Scenarios</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={onNewScenario}
+            onClick={startNewScenario}
             disabled={
               loading ||
               status === 'working' ||
@@ -614,9 +690,28 @@ export function ScenarioLibraryPanel({
           >
             New Scenario
           </button>
+          {role === 'administrator' ? (
+            <button
+              type="button"
+              onClick={startNewTemplateScenario}
+              disabled={
+                loading ||
+                status === 'working' ||
+                scenarioAction !== 'idle' ||
+                scenarioSelectionDisabled
+              }
+              className="border border-purple-etco2 bg-purple-etco2/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider text-purple-etco2 hover:bg-purple-etco2/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              New Template
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => setCreatingFolder(true)}
+            aria-label="New Folder"
+            onClick={() => {
+              setNewFolderLibraryKind('personal')
+              setCreatingFolder(true)
+            }}
             disabled={
               creatingFolder ||
               loading ||
@@ -626,14 +721,39 @@ export function ScenarioLibraryPanel({
             }
             className="border border-cyan-bp bg-cyan-bp/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/20 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            New Folder
+            New Personal Folder
           </button>
+          {role === 'administrator' ? (
+            <button
+              type="button"
+              onClick={() => {
+                setNewFolderLibraryKind('template')
+                setCreatingFolder(true)
+              }}
+              disabled={
+                creatingFolder ||
+                loading ||
+                status === 'working' ||
+                scenarioAction !== 'idle' ||
+                scenarioSelectionDisabled
+              }
+              className="border border-purple-etco2 bg-purple-etco2/10 px-3 py-2 font-mono text-xs font-bold uppercase tracking-wider text-purple-etco2 hover:bg-purple-etco2/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              New Template Folder
+            </button>
+          ) : null}
         </div>
       </div>
 
       {creatingFolder ? (
+        <div className="mt-3 text-xs uppercase tracking-wider text-neutral-500">
+          Creating in {newFolderLibraryKind === 'personal' ? 'My Scenarios' : 'Templates'}
+        </div>
+      ) : null}
+
+      {creatingFolder ? (
         <form
-          className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2"
+          className="mt-2 grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2"
           onSubmit={(event) => {
             event.preventDefault()
             void createFolder()
@@ -675,8 +795,13 @@ export function ScenarioLibraryPanel({
       <div className="mt-3 border border-neutral-800" data-testid="scenario-folder-list">
         {loading && folders.length === 0 ? (
           <p className="p-4 text-sm text-neutral-500">Loading scenarios…</p>
-        ) : folders.length === 0 && scenarioDraftActive ? (
-          <section className="border-b border-neutral-800 last:border-b-0">
+        ) : (
+          <>
+            <div className="border-b border-neutral-800 bg-cyan-bp/5 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-bp">
+              My Scenarios
+            </div>
+            {personalFolders.length === 0 && scenarioDraftActive && !selectedFolderId ? (
+              <section className="border-b border-neutral-800">
             <div className="bg-cyan-bp/10 px-2 py-2">
               <div className="flex min-w-0 items-center gap-2">
                 <span aria-hidden="true" className="font-mono text-cyan-bp">−</span>
@@ -697,26 +822,35 @@ export function ScenarioLibraryPanel({
                 action={scenarioAction}
                 disabled={scenarioSelectionDisabled}
                 onUnload={onDeleteDraft}
-                onSave={onSaveScenario}
+                onSave={() => onSaveScenario()}
                 onDelete={onDeleteDraft}
               />
             </div>
-          </section>
-        ) : folders.length === 0 ? (
-          <p className="p-4 text-sm text-neutral-500">
-            No scenario folders. Select New Scenario to start a draft; Folder 1 will be created when you save.
-          </p>
-        ) : (
-          folders.map((folder, folderIndex) => {
+              </section>
+            ) : personalFolders.length === 0 ? (
+              <p className="border-b border-neutral-800 p-4 text-sm text-neutral-500">
+                No scenario folders. Select New Scenario to start a draft; Folder 1 will be created when you save.
+              </p>
+            ) : null}
+            {[...personalFolders, ...templateFolders].map((folder) => {
+            const scopedFolders = folder.library_kind === 'personal'
+              ? personalFolders
+              : templateFolders
+            const folderIndex = scopedFolders.findIndex((candidate) => candidate.id === folder.id)
             const selectedFolder = folder.id === selectedFolderId
             const expanded = expandedFolderIds.has(folder.id)
             const scenarios = scenariosByFolderId[folder.id] ?? []
             const loadingScenarios = loadingFolderIds.has(folder.id)
             const renaming = renamingFolderId === folder.id
             return (
+              <div key={folder.id}>
+                {folder.library_kind === 'template' && folderIndex === 0 ? (
+                  <div className="border-b border-neutral-800 bg-purple-etco2/5 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-purple-etco2">
+                    Templates
+                  </div>
+                ) : null}
               <section
-                key={folder.id}
-                draggable={!controlsDisabled && !renaming}
+                draggable={!controlsDisabled && !renaming && folder.can_edit}
                 onDragStart={(event) => {
                   event.dataTransfer.setData('text/folder-id', folder.id)
                   event.dataTransfer.effectAllowed = 'move'
@@ -780,7 +914,7 @@ export function ScenarioLibraryPanel({
                         type="button"
                         aria-label={`Move ${folder.name} up`}
                         onClick={() => moveFolderBy(folder.id, -1)}
-                        disabled={folderIndex === 0 || controlsDisabled}
+                        disabled={folderIndex === 0 || controlsDisabled || !folder.can_edit}
                         className="border border-neutral-700 px-2 py-1 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
                       >
                         ↑
@@ -789,7 +923,7 @@ export function ScenarioLibraryPanel({
                         type="button"
                         aria-label={`Move ${folder.name} down`}
                         onClick={() => moveFolderBy(folder.id, 1)}
-                        disabled={folderIndex === folders.length - 1 || controlsDisabled}
+                        disabled={folderIndex === scopedFolders.length - 1 || controlsDisabled || !folder.can_edit}
                         className="border border-neutral-700 px-2 py-1 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
                       >
                         ↓
@@ -800,7 +934,7 @@ export function ScenarioLibraryPanel({
                           setRenamingFolderId(folder.id)
                           setRenameValue(folder.name)
                         }}
-                        disabled={controlsDisabled}
+                        disabled={controlsDisabled || !folder.can_edit}
                         className="font-mono text-[10px] uppercase text-cyan-bp disabled:opacity-40"
                       >
                         Rename
@@ -808,7 +942,7 @@ export function ScenarioLibraryPanel({
                       <button
                         type="button"
                         onClick={() => setFolderPendingDeletion(folder)}
-                        disabled={controlsDisabled}
+                        disabled={controlsDisabled || !folder.can_edit}
                         className="font-mono text-[10px] uppercase text-alarm-red disabled:opacity-40"
                       >
                         Delete
@@ -830,7 +964,7 @@ export function ScenarioLibraryPanel({
                         action={scenarioAction}
                         disabled={scenarioSelectionDisabled}
                         onUnload={onDeleteDraft}
-                        onSave={onSaveScenario}
+                        onSave={() => onSaveScenario()}
                         onDelete={onDeleteDraft}
                       />
                     ) : null}
@@ -851,7 +985,7 @@ export function ScenarioLibraryPanel({
                             aria-pressed={selected}
                             aria-disabled={scenarioSelectionDisabled}
                             aria-label={`${selected ? 'Unload' : 'Load'} ${scenario.title}`}
-                            draggable={!controlsDisabled}
+                            draggable={!controlsDisabled && scenario.can_edit}
                             onClick={() => void loadScenario(scenario.id)}
                             onKeyDown={(event) => activateScenario(event, scenario.id)}
                             onDragStart={(event) => {
@@ -884,10 +1018,13 @@ export function ScenarioLibraryPanel({
                             <ScenarioRowActions
                               title={scenario.title}
                               saveDisabled={!selected || !scenarioIsDirty || controlsDisabled}
-                              deleteDisabled={controlsDisabled}
+                              deleteDisabled={controlsDisabled || !scenario.can_edit}
                               saving={selected && scenarioAction === 'saving'}
                               deleting={scenarioAction === 'deleting'}
-                              onSave={onSaveScenario}
+                              saveLabel={scenario.can_edit ? 'Save' : 'Save Copy'}
+                              onSave={() => onSaveScenario(
+                                scenario.can_edit ? undefined : personalFolders[0]?.id ?? null,
+                              )}
                               onDelete={() => onDeleteScenario(scenario)}
                             />
                             <div
@@ -900,7 +1037,7 @@ export function ScenarioLibraryPanel({
                                   type="button"
                                   aria-label={`Move ${scenario.title} up`}
                                   onClick={() => moveScenarioBy(folder.id, scenario.id, -1)}
-                                  disabled={index === 0 || controlsDisabled}
+                                  disabled={index === 0 || controlsDisabled || !scenario.can_edit}
                                   className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
                                 >
                                   ↑
@@ -909,7 +1046,7 @@ export function ScenarioLibraryPanel({
                                   type="button"
                                   aria-label={`Move ${scenario.title} down`}
                                   onClick={() => moveScenarioBy(folder.id, scenario.id, 1)}
-                                  disabled={index === scenarios.length - 1 || controlsDisabled}
+                                  disabled={index === scenarios.length - 1 || controlsDisabled || !scenario.can_edit}
                                   className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
                                 >
                                   ↓
@@ -925,10 +1062,12 @@ export function ScenarioLibraryPanel({
                                     folder.id,
                                     event.target.value,
                                   )}
-                                  disabled={controlsDisabled}
+                                  disabled={controlsDisabled || !scenario.can_edit}
                                   className="min-w-0 border border-neutral-700 bg-neutral-900 px-2 py-2 text-xs text-neutral-200 disabled:opacity-40"
                                 >
-                                  {folders.map((target) => (
+                                  {folders
+                                    .filter((target) => target.library_kind === folder.library_kind)
+                                    .map((target) => (
                                     <option key={target.id} value={target.id}>{target.name}</option>
                                   ))}
                                 </select>
@@ -941,8 +1080,18 @@ export function ScenarioLibraryPanel({
                   </div>
                 ) : null}
               </section>
+              </div>
             )
-          })
+          })}
+            {templateFolders.length === 0 ? (
+              <>
+                <div className="border-b border-neutral-800 bg-purple-etco2/5 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-purple-etco2">
+                  Templates
+                </div>
+                <p className="p-4 text-sm text-neutral-500">No shared Templates yet.</p>
+              </>
+            ) : null}
+          </>
         )}
       </div>
       <ConfirmationDialog
