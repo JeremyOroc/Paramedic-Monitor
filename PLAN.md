@@ -1831,6 +1831,90 @@ authorization is next.
 
 ---
 
+### Phase 16 — Instructor-Recorded Actions
+**Goal:** The two things a drill produces that the record could not hold — a drug given while the
+paramedic's hands were full, and a history question asked out loud — are recordable from the console,
+and the SAMPLE/OPQRST answers and Pulse/Respiratory/Skin findings the instructor staged appear in the
+report alongside the vitals that already did.
+
+**Requirement (2026-09-07):** Two gaps, both reported from real use. A paramedic mid-intervention
+gives the drug and never reaches the monitor's medication keys, so the run's record loses it
+entirely. And the console's SAMPLE/OPQRST letter buttons were local highlight and nothing more — the
+one skill the checklist exists to assess, whether the trainee actually asked, left no trace at all.
+
+#### 16a — Who the row belongs to
+**Decided 2026-09-07.** Both are trainee actions; the instructor is only the one at a keyboard. So
+they are credited to the participant and carry `payload.source = 'instructor'`, which the report
+draws as `by instructor`. The alternative — a separate `instructor_events` table — was rejected
+because it gives the evaluator two streams to interleave by eye for one drill, and needs a parallel
+review query, row kind, and attempt filter for no gain.
+
+The console posts to `POST /api/session/[code]/instructor-event`, host-token authenticated, since it
+holds no participant token. `recordInstructorEvent` verifies the participant belongs to *this*
+session before writing, so a host token for one room cannot write into another room's record. It
+stamps `source` server-side rather than trusting the body, and shares `insertStudentEvent` with the
+monitor path so the two cannot drift on state pinning or validation. `stateVersion` is deliberately
+not accepted: the console was never "behind" a state, and letting the host name an older version
+would print a false `← n behind` on a row no monitor produced.
+
+New event kinds `sample_ask` and `opqrst_ask`, added to `student_events_kind_check`. `medication`
+already existed. Both directions of a checklist press are logged: a letter cleared is something the
+record should show, not something it should silently disagree with the panel about. The detail reads
+as a sentence a debrief can quote — `S from SAMPLE was asked`, `M from SAMPLE was unmarked`.
+
+#### 16b — The med grid
+`MedicationRecorder` becomes the middle column of the Monitor & Patient SNS tab, between the vitals
+and the checklists. It offers all twelve meds from `ALL_MEDICATIONS`, derived from the monitor's
+`MED_PAGES` rather than retyped — the console and the monitor must offer the same drugs or the report
+shows two vocabularies for one drill. Flat, not paged: paging exists to fit four soft keys, and the
+console has a column.
+
+Credit defaults to the room's single trainee and is resolved against the live roster on every render,
+never stored, so a trainee leaving or a New Attempt cannot strand a stale id. A picker appears only
+when there is genuinely a choice. With nobody to credit the grid disables itself and says why; the
+checklist letters keep working, because that panel is also a scenario-authoring surface.
+
+#### 16c — The staged answers reach the report
+SAMPLE/OPQRST text and the Pulse/Respiratory/Skin findings were console-local React state and reached
+neither the monitor nor the record. They now travel with each Send under an `instructorOnly` key.
+
+**Decided 2026-09-07 — the key is stripped from `session_state` and kept in `session_state_history`.**
+The trainee polls `session_state` every 1.5s, so anything in it is one devtools tab away from being
+the answer key to the questions they are being marked on asking. `splitInstructorOnlyState` is the
+same seam as `stripRouteGeometry`, pointed the other way: that drops from history what only the live
+state needs, this drops from live state what only history needs.
+
+`normalizeHistoryState` and `diffStates` extend to both blocks. SNS findings are named individually
+(`Pulse strength strong → thready`) because that is the clinical change the row is read for; history
+answers collapse to `patient history · n fields` the way the dispatch card does, since one Send can
+fill six letters. The opening change gains a `History` fact group. Rows written before this existed
+degrade to blanks, which is what an old row honestly means.
+
+#### Testing
+- Service: host auth, cross-session participant rejection with the scoping asserted rather than only
+  the null path, ended room, unknown kind, attempt window opened, `source` stamped over a body that
+  claims otherwise
+- `splitInstructorOnlyState`: block absent from the live upsert, present in the history row, caller
+  state not mutated, a state without the key passed through
+- Timeline: both blocks normalized, malformed and pre-migration rows degrade, SNS named / history
+  collapsed, opening facts, ask wording both directions, `enteredByInstructor`, and no `behind`
+  warning on an instructor row
+- Component: all twelve meds unpaged, press records, visual and screen-reader confirmation, the
+  confirmation moves to the newest press, disabled with a reason and no callback, picker hidden for
+  one trainee, failure surfaced
+- Integration: med press posts host-authenticated with the right body, both checklist directions
+  post, an empty room still highlights but logs nothing, the Send carries `instructorOnly`
+- Report: marker rendered and absent on monitor rows, ask sentences, marker in the copied stream,
+  staged history and findings in the opening expansion
+
+**Milestone:** An instructor records a drug and a question from the console, and both appear in the
+trainee's stream marked as instructor-entered, against the patient state they were taken at.
+
+**Code complete 2026-09-07.** Migration `20260908120000_instructor_recorded_actions.sql` is written
+but **not yet applied** — the two new kinds are rejected by the live constraint until it is.
+
+---
+
 ## Quick Reference — Key Decisions
 
 | Decision | Choice |

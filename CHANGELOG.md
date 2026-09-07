@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-09-07] [instructor/server] — Record meds and history questions from the console
+
+- Added a med grid as the middle column of the Monitor & Patient SNS tab. All twelve meds, derived
+  from the monitor's `MED_PAGES` rather than retyped, unpaged because the console has the room the
+  monitor's four soft keys do not. One press records the same `medication` event the monitor writes.
+- SAMPLE and OPQRST letter presses are now logged, in both directions: `S from SAMPLE was asked`,
+  `M from SAMPLE was unmarked`. The buttons were local highlight before, so whether the trainee
+  actually asked — the one thing the checklist exists to assess — left no trace in the record.
+- Both are credited to the trainee and marked `by instructor`, rather than split into a second
+  stream the evaluator has to interleave by eye. New host-authenticated
+  `POST /api/session/[code]/instructor-event`; `recordInstructorEvent` verifies the participant
+  belongs to this room, stamps the source server-side, and shares the insert path with the monitor.
+- An instructor-entered row never carries a `← n behind` warning: the console posts against the
+  current version by definition, and the flag would be a lie about a trainee.
+- The SAMPLE/OPQRST answers and the Pulse/Respiratory/Skin findings now travel with each Send and
+  appear in the report — named individually for findings, collapsed to a count for history answers,
+  with a `History` group in the opening expansion. They were console-local state before and reached
+  neither the monitor nor the record.
+- Those answers are stripped from the `session_state` the trainee polls every 1.5s and kept only in
+  `session_state_history`. In the live state they would have been one devtools tab away from being
+  the answer key to the questions the trainee is being marked on asking.
+- Added `20260908120000_instructor_recorded_actions.sql` for the `sample_ask` / `opqrst_ask` kinds.
+  **Not yet applied** — the live constraint rejects both kinds until it is.
+- 44 new tests across the service, timeline, recorder component, admin integration, and report panel.
+
 ## [2026-09-07] [scenarios/ops] — Verify Phase 3 in production
 
 - Merged the Personal/Template ownership branch and deployed

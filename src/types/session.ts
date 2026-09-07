@@ -25,6 +25,11 @@ export type SessionParticipant = {
  *
  * CPR is deliberately absent: it is instructor-driven, so it is captured by
  * session_state_history rather than as a trainee action.
+ *
+ * Some of these arrive from the console rather than the monitor -- a drug the
+ * paramedic gave without a free hand, a history question asked aloud. They are
+ * still trainee actions, so they are credited to the participant and marked
+ * with `payload.source = 'instructor'` rather than split into a second stream.
  */
 export const STUDENT_EVENT_KINDS = [
   'acknowledge',
@@ -46,6 +51,13 @@ export const STUDENT_EVENT_KINDS = [
   'energy_change',
   'treatment_menu',
   'patient_info',
+  /**
+   * The trainee asked a SAMPLE or OPQRST question out loud and the instructor
+   * logged it from the console. Asking is the assessed skill, so it belongs in
+   * the trainee's stream; `payload.source` says the instructor pressed it.
+   */
+  'sample_ask',
+  'opqrst_ask',
 ] as const
 
 export type StudentEventKind = (typeof STUDENT_EVENT_KINDS)[number]

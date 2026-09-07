@@ -639,6 +639,142 @@ describe('AdminPage', () => {
     expect(offPost.state.cprOverrideActive).toBe(false)
   })
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // Phase 16 — actions the instructor records on the trainee's behalf
+  // ───────────────────────────────────────────────────────────────────────────
+
+  const TRAINEE = {
+    id: 'participant-1',
+    nickname: 'Sarah M.',
+    joined_at: '2026-09-07T10:00:00.000Z',
+    last_seen_at: null,
+  }
+
+  /** A room with one trainee in it, which is the ordinary case. */
+  function mockRoom(participants: unknown[] = [TRAINEE]) {
+    return vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      const url = String(input)
+      const body = url.includes('/review')
+        ? { session: { status: 'active', active_attempt_version: 1 }, participants, events: [] }
+        : { session: { status: 'active' }, state: { version: 1 } }
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+  }
+
+  const instructorPosts = (fetchMock: ReturnType<typeof mockRoom>) =>
+    fetchMock.mock.calls
+      .filter(([url, init]) => String(url).endsWith('/instructor-event') && init?.method === 'POST')
+      .map(([, init]) => JSON.parse(String(init?.body)))
+
+  it('records a medication the paramedic gave without reaching the monitor', async () => {
+    const user = userEvent.setup()
+    const fetchMock = mockRoom()
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+
+    await user.click(screen.getByRole('button', { name: 'Nitro' }))
+
+    await waitFor(() => expect(instructorPosts(fetchMock)).toHaveLength(1))
+    expect(instructorPosts(fetchMock)[0]).toEqual({
+      participantId: TRAINEE.id,
+      kind: 'medication',
+      label: 'Nitro',
+    })
+
+    // Host-authenticated: the console holds no participant token.
+    const [, init] = fetchMock.mock.calls.find(([url]) =>
+      String(url).endsWith('/instructor-event'),
+    )!
+    expect(init?.headers).toMatchObject({ 'x-session-host-token': 'host_token' })
+  })
+
+  it('logs both directions of a checklist press', async () => {
+    const user = userEvent.setup()
+    const fetchMock = mockRoom()
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+
+    const sample = screen.getByRole('region', { name: 'Sample' })
+    const letterS = within(sample).getByRole('button', { name: 'S' })
+
+    await user.click(letterS)
+    await waitFor(() => expect(instructorPosts(fetchMock)).toHaveLength(1))
+    expect(instructorPosts(fetchMock)[0]).toEqual({
+      participantId: TRAINEE.id,
+      kind: 'sample_ask',
+      label: 'S',
+      payload: { asked: true },
+    })
+
+    // Clearing a letter is something the record should show too, rather than
+    // silently disagreeing with the panel the evaluator is looking at.
+    await user.click(letterS)
+    await waitFor(() => expect(instructorPosts(fetchMock)).toHaveLength(2))
+    expect(instructorPosts(fetchMock)[1]).toMatchObject({
+      kind: 'sample_ask',
+      payload: { asked: false },
+    })
+
+    const opqrst = screen.getByRole('region', { name: 'OPQRST' })
+    await user.click(within(opqrst).getByRole('button', { name: 'O' }))
+    await waitFor(() => expect(instructorPosts(fetchMock)).toHaveLength(3))
+    expect(instructorPosts(fetchMock)[2]).toMatchObject({ kind: 'opqrst_ask', label: 'O' })
+  })
+
+  it('still highlights a checklist letter when there is nobody to credit', async () => {
+    const user = userEvent.setup()
+    const fetchMock = mockRoom([])
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+
+    expect(screen.getByTestId('medication-recorder-unavailable')).toHaveTextContent(
+      'No trainee has joined yet.',
+    )
+
+    const sample = screen.getByRole('region', { name: 'Sample' })
+    const letterS = within(sample).getByRole('button', { name: 'S' })
+    await user.click(letterS)
+
+    // The panel is also a scenario-authoring surface, so the letters keep
+    // working with an empty room -- there is just nothing to log against.
+    expect(letterS).toHaveAttribute('aria-pressed', 'true')
+    expect(instructorPosts(fetchMock)).toEqual([])
+  })
+
+  it('sends the staged history and findings without exposing them in the poll body', async () => {
+    const user = userEvent.setup()
+    const fetchMock = mockRoom()
+
+    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+
+    const sample = screen.getByRole('region', { name: 'Sample' })
+    await user.type(within(sample).getByLabelText('Sample S information'), 'chest pain')
+    await user.click(screen.getByRole('button', { name: 'Regular CPR' }))
+
+    const statePosts = () =>
+      fetchMock.mock.calls
+        .filter(([url, init]) => String(url).endsWith('/state') && init?.method === 'POST')
+        .map(([, init]) => JSON.parse(String(init?.body)))
+
+    await waitFor(() => expect(statePosts().length).toBeGreaterThan(0))
+    const sent = statePosts()[statePosts().length - 1]
+    // Under its own key, so the server can strip it from the state the trainee
+    // polls while keeping it in the row the report reads.
+    expect(sent.state.instructorOnly.patientInformation.values.sample.S).toBe('chest pain')
+    expect(sent.state.instructorOnly.patientSns).toBeDefined()
+  })
+
   it('removes the shared Reset control from live sessions', async () => {
     vi.spyOn(window, 'fetch').mockImplementation(async () => {
       const body = { session: { status: 'active' }, participants: [], events: [] }
@@ -694,13 +830,17 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'Skin/Extremities' })).toBeInTheDocument()
     const vitals = screen.getByRole('heading', { name: 'Vitals' }).closest('section')
     const sample = screen.getByRole('region', { name: 'Sample' })
+    const meds = screen.getByTestId('medication-recorder')
     const monitorLayout = screen.getByTestId('monitor-patient-sns-layout')
+    // Three columns since the med recorder landed between the vitals and the
+    // checklists, which is where the instructor's eye already is mid-drill.
     expect(monitorLayout).toHaveClass(
       'grid',
-      'lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)]',
-      'xl:[@media(min-height:800px)]:grid-cols-[minmax(0,8fr)_minmax(0,5fr)]',
+      'lg:grid-cols-[minmax(0,11fr)_minmax(0,4fr)_minmax(0,9fr)]',
+      'xl:[@media(min-height:800px)]:grid-cols-[minmax(0,8fr)_minmax(0,3fr)_minmax(0,5fr)]',
     )
     expect(monitorLayout).toContainElement(vitals)
+    expect(monitorLayout).toContainElement(meds)
     expect(monitorLayout).toContainElement(sample)
     expect(screen.getByTestId('admin-etco2-calibration-indicator')).toHaveAttribute(
       'data-calibrated',

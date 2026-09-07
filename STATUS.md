@@ -6,6 +6,13 @@
 ---
 
 ## Current Phase
+**Instructor-recorded actions — PHASE 16 CODE COMPLETE, MIGRATION PENDING (2026-09-07).**
+The console can record a med given while the paramedic's hands were full and a SAMPLE/OPQRST
+question asked out loud; both are credited to the trainee and marked as instructor-entered, and the
+staged history and Pulse/Respiratory/Skin findings now reach the report while staying out of the
+state the trainee polls. `20260908120000_instructor_recorded_actions.sql` must be applied before the
+checklist logging works against a live room.
+
 **Accounts & scenario ownership — PHASE 3 PRODUCTION VERIFIED; PHASE 4 NOT STARTED (2026-09-07).**
 The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
 implemented shared-code self-registration flow. Public registration and its deployment secret are
@@ -887,6 +894,24 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Recently Completed
+- [x] **Phase 16 — Instructor-Recorded Actions — CODE COMPLETE, MIGRATION NOT APPLIED (2026-09-07):**
+  - [x] Med grid as the middle column of Monitor & Patient SNS: all twelve meds unpaged, derived
+        from the monitor's `MED_PAGES` so the console and the monitor cannot drift
+  - [x] SAMPLE and OPQRST presses logged in both directions, reading as a sentence a debrief quotes
+  - [x] Both credited to the trainee and marked `by instructor`, not split into a second stream
+  - [x] Host-authenticated `POST /api/session/[code]/instructor-event`; participant scoped to the
+        room, `source` stamped server-side, insert path shared with the monitor, no false `behind`
+  - [x] Credit resolved against the live roster each render, so a leaver or New Attempt cannot
+        strand a stale id; picker only when there is a choice; disabled with a stated reason
+  - [x] SAMPLE/OPQRST answers and Pulse/Respiratory/Skin findings reach the report, stripped from
+        the `session_state` the trainee polls and kept only in `session_state_history`
+  - [x] Verified 1,205 tests passing, TypeScript clean, ESLint 0 errors and 12 pre-existing
+        warnings (none in the changed files), production build clean with the new route registered
+  - [ ] **Apply `20260908120000_instructor_recorded_actions.sql`** — until it runs, the live
+        `student_events_kind_check` rejects `sample_ask` and `opqrst_ask`, so every checklist press
+        fails with a 400 while the med grid works
+  - [ ] Visual check of the three-column tab in a signed-in console (invite-only sign-in put this
+        out of reach of automated browser verification)
 - [x] **Phase 17 presentation modes — COMPLETE:**
   - [x] Record the confirmed Docked, fixed Floating, and native Fullscreen behavior and lifecycle
   - [x] Implement persistent accessible controls, mode return state, fullscreen rejection status,

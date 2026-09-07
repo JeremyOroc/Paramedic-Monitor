@@ -12,6 +12,7 @@ import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
 import { DefibrillatorPanel } from '@/components/instructor/DefibrillatorPanel'
 import { EvaluationReportPanel } from '@/components/instructor/EvaluationReportPanel'
+import { MedicationRecorder } from '@/components/instructor/MedicationRecorder'
 import { CallerInfoForm } from '@/components/instructor/CallerInfoForm'
 import { ScenarioLibraryPanel } from '@/components/instructor/ScenarioLibraryPanel'
 import {
@@ -46,6 +47,7 @@ import {
   hasMeaningfulScenarioContent,
   scenarioSnapshotsEqual,
 } from '@/lib/scenarioSnapshot'
+import { ALL_MEDICATIONS } from '@/lib/monitor/medications'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { usePatientSnsMeasurements } from '@/hooks/usePatientSnsMeasurements'
@@ -66,6 +68,7 @@ import type {
   ParticipantAttempt,
   SessionStateHistoryEntry,
   StudentEvent,
+  StudentEventKind,
 } from '@/types/session'
 import type {
   SavedScenario,
@@ -240,6 +243,11 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // back is a deliberate, one-off read rather than something polled.
   const [pastReview, setPastReview] = useState<PastReview | null>(null)
   const [sessionError, setSessionError] = useState('')
+  // The instructor's explicit pick of who an instructor-recorded action is
+  // credited to. Null means "whoever is first", which is every one-trainee
+  // room and so most of them.
+  const [creditedChoice, setCreditedChoice] = useState<string | null>(null)
+  const [instructorEventError, setInstructorEventError] = useState('')
 
   const stopSpectating = useCallback((participantId: string) => {
     setSpectatorPresentationMode('docked')
@@ -468,14 +476,105 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           // The title is console state, not monitor state, so it joins here
           // rather than in the store's shared snapshot.
           scenarioTitleConfirmed: scenarioTitle.trim(),
+          // The report's instructor rows could show vitals and the dispatch
+          // card but not the history the trainee had to elicit or the
+          // Pulse/Respiratory/Skin findings they had to palpate for, because
+          // none of it left the console. It travels here -- and the server
+          // keeps it in session_state_history while stripping it from the
+          // session_state the trainee polls, so the answer key stays on the
+          // instructor's side of the room.
+          instructorOnly: {
+            patientInformation: {
+              selected: {
+                sample: [...patientSelections.sample].sort(),
+                opqrst: [...patientSelections.opqrst].sort(),
+              },
+              values: {
+                sample: { ...patientText.sample },
+                opqrst: { ...patientText.opqrst },
+              },
+            },
+            patientSns: { ...patientPhysicalFindings },
+          },
         },
       }),
     })
     const data = await response.json()
     if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
-  }, [getSharedState, scenarioTitle, session])
+  }, [
+    getSharedState,
+    patientPhysicalFindings,
+    patientSelections,
+    patientText,
+    scenarioTitle,
+    session,
+  ])
 
-  // CPR override and full instructor resets bypass Save → Send, so in a
+  // Resolved against the live roster on every render rather than stored,
+  // because the roster is polled: a trainee who leaves, or a New Attempt that
+  // clears the room, would otherwise leave a stale id selected and every
+  // recorded action 404ing against a participant who is no longer there.
+  const creditedParticipantId =
+    participants.find((participant) => participant.id === creditedChoice)?.id ??
+    participants[0]?.id ??
+    null
+
+  /**
+   * Writes a trainee action the instructor pressed on the trainee's behalf.
+   *
+   * Fire-and-forget by design: the console is not the trainee's monitor and has
+   * no offline queue behind it, so a failure is reported next to the button
+   * rather than retried. The row is credited to the trainee; the server stamps
+   * the instructor marker.
+   */
+  const recordInstructorAction = useCallback(
+    async (kind: StudentEventKind, label: string, payload?: Record<string, unknown>) => {
+      if (!session || !creditedParticipantId) return
+      try {
+        const response = await fetch(`/api/session/${session.code}/instructor-event`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-host-token': session.hostToken,
+          },
+          body: JSON.stringify({
+            participantId: creditedParticipantId,
+            kind,
+            label,
+            payload,
+          }),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          setInstructorEventError(getResponseError(data, `Unable to record ${label}`))
+          return
+        }
+        setInstructorEventError('')
+        // The record just changed, so pull it rather than waiting out the poll.
+        await refreshReview()
+      } catch (caught) {
+        setInstructorEventError(
+          caught instanceof Error ? caught.message : `Unable to record ${label}`,
+        )
+      }
+    },
+    [creditedParticipantId, refreshReview, session],
+  )
+
+  /**
+   * Why the med grid and the checklist logging cannot write right now, or null
+   * when they can. Said out loud on the panel: a dead button with no reason is
+   * indistinguishable from a broken one.
+   */
+  const instructorRecordingUnavailable = !session
+    ? 'Start a room to record actions.'
+    : sessionStatus === 'ended'
+      ? 'This room has ended.'
+      : participants.length === 0
+        ? 'No trainee has joined yet.'
+        : null
+
+    // CPR override and full instructor resets bypass Save → Send, so in a
   // session they must push shared state themselves — the Send button stays
   // disabled without pending changes and would otherwise strand these locally.
   const cprMode = useMonitorStore((s) => s.cprMode)
@@ -794,7 +893,16 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     })
   }
 
+  /**
+   * The letter buttons were local highlight and nothing else, so the one skill
+   * the checklist is there to assess -- whether the trainee actually asked --
+   * left no trace in the record. Every press is logged now, including the one
+   * that clears a letter: an instructor who marked the wrong letter is telling
+   * the record something too, and silently dropping half the presses would
+   * leave a report that disagrees with the panel the evaluator was looking at.
+   */
   const togglePatientSelection = (checklist: PatientInfoChecklist, letter: string) => {
+    const asked = !patientSelections[checklist].has(letter)
     setPatientSelections((current) => {
       const nextChecklist = new Set(current[checklist])
       if (nextChecklist.has(letter)) {
@@ -807,6 +915,12 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         [checklist]: nextChecklist,
       }
     })
+    if (instructorRecordingUnavailable) return
+    void recordInstructorAction(
+      checklist === 'sample' ? 'sample_ask' : 'opqrst_ask',
+      letter,
+      { asked },
+    )
   }
 
   const handlePatientTextChange = (
@@ -1143,7 +1257,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       </div>
       {tab === 'monitor' ? (
         <div
-          className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:items-stretch lg:gap-3 xl:[@media(min-height:800px)]:grid-cols-[minmax(0,8fr)_minmax(0,5fr)] xl:[@media(min-height:800px)]:gap-4"
+          className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,11fr)_minmax(0,4fr)_minmax(0,9fr)] lg:items-stretch lg:gap-3 xl:[@media(min-height:800px)]:grid-cols-[minmax(0,8fr)_minmax(0,3fr)_minmax(0,5fr)] xl:[@media(min-height:800px)]:gap-4"
           data-testid="monitor-patient-sns-layout"
         >
           <VitalsControls
@@ -1162,6 +1276,17 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             sessionEtco2Calibrated={
               session ? anyoneCalibratedEtco2(studentEvents, attemptVersion) : undefined
             }
+          />
+          <MedicationRecorder
+            medications={ALL_MEDICATIONS}
+            participants={participants}
+            participantId={creditedParticipantId}
+            onParticipantChange={setCreditedChoice}
+            onRecord={(medication) =>
+              void recordInstructorAction('medication', medication)
+            }
+            unavailableReason={instructorRecordingUnavailable}
+            error={instructorEventError}
           />
           <PatientInformationPanel
             selected={patientSelections}

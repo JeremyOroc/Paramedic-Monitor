@@ -674,6 +674,41 @@ export function stripRouteGeometry(state: unknown): unknown {
   }
 }
 
+/**
+ * The key the console uses for state the evaluator needs and the trainee must
+ * never see.
+ */
+export const INSTRUCTOR_ONLY_STATE_KEY = 'instructorOnly'
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ * Splits the sent state into the half the monitor polls and the half only the
+ * record keeps.
+ *
+ * SAMPLE and OPQRST answers and the Pulse/Respiratory/Skin findings have to
+ * reach `session_state_history`, because "what the instructor had staged" is
+ * half of every report row. They must not reach `session_state`: the trainee
+ * polls that endpoint every 1.5s, so anything in it is one devtools tab away
+ * from being the answer key to the questions they are being marked on asking.
+ *
+ * The same seam as `stripRouteGeometry`, pointed the other way -- that drops
+ * from history what only the live state needs; this drops from live state what
+ * only history needs.
+ */
+export function splitInstructorOnlyState(state: unknown): {
+  shared: unknown
+  history: unknown
+} {
+  if (!isPlainRecord(state)) return { shared: state, history: state }
+  if (!(INSTRUCTOR_ONLY_STATE_KEY in state)) return { shared: state, history: state }
+  const shared = { ...state }
+  delete shared[INSTRUCTOR_ONLY_STATE_KEY]
+  return { shared, history: state }
+}
+
 export async function updateSessionState(
   code: string,
   hostToken: string,
@@ -694,11 +729,14 @@ export async function updateSessionState(
   const nextVersion =
     typeof current?.version === 'number' ? current.version + 1 : 1
 
+  // The trainee's half and the record's half part company here.
+  const { shared, history } = splitInstructorOnlyState(state)
+
   const { data, error } = await supabase
     .from('session_state')
     .upsert({
       session_id: session.id,
-      state,
+      state: shared,
       version: nextVersion,
       updated_at: new Date().toISOString(),
     })
@@ -722,7 +760,7 @@ export async function updateSessionState(
       session_id: session.id,
       attempt_version: session.active_attempt_version,
       version: nextVersion,
-      state: stripRouteGeometry(state),
+      state: stripRouteGeometry(history),
     })
   if (historyError) {
     console.error('[session] state history write failed:', historyError.message)
@@ -731,12 +769,20 @@ export async function updateSessionState(
   return { session, state: data }
 }
 
-export async function recordStudentEvent(
-  code: string,
-  participantToken: string,
+/**
+ * The write shared by the trainee's monitor and the instructor's console.
+ *
+ * Both produce trainee actions -- the console path exists because a paramedic
+ * with both hands full still gave the drug, and a question asked aloud is
+ * still a question asked. The caller has already proved who it is and which
+ * participant the row belongs to; everything from here down is identical, so
+ * neither path can drift from the other on state pinning or validation.
+ */
+async function insertStudentEvent(
+  session: SessionRecord,
+  participant: { id: string },
   input: StudentEventInput,
 ) {
-  const { session, participant } = await verifyParticipant(code, participantToken)
   // 410 rather than a silent accept: the queue treats a 4xx as permanent and
   // drops the action, which is right for a room that no longer exists to act in.
   if (session.status === 'ended') throw new SessionError('Session has ended', 410)
@@ -818,7 +864,64 @@ export async function recordStudentEvent(
     .single()
 
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to record event', 500)
-  return { session, participant, event: data }
+  return data
+}
+
+export async function recordStudentEvent(
+  code: string,
+  participantToken: string,
+  input: StudentEventInput,
+) {
+  const { session, participant } = await verifyParticipant(code, participantToken)
+  const event = await insertStudentEvent(session, participant, input)
+  return { session, participant, event }
+}
+
+/**
+ * A trainee action the instructor recorded from the console.
+ *
+ * Credited to the trainee, not to the instructor: the drug was given and the
+ * question was asked by the person being assessed. `payload.source` is
+ * stamped here rather than trusted from the body, so the marker the report
+ * draws means what it says.
+ *
+ * `stateVersion` is deliberately not accepted. The console is not a monitor
+ * and was never "behind" a state -- pinning to the version current at insert
+ * is the honest answer, and letting the host name an older one would put a
+ * false `← n behind` on a row nobody's monitor produced.
+ */
+export async function recordInstructorEvent(
+  code: string,
+  hostToken: string,
+  participantId: string,
+  input: Omit<StudentEventInput, 'stateVersion'>,
+) {
+  const session = await verifyHost(code, hostToken)
+  if (!participantId) throw new SessionError('Participant is required', 400)
+
+  const supabase = createServiceClient()
+  // Scoped to this session, so a host token for one room cannot write rows
+  // into another room's record by naming a participant id from it.
+  const { data: participant, error } = await supabase
+    .from('participants')
+    .select('id')
+    .eq('id', participantId)
+    .eq('session_id', session.id)
+    .maybeSingle()
+
+  if (error) throw new SessionError(error.message, 500)
+  if (!participant) throw new SessionError('Participant is not in this session', 404)
+
+  // The trainee may have joined before this attempt began; without a row the
+  // report has no window to place the action in.
+  await ensureAttempt(session.id, participant.id, session.active_attempt_version)
+
+  const payload = isPlainRecord(input.payload) ? input.payload : {}
+  const event = await insertStudentEvent(session, participant, {
+    ...input,
+    payload: { ...payload, source: 'instructor' },
+  })
+  return { session, participant, event }
 }
 
 /**
