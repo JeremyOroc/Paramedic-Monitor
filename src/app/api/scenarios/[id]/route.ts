@@ -13,9 +13,9 @@ type RouteContext = { params: Promise<{ id: string }> }
 
 export async function GET(request: Request, { params }: RouteContext) {
   try {
-    await requireScenarioLibraryAccess(request)
+    const account = await requireScenarioLibraryAccess(request)
     const { id } = await params
-    return NextResponse.json({ scenario: await getSavedScenario(id) })
+    return NextResponse.json({ scenario: await getSavedScenario(account, id) })
   } catch (error) {
     return scenarioJsonError(error)
   }
@@ -23,14 +23,14 @@ export async function GET(request: Request, { params }: RouteContext) {
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   try {
-    await requireScenarioLibraryAccess(request)
+    const account = await requireScenarioLibraryAccess(request)
     const { id } = await params
     const body = await request.json() as {
       folderId?: unknown
       title?: unknown
       snapshot?: unknown
     }
-    const changes: Parameters<typeof updateSavedScenario>[1] = {}
+    const changes: Parameters<typeof updateSavedScenario>[2] = {}
     if (body.folderId !== undefined) {
       if (typeof body.folderId !== 'string') {
         return NextResponse.json({ error: 'folderId must be a string' }, { status: 400 })
@@ -50,7 +50,7 @@ export async function PATCH(request: Request, { params }: RouteContext) {
       }
       changes.snapshot = snapshot
     }
-    return NextResponse.json({ scenario: await updateSavedScenario(id, changes) })
+    return NextResponse.json({ scenario: await updateSavedScenario(account, id, changes) })
   } catch (error) {
     return scenarioJsonError(error)
   }

@@ -244,6 +244,8 @@ export type Database = {
         Row: {
           id: string
           name: string
+          library_kind: 'personal' | 'template'
+          owner_user_id: string | null
           position: number
           created_at: string
           updated_at: string
@@ -251,11 +253,43 @@ export type Database = {
         Insert: {
           id?: string
           name: string
+          library_kind?: 'personal' | 'template'
+          owner_user_id?: string | null
           position?: number
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['scenario_folders']['Insert']>
+        Update: {
+          id?: string
+          name?: string
+          library_kind?: 'personal' | 'template'
+          owner_user_id?: string | null
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      template_scenario_audit_log: {
+        Row: {
+          id: string
+          actor_user_id: string
+          action: 'create' | 'update' | 'move' | 'reorder' | 'delete'
+          entity_type: 'folder' | 'scenario'
+          entity_id: string
+          entity_name: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          actor_user_id: string
+          action: 'create' | 'update' | 'move' | 'reorder' | 'delete'
+          entity_type: 'folder' | 'scenario'
+          entity_id: string
+          entity_name: string
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['template_scenario_audit_log']['Insert']>
         Relationships: []
       }
       trainee_monitor_projections: {
@@ -338,6 +372,7 @@ export type Database = {
       }
       reorder_scenario_folders: {
         Args: {
+          library_scope: 'personal' | 'template'
           ordered_folder_ids: string[]
         }
         Returns: Database['public']['Tables']['scenario_folders']['Row'][]

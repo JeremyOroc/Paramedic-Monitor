@@ -1780,11 +1780,46 @@ Account UI. The corrected invite-only revision passed 1,151 Vitest tests with on
 test skipped, TypeScript, ESLint with zero errors and the 12 pre-existing warnings, a production build,
 and rendered dummy-token failure-path QA in Chrome.
 The linked database now has complete migration parity and the deployed Account authorization objects.
-The production Site URL and invitation routing are confirmed. The hosted public-signup switch must
-remain disabled, and a successful real invitation smoke test after deploying the handoff correction
-remains an operational step. Phase 3 is next. The previous deferred account note and its
+The production Site URL and invitation routing are confirmed. The hosted public-signup switch is
+disabled, and the real invitation acceptance plus sign-out/sign-in smoke test passed on 2026-09-06.
+Phase 3 is code-complete locally. Its production migration remains intentionally undeployed until
+the phase branch is merged and the matching application code can roll out with it. The previous deferred account note and its
 assumption that the global library would remain
 until an external sale are superseded by this design.
+
+#### Account implementation Phase 3 — Personal and Template scenario ownership (CODE COMPLETE 2026-09-07)
+
+Phase 3 converts the existing global scenario library into the shared `Templates` area without
+changing its folders, ordering, scenario ordering, contents, or identifiers. It adds owner-scoped
+Personal folders and scenarios for every enabled Account, while keeping `Templates` readable by all
+enabled Accounts and mutable only by Administrators. The fixed area names are not stored as ordinary
+folders and cannot be renamed, reordered, or deleted. New Accounts begin with an empty Personal area;
+the existing virtual `Folder 1` is created only when the first Personal scenario is saved without a
+selected folder. Template modifications by an Instructor create an independent Personal copy instead
+of mutating or moving the shared original. Every Template folder/scenario create, edit, move, reorder,
+and delete writes an append-only audit row without scenario contents.
+
+##### Testing
+
+- Add migration-contract and transactional pgTAP coverage for existing-data conversion, owner
+  isolation, enabled-account Template reads, Administrator-only Template writes, immutable ownership
+  scope, cascade deletion, grants, RLS, and append-only Template auditing.
+- Add service and route coverage for missing/disabled Accounts, cross-owner IDs, Personal operations,
+  Template reads, Administrator mutations, Instructor copy-to-Personal behavior, and generic denied
+  responses that do not reveal inaccessible records.
+- Add component coverage for the fixed `My Scenarios` and `Templates` areas, empty Personal state,
+  role-aware controls, Template load/copy behavior, and preserving selection/order interactions.
+- Run the isolated database replay and pgTAP suite, complete Vitest suite, TypeScript, ESLint,
+  production build, and rendered browser checks before marking Phase 3 code complete.
+
+Phase 3 passed a clean local replay of every migration, 54 pgTAP assertions, Supabase schema lint,
+1,162 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and
+the 12 pre-existing warnings, and the production build. Rendered QA used disposable local
+Administrator and Instructor Accounts to verify fixed Personal/Template areas, role-aware controls,
+Administrator Template creation/update confirmation, and Instructor Template-to-Personal copying.
+The browser console contained no warnings or errors. Local Auth keeps global signup disabled while
+leaving the email/password provider enabled, matching the hosted invite-only behavior: an invited
+Account login returned 200 and an anonymous signup attempt returned 422.
 
 ---
 

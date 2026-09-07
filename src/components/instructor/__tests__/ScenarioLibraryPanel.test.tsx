@@ -15,10 +15,14 @@ function folder(
   name: string,
   scenarioCount: number,
   position: number,
+  libraryKind: ScenarioFolder['library_kind'] = 'personal',
+  canEdit = true,
 ): ScenarioFolder {
   return {
     id,
     name,
+    library_kind: libraryKind,
+    can_edit: canEdit,
     position,
     scenario_count: scenarioCount,
     created_at: timestamp,
@@ -31,12 +35,16 @@ function savedScenario(
   folderId: string,
   title: string,
   position: number,
+  libraryKind: SavedScenario['library_kind'] = 'personal',
+  canEdit = true,
 ): SavedScenario {
   return {
     id,
     folder_id: folderId,
     scenario_number: Number(id.replace(/\D/g, '')),
     title,
+    library_kind: libraryKind,
+    can_edit: canEdit,
     position,
     snapshot: createEmptyScenarioSnapshot(),
     created_at: timestamp,
@@ -57,19 +65,26 @@ function summary(scenario: SavedScenario) {
     folder_id: scenario.folder_id,
     scenario_number: scenario.scenario_number,
     title: scenario.title,
+    library_kind: scenario.library_kind,
+    can_edit: scenario.can_edit,
     position: scenario.position,
     created_at: scenario.created_at,
     updated_at: scenario.updated_at,
   }
 }
 
-function createFetchMock(options: { empty?: boolean } = {}) {
+function createFetchMock(options: {
+  empty?: boolean
+  folders?: ScenarioFolder[]
+  scenarios?: SavedScenario[]
+  role?: 'instructor' | 'administrator'
+} = {}) {
   const folders = options.empty
     ? []
-    : [folder('general', 'General', 2, 1), folder('trauma', 'Trauma', 0, 2)]
+    : options.folders ?? [folder('general', 'General', 2, 1), folder('trauma', 'Trauma', 0, 2)]
   const scenarios = options.empty
     ? []
-    : [
+    : options.scenarios ?? [
         savedScenario('scenario-1', 'general', 'Chest Pain', 1),
         savedScenario('scenario-2', 'general', 'Older Call', 2),
       ]
@@ -78,7 +93,7 @@ function createFetchMock(options: { empty?: boolean } = {}) {
     const url = String(input)
     const method = init?.method ?? 'GET'
     if (url === '/api/scenario-folders' && method === 'GET') {
-      return jsonResponse({ folders })
+      return jsonResponse({ folders, role: options.role ?? 'instructor' })
     }
     if (url.startsWith('/api/scenarios?folderId=')) {
       const folderId = new URL(url, 'http://localhost').searchParams.get('folderId')
@@ -155,7 +170,7 @@ type HarnessProps = {
   onUnload?: () => void
   onFolderDeleted?: (folderId: string) => void
   onNewScenario?: () => void
-  onSaveScenario?: () => void
+  onSaveScenario?: (personalDestinationFolderId?: string | null) => void
   onDeleteScenario?: (scenarioId: string) => void
   onDeleteDraft?: () => void
   scenarioDraftActive?: boolean
@@ -377,7 +392,10 @@ describe('ScenarioLibraryPanel', () => {
       '/api/scenario-folders/order',
       expect.objectContaining({
         method: 'PATCH',
-        body: JSON.stringify({ folderIds: ['trauma', 'general'] }),
+        body: JSON.stringify({
+          libraryKind: 'personal',
+          folderIds: ['trauma', 'general'],
+        }),
       }),
     ))
     expect(screen.getAllByRole('button', { name: /^(General|Trauma)/ })[0])
@@ -520,5 +538,64 @@ describe('ScenarioLibraryPanel', () => {
     expect(onSaveScenario).toHaveBeenCalledOnce()
     await user.click(screen.getByRole('button', { name: 'Delete Title Only' }))
     expect(onDeleteDraft).toHaveBeenCalledOnce()
+  })
+
+  it('separates Templates and offers Instructors a Personal copy instead of edit controls', async () => {
+    const personal = folder('mine', 'My Cases', 0, 1)
+    const template = folder('template', 'College Templates', 1, 1, 'template', false)
+    const shared = savedScenario(
+      'scenario-9',
+      'template',
+      'Shared Arrest',
+      1,
+      'template',
+      false,
+    )
+    createFetchMock({ folders: [personal, template], scenarios: [shared] })
+    const onSaveScenario = vi.fn()
+    const user = userEvent.setup()
+    render(<Harness onSaveScenario={onSaveScenario} scenarioIsDirty />)
+
+    expect(await screen.findByText('My Scenarios')).toBeInTheDocument()
+    expect(screen.getByText('Templates')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'New Template' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: /^College Templates/ }))
+    await user.click(await screen.findByRole('button', { name: 'Load Shared Arrest' }))
+    const templateSection = screen.getByRole('button', { name: /^College Templates/ })
+      .closest('section') as HTMLElement
+    expect(within(templateSection).getByRole('button', { name: 'Rename' })).toBeDisabled()
+    expect(within(templateSection).getByRole('button', { name: 'Delete' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Save Shared Arrest' })).toHaveTextContent('Save Copy')
+
+    await user.click(screen.getByRole('button', { name: 'Save Shared Arrest' }))
+    expect(onSaveScenario).toHaveBeenCalledWith('mine')
+  })
+
+  it('exposes Template creation controls only to Administrators', async () => {
+    createFetchMock({
+      role: 'administrator',
+      folders: [folder('template', 'College Templates', 0, 1, 'template', true)],
+      scenarios: [],
+    })
+    render(<Harness />)
+
+    expect(await screen.findByRole('button', { name: 'New Template' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'New Template Folder' })).toBeEnabled()
+  })
+
+  it('renders an Administrator Template draft only in its selected Template folder', async () => {
+    createFetchMock({
+      role: 'administrator',
+      folders: [folder('general', 'General', 0, 1, 'template', true)],
+      scenarios: [],
+    })
+    const user = userEvent.setup()
+    render(<Harness scenarioDraftActive />)
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
+
+    expect(screen.getByRole('button', { name: 'Unload Untitled Scenario' }))
+      .toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Folder 1 scenarios' })).toBeNull()
   })
 })

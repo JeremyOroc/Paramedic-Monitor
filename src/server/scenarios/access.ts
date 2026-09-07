@@ -1,10 +1,12 @@
-/**
- * Single authorization boundary for the scenario library.
- *
- * The current dev console has no account system, so access remains open to the
- * application route today. Future Supabase Auth admin-role enforcement belongs
- * here; the client and repository APIs will not need to change.
- */
-export async function requireScenarioLibraryAccess(request: Request): Promise<void> {
+import { getCurrentAccount, type ActiveAccount } from '@/server/accounts/service'
+import { ScenarioLibraryError } from '@/server/scenarios/service'
+
+/** Single live Account boundary shared by every scenario-library route. */
+export async function requireScenarioLibraryAccess(request: Request): Promise<ActiveAccount> {
   void request
+  const account = await getCurrentAccount()
+  if (!account) {
+    throw new ScenarioLibraryError('Sign in to access scenarios', 401)
+  }
+  return account
 }

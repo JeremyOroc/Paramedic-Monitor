@@ -11,13 +11,13 @@ type RouteContext = { params: Promise<{ id: string }> }
 
 export async function PATCH(request: Request, { params }: RouteContext) {
   try {
-    await requireScenarioLibraryAccess(request)
+    const account = await requireScenarioLibraryAccess(request)
     const { id } = await params
     const body = await request.json() as { name?: unknown }
     if (typeof body.name !== 'string') {
       return NextResponse.json({ error: 'Folder name is required' }, { status: 400 })
     }
-    return NextResponse.json({ folder: await renameScenarioFolder(id, body.name) })
+    return NextResponse.json({ folder: await renameScenarioFolder(account, id, body.name) })
   } catch (error) {
     return scenarioJsonError(error)
   }

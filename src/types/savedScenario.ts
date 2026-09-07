@@ -51,6 +51,8 @@ export type ScenarioSnapshotV1 = {
 export type ScenarioFolder = {
   id: string
   name: string
+  library_kind: 'personal' | 'template'
+  can_edit: boolean
   position: number
   scenario_count: number
   created_at: string
@@ -62,6 +64,8 @@ export type SavedScenarioSummary = {
   folder_id: string
   scenario_number: number
   title: string
+  library_kind: 'personal' | 'template'
+  can_edit: boolean
   position: number
   created_at: string
   updated_at: string
@@ -73,6 +77,7 @@ export type SavedScenario = SavedScenarioSummary & {
 
 export type ScenarioFolderListResponse = {
   folders: ScenarioFolder[]
+  role: 'instructor' | 'administrator'
 }
 
 export type SavedScenarioListResponse = {

@@ -5,6 +5,30 @@
 
 ---
 
+## [2026-09-07] [scenarios/auth] — Complete Personal and Template scenario ownership
+
+- Added the Phase 3 ownership migration. Existing folder/scenario IDs, content, and order become
+  shared Templates in place; Personal folders belong to immutable Auth user IDs and cascade only when
+  their Account is deliberately deleted. Scoped constraints and invoker-security RPCs preserve
+  independent ordering and prevent movement between Personal and Template areas.
+- Replaced the privileged scenario-library data path with the caller's cookie-backed Supabase client.
+  Enabled Accounts can read Templates and only their own Personal library; only Administrators can
+  mutate Templates. Anonymous, disabled, cross-owner, and non-Administrator writes are denied by
+  explicit grants plus RLS. Content-free Template mutation audit rows are inaccessible to app roles.
+- Split the console into fixed My Scenarios and Templates areas. Instructors receive read-only
+  Template controls and save modified Templates as independent Personal copies; Administrators can
+  create Template folders/scenarios and must confirm a shared Template update. The empty Personal
+  virtual Folder 1 remains first-save-only.
+- Corrected local invite-only Auth configuration so global signup remains disabled while the
+  email/password provider stays enabled. Local verification returned 200 for an invited Account login
+  and 422 for an anonymous signup attempt, matching the already-confirmed hosted behavior.
+- Verified every migration replays cleanly, all 54 pgTAP assertions and Supabase schema lint pass,
+  all 1,162 Vitest tests pass with one opt-in integration test skipped, TypeScript passes, ESLint has
+  zero errors and the 12 pre-existing warnings, and the production build passes. Rendered local
+  Administrator and Instructor flows verified Template creation, shared-update confirmation,
+  read-only controls, and Template-to-Personal copying with no browser console warnings or errors.
+  The production migration remains undeployed until this matching application branch is merged.
+
 ## [2026-09-06] [auth/ui] — Persist standard Dashboard invitation sessions
 
 - Fixed the standard Supabase Dashboard invitation handoff, whose accepted link returns credentials

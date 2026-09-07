@@ -9,9 +9,13 @@ const scenarioService = vi.hoisted(() => ({
   updateSavedScenario: vi.fn(),
   deleteSavedScenario: vi.fn(),
 }))
+const account = vi.hoisted(() => ({
+  user_id: 'user-1', username: 'Instructor.One', email: 'one@example.test',
+  role: 'instructor' as const, status: 'enabled' as const,
+}))
 
 vi.mock('@/server/scenarios/access', () => ({
-  requireScenarioLibraryAccess: vi.fn(),
+  requireScenarioLibraryAccess: vi.fn().mockResolvedValue(account),
 }))
 vi.mock('@/server/scenarios/service', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/server/scenarios/service')>()),
@@ -44,7 +48,7 @@ describe('saved scenario routes', () => {
 
     scenarioService.listSavedScenarios.mockResolvedValue([saved])
     const listed = await GET(new Request('http://localhost/api/scenarios?folderId=general'))
-    expect(scenarioService.listSavedScenarios).toHaveBeenCalledWith('general')
+    expect(scenarioService.listSavedScenarios).toHaveBeenCalledWith(account, 'general')
     expect((await listed.json()).scenarios).toHaveLength(1)
 
     scenarioService.createSavedScenario.mockResolvedValue(saved)
@@ -53,7 +57,12 @@ describe('saved scenario routes', () => {
       body: JSON.stringify({ folderId: 'general', title: '', snapshot }),
     }))
     expect(created.status).toBe(201)
-    expect(scenarioService.createSavedScenario).toHaveBeenCalledWith('general', '', snapshot)
+    expect(scenarioService.createSavedScenario).toHaveBeenCalledWith(
+      account,
+      'general',
+      '',
+      snapshot,
+    )
 
     scenarioService.createSavedScenario.mockResolvedValue(saved)
     const autoCreated = await POST(new Request('http://localhost/api/scenarios', {
@@ -61,7 +70,12 @@ describe('saved scenario routes', () => {
       body: JSON.stringify({ autoCreateFolder: true, title: '', snapshot }),
     }))
     expect(autoCreated.status).toBe(201)
-    expect(scenarioService.createSavedScenario).toHaveBeenLastCalledWith(null, '', snapshot)
+    expect(scenarioService.createSavedScenario).toHaveBeenLastCalledWith(
+      account,
+      null,
+      '',
+      snapshot,
+    )
 
     const invalid = await POST(new Request('http://localhost/api/scenarios', {
       method: 'POST',
@@ -86,7 +100,7 @@ describe('saved scenario routes', () => {
       method: 'PATCH',
       body: JSON.stringify({ folderId: 'trauma', title: 'Moved', snapshot }),
     }), context)
-    expect(scenarioService.updateSavedScenario).toHaveBeenCalledWith('scenario-1', {
+    expect(scenarioService.updateSavedScenario).toHaveBeenCalledWith(account, 'scenario-1', {
       folderId: 'trauma',
       title: 'Moved',
       snapshot,

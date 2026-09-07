@@ -15,9 +15,9 @@ import {
   updateSavedScenario,
 } from '../service'
 
-const createServiceClient = vi.hoisted(() => vi.fn())
+const createAuthenticatedClient = vi.hoisted(() => vi.fn())
 
-vi.mock('@/lib/supabase/server', () => ({ createServiceClient }))
+vi.mock('@/lib/supabase/server', () => ({ createAuthenticatedClient }))
 
 type QueryError = { code?: string; message: string } | null
 type QueryResult<T> = { data: T; error: QueryError }
@@ -48,7 +48,7 @@ function mockClient(builders: QueryBuilder<unknown>[]) {
     from: vi.fn(() => builders[builderIndex++]),
     rpc: vi.fn(),
   }
-  createServiceClient.mockReturnValue(client as never)
+  createAuthenticatedClient.mockResolvedValue(client as never)
   return client
 }
 
@@ -56,9 +56,25 @@ const timestamp = '2026-08-18T12:00:00.000Z'
 const general = {
   id: 'general',
   name: 'General',
+  library_kind: 'personal' as const,
+  owner_user_id: 'user-1',
   position: 1,
   created_at: timestamp,
   updated_at: timestamp,
+}
+
+const account = {
+  user_id: 'user-1',
+  username: 'Instructor.One',
+  email: 'one@example.test',
+  role: 'instructor' as const,
+  status: 'enabled' as const,
+}
+
+const administrator = {
+  ...account,
+  username: 'Jeremy',
+  role: 'administrator' as const,
 }
 
 const scenario = {
@@ -74,7 +90,7 @@ const scenario = {
 
 describe('scenario library service', () => {
   beforeEach(() => {
-    createServiceClient.mockReset()
+    createAuthenticatedClient.mockReset()
   })
 
   it('preserves persisted folder order and adds counts', async () => {
@@ -93,7 +109,7 @@ describe('scenario library service', () => {
       }),
     ])
 
-    const folders = await listScenarioFolders()
+    const folders = await listScenarioFolders(account)
 
     expect(folders.map((folder) => folder.name)).toEqual(['zebra', 'Alpha', 'General'])
     expect(folders.map((folder) => folder.scenario_count)).toEqual([0, 2, 1])
@@ -106,11 +122,15 @@ describe('scenario library service', () => {
     })
     mockClient([insert])
 
-    await expect(createScenarioFolder('  GENERAL  ')).rejects.toMatchObject({
+    await expect(createScenarioFolder(account, '  GENERAL  ', 'personal')).rejects.toMatchObject({
       status: 409,
       message: 'A folder with that name already exists',
     })
-    expect(insert.insert).toHaveBeenCalledWith({ name: 'GENERAL' })
+    expect(insert.insert).toHaveBeenCalledWith({
+      name: 'GENERAL',
+      library_kind: 'personal',
+      owner_user_id: 'user-1',
+    })
   })
 
   it('allows the former General folder to be renamed', async () => {
@@ -121,7 +141,7 @@ describe('scenario library service', () => {
     })
     mockClient([lookup, updated])
 
-    await expect(renameScenarioFolder('general', 'Renamed')).resolves.toMatchObject({
+    await expect(renameScenarioFolder(account, 'general', 'Renamed')).resolves.toMatchObject({
       name: 'Renamed',
     })
     expect(updated.update).toHaveBeenCalledWith({ name: 'Renamed' })
@@ -132,7 +152,7 @@ describe('scenario library service', () => {
     const scenarioList = new QueryBuilder({ data: [scenario], error: null })
     mockClient([folderLookup, scenarioList])
 
-    await expect(listSavedScenarios('general')).resolves.toMatchObject([
+    await expect(listSavedScenarios(account, 'general')).resolves.toMatchObject([
       { id: 'scenario-3', scenario_number: 3 },
     ])
     expect(scenarioList.order).toHaveBeenNthCalledWith(1, 'position', { ascending: true })
@@ -145,9 +165,10 @@ describe('scenario library service', () => {
         data: { ...scenario, snapshot: { version: 2 } },
         error: null,
       }),
+      new QueryBuilder({ data: general, error: null }),
     ])
 
-    await expect(getSavedScenario('scenario-3')).rejects.toMatchObject({
+    await expect(getSavedScenario(account, 'scenario-3')).rejects.toMatchObject({
       status: 500,
       message: 'Scenario scenario-3 contains an invalid snapshot',
     })
@@ -155,10 +176,12 @@ describe('scenario library service', () => {
 
   it('uses the record-reserved scenario number when an updated title is blank', async () => {
     const current = new QueryBuilder({ data: scenario, error: null })
+    const currentFolder = new QueryBuilder({ data: general, error: null })
     const updated = new QueryBuilder({ data: scenario, error: null })
-    mockClient([current, updated])
+    const updatedFolder = new QueryBuilder({ data: general, error: null })
+    mockClient([current, currentFolder, updated, updatedFolder])
 
-    await updateSavedScenario('scenario-3', { title: '   ' })
+    await updateSavedScenario(account, 'scenario-3', { title: '   ' })
 
     expect(updated.update).toHaveBeenCalledWith({ title: 'Scenario 3' })
   })
@@ -173,11 +196,11 @@ describe('scenario library service', () => {
   })
 
   it('uses the atomic auto-folder RPC only when no folder is supplied', async () => {
-    const client = mockClient([])
+    const client = mockClient([new QueryBuilder({ data: general, error: null })])
     client.rpc.mockResolvedValue({ data: scenario, error: null })
 
     await expect(
-      createSavedScenario(null, '', createEmptyScenarioSnapshot()),
+      createSavedScenario(account, null, '', createEmptyScenarioSnapshot()),
     ).resolves.toMatchObject({ id: 'scenario-3', position: 1 })
     expect(client.rpc).toHaveBeenCalledWith('create_saved_scenario_with_auto_folder', {
       requested_title: '',
@@ -186,8 +209,12 @@ describe('scenario library service', () => {
   })
 
   it('moves scenarios through the append RPC and persists complete folder order', async () => {
+    const trauma = { ...general, id: 'trauma', name: 'Trauma' }
     const current = new QueryBuilder({ data: scenario, error: null })
-    const client = mockClient([current])
+    const currentFolder = new QueryBuilder({ data: general, error: null })
+    const movedFolder = new QueryBuilder({ data: trauma, error: null })
+    const reorderFolder = new QueryBuilder({ data: trauma, error: null })
+    const client = mockClient([current, currentFolder, movedFolder, reorderFolder])
     client.rpc
       .mockResolvedValueOnce({
         data: { ...scenario, folder_id: 'trauma', position: 4 },
@@ -201,12 +228,12 @@ describe('scenario library service', () => {
         error: null,
       })
 
-    await expect(updateSavedScenario('scenario-3', { folderId: 'trauma' })).resolves.toMatchObject({
+    await expect(updateSavedScenario(account, 'scenario-3', { folderId: 'trauma' })).resolves.toMatchObject({
       folder_id: 'trauma',
       position: 4,
     })
     await expect(
-      reorderSavedScenarios('trauma', ['scenario-2', 'scenario-3']),
+      reorderSavedScenarios(account, 'trauma', ['scenario-2', 'scenario-3']),
     ).resolves.toMatchObject([{ id: 'scenario-2', position: 1 }, { id: 'scenario-3', position: 2 }])
     expect(client.rpc).toHaveBeenNthCalledWith(1, 'move_saved_scenario', {
       scenario_to_move: 'scenario-3',
@@ -229,12 +256,40 @@ describe('scenario library service', () => {
       error: null,
     })
 
-    await expect(reorderScenarioFolders(['trauma', 'general'])).resolves.toMatchObject([
+    await expect(reorderScenarioFolders(account, 'personal', ['trauma', 'general'])).resolves.toMatchObject([
       { id: 'trauma', position: 1, scenario_count: 1 },
       { id: 'general', position: 2, scenario_count: 0 },
     ])
     expect(client.rpc).toHaveBeenCalledWith('reorder_scenario_folders', {
+      library_scope: 'personal',
       ordered_folder_ids: ['trauma', 'general'],
     })
+  })
+
+  it('reports Templates as read-only for Instructors and editable for Administrators', async () => {
+    const template = {
+      ...general,
+      library_kind: 'template' as const,
+      owner_user_id: null,
+    }
+    mockClient([
+      new QueryBuilder({ data: [template], error: null }),
+      new QueryBuilder({ data: [], error: null }),
+    ])
+    await expect(listScenarioFolders(account)).resolves.toMatchObject([{ can_edit: false }])
+
+    mockClient([
+      new QueryBuilder({ data: [template], error: null }),
+      new QueryBuilder({ data: [], error: null }),
+    ])
+    await expect(listScenarioFolders(administrator)).resolves.toMatchObject([{ can_edit: true }])
+  })
+
+  it('rejects Template creation before querying for a non-Administrator', async () => {
+    await expect(createScenarioFolder(account, 'Shared', 'template')).rejects.toMatchObject({
+      status: 403,
+      message: 'Administrator access required',
+    })
+    expect(createAuthenticatedClient).not.toHaveBeenCalled()
   })
 })
