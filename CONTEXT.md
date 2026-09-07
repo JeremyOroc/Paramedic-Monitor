@@ -13,8 +13,45 @@ The MacBook or desktop monitor that ordinarily presents the Instructor Console; 
 _Avoid_: Training display, dev display
 
 **Saved scenario**:
-A named instructor-authored clinical and dispatch snapshot stored in the scenario library.
-_Avoid_: Template, preset
+A named instructor-authored clinical and dispatch snapshot stored as either a Personal scenario or a Template scenario.
+_Avoid_: Preset
+
+**Account**:
+A verified instructor identity with a unique username and email that can authenticate, own Personal scenarios, and own Rooms. Trainees participate in Rooms without Accounts.
+_Avoid_: User, trainee account, student account
+
+**Invited Account**:
+An instructor identity invited by a Product operator that has not yet completed its username and
+password setup. It cannot enter ordinary authenticated product areas until invitation acceptance.
+_Avoid_: Pending Account, public registrant
+
+**Instructor**:
+The ordinary Account role for preparing scenarios, creating Rooms, and conducting Attempts.
+_Avoid_: Teacher role, standard user
+
+**Administrator**:
+An Account role with every Instructor capability plus authority to maintain the shared Template scenarios.
+_Avoid_: Superuser, template owner
+
+**Product operator**:
+A maintainer who administers Accounts outside the application. A Product operator is not an application role and is distinct from an Administrator.
+_Avoid_: Administrator, instructor admin
+
+**Personal scenario**:
+A Saved scenario visible and mutable only to its owning Account rather than shared through Templates.
+_Avoid_: Private template, user scenario
+
+**Template scenario**:
+A shared Saved scenario in the permanent Templates collection, available to every Account and maintained by Administrators.
+_Avoid_: Preset, global scenario
+
+**My Scenarios**:
+The Account's private scenario-library area, containing its Personal scenarios and folders.
+_Avoid_: Personal folder, user library
+
+**Templates**:
+The fixed shared scenario-library area, containing Administrator-maintained Template scenarios and folders.
+_Avoid_: Template folder, shared library
 
 **Loaded scenario**:
 The saved scenario currently populating the Instructor Console authoring fields for review or editing.
@@ -25,11 +62,11 @@ Local scenario authoring state that has not yet been stored in the scenario libr
 _Avoid_: Unsaved scenario, temporary scenario
 
 **Scenario folder order**:
-The instructor-defined global sequence of scenario folders, independent of the order of saved scenarios inside each folder.
+The Account-defined sequence of folders in My Scenarios or Administrator-defined sequence in Templates, independent of the order of Saved scenarios inside each folder.
 _Avoid_: Alphabetical folder order, scenario order
 
 **Room**:
-The join-coded space one instructor opens for their trainees. It holds every attempt run in it and the evaluation record of each, and both end when the instructor closes it.
+The join-coded space owned by one Instructor Account and opened for trainees who join by nickname. It holds every Attempt run in it and the Evaluation record of each.
 _Avoid_: Session, lobby, class
 
 **Attempt**:
@@ -68,8 +105,42 @@ How current a trainee monitor projection is relative to the trainee's latest acc
 _Avoid_: Connection status, participant presence
 
 **Evaluation record**:
-Everything a room stores about an attempt for the instructor to review afterward: each trainee action in order, the confirmed clinical state it was taken against, and each change the instructor sent. It presents; it does not grade.
+The persistent Account-owned report of one Attempt across all participating trainees. It is created
+when the Attempt starts, autosaves each trainee action, confirmed clinical state, and Instructor
+change, and remains Incomplete until New Attempt or End Room completes it. It presents; it does not
+grade.
 _Avoid_: Report data, session log, history
+
+**Student name**:
+An optional Instructor-entered name attached to an Evaluation record for identifying a learner. It
+is independent of the nickname a trainee used to join the Room and is not an Account. A record may
+hold up to 100 Student names of up to 100 characters each; blank entries are discarded and duplicate
+names are allowed. Entries are otherwise free-form and the application gives no inline privacy or
+institution-approved-identifier guidance.
+_Avoid_: Trainee nickname, student Account, participant identity
+
+**Room controller**:
+The single signed-in browser authorized to mutate an Account-owned Room. Other devices for the same
+Account may observe the Room or explicitly take control, which makes the previous controller
+read-only.
+_Avoid_: Room owner, host token, primary Account
+
+**Reports**:
+The authenticated area containing the signed-in Instructor's complete and Incomplete Evaluation
+records, retained until that Instructor permanently deletes them.
+_Avoid_: Archive, room history, saved Rooms
+
+**Incomplete Evaluation record**:
+An Evaluation record whose Attempt started but was not completed through New Attempt or End Room.
+It remains reviewable and editable in Reports. After its Room has ended or expired, its owner may
+manually complete it without altering the recorded timeline.
+_Avoid_: Draft report, live Room
+
+**Evaluation scenario snapshot**:
+The immutable scenario name, confirmed defibrillator model, and report-relevant configuration stored
+with an Evaluation record when its Attempt starts. It keeps the record intelligible if the source
+Personal scenario or Template is later edited or deleted.
+_Avoid_: Linked scenario, current scenario
 
 **Instructor change**:
 One Send by the instructor as the evaluation record shows it: the difference from the previous Send in that attempt. Every Send is its own instructor change, including a correction seconds after the last one; the opening Send is the one instructor change with nothing before it.

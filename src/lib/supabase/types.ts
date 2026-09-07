@@ -5,6 +5,54 @@
 export type Database = {
   public: {
     Tables: {
+      account_profiles: {
+        Row: {
+          user_id: string
+          username: string
+          normalized_username: string
+          role: 'instructor' | 'administrator'
+          status: 'enabled' | 'disabled'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          username: string
+          normalized_username?: never
+          role?: 'instructor' | 'administrator'
+          status?: 'enabled' | 'disabled'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          username?: string
+          normalized_username?: never
+          role?: 'instructor' | 'administrator'
+          status?: 'enabled' | 'disabled'
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reserved_account_usernames: {
+        Row: {
+          username: string
+          normalized_username: string
+          created_at: string
+        }
+        Insert: {
+          username: string
+          normalized_username?: never
+          created_at?: string
+        }
+        Update: {
+          username?: string
+          normalized_username?: never
+          created_at?: string
+        }
+        Relationships: []
+      }
       sessions: {
         Row: {
           id: string

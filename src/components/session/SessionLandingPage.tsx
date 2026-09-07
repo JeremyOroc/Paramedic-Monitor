@@ -120,6 +120,12 @@ export function SessionLandingPage() {
               </p>
             )}
             <div className="mt-2 grid gap-3 border-t border-neutral-800 pt-4">
+              <Link
+                href="/instructor/login"
+                className="border border-cyan-bp px-5 py-3 text-center font-mono text-xs font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/10"
+              >
+                Instructor sign in
+              </Link>
               <button
                 type="button"
                 onClick={createRoom}
@@ -128,6 +134,9 @@ export function SessionLandingPage() {
               >
                 Create Room
               </button>
+              <p className="text-center text-xs leading-5 text-neutral-600">
+                Legacy room creation remains available during the account rollout.
+              </p>
             </div>
             <Link
               href="/?dev=1"
