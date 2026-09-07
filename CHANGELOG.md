@@ -5,6 +5,19 @@
 
 ---
 
+## [2026-09-07] [scenarios/ops] — Verify Phase 3 in production
+
+- Merged the Personal/Template ownership branch and deployed
+  `20260907032643_phase_3_scenario_ownership.sql` with the matching application release.
+- Passed the complete ten-step production smoke test: health, invited Instructor access, fixed
+  Personal and Template areas, read-only Template behavior, independent Personal copying, and
+  sign-out/sign-in persistence all behaved as designed.
+- Deliberately provisioned the existing verified `JeremyTest` Auth identity as the reserved `Jeremy`
+  Administrator by immutable user ID. Production sign-in displayed the Administrator role, and
+  Administrator-only shared Template creation, update confirmation, and cleanup passed.
+- Closed Account implementation Phase 3 in production. Phase 4 account-owned Room authorization is
+  the next implementation phase.
+
 ## [2026-09-07] [scenarios/auth] — Complete Personal and Template scenario ownership
 
 - Added the Phase 3 ownership migration. Existing folder/scenario IDs, content, and order become
