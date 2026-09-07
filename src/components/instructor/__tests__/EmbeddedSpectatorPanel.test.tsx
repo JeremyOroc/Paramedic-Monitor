@@ -176,7 +176,6 @@ function RestartableSpectatorHarness() {
       </button>
       <EmbeddedSpectatorPanel
         code="ABC123"
-        hostToken="host-token"
         participant={selectedParticipant}
         mode={mode}
         onModeChange={setMode}

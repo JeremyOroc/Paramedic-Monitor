@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-09-07] [instructor/testing] — Fix Vercel spectator test type check
+
+- Removed the retired `hostToken` prop from the restartable Floating Spectator test harness. The
+  Account-owned Room merge had already removed that prop from the production component and every
+  other caller, leaving this single stale test fixture to fail Next.js production type checking.
+- Re-ran the focused spectator regression, the complete Vitest suite, TypeScript, ESLint, and the
+  production build so the Vercel deployment contract is covered locally.
+
 ## [2026-09-07] [merge/instructor] — Integrate draggable Spectator corners
 
 - Resolved the documentation merge by retaining the complete Accounts and production-operations

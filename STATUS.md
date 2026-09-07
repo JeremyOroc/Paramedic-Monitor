@@ -950,6 +950,9 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Recently Completed
+- [x] **Vercel spectator test type-check fix — COMPLETE:**
+  - [x] Remove the retired `hostToken` prop from the restartable Floating Spectator test harness
+  - [x] Verify the focused spectator tests, full suite, TypeScript, ESLint, and production build
 - [x] **Phase 17 floating-corner enhancement — COMPLETE:**
   - [x] Add a primary-pointer drag grip with a 6px threshold, viewport containment, target preview,
         player-center quadrant selection, four safe-area anchors, and reduced-motion-aware snapping
