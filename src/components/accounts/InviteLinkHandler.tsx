@@ -6,6 +6,39 @@ import { useRouter } from 'next/navigation'
 
 import { createClient } from '@/lib/supabase/client'
 
+type InviteFragment =
+  | { kind: 'none' }
+  | { kind: 'invalid' }
+  | { kind: 'session'; accessToken: string; refreshToken: string }
+
+function consumeInviteFragment(): InviteFragment {
+  const hash = window.location.hash
+  if (!hash) return { kind: 'none' }
+
+  const params = new URLSearchParams(hash.slice(1))
+
+  // Invitation credentials arrive in the fragment. Remove them from the visible
+  // URL and browser history before any asynchronous authentication work begins.
+  window.history.replaceState(
+    window.history.state,
+    document.title,
+    `${window.location.pathname}${window.location.search}`,
+  )
+
+  const accessToken = params.get('access_token')
+  const refreshToken = params.get('refresh_token')
+  if (
+    params.has('error')
+    || params.has('error_code')
+    || !accessToken
+    || !refreshToken
+  ) {
+    return { kind: 'invalid' }
+  }
+
+  return { kind: 'session', accessToken, refreshToken }
+}
+
 export function InviteLinkHandler() {
   const router = useRouter()
   const [failed, setFailed] = useState(false)
@@ -14,22 +47,38 @@ export function InviteLinkHandler() {
     let active = true
 
     async function finishInviteRedirect() {
-      const supabase = createClient()
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      if (sessionError || !sessionData.session) {
+      const fragment = consumeInviteFragment()
+      if (fragment.kind === 'invalid') {
         if (active) setFailed(true)
         return
       }
 
-      const { data: userData, error: userError } = await supabase.auth.getUser()
-      if (userError || !userData.user?.invited_at) {
-        if (active) setFailed(true)
-        return
-      }
+      try {
+        const supabase = createClient()
+        const sessionResult = fragment.kind === 'session'
+          ? await supabase.auth.setSession({
+              access_token: fragment.accessToken,
+              refresh_token: fragment.refreshToken,
+            })
+          : await supabase.auth.getSession()
 
-      if (active) {
-        router.replace('/instructor/accept-invite')
-        router.refresh()
+        if (sessionResult.error || !sessionResult.data.session) {
+          if (active) setFailed(true)
+          return
+        }
+
+        const { data: userData, error: userError } = await supabase.auth.getUser()
+        if (userError || !userData.user?.invited_at) {
+          if (active) setFailed(true)
+          return
+        }
+
+        if (active) {
+          router.replace('/instructor/accept-invite')
+          router.refresh()
+        }
+      } catch {
+        if (active) setFailed(true)
       }
     }
 

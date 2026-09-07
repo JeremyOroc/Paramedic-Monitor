@@ -6,14 +6,18 @@
 ---
 
 ## Current Phase
-**Accounts & scenario ownership — PHASE 2 INVITE-ONLY REVISION CODE COMPLETE (2026-09-05); HOSTED CONFIGURATION PENDING.**
+**Accounts & scenario ownership — PHASE 2 INVITE HANDOFF CORRECTED (2026-09-06); HOSTED RE-TEST PENDING.**
 The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
 implemented shared-code self-registration flow. Public registration and its deployment secret are
 removed; verified invited instructors complete a unique username and password in the app
 before receiving a fixed Instructor profile. Username/password sign-in, recovery, cookie-based session
 refresh, protected Instructor entry, password change, current-device sign-out, and the initial Account
 UI otherwise remain. The callback is local-redirect-only and protected pages re-check the live
-enabled profile. Existing host-token Rooms remain operational until Phase 4. The local Account
+enabled profile. Standard Supabase Dashboard invitations now consume the implicit-flow credential
+fragment, remove it from browser history before asynchronous work, persist the cookie-backed session,
+and verify the live invited identity before opening setup. Partial, expired, provider-error, and
+non-invited flows fail generically; an already-persisted cookie session remains a supported retry path.
+Existing host-token Rooms remain operational until Phase 4. The local Account
 authorization foundation includes protected profiles keyed by Auth user ID, normalized
 case-insensitive usernames, reserved Administrator names, live enabled/Administrator helpers,
 least-privilege grants, RLS, and 24 executable allow/deny database policy assertions. The Account
@@ -80,15 +84,15 @@ rehearsals; Free requires a smoke test before classes following five-day breaks;
 controls cutover; critical operational failures are sanitized and emailed; and work follows seven
 tested dependency-ordered phases. The user explicitly confirmed the complete contract as the shared
 implementation baseline and authorized implementation. The revised Phase 1/2 gate passed 24 pgTAP
-assertions, local schema lint, all 1,146 Vitest tests with one opt-in integration test skipped,
+assertions, local schema lint, all 1,151 Vitest tests with one opt-in integration test skipped,
 TypeScript, ESLint with zero errors and the 12 pre-existing warnings, and the production build. A
 localhost smoke test returned HTTP 200 for health, invitation-only login, and invite handoff, while
 both retired public registration routes returned HTTP 404. The earlier isolated Auth check proved
 confirmed sign-in, enabled self-read, and immediate RLS denial after disablement; its invite-based
 replacement remains opt-in. Multi-tenancy stays deferred. Phase 3 Personal/Template
-scenario ownership is next. Before hosted use, Product operators must deploy this revision, configure
-the production Auth Site URL/redirect allow-list, disable hosted public signup, and complete one real
-Dashboard invitation acceptance/login smoke test. The linked database now reports complete local/remote
+scenario ownership is next. Production health and invitation routing are confirmed; Product operators
+must deploy the handoff correction and repeat one real Dashboard invitation acceptance/login smoke test.
+The linked database now reports complete local/remote
 migration parity and a no-op migration dry run; direct verification confirmed both Account tables,
 all three reserved usernames, RLS, the self-read policy, protected client grants, triggers, and private
 authorization helpers. `/api/health` returned HTTP 200 with `database: ok` after deployment.

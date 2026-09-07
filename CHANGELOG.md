@@ -5,6 +5,19 @@
 
 ---
 
+## [2026-09-06] [auth/ui] — Persist standard Dashboard invitation sessions
+
+- Fixed the standard Supabase Dashboard invitation handoff, whose accepted link returns credentials
+  in the URL fragment while the cookie-aware SSR browser client is configured for PKCE. The handoff
+  now consumes a complete access/refresh token pair and persists it before opening Instructor setup.
+- Removed the credential fragment from the visible URL and browser history before asynchronous Auth
+  work. Partial, provider-error, expired, and non-invited flows retain the generic failure UI, while a
+  previously persisted cookie session remains a supported retry path.
+- Added regressions for fragment persistence, erase-before-persist ordering, malformed/error fragments,
+  cookie-session fallback, non-invited identities, and thrown provider failures. Verified all 1,151
+  Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and the 12
+  pre-existing warnings, the production build, and the rendered invalid-token path in local Chrome.
+
 ## [2026-09-06] [database/operations] — Reconcile migration history and deploy Account authorization
 
 - Audited the linked Supabase project before mutation. The trainee action-clock columns and

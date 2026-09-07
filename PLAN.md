@@ -1731,7 +1731,7 @@ row on every protected database decision instead of from user-editable metadata 
   reviewed. On 2026-09-06, direct schema inspection verified the two already-present changes, their
   history was repaired, and the Account migration was deployed and verified.
 
-#### Account implementation Phase 2 — Authentication and Account UI (INVITE-ONLY REVISION CODE COMPLETE 2026-09-05)
+#### Account implementation Phase 2 — Authentication and Account UI (INVITE HANDOFF CORRECTED 2026-09-06)
 
 Phase 2 adds invitation-only onboarding, username/password sign-in, password recovery, session refresh,
 protected Instructor entry, current-device sign-out, and the first Account page. Product operators
@@ -1747,18 +1747,20 @@ Room migration in Phase 4.
 - Test invitation acceptance, duplicate/reserved usernames, provider password errors, fixed Instructor
   role assignment, existing manually provisioned Administrator setup, and retryable profile failures.
 - Test sign-in success, generic invalid credentials, non-accepted invitations, disabled Accounts,
-  recovery, invite callback exchange, password change, current-device sign-out, and protected redirects.
+  recovery, PKCE/token-hash callback exchange, implicit Dashboard-invite session persistence and
+  credential-fragment removal, password change, current-device sign-out, and protected redirects.
 - Test each client form's pending, success, error, navigation, and accessibility behavior.
 - Exercise the flows against an isolated local Supabase stack with synthetic identities, then run the
   complete Vitest suite, TypeScript, ESLint, and a production build. The linked-project history review
-  and Account authorization deployment completed on 2026-09-06; hosted Auth configuration and a real
-  Dashboard invitation smoke test remain separate launch gates.
+  and Account authorization deployment completed on 2026-09-06. Production invitation routing now
+  reaches the intended handoff; a successful real Dashboard invitation smoke test remains a launch gate.
 
 Phase 2's original shared-code self-registration is superseded by the confirmed invitation-only
 revision. Cookie-aware Supabase SSR clients and scoped Proxy refresh retain the server-rendered flow.
 Same-origin, no-store API routes mediate invitation acceptance, sign-in, recovery, password changes,
-and local sign-out. The standard Dashboard invite handoff plus PKCE/token-hash callback paths send
-verified invited identities to onboarding and reject non-invited profile-less identities. `/instructor` exposes login,
+and local sign-out. The standard Dashboard invite handoff removes its implicit-flow credentials from
+browser history before persisting them into the cookie-backed session; PKCE/token-hash callbacks remain
+supported. Both paths send verified invited identities to onboarding and reject non-invited profile-less identities. `/instructor` exposes login,
 invite acceptance, recovery, and protected Account/reset states; it exposes no public registration.
 The Account page keeps username/email immutable in-app, displays role, changes password, and signs out
 the current device. The pre-account host-token Create Room path remains explicitly visible and
@@ -1774,11 +1776,13 @@ expansion seam remains part of the design interview; speculative multi-tenant in
 The user explicitly confirmed this complete documented contract on 2026-09-04 as the shared
 implementation baseline and authorized implementation. Phases 1 and 2 are code-complete locally with
 the isolated database, pgTAP suite, generated-schema TypeScript additions, Supabase Auth flow, and
-Account UI. The invite-only revision passed 1,146 Vitest tests with one opt-in integration test
-skipped, TypeScript, ESLint with zero errors and the 12 pre-existing warnings, and a production build.
+Account UI. The corrected invite-only revision passed 1,151 Vitest tests with one opt-in integration
+test skipped, TypeScript, ESLint with zero errors and the 12 pre-existing warnings, a production build,
+and rendered dummy-token failure-path QA in Chrome.
 The linked database now has complete migration parity and the deployed Account authorization objects.
-The hosted Site URL, redirect allow-list, public-signup switch, and real invitation smoke test remain
-operational deployment steps. Phase 3 is next. The previous deferred account note and its
+The production Site URL and invitation routing are confirmed. The hosted public-signup switch must
+remain disabled, and a successful real invitation smoke test after deploying the handoff correction
+remains an operational step. Phase 3 is next. The previous deferred account note and its
 assumption that the global library would remain
 until an external sale are superseded by this design.
 
