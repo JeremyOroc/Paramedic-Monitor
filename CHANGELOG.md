@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-09-07] [navigation/sessions] — Complete Phase 6 authenticated navigation locally
+
+- Made `/instructor` the canonical protected Console, retained `/admin` as a compatibility redirect,
+  and added one accessible Console/Reports/Account navigation across the local Console, live Room,
+  Reports, and Account surfaces. Active-page semantics, visible keyboard focus, compact wrapping, and
+  touch-sized targets are covered by component and route tests.
+- Exercised the complete rendered cross-area flow, including Room create/conflict/reopen and live
+  waiting-room access. Corrected narrow-screen overflow in the clinical tabs, scenario library,
+  Vitals, and Patient/SNS controls without changing their desktop layouts.
+- Corrected the Phase 6 start assumption that no migration was needed. Clean-install QA exposed
+  missing service-role DML privileges on four temporary live-Room tables, so
+  `20260907163444_grant_live_room_service_access.sql` now applies exact least-privilege server grants
+  while keeping browser roles out. Added migration-contract and pgTAP regression coverage.
+- Verified a clean migration replay, 120 pgTAP assertions, error-level schema lint, database advisors
+  with no error-level findings, all 1,203 Vitest tests with one opt-in integration test skipped,
+  TypeScript, ESLint with zero errors and the 12 existing warnings, and the production build. The
+  available 319×748 browser passed routing, navigation, Room, compact-overflow, overlay, and console
+  checks; a wider rendered smoke test remains for post-deployment acceptance. Production is unchanged.
+
+## [2026-09-07] [navigation] — Start Phase 6 authenticated Instructor shell
+
+- Recorded the Product operator's Phase 5 merge and report-migration deployment and opened
+  `phase/6-instructor-navigation` from that merged revision.
+- Confirmed `/instructor` as the canonical Console, `/admin` as a backwards-compatible redirect, and
+  one accessible Console/Reports/Account navigation across the local Console, live Room Console,
+  Reports, and Account surfaces without changing Room authorization or report persistence.
+- Added the Phase 6 testing gate for protected/canonical routing, active navigation semantics,
+  regression coverage, full application verification, and rendered desktop/compact cross-area and
+  live-Room browser checks. Phase 6 requires no database migration.
+
 ## [2026-09-07] [reports] — Complete Phase 5 persistent Evaluation reports locally
 
 - Added one durable, Account-owned Evaluation report per started Attempt. Database triggers snapshot

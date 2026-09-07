@@ -175,7 +175,7 @@ export function CallerInfoForm({
   }, [routeDestinationAddress, routeOriginAddress, setDispatchRouteDraft])
 
   return (
-    <section className="flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
+    <section className="min-w-0 flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <button

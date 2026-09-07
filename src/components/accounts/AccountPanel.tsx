@@ -1,8 +1,9 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+
+import { InstructorNavigation } from '@/components/instructor/InstructorNavigation'
 
 interface AccountPanelProps {
   email: string
@@ -60,17 +61,14 @@ export function AccountPanel({ email, role, username }: AccountPanelProps) {
     <main className="min-h-screen bg-monitor-bg px-5 py-10 text-white">
       <section className="mx-auto w-full max-w-2xl border border-neutral-800 bg-sidebar-bg p-6 sm:p-8">
         <p className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-cyan-bp">Instructor console</p>
-        <div className="mt-3 flex items-start justify-between gap-4">
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black tracking-tight">Account</h1>
             <p className="mt-2 text-sm text-neutral-400">Your identity and sign-in settings.</p>
           </div>
-          <button type="button" onClick={signOut} disabled={busy} className="border border-neutral-700 px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider hover:border-alarm-red hover:text-alarm-red disabled:opacity-50">Sign out</button>
+          <button type="button" onClick={signOut} disabled={busy} className="min-h-11 border border-neutral-700 px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider hover:border-alarm-red hover:text-alarm-red disabled:opacity-50">Sign out</button>
         </div>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <Link href="/admin" className="inline-block border border-cyan-bp px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/10">Open console</Link>
-          <Link href="/instructor/reports" className="inline-block border border-neutral-700 px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-neutral-300 hover:border-cyan-bp hover:text-cyan-bp">Reports</Link>
-        </div>
+        <InstructorNavigation active="account" className="mt-5" />
         <dl className="mt-8 grid gap-5 border-y border-neutral-800 py-6 sm:grid-cols-3">
           <div><dt className="font-mono text-xs uppercase tracking-wider text-neutral-500">Username</dt><dd className="mt-2 font-semibold">{username}</dd></div>
           <div><dt className="font-mono text-xs uppercase tracking-wider text-neutral-500">Verified email</dt><dd className="mt-2 break-all font-semibold">{email}</dd></div>

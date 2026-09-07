@@ -22,6 +22,8 @@ describe('AccountPanel', () => {
     expect(screen.getByText('administrator')).toBeInTheDocument()
     expect(screen.queryByDisplayValue('Jeremy')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/instructor/reports')
+    expect(screen.getByRole('link', { name: 'Console' })).toHaveAttribute('href', '/instructor')
+    expect(screen.getByRole('link', { name: 'Account' })).toHaveAttribute('aria-current', 'page')
   })
 
   it('updates the password and signs out only the current device', async () => {

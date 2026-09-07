@@ -6,7 +6,7 @@
 ---
 
 ## Current Phase
-**Accounts & scenario ownership — PHASE 4 PRODUCTION VERIFIED; PHASE 5 CODE COMPLETE LOCALLY (2026-09-07).**
+**Accounts & scenario ownership — PHASE 6 CODE COMPLETE LOCALLY (2026-09-07).**
 The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
 implemented shared-code self-registration flow. Public registration and its deployment secret are
 removed; verified invited instructors complete a unique username and password in the app
@@ -22,8 +22,9 @@ together. Account-owned Rooms are production-verified. The Account
 authorization foundation includes protected profiles keyed by Auth user ID, normalized
 case-insensitive usernames, reserved Administrator names, live enabled/Administrator helpers,
 least-privilege grants, RLS, and 24 executable allow/deny database policy assertions. The Account
-authorization foundation, scenario ownership, and Room ownership are complete and deployed to the
-linked Supabase project; persistent report ownership is code-complete locally in Phase 5. On
+authorization foundation, scenario ownership, Room ownership, and persistent Reports are complete
+and deployed to the linked Supabase project. Phase 6 implements the canonical `/instructor`
+Console plus shared Console/Reports/Account navigation and full cross-area browser verification. On
 2026-09-06, direct schema inspection proved the trainee
 action-clock and Attempt-name migrations had already been applied manually, their two missing history
 records were repaired, and the Account authorization migration was then applied normally.
@@ -105,13 +106,23 @@ remains Account-free. A clean migration replay, all 83 pgTAP assertions, schema 
 tests with one opt-in integration test skipped, TypeScript, ESLint with no errors and the 12 existing
 warnings, production build, and rendered public/protected-entry checks pass. The complete production
 owner/controller/trainee checklist passed after the matching branch and migration were deployed.
-Phase 5 is code-complete locally on `phase/5-persistent-reports`: it adds durable owner-scoped Evaluation
+Phase 5 adds durable owner-scoped Evaluation
 records, immutable per-Attempt scenario snapshots, autosaved report timelines, Student-name metadata,
 search/edit/manual-completion/permanent-deletion workflows, and privacy-minimized mutation auditing.
 A clean replay of every migration, 118 pgTAP assertions, error-level Supabase schema lint, all 1,199
 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and the 12
 existing warnings, the production build, and rendered local report workflow checks pass. The Phase 5
-application and `20260907135753_phase_5_persistent_reports.sql` migration remain undeployed.
+application was merged and its `20260907135753_phase_5_persistent_reports.sql` migration was applied
+on 2026-09-07. Phase 6 is complete locally on `phase/6-instructor-navigation`. Rendered live-Room QA
+corrected the initial no-migration expectation: a clean installation lacked explicit service-role
+privileges on four temporary Room tables. The new
+`20260907163444_grant_live_room_service_access.sql` migration revokes all browser access and grants
+only the server operations actually used. A clean migration replay, 120 pgTAP assertions, error-level
+schema lint, database advisors with no error-level findings, 1,203 Vitest tests with one opt-in
+integration test skipped, TypeScript, ESLint with zero errors and the 12 existing warnings, the
+production build, and rendered compact cross-area/live-Room checks pass. Production is unchanged;
+the matching application and corrective migration must deploy together, followed by the wider
+desktop smoke test unavailable in the current 319×748 browser surface.
 The Phase 3 migration converts the existing library to shared Templates in place, adds immutable
 Auth-ID Personal ownership, enabled-account reads, Administrator-only Template writes, scoped
 ordering, cascade cleanup, explicit Data API grants, and an operator-only content-free Template audit
@@ -127,7 +138,8 @@ rollout checks passed, including health, Personal/Template separation, Instructo
 sign-out/sign-in persistence. The existing verified `JeremyTest` Auth identity was deliberately
 renamed to reserved username `Jeremy` and assigned Administrator authority by immutable user ID;
 production sign-in and Administrator-only shared Template controls passed. Phase 4 account-owned
-Room authorization is production-verified; Phase 5 persistent Reports are code-complete locally.
+Room authorization is production-verified; Phase 5 persistent Reports are deployed; Phase 6
+navigation and cross-area verification are complete locally and await deployment.
 The linked database now reports complete local/remote
 migration parity and a no-op migration dry run; direct verification confirmed both Account tables,
 all three reserved usernames, RLS, the self-read policy, protected client grants, triggers, and private

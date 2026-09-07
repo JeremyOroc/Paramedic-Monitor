@@ -72,7 +72,7 @@ export function VitalsControls({
   return (
     <section className="flex h-full min-w-0 flex-col gap-2 border border-neutral-800 bg-neutral-950 p-3 xl:[@media(min-height:800px)]:gap-3 xl:[@media(min-height:800px)]:p-4">
       <h2 className="text-xs uppercase tracking-wider text-neutral-400 xl:[@media(min-height:800px)]:text-sm">Vitals</h2>
-      <div className="grid min-w-0 grid-cols-[minmax(15rem,0.9fr)_minmax(0,1.1fr)] items-start gap-2 xl:[@media(min-height:800px)]:grid-cols-[minmax(17rem,1fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:gap-4">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-2 sm:grid-cols-[minmax(15rem,0.9fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:grid-cols-[minmax(17rem,1fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:gap-4">
         <div className="flex min-w-0 flex-col gap-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[18rem] xl:[@media(min-height:800px)]:gap-3" data-testid="admin-vitals-column">
           <div className="flex items-center" data-testid="admin-vital-row-fc">
             <VitalInput compact field="hr" label="FC" unit="bpm" min={0} max={300} />

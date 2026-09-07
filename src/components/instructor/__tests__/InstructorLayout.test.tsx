@@ -14,6 +14,9 @@ describe('InstructorLayout', () => {
     expect(screen.getByRole('heading', { name: 'Instructor Console' })).toBeInTheDocument()
     expect(screen.queryByText('Dev Console')).toBeNull()
     expect(screen.queryByText(/Local-only\. Edits go through/)).toBeNull()
+    expect(screen.getByRole('link', { name: 'Console' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/instructor/reports')
+    expect(screen.getByRole('link', { name: 'Account' })).toHaveAttribute('href', '/instructor/account')
     expect(screen.getByText('Console content')).toBeInTheDocument()
     expect(screen.getByText('Console content').parentElement).toHaveClass(
       'w-full',
