@@ -59,7 +59,8 @@ export type Database = {
           code: string
           status: 'waiting' | 'active' | 'ended'
           active_attempt_version: number
-          expires_at: string | null
+          owner_user_id: string
+          expires_at: string
           created_at: string
         }
         Insert: {
@@ -67,7 +68,8 @@ export type Database = {
           code: string
           status?: 'waiting' | 'active' | 'ended'
           active_attempt_version?: number
-          expires_at?: string | null
+          owner_user_id: string
+          expires_at?: string
           created_at?: string
         }
         Update: {
@@ -75,25 +77,26 @@ export type Database = {
           code?: string
           status?: 'waiting' | 'active' | 'ended'
           active_attempt_version?: number
-          expires_at?: string | null
+          owner_user_id?: string
+          expires_at?: string
           created_at?: string
         }
         Relationships: []
       }
-      session_hosts: {
+      session_controllers: {
         Row: {
-          id: string
           session_id: string
           token_hash: string
-          created_at: string
+          claim_version: number
+          claimed_at: string
         }
         Insert: {
-          id?: string
           session_id: string
           token_hash: string
-          created_at?: string
+          claim_version?: number
+          claimed_at?: string
         }
-        Update: Partial<Database['public']['Tables']['session_hosts']['Insert']>
+        Update: Partial<Database['public']['Tables']['session_controllers']['Insert']>
         Relationships: []
       }
       session_state: {

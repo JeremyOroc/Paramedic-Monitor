@@ -11,9 +11,11 @@ The console can record a med given while the paramedic's hands were full and a S
 question asked out loud; both are credited to the trainee and marked as instructor-entered, and the
 staged history and Pulse/Respiratory/Skin findings now reach the report while staying out of the
 state the trainee polls. `20260908120000_instructor_recorded_actions.sql` must be applied before the
-checklist logging works against a live room.
+checklist logging works against a live room. Rebased onto Phase 4: instructor-recorded actions are
+authorized as the room's controlling device, so a read-only second device cannot write into the
+record behind the controller's back.
 
-**Accounts & scenario ownership — PHASE 3 PRODUCTION VERIFIED; PHASE 4 NOT STARTED (2026-09-07).**
+**Accounts & scenario ownership — PHASE 3 PRODUCTION VERIFIED; PHASE 4 CODE COMPLETE LOCALLY (2026-09-07).**
 The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
 implemented shared-code self-registration flow. Public registration and its deployment secret are
 removed; verified invited instructors complete a unique username and password in the app
@@ -24,7 +26,8 @@ enabled profile. Standard Supabase Dashboard invitations now consume the implici
 fragment, remove it from browser history before asynchronous work, persist the cookie-backed session,
 and verify the live invited identity before opening setup. Partial, expired, provider-error, and
 non-invited flows fail generically; an already-persisted cookie session remains a supported retry path.
-Existing host-token Rooms remain operational until Phase 4. The local Account
+Production host-token Rooms remain operational only until the Phase 4 application and migration are
+deployed together. Phase 4 code now replaces them with Account-owned Rooms. The local Account
 authorization foundation includes protected profiles keyed by Auth user ID, normalized
 case-insensitive usernames, reserved Administrator names, live enabled/Administrator helpers,
 least-privilege grants, RLS, and 24 executable allow/deny database policy assertions. The Account
@@ -64,9 +67,8 @@ user-editable metadata, and stale JWT role claims are not authoritative. Disable
 existing-session access immediately. Legacy
 host-token Rooms and their reports are deleted at rollout. Disabling an Account ends its Room but
 preserves owned data; deliberate permanent deletion removes its Personal scenarios and Reports while
-Templates remain. Attempt naming is already implemented, currently host-token
-authorized, with its schema and migration history now aligned; the account phase will preserve it
-under Account ownership.
+Templates remain. Attempt naming is preserved under Account ownership and the current browser's
+rotating controller fence.
 Student names remain free-form without inline privacy guidance. Scenario deletion cannot affect live
 Rooms, Personal copies, or report snapshots, and Template mutations receive an operator-only
 Supabase audit log.
@@ -100,6 +102,17 @@ replacement remains opt-in. Multi-tenancy stays deferred. Phase 3 Personal/Templ
 scenario ownership is deployed and production-verified. Production health, invitation routing, real Dashboard
 invitation acceptance, and a subsequent username/password sign-in are confirmed; legacy API keys are
 deactivated after those replacement-key checks passed.
+Phase 4 is code-complete locally on `phase/4-account-owned-rooms`. The migration deliberately deletes
+legacy temporary Rooms, requires immutable Auth-user ownership and a 24-hour expiry, enforces one
+waiting/active Room per Account, protects controller hashes from browsers, and transactionally ends
+live Rooms/current attempts when an Account is disabled. Room creation now lives only in the
+authenticated console. Same-Account secondary devices continue observing the roster/report in
+read-only mode and can take control only through an explicit confirmation that rotates the local
+controller token; the former controller is rejected immediately for every mutation. Trainee joining
+remains Account-free. A clean migration replay, all 83 pgTAP assertions, schema lint, 1,180 Vitest
+tests with one opt-in integration test skipped, TypeScript, ESLint with no errors and the 12 existing
+warnings, production build, and rendered public/protected-entry checks pass. Production is unchanged
+until the matching branch and destructive temporary-Room migration are rolled out together.
 The Phase 3 migration converts the existing library to shared Templates in place, adds immutable
 Auth-ID Personal ownership, enabled-account reads, Administrator-only Template writes, scoped
 ordering, cascade cleanup, explicit Data API grants, and an operator-only content-free Template audit

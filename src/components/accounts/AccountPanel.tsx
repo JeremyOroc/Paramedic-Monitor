@@ -1,6 +1,7 @@
 'use client'
 
 import { FormEvent, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 interface AccountPanelProps {
@@ -66,6 +67,7 @@ export function AccountPanel({ email, role, username }: AccountPanelProps) {
           </div>
           <button type="button" onClick={signOut} disabled={busy} className="border border-neutral-700 px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider hover:border-alarm-red hover:text-alarm-red disabled:opacity-50">Sign out</button>
         </div>
+        <Link href="/admin" className="mt-5 inline-block border border-cyan-bp px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/10">Open console</Link>
         <dl className="mt-8 grid gap-5 border-y border-neutral-800 py-6 sm:grid-cols-3">
           <div><dt className="font-mono text-xs uppercase tracking-wider text-neutral-500">Username</dt><dd className="mt-2 font-semibold">{username}</dd></div>
           <div><dt className="font-mono text-xs uppercase tracking-wider text-neutral-500">Verified email</dt><dd className="mt-2 break-all font-semibold">{email}</dd></div>

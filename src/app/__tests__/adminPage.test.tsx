@@ -86,7 +86,7 @@ describe('AdminPage', () => {
         }),
       )
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
 
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
 
@@ -95,7 +95,7 @@ describe('AdminPage', () => {
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith('/api/session/ABC123/end', {
         method: 'POST',
-        headers: { 'x-session-host-token': 'host_token' },
+        headers: { 'x-room-controller-token': 'controller_token' },
       }),
     )
     await waitFor(() => expect(screen.getByText('ended')).toBeInTheDocument())
@@ -116,13 +116,41 @@ describe('AdminPage', () => {
       )
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: 'End Room' }))
 
     await waitFor(() => expect(screen.getByText(/Unable to end/)).toBeInTheDocument())
     expect(routerReplace).not.toHaveBeenCalled()
+  })
+
+  it('keeps a displaced controller read-only and offers an explicit takeover', async () => {
+    const takeControl = vi.fn()
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(
+      JSON.stringify({
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+
+    render(<AdminPage session={{
+      code: 'ABC123',
+      controllerToken: 'stale-controller',
+      canControl: false,
+      onTakeControl: takeControl,
+    }} />)
+
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Start / Dispatch' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'New Attempt' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'End Room' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Take control' }))
+    expect(takeControl).toHaveBeenCalledOnce()
   })
 
   it('offers a way home when the room is already ended', async () => {
@@ -137,12 +165,12 @@ describe('AdminPage', () => {
       ),
     )
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
 
     const notice = await screen.findByTestId('room-ended-notice')
     expect(screen.getByRole('button', { name: 'End Room' })).toBeDisabled()
     await user.click(within(notice).getByRole('button', { name: 'Create a new room' }))
-    expect(routerReplace).toHaveBeenCalledWith('/')
+    expect(routerReplace).toHaveBeenCalledWith('/admin')
   })
 
   it('shows a live roster with connection dots and per-student progress', async () => {
@@ -192,7 +220,7 @@ describe('AdminPage', () => {
       })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
 
     await waitFor(() => expect(screen.getByText('Students')).toBeInTheDocument())
     const studentsPanel = screen.getByText('Students').parentElement as HTMLElement
@@ -226,7 +254,7 @@ describe('AdminPage', () => {
       events: [],
     }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
 
     const studentsPanel = (await screen.findByText('Students')).parentElement as HTMLElement
     await waitFor(() => {
@@ -259,7 +287,7 @@ describe('AdminPage', () => {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await screen.findByText('Alice')
 
     await user.click(within(screen.getByTestId('student-row-student-1')).getByRole('button', { name: 'Spectate' }))
@@ -326,7 +354,7 @@ describe('AdminPage', () => {
       })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     revealSnsOptions('pulse')
@@ -340,7 +368,7 @@ describe('AdminPage', () => {
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith('/api/session/ABC123/attempt', {
         method: 'POST',
-        headers: { 'x-session-host-token': 'host_token' },
+        headers: { 'x-room-controller-token': 'controller_token' },
       }),
     )
     await waitFor(() =>
@@ -364,7 +392,7 @@ describe('AdminPage', () => {
       ),
     )
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
 
     // Opening the room is what begins the scenario, so the call has to be
@@ -430,7 +458,7 @@ describe('AdminPage', () => {
     })
 
     const user = userEvent.setup()
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
     await user.click(screen.getByRole('button', { name: 'Wagami Z' }))
@@ -479,7 +507,7 @@ describe('AdminPage', () => {
     })
 
     const user = userEvent.setup()
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
     await user.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
@@ -509,7 +537,7 @@ describe('AdminPage', () => {
       })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
 
     act(() => {
@@ -559,7 +587,7 @@ describe('AdminPage', () => {
       })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
 
     // Load the previous run's scenario onto the instructor side.
@@ -607,7 +635,7 @@ describe('AdminPage', () => {
       })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
@@ -688,7 +716,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     const fetchMock = mockRoom()
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
@@ -701,18 +729,18 @@ describe('AdminPage', () => {
       label: 'Nitro',
     })
 
-    // Host-authenticated: the console holds no participant token.
+    // Controller-authorized: the console holds no participant token.
     const [, init] = fetchMock.mock.calls.find(([url]) =>
       String(url).endsWith('/instructor-event'),
     )!
-    expect(init?.headers).toMatchObject({ 'x-session-host-token': 'host_token' })
+    expect(init?.headers).toMatchObject({ 'x-room-controller-token': 'controller_token' })
   })
 
   it('logs both directions of a checklist press', async () => {
     const user = userEvent.setup()
     const fetchMock = mockRoom()
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
@@ -747,7 +775,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     const fetchMock = mockRoom([])
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
@@ -771,7 +799,7 @@ describe('AdminPage', () => {
     // one the instructor logged. The grid counts the run, not its own presses.
     mockRoom([TRAINEE], [medEvent('Epi'), medEvent('Epi'), medEvent('Nitro')])
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
@@ -786,7 +814,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     mockRoom([TRAINEE], [medEvent('Epi', 1), medEvent('Epi', 2)])
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
@@ -826,7 +854,7 @@ describe('AdminPage', () => {
       })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     await waitFor(() =>
@@ -873,7 +901,7 @@ describe('AdminPage', () => {
       })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     await waitFor(() =>
@@ -895,7 +923,7 @@ describe('AdminPage', () => {
     const user = userEvent.setup()
     const fetchMock = mockRoom()
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
@@ -925,7 +953,7 @@ describe('AdminPage', () => {
       })
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
 
     expect(screen.queryByRole('button', { name: 'Reset' })).toBeNull()
@@ -1073,7 +1101,7 @@ describe('AdminPage', () => {
       )
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
@@ -1111,7 +1139,7 @@ describe('AdminPage', () => {
       )
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Report' }))
 
@@ -1120,7 +1148,7 @@ describe('AdminPage', () => {
     await waitFor(() => expect(calls.some((c) => c.init?.method === 'PATCH')).toBe(true))
     const patch = calls.find((c) => c.init?.method === 'PATCH')!
     expect(patch.url).toBe('/api/session/ABC123/attempt/1')
-    expect((patch.init?.headers as Record<string, string>)['x-session-host-token']).toBe('host_token')
+    expect((patch.init?.headers as Record<string, string>)['x-room-controller-token']).toBe('controller_token')
     expect(JSON.parse(String(patch.init?.body))).toEqual({ label: 'Morning cohort' })
     // Applied locally, before the next poll: once in the status line, once in
     // the report header.
@@ -1144,7 +1172,7 @@ describe('AdminPage', () => {
       )
     })
 
-    render(<AdminPage session={{ code: 'ABC123', hostToken: 'host_token' }} />)
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
     await waitFor(() => expect(urls.length).toBeGreaterThan(0))
     expect(urls[0]).toBe('/api/session/ABC123/review')
 

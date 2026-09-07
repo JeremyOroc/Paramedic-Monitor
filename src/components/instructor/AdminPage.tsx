@@ -26,6 +26,7 @@ import {
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
 import { RoomCodeCopy } from '@/components/session/RoomCodeCopy'
+import { RoomLauncher } from '@/components/session/RoomLauncher'
 import {
   CALLER_INFO_AUTO_SORT_FIELDS,
   parseCallerInfoAutoSort,
@@ -96,7 +97,9 @@ const AUTO_SORT_VITAL_FIELDS: ReadonlyArray<NumericVitalField> = [
 type SessionAdminProps = {
   session?: {
     code: string
-    hostToken: string
+    controllerToken: string
+    canControl?: boolean
+    onTakeControl?: () => void
   }
 }
 
@@ -252,6 +255,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // source of truth for the tally, but it is 2.5s behind a press, and a button
   // whose count moves a beat later reads as a button that did not work.
   const [pendingMedications, setPendingMedications] = useState<Record<string, number>>({})
+  const canControlRoom = session?.canControl ?? true
 
   const stopSpectating = useCallback((participantId: string) => {
     setSpectatorPresentationMode('docked')
@@ -267,7 +271,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     if (!session) return
     const response = await fetch(
       `/api/session/${session.code}/review${includeHistory ? '?include=history' : ''}`,
-      { headers: { 'x-session-host-token': session.hostToken } },
+      { cache: 'no-store' },
     )
     const data = await response.json()
     if (!response.ok) {
@@ -305,7 +309,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const startSession = async () => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     // Re-stamp and push the dispatch clock before opening the room, so trainees
     // arriving on the very first status poll already have travel time measured
     // from now rather than from whenever the call was staged.
@@ -318,7 +322,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     }
     const response = await fetch(`/api/session/${session.code}/start`, {
       method: 'POST',
-      headers: { 'x-session-host-token': session.hostToken },
+      headers: { 'x-room-controller-token': session.controllerToken },
     })
     const data = await response.json()
     if (!response.ok) {
@@ -330,10 +334,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   }
 
   const startNewAttempt = async () => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     const response = await fetch(`/api/session/${session.code}/attempt`, {
       method: 'POST',
-      headers: { 'x-session-host-token': session.hostToken },
+      headers: { 'x-room-controller-token': session.controllerToken },
     })
     const data = await response.json()
     if (!response.ok) {
@@ -354,7 +358,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   }
 
   const endSession = async () => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     // A thrown fetch (offline, a non-JSON 500 from the host) used to reject
     // this handler unhandled: no message, no navigation, the button did
     // nothing. Every failure now says so.
@@ -362,7 +366,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     try {
       const response = await fetch(`/api/session/${session.code}/end`, {
         method: 'POST',
-        headers: { 'x-session-host-token': session.hostToken },
+        headers: { 'x-room-controller-token': session.controllerToken },
       })
       data = await response.json().catch(() => ({}))
       if (!response.ok) {
@@ -394,7 +398,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       }
       const response = await fetch(
         `/api/session/${session.code}/review?attempt=${version}&include=history`,
-        { headers: { 'x-session-host-token': session.hostToken } },
+        { cache: 'no-store' },
       )
       const data = await response.json()
       if (!response.ok) {
@@ -419,14 +423,14 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   // status line update at once rather than on the next poll.
   const renameAttempt = useCallback(
     async (version: number, label: string) => {
-      if (!session) return
+      if (!session || !canControlRoom) return
       let data: { attempt?: AttemptLabel; error?: string }
       try {
         const response = await fetch(`/api/session/${session.code}/attempt/${version}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'x-session-host-token': session.hostToken,
+            'x-room-controller-token': session.controllerToken,
           },
           body: JSON.stringify({ label }),
         })
@@ -451,7 +455,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         current ? { ...current, attemptLabels: apply(current.attemptLabels) } : current,
       )
     },
-    [session],
+    [canControlRoom, session],
   )
 
   const report = pastReview ?? {
@@ -467,12 +471,12 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     attemptLabels.find((entry) => entry.attempt_version === attemptVersion)?.label ?? ''
 
   const sendSessionState = useCallback(async () => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     const response = await fetch(`/api/session/${session.code}/state`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-session-host-token': session.hostToken,
+        'x-room-controller-token': session.controllerToken,
       },
       body: JSON.stringify({
         state: {
@@ -506,6 +510,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
     const data = await response.json()
     if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
   }, [
+    canControlRoom,
     getSharedState,
     patientPhysicalFindings,
     patientSelections,
@@ -533,13 +538,13 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
    */
   const recordInstructorAction = useCallback(
     async (kind: StudentEventKind, label: string, payload?: Record<string, unknown>) => {
-      if (!session || !creditedParticipantId) return
+      if (!session || !canControlRoom || !creditedParticipantId) return
       try {
         const response = await fetch(`/api/session/${session.code}/instructor-event`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-session-host-token': session.hostToken,
+            'x-room-controller-token': session.controllerToken,
           },
           body: JSON.stringify({
             participantId: creditedParticipantId,
@@ -562,7 +567,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         )
       }
     },
-    [creditedParticipantId, refreshReview, session],
+    [canControlRoom, creditedParticipantId, refreshReview, session],
   )
 
   /**
@@ -625,11 +630,13 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
    */
   const instructorRecordingUnavailable = !session
     ? 'Start a room to record actions.'
-    : sessionStatus === 'ended'
-      ? 'This room has ended.'
-      : participants.length === 0
-        ? 'No trainee has joined yet.'
-        : null
+    : !canControlRoom
+      ? 'This room is read-only on this device.'
+      : sessionStatus === 'ended'
+        ? 'This room has ended.'
+        : participants.length === 0
+          ? 'No trainee has joined yet.'
+          : null
 
     // CPR override and full instructor resets bypass Save → Send, so in a
   // session they must push shared state themselves — the Send button stays
@@ -638,7 +645,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
   const monitorResetVersion = useMonitorStore((s) => s.monitorResetVersion)
   const immediatePushRef = useRef<{ cprMode: CprMode; resetVersion: number } | null>(null)
   useEffect(() => {
-    if (!session) return
+    if (!session || !canControlRoom) return
     const prev = immediatePushRef.current
     immediatePushRef.current = { cprMode, resetVersion: monitorResetVersion }
     if (!prev) return
@@ -648,7 +655,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         caught instanceof Error ? caught.message : 'Unable to send session state',
       )
     })
-  }, [cprMode, monitorResetVersion, sendSessionState, session])
+  }, [canControlRoom, cprMode, monitorResetVersion, sendSessionState, session])
 
   const currentScenarioSnapshot = createScenarioSnapshot({
     defibrillatorModel: defibrillatorModelDraft,
@@ -1062,6 +1069,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
 
   return (
     <InstructorLayout>
+      {!session ? <RoomLauncher /> : null}
       {session && (
         <div className="grid gap-4 lg:grid-cols-2" data-testid="session-overview-grid">
           <section
@@ -1083,6 +1091,15 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               </p>
             </div>
             <div className="mt-3 flex shrink-0 flex-wrap gap-2">
+              {!canControlRoom && sessionStatus !== 'ended' ? (
+                <button
+                  type="button"
+                  onClick={session.onTakeControl}
+                  className="border border-cyan-bp bg-cyan-bp/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp hover:text-black"
+                >
+                  Take control
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={startSession}
@@ -1096,6 +1113,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                 disabled={
                   sessionStatus === 'active' ||
                   sessionStatus === 'ended' ||
+                  !canControlRoom ||
                   !dispatchArmed ||
                   !defibrillatorModelReady
                 }
@@ -1106,7 +1124,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               <button
                 type="button"
                 onClick={startNewAttempt}
-                disabled={sessionStatus !== 'active'}
+                disabled={sessionStatus !== 'active' || !canControlRoom}
                 className="border border-pending-amber bg-pending-amber/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-pending-amber hover:bg-pending-amber hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
               >
                 New Attempt
@@ -1114,7 +1132,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
               <button
                 type="button"
                 onClick={endSession}
-                disabled={sessionStatus === 'ended'}
+                disabled={sessionStatus === 'ended' || !canControlRoom}
                 className="border border-alarm-red bg-alarm-red/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
               >
                 End Room
@@ -1138,7 +1156,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                 </p>
                 <button
                   type="button"
-                  onClick={() => router.replace('/')}
+                  onClick={() => router.replace('/admin')}
                   className="border border-neutral-700 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-cyan-bp hover:text-cyan-bp"
                 >
                   Create a new room
@@ -1226,7 +1244,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           </section>
           <EmbeddedSpectatorPanel
             code={session.code}
-            hostToken={session.hostToken}
             mode={spectatorPresentationMode}
             onModeChange={setSpectatorPresentationMode}
             onStopSpectating={() => {
@@ -1240,7 +1257,10 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
       )}
       <div className="flex items-center gap-3" data-testid="admin-save-send-actions">
         <SaveButton />
-        <SendButton onSent={session ? sendSessionState : undefined} />
+        <SendButton
+          onSent={session ? sendSessionState : undefined}
+          forceDisabled={Boolean(session && !canControlRoom)}
+        />
       </div>
       <div
         className="grid grid-cols-5 border border-neutral-800 bg-neutral-950 p-1"

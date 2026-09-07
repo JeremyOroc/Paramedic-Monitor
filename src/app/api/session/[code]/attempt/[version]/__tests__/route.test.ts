@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const account = vi.hoisted(() => ({ user_id: 'account-id' }))
+
+vi.mock('@/server/sessions/access', () => ({
+  requireRoomAccount: vi.fn(async () => account),
+}))
+
 vi.mock('@/server/sessions/http', () => ({
-  hostTokenFromRequest: vi.fn(() => 'host_token'),
+  controllerTokenFromRequest: vi.fn(() => 'controller_token'),
   jsonError: vi.fn((error: Error & { status?: number }) =>
     Response.json({ error: error.message }, { status: error.status ?? 500 }),
   ),
@@ -33,7 +39,7 @@ describe('PATCH /api/session/[code]/attempt/[version]', () => {
   it('renames the attempt named in the path', async () => {
     const response = await PATCH(request({ label: 'Morning cohort' }), context('2'))
 
-    expect(renameAttempt).toHaveBeenCalledWith(CODE, 'host_token', 2, 'Morning cohort')
+    expect(renameAttempt).toHaveBeenCalledWith(CODE, account, 'controller_token', 2, 'Morning cohort')
     expect(await response.json()).toEqual({ attempt: { attempt_version: 2, label: 'Morning cohort' } })
   })
 
@@ -41,8 +47,8 @@ describe('PATCH /api/session/[code]/attempt/[version]', () => {
     await PATCH(request({}), context('2'))
     await PATCH(request({ label: 42 }), context('2'))
 
-    expect(renameAttempt).toHaveBeenNthCalledWith(1, CODE, 'host_token', 2, '')
-    expect(renameAttempt).toHaveBeenNthCalledWith(2, CODE, 'host_token', 2, '')
+    expect(renameAttempt).toHaveBeenNthCalledWith(1, CODE, account, 'controller_token', 2, '')
+    expect(renameAttempt).toHaveBeenNthCalledWith(2, CODE, account, 'controller_token', 2, '')
   })
 
   it('surfaces a rejected version as its status', async () => {

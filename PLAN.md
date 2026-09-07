@@ -1738,8 +1738,8 @@ protected Instructor entry, current-device sign-out, and the first Account page.
 send Supabase invitations outside the application. The verified recipient follows the token-hash
 callback to an acceptance page, chooses a unique username and password, and receives a fixed enabled
 Instructor profile. The server-only username-to-email bridge never exposes the secret credential or
-email mapping to the browser. Existing host-token Rooms remain operational until the account-owned
-Room migration in Phase 4.
+email mapping to the browser. Existing host-token Rooms remained operational through the Account and
+scenario rollout; Phase 4 now replaces that path with Account-owned Rooms.
 
 ##### Testing
 
@@ -1763,8 +1763,7 @@ browser history before persisting them into the cookie-backed session; PKCE/toke
 supported. Both paths send verified invited identities to onboarding and reject non-invited profile-less identities. `/instructor` exposes login,
 invite acceptance, recovery, and protected Account/reset states; it exposes no public registration.
 The Account page keeps username/email immutable in-app, displays role, changes password, and signs out
-the current device. The pre-account host-token Create Room path remains explicitly visible and
-operational until Phase 4.
+the current device. Phase 4 removes the pre-account public Create Room and host-token path.
 
 The first account release targets one college only. A multi-college SaaS remains a possible future,
 not a committed product requirement. Institution records, tenant memberships, tenant switching,
@@ -1828,6 +1827,48 @@ then deployed together. Production health and all ten rollout checks passed. The
 the `administrator` role by immutable user ID; subsequent sign-in and Administrator-only shared
 Template operations passed. Phase 3 is complete in production, and Phase 4 account-owned Room
 authorization is next.
+
+#### Account implementation Phase 4 — Account-owned Rooms, controller takeover, and expiry (CODE COMPLETE — LOCAL VERIFICATION PASSED 2026-09-07)
+
+Phase 4 removes the legacy host-token authorization path and deletes its existing temporary Room
+rows at rollout. Every new Room belongs to the immutable Auth user ID of the enabled Account that
+creates it. Trainees continue joining without Accounts using the six-character Room code, nickname,
+and their existing participant token. An Account may have only one waiting or active Room. Creating
+another offers the owner a deliberate choice to reopen the existing Room or end it and create a new
+one.
+
+The browser that creates, reopens, or takes control of a Room receives a controller token stored
+outside the URL. Account ownership authorizes Room observation; the rotating controller token fences
+mutations between multiple browsers signed into the same Account. A confirmed takeover immediately
+invalidates the former controller for Send, Start/Dispatch, New Attempt, Attempt rename, and End Room.
+Rooms expire 24 hours after creation, become ended on the next relevant access or create operation,
+release the Account's active-Room slot, disconnect trainees, and leave the current attempt data
+available for Phase 5 persistence work. Disabling an Account ends its active Room immediately.
+
+##### Testing
+
+- Add migration-contract and transactional pgTAP coverage for legacy Room deletion, immutable owner
+  IDs, one-active-Room enforcement, explicit grants, owner-only enabled-Account reads, denial of
+  direct app-role mutations, controller secrecy, disabled-Account cleanup, and cascade behavior.
+- Add service and route coverage for authenticated creation, collision retry, active-Room conflict,
+  owner observation, cross-owner and disabled denial, controller creation/rotation, stale-controller
+  rejection, reopen/end-new choices, expiration, and unchanged trainee join/participant behavior.
+- Add component and page coverage for removing public legacy creation, authenticated Room creation,
+  existing-Room choices, clean instructor URLs, local controller persistence, read-only secondary
+  devices, confirmed takeover, former-controller rejection feedback, and ended/expired Room states.
+- Replay every migration locally, run pgTAP and Supabase schema lint, run the complete Vitest suite,
+  TypeScript, ESLint, and a production build, then exercise the owner/controller/trainee flow in the
+  rendered application before marking Phase 4 code complete.
+
+Phase 4 passed a clean replay of every migration, all 83 pgTAP assertions, Supabase schema lint,
+1,180 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and
+the 12 pre-existing warnings, and the production build. Rendered local QA confirmed the public page
+offers only trainee Join and Instructor sign-in, `/admin` redirects anonymous visitors to sign-in,
+and the browser console remains clean. Application integration coverage exercises Account-owned
+creation, one-live-Room conflicts, reopen/end-and-replace choices, clean instructor URLs, local
+controller persistence, read-only observation, confirmed takeover, and immediate stale-controller
+rejection. The migration remains local until the matching application branch is merged and the
+destructive legacy-Room cleanup is deliberately deployed in the Phase 4 maintenance window.
 
 ---
 
@@ -1940,7 +1981,7 @@ but **not yet applied** — the two new kinds are rejected by the live constrain
 | Send behavior | Staged commit — edits pending until Send |
 | Language | English |
 | Session routing | `/session/[code]/instructor` vs `/session/[code]/monitor` |
-| Instructor exclusivity | One instructor per session via Supabase Presence |
+| Instructor exclusivity | One Account-owned live Room per Account; one rotating controller browser, with same-Account observers read-only |
 | Realtime mechanism | Polling with `?since=` as the guarantee; Supabase Realtime as a nudge only — `docs/adr/0003` |
 | Audio | Pre-recorded files in `/public/audio/` |
 | Alarm thresholds | HR < 40 or > 140 bpm; BP sys < 90 or > 200 mmHg; BP dia < 25 or > 225 mmHg; SpO2 < 90%; no EtCO2 threshold |

@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto'
 
-import { createServiceClient } from '@/lib/supabase/server'
+import {
+  createAuthenticatedClient,
+  createServiceClient,
+} from '@/lib/supabase/server'
 import { generateSessionCode, isValidSessionCode } from '@/lib/session'
+import type { ActiveAccount } from '@/server/accounts/service'
 import { isStudentEventKind } from '@/types/session'
 import {
   MONITOR_PROJECTION_VERSION,
@@ -22,6 +26,7 @@ export const REVIEW_EVENT_LIMIT = 2000
 export type SessionRecord = {
   id: string
   code: string
+  owner_user_id: string
   status: 'waiting' | 'active' | 'ended'
   active_attempt_version: number
   created_at: string
@@ -115,6 +120,7 @@ export class SessionError extends Error {
   constructor(
     message: string,
     readonly status = 400,
+    readonly details?: Record<string, unknown>,
   ) {
     super(message)
   }
@@ -153,12 +159,57 @@ async function getSessionByCode(code: string): Promise<SessionRecord> {
   const supabase = createServiceClient()
   const { data, error } = await supabase
     .from('sessions')
-    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .select('id, code, owner_user_id, status, active_attempt_version, created_at, expires_at')
     .eq('code', normalized)
     .single()
 
   if (error || !data) throw new SessionError('Session not found', 404)
-  return applySessionExpiry(data as SessionRecord)
+  const session = data as SessionRecord
+  const effective = applySessionExpiry(session)
+  if (effective.status !== session.status) {
+    await closeAttempts(session.id, session.active_attempt_version)
+    const { error: expiryError } = await supabase
+      .from('sessions')
+      .update({ status: 'ended' })
+      .eq('id', session.id)
+    if (expiryError) throw new SessionError(expiryError.message, 500)
+  }
+  return effective
+}
+
+type RoomAccount = Pick<ActiveAccount, 'user_id'>
+
+/** Owner observation is enforced by the caller's RLS-scoped Supabase client. */
+export async function verifyRoomOwner(
+  code: string,
+  account: RoomAccount,
+): Promise<SessionRecord> {
+  const normalized = normalizeCode(code)
+  if (!isValidSessionCode(normalized)) throw new SessionError('Invalid session code', 400)
+
+  const authenticated = await createAuthenticatedClient()
+  const { data, error } = await authenticated
+    .from('sessions')
+    .select('id, code, owner_user_id, status, active_attempt_version, created_at, expires_at')
+    .eq('code', normalized)
+    .eq('owner_user_id', account.user_id)
+    .maybeSingle()
+  if (error) throw new SessionError(error.message, 500)
+  if (!data) throw new SessionError('Room not found', 404)
+
+  const session = data as SessionRecord
+  const effective = applySessionExpiry(session)
+  if (effective.status !== session.status) {
+    const service = createServiceClient()
+    await closeAttempts(session.id, session.active_attempt_version)
+    const { error: expiryError } = await service
+      .from('sessions')
+      .update({ status: 'ended' })
+      .eq('id', session.id)
+      .eq('owner_user_id', account.user_id)
+    if (expiryError) throw new SessionError(expiryError.message, 500)
+  }
+  return effective
 }
 
 async function findParticipantByToken(
@@ -217,39 +268,85 @@ async function ensureAttempt(
   if (error) throw new SessionError(error.message, 500)
 }
 
-export async function createSession(origin: string) {
+export async function createSession(origin: string, account: RoomAccount) {
   const supabase = createServiceClient()
-  const hostToken = createSessionToken('host')
+
+  const { data: existing, error: existingError } = await supabase
+    .from('sessions')
+    .select('id, code, owner_user_id, status, active_attempt_version, created_at, expires_at')
+    .eq('owner_user_id', account.user_id)
+    .in('status', ['waiting', 'active'])
+    .limit(1)
+    .maybeSingle()
+  if (existingError) throw new SessionError(existingError.message, 500)
+  if (existing) {
+    const effective = applySessionExpiry(existing as SessionRecord)
+    if (effective.status !== 'ended') {
+      throw new SessionError('You already have an active room', 409, {
+        existingRoom: { code: effective.code, status: effective.status },
+      })
+    }
+    await closeAttempts(effective.id, effective.active_attempt_version)
+    const { error: expiryError } = await supabase
+      .from('sessions')
+      .update({ status: 'ended' })
+      .eq('id', effective.id)
+      .eq('owner_user_id', account.user_id)
+    if (expiryError) throw new SessionError(expiryError.message, 500)
+  }
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = generateSessionCode()
+    const controllerToken = createSessionToken('controller')
     const { data: session, error } = await supabase
       .from('sessions')
-      .insert({ code, status: 'waiting', active_attempt_version: 1 })
-      .select('id, code, status, active_attempt_version, created_at, expires_at')
+      .insert({
+        code,
+        owner_user_id: account.user_id,
+        status: 'waiting',
+        active_attempt_version: 1,
+      })
+      .select('id, code, owner_user_id, status, active_attempt_version, created_at, expires_at')
       .single()
 
     if (error) {
-      if (error.code === '23505') continue
+      if (error.code === '23505') {
+        const { data: conflict } = await supabase
+          .from('sessions')
+          .select('code, status')
+          .eq('owner_user_id', account.user_id)
+          .in('status', ['waiting', 'active'])
+          .limit(1)
+          .maybeSingle()
+        if (conflict) {
+          throw new SessionError('You already have an active room', 409, {
+            existingRoom: conflict,
+          })
+        }
+        continue
+      }
       throw new SessionError(error.message, 500)
     }
     if (!session) throw new SessionError('Unable to create session', 500)
 
-    const { error: hostError } = await supabase
-      .from('session_hosts')
+    const { error: controllerError } = await supabase
+      .from('session_controllers')
       .insert({
         session_id: session.id,
-        token_hash: hashSessionToken(hostToken),
+        token_hash: hashSessionToken(controllerToken),
       })
-    if (hostError) throw new SessionError(hostError.message, 500)
+    if (controllerError) {
+      await supabase.from('sessions').delete().eq('id', session.id)
+      throw new SessionError(controllerError.message, 500)
+    }
 
-    const instructorUrl = `${origin}/session/${session.code}/instructor?host=${hostToken}`
+    const instructorUrl = `${origin}/session/${session.code}/instructor`
     const monitorUrl = `${origin}/session/${session.code}/monitor`
     const waitingUrl = `${origin}/session/${session.code}/waiting`
 
     return {
       session: session as SessionRecord,
-      hostToken,
+      controllerToken,
       instructorUrl,
       monitorUrl,
       waitingUrl,
@@ -349,21 +446,67 @@ export async function joinSession(
   }
 }
 
-export async function verifyHost(code: string, hostToken: string): Promise<SessionRecord> {
-  if (!hostToken) throw new SessionError('Host token required', 401)
-  const session = await getSessionByCode(code)
+async function controllerMatches(sessionId: string, controllerToken: string): Promise<boolean> {
+  if (!controllerToken) return false
   const supabase = createServiceClient()
   const { data, error } = await supabase
-    .from('session_hosts')
+    .from('session_controllers')
     .select('token_hash')
-    .eq('session_id', session.id)
-    .single()
+    .eq('session_id', sessionId)
+    .maybeSingle()
 
-  if (error || !data || !verifySessionToken(hostToken, data.token_hash as string)) {
-    throw new SessionError('Invalid host token', 403)
+  if (error) throw new SessionError(error.message, 500)
+  return Boolean(data && verifySessionToken(controllerToken, data.token_hash as string))
+}
+
+export async function verifyRoomController(
+  code: string,
+  account: RoomAccount,
+  controllerToken: string,
+): Promise<SessionRecord> {
+  const session = await verifyRoomOwner(code, account)
+  if (!await controllerMatches(session.id, controllerToken)) {
+    throw new SessionError('This room is read-only on this device', 409)
   }
-
   return session
+}
+
+export async function getRoomAccess(
+  code: string,
+  account: RoomAccount,
+  controllerToken: string,
+) {
+  const session = await verifyRoomOwner(code, account)
+  return {
+    session,
+    canControl: await controllerMatches(session.id, controllerToken),
+  }
+}
+
+export async function claimRoomControl(code: string, account: RoomAccount) {
+  const session = await verifyRoomOwner(code, account)
+  if (session.status === 'ended') throw new SessionError('Session has ended', 410)
+
+  const controllerToken = createSessionToken('controller')
+  const supabase = createServiceClient()
+  const { data: current, error: currentError } = await supabase
+    .from('session_controllers')
+    .select('claim_version')
+    .eq('session_id', session.id)
+    .maybeSingle()
+  if (currentError) throw new SessionError(currentError.message, 500)
+
+  const { error } = await supabase
+    .from('session_controllers')
+    .upsert({
+      session_id: session.id,
+      token_hash: hashSessionToken(controllerToken),
+      claim_version: ((current?.claim_version as number | undefined) ?? 0) + 1,
+      claimed_at: new Date().toISOString(),
+    })
+  if (error) throw new SessionError(error.message, 500)
+
+  return { session, controllerToken }
 }
 
 export async function verifyParticipant(
@@ -464,12 +607,12 @@ export async function publishMonitorProjection(
   }
 }
 
-export async function getMonitorProjectionForHost(
+export async function getMonitorProjectionForOwner(
   code: string,
-  hostToken: string,
+  account: RoomAccount,
   participantId: string,
 ) {
-  const session = await verifyHost(code, hostToken)
+  const session = await verifyRoomOwner(code, account)
   const supabase = createServiceClient()
   const [participantResult, projectionResult] = await Promise.all([
     supabase
@@ -509,8 +652,12 @@ export async function getMonitorProjectionForHost(
   }
 }
 
-export async function startSession(code: string, hostToken: string) {
-  const session = await verifyHost(code, hostToken)
+export async function startSession(
+  code: string,
+  account: RoomAccount,
+  controllerToken: string,
+) {
+  const session = await verifyRoomController(code, account, controllerToken)
   if (session.status === 'ended') {
     throw new SessionError('Session has ended', 410)
   }
@@ -519,15 +666,19 @@ export async function startSession(code: string, hostToken: string) {
     .from('sessions')
     .update({ status: 'active' })
     .eq('id', session.id)
-    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .select('id, code, owner_user_id, status, active_attempt_version, created_at, expires_at')
     .single()
 
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to start session', 500)
   return data as SessionRecord
 }
 
-export async function startNewAttempt(code: string, hostToken: string) {
-  const session = await verifyHost(code, hostToken)
+export async function startNewAttempt(
+  code: string,
+  account: RoomAccount,
+  controllerToken: string,
+) {
+  const session = await verifyRoomController(code, account, controllerToken)
   if (session.status === 'ended') {
     throw new SessionError('Session has ended', 410)
   }
@@ -546,7 +697,7 @@ export async function startNewAttempt(code: string, hostToken: string) {
       status: 'waiting',
     })
     .eq('id', session.id)
-    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .select('id, code, owner_user_id, status, active_attempt_version, created_at, expires_at')
     .single()
 
   if (error || !data) {
@@ -565,11 +716,12 @@ export const ATTEMPT_LABEL_MAX = 60
  */
 export async function renameAttempt(
   code: string,
-  hostToken: string,
+  account: RoomAccount,
+  controllerToken: string,
   attemptVersion: number,
   label: string,
 ) {
-  const session = await verifyHost(code, hostToken)
+  const session = await verifyRoomController(code, account, controllerToken)
   if (
     !Number.isInteger(attemptVersion) ||
     attemptVersion < 1 ||
@@ -597,15 +749,19 @@ export async function renameAttempt(
   return data
 }
 
-export async function endSession(code: string, hostToken: string) {
-  const session = await verifyHost(code, hostToken)
+export async function endSession(
+  code: string,
+  account: RoomAccount,
+  controllerToken: string,
+) {
+  const session = await verifyRoomController(code, account, controllerToken)
   const supabase = createServiceClient()
   await closeAttempts(session.id, session.active_attempt_version)
   const { data, error } = await supabase
     .from('sessions')
     .update({ status: 'ended' })
     .eq('id', session.id)
-    .select('id, code, status, active_attempt_version, created_at, expires_at')
+    .select('id, code, owner_user_id, status, active_attempt_version, created_at, expires_at')
     .single()
 
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to end session', 500)
@@ -711,10 +867,11 @@ export function splitInstructorOnlyState(state: unknown): {
 
 export async function updateSessionState(
   code: string,
-  hostToken: string,
+  account: RoomAccount,
+  controllerToken: string,
   state: unknown,
 ) {
-  const session = await verifyHost(code, hostToken)
+  const session = await verifyRoomController(code, account, controllerToken)
   // An ended room is closed to changes: a Send here would write history the
   // record shows as part of an attempt that had already finished.
   if (session.status === 'ended') throw new SessionError('Session has ended', 410)
@@ -892,11 +1049,14 @@ export async function recordStudentEvent(
  */
 export async function recordInstructorEvent(
   code: string,
-  hostToken: string,
+  account: RoomAccount,
+  controllerToken: string,
   participantId: string,
   input: Omit<StudentEventInput, 'stateVersion'>,
 ) {
-  const session = await verifyHost(code, hostToken)
+  // The controlling device only. A read-only device watching the same room
+  // must not be able to write into the record behind the controller's back.
+  const session = await verifyRoomController(code, account, controllerToken)
   if (!participantId) throw new SessionError('Participant is required', 400)
 
   const supabase = createServiceClient()
@@ -949,11 +1109,11 @@ export type GetReviewOptions = {
 
 export async function getReview(
   code: string,
-  hostToken: string,
+  account: RoomAccount,
   attemptVersion: number | 'all' = -1,
   { includeHistory = false }: GetReviewOptions = {},
 ) {
-  const session = await verifyHost(code, hostToken)
+  const session = await verifyRoomOwner(code, account)
   const supabase = createServiceClient()
   const attempt =
     attemptVersion === 'all'
