@@ -64,7 +64,7 @@ describe('VitalsControls', () => {
     expect(screen.queryByLabelText('Auto-sort vitals')).toBeNull()
   })
 
-  it('renders Pulse, Respiratory, and Skin/Extremities horizontally inside Vitals', () => {
+  it('keeps Pulse, Respiratory, and Skin/Extremities ordered in a responsive grid', () => {
     render(
       <VitalsControls
         autoSortText=""
@@ -88,7 +88,7 @@ describe('VitalsControls', () => {
       name: 'Skin/Extremities',
     })
 
-    expect(controls).toHaveClass('grid', 'grid-cols-3')
+    expect(controls).toHaveClass('grid', 'grid-cols-1', 'min-[420px]:grid-cols-3')
     expect(pulse.compareDocumentPosition(respiratory)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(respiratory.compareDocumentPosition(skinExtremities)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,

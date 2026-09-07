@@ -1156,7 +1156,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                 </p>
                 <button
                   type="button"
-                  onClick={() => router.replace('/admin')}
+                  onClick={() => router.replace('/instructor')}
                   className="border border-neutral-700 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-neutral-300 hover:border-cyan-bp hover:text-cyan-bp"
                 >
                   Create a new room
@@ -1263,7 +1263,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
         />
       </div>
       <div
-        className="grid grid-cols-5 border border-neutral-800 bg-neutral-950 p-1"
+        className="grid grid-cols-2 border border-neutral-800 bg-neutral-950 p-1 sm:grid-cols-3 lg:grid-cols-5"
         data-testid="admin-tab-list"
       >
         <button
@@ -1271,7 +1271,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('scenarios')}
           aria-pressed={tab === 'scenarios'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'scenarios'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1284,7 +1284,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('monitor')}
           aria-pressed={tab === 'monitor'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'monitor'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1297,7 +1297,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('physical')}
           aria-pressed={tab === 'physical'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'physical'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1310,7 +1310,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('defibrillators')}
           aria-pressed={tab === 'defibrillators'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'defibrillators'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',
@@ -1323,7 +1323,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
           onClick={() => setTab('report')}
           aria-pressed={tab === 'report'}
           className={cn(
-            'px-4 py-2 text-sm font-mono font-bold uppercase tracking-wider',
+            'min-h-11 px-3 py-2 text-xs font-mono font-bold uppercase leading-tight tracking-wider sm:text-sm',
             tab === 'report'
               ? 'bg-cyan-bp text-black'
               : 'text-neutral-400 hover:bg-neutral-900',

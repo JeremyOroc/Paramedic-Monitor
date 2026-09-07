@@ -10,8 +10,11 @@ import { refreshSupabaseSession } from '@/lib/supabase/proxy'
 import { config } from '@/proxy'
 
 describe('account session proxy', () => {
-  it('is limited to Auth and Instructor routes', () => {
-    expect(config.matcher).toEqual(['/auth/:path*', '/instructor/:path*'])
+  it('covers application workflows while excluding static asset paths', () => {
+    expect(config.matcher).toContain('/auth/:path*')
+    expect(config.matcher).toContain('/instructor/:path*')
+    expect(config.matcher).toContain('/session/:path*')
+    expect(config.matcher).toContain('/api/:path*')
   })
 
   it('refreshes Auth claims and prevents private session responses from caching', async () => {

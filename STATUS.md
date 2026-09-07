@@ -13,9 +13,20 @@ staged history and Pulse/Respiratory/Skin findings now reach the report while st
 state the trainee polls. `20260908120000_instructor_recorded_actions.sql` must be applied before the
 checklist logging works against a live room. Rebased onto Phase 4: instructor-recorded actions are
 authorized as the room's controlling device, so a read-only second device cannot write into the
-record behind the controller's back.
+record behind the controller's back. Rebased again onto Phases 5-7: persistent Evaluation reports
+snapshot whole `student_events` rows, so the new kinds and the instructor marker carry into a saved
+report without Phase 5 needing to know about them, and `ReportsPage` renders through the same panel.
 
-**Accounts & scenario ownership — PHASE 3 PRODUCTION VERIFIED; PHASE 4 CODE COMPLETE LOCALLY (2026-09-07).**
+**Accounts & scenario ownership — PHASE 7 CODE COMPLETE (2026-09-07).**
+The authenticated page-shell consistency refinement is complete locally. Console, Reports, and
+Account now share the Console's full-width outer spacing, header divider, green title treatment, and
+top-right navigation. Reports and Account use title-only headers, the Account settings card is no
+longer centered or width-capped, and current-device Sign Out is positioned directly below Account in
+the shared header on every authenticated Instructor surface. Component coverage verifies shell,
+title, active-area, Sign Out success/failure, and Account-width behavior. All 1,235 runnable Vitest
+tests, TypeScript, the production build, and ESLint with zero errors and the 12 existing warnings pass.
+Rendered browser QA remains unrun because the Browser plugin and Playwright are not installed; no new
+dependency was added without approval.
 The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
 implemented shared-code self-registration flow. Public registration and its deployment secret are
 removed; verified invited instructors complete a unique username and password in the app
@@ -26,13 +37,15 @@ enabled profile. Standard Supabase Dashboard invitations now consume the implici
 fragment, remove it from browser history before asynchronous work, persist the cookie-backed session,
 and verify the live invited identity before opening setup. Partial, expired, provider-error, and
 non-invited flows fail generically; an already-persisted cookie session remains a supported retry path.
-Production host-token Rooms remain operational only until the Phase 4 application and migration are
-deployed together. Phase 4 code now replaces them with Account-owned Rooms. The local Account
+Production host-token Rooms were retired when the Phase 4 application and migration were deployed
+together. Account-owned Rooms are production-verified. The Account
 authorization foundation includes protected profiles keyed by Auth user ID, normalized
 case-insensitive usernames, reserved Administrator names, live enabled/Administrator helpers,
 least-privilege grants, RLS, and 24 executable allow/deny database policy assertions. The Account
-authorization foundation is complete and deployed to the linked Supabase project; scenario, Room,
-and report ownership remain later phases. On 2026-09-06, direct schema inspection proved the trainee
+authorization foundation, scenario ownership, Room ownership, and persistent Reports are complete
+and deployed to the linked Supabase project. Phase 6 implements the canonical `/instructor`
+Console plus shared Console/Reports/Account navigation and full cross-area browser verification. On
+2026-09-06, direct schema inspection proved the trainee
 action-clock and Attempt-name migrations had already been applied manually, their two missing history
 records were repaired, and the Account authorization migration was then applied normally.
 Supabase Auth and a
@@ -102,7 +115,7 @@ replacement remains opt-in. Multi-tenancy stays deferred. Phase 3 Personal/Templ
 scenario ownership is deployed and production-verified. Production health, invitation routing, real Dashboard
 invitation acceptance, and a subsequent username/password sign-in are confirmed; legacy API keys are
 deactivated after those replacement-key checks passed.
-Phase 4 is code-complete locally on `phase/4-account-owned-rooms`. The migration deliberately deletes
+Phase 4 is deployed and production-verified. Its migration deliberately deletes
 legacy temporary Rooms, requires immutable Auth-user ownership and a 24-hour expiry, enforces one
 waiting/active Room per Account, protects controller hashes from browsers, and transactionally ends
 live Rooms/current attempts when an Account is disabled. Room creation now lives only in the
@@ -111,8 +124,25 @@ read-only mode and can take control only through an explicit confirmation that r
 controller token; the former controller is rejected immediately for every mutation. Trainee joining
 remains Account-free. A clean migration replay, all 83 pgTAP assertions, schema lint, 1,180 Vitest
 tests with one opt-in integration test skipped, TypeScript, ESLint with no errors and the 12 existing
-warnings, production build, and rendered public/protected-entry checks pass. Production is unchanged
-until the matching branch and destructive temporary-Room migration are rolled out together.
+warnings, production build, and rendered public/protected-entry checks pass. The complete production
+owner/controller/trainee checklist passed after the matching branch and migration were deployed.
+Phase 5 adds durable owner-scoped Evaluation
+records, immutable per-Attempt scenario snapshots, autosaved report timelines, Student-name metadata,
+search/edit/manual-completion/permanent-deletion workflows, and privacy-minimized mutation auditing.
+A clean replay of every migration, 118 pgTAP assertions, error-level Supabase schema lint, all 1,199
+Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and the 12
+existing warnings, the production build, and rendered local report workflow checks pass. The Phase 5
+application was merged and its `20260907135753_phase_5_persistent_reports.sql` migration was applied
+on 2026-09-07. Phase 6 is complete locally on `phase/6-instructor-navigation`. Rendered live-Room QA
+corrected the initial no-migration expectation: a clean installation lacked explicit service-role
+privileges on four temporary Room tables. The new
+`20260907163444_grant_live_room_service_access.sql` migration revokes all browser access and grants
+only the server operations actually used. A clean migration replay, 120 pgTAP assertions, error-level
+schema lint, database advisors with no error-level findings, 1,203 Vitest tests with one opt-in
+integration test skipped, TypeScript, ESLint with zero errors and the 12 existing warnings, the
+production build, and rendered compact cross-area/live-Room checks pass. Production is unchanged;
+the matching application and corrective migration must deploy together, followed by the wider
+desktop smoke test unavailable in the current 319×748 browser surface.
 The Phase 3 migration converts the existing library to shared Templates in place, adds immutable
 Auth-ID Personal ownership, enabled-account reads, Administrator-only Template writes, scoped
 ordering, cascade cleanup, explicit Data API grants, and an operator-only content-free Template audit
@@ -128,11 +158,34 @@ rollout checks passed, including health, Personal/Template separation, Instructo
 sign-out/sign-in persistence. The existing verified `JeremyTest` Auth identity was deliberately
 renamed to reserved username `Jeremy` and assigned Administrator authority by immutable user ID;
 production sign-in and Administrator-only shared Template controls passed. Phase 4 account-owned
-Room authorization is next.
+Room authorization is production-verified; Phase 5 persistent Reports are deployed; Phase 6
+navigation and cross-area verification are production-verified after all eight acceptance sections
+passed. Phase 7 production operations and launch-readiness tooling are complete locally on
+`phase/7-production-operations`. The branch adds safe-off server maintenance mode, a rendered
+maintenance response, nightly encrypted Supabase logical backup automation with 30 daily/12 monthly
+retention, guarded non-production restore rehearsals, two-developer sanitized failure alerts, a
+one-year Account-audit retention primitive, and the complete SMTP/backup/deployment/incident/
+offboarding/release runbooks. A clean migration replay, 128 pgTAP assertions, schema lint with no
+errors, hosted advisors with no error-level findings, 1,232 Vitest tests with one opt-in integration
+test skipped, TypeScript, ESLint with zero errors and the 12 existing warnings, Bash syntax checks,
+production build, rendered maintenance QA, exact maintenance HTTP responses, and normal-mode smoke
+checks pass. No production migration or external configuration was changed. Before classroom launch,
+operators must merge and deploy the reviewed migration/application together, set
+`MAINTENANCE_MODE=false`, configure custom SMTP/DNS and the GitHub backup/alert secrets, run the first
+encrypted backup and non-production restore rehearsal, name the college privacy contact, rerun hosted
+advisors, and complete the release-acceptance checklist. Supabase's remaining leaked-password warning
+is a documented Pro-only hardening option; INFO-only server-table and legacy index notices are tracked.
 The linked database now reports complete local/remote
 migration parity and a no-op migration dry run; direct verification confirmed both Account tables,
 all three reserved usernames, RLS, the self-read policy, protected client grants, triggers, and private
 authorization helpers. `/api/health` returned HTTP 200 with `database: ok` after deployment.
+
+**Phase 17 floating-corner enhancement — COMPLETE (2026-09-05).** The Floating Spectator is now
+pointer-draggable and keyboard-movable across all four safe-area-aware viewport corners while
+preserving the existing single player, projection poll, and presentation lifecycle. Threshold,
+containment, quadrant snapping, cancellation, accessibility, lifecycle, and reset behavior are
+covered by 1,091 passing tests. The TypeScript production build, ESLint, and a live 1280×720
+instructor room with real pointer and keyboard movement all pass with clean browser logs.
 
 **Operational health check — CORRECTED (2026-09-05).** `/api/health` now checks the protected
 `sessions` table with the server-only Supabase secret client. It no longer depends on the deliberately
@@ -140,8 +193,9 @@ revoked anonymous table grant, and route regressions cover healthy, degraded, an
 responses without exposing the secret or reopening room-code reads. The live local endpoint returns
 HTTP 200 with `database: ok`; all 1,140 tests, TypeScript, and ESLint pass.
 
-**Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04).** The Embedded Spectator now
-switches among Docked, a fixed bottom-right Floating mini-player, and browser-native Fullscreen while
+**Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04; corners updated 2026-09-05).** The
+Embedded Spectator switches among Docked, a movable corner-pinned Floating mini-player, and
+browser-native Fullscreen while
 preserving one selected-only polling path and an inert uniformly scaled monitor. Permanent accessible
 controls, return-mode and focus restoration, failure feedback, responsive safe-area sizing, reduced
 motion, and Stop from every mode are verified by tests and a real instructor/trainee browser flow.
@@ -914,19 +968,34 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
         presses, incremented optimistically and rolled back on a failed write
   - [x] SAMPLE and OPQRST presses logged in both directions, reading as a sentence a debrief quotes
   - [x] Both credited to the trainee and marked `by instructor`, not split into a second stream
-  - [x] Host-authenticated `POST /api/session/[code]/instructor-event`; participant scoped to the
-        room, `source` stamped server-side, insert path shared with the monitor, no false `behind`
+  - [x] Controller-authorized `POST /api/session/[code]/instructor-event`; participant scoped to the
+        room, `source` stamped server-side, insert path shared with the monitor, no false `behind`,
+        and a read-only second device refused with 409
   - [x] Credit resolved against the live roster each render, so a leaver or New Attempt cannot
         strand a stale id; picker only when there is a choice; disabled with a stated reason
   - [x] SAMPLE/OPQRST answers and Pulse/Respiratory/Skin findings reach the report, stripped from
         the `session_state` the trainee polls and kept only in `session_state_history`
-  - [x] Verified 1,214 tests passing, TypeScript clean, ESLint 0 errors and 12 pre-existing
+  - [x] Carries into persistent Evaluation reports for free: Phase 5 snapshots whole
+        `student_events` rows, and `ReportsPage` renders through the same panel
+  - [x] Verified 1,293 tests passing, TypeScript clean, ESLint 0 errors and 12 pre-existing
         warnings (none in the changed files), production build clean with the new route registered
   - [ ] **Apply `20260908120000_instructor_recorded_actions.sql`** — until it runs, the live
         `student_events_kind_check` rejects `sample_ask` and `opqrst_ask`, so every checklist press
         fails with a 400 while the med grid works
   - [ ] Visual check of the three-column tab in a signed-in console (invite-only sign-in put this
         out of reach of automated browser verification)
+- [x] **Vercel spectator test type-check fix — COMPLETE:**
+  - [x] Remove the retired `hostToken` prop from the restartable Floating Spectator test harness
+  - [x] Verify the focused spectator tests, full suite, TypeScript, ESLint, and production build
+- [x] **Phase 17 floating-corner enhancement — COMPLETE:**
+  - [x] Add a primary-pointer drag grip with a 6px threshold, viewport containment, target preview,
+        player-center quadrant selection, four safe-area anchors, and reduced-motion-aware snapping
+  - [x] Add adjacent-corner arrow-key movement, accessible naming, focus treatment, and live position
+        announcements while preserving the inert monitor surface
+  - [x] Preserve the selected corner across console, trainee, attempt, dock, and fullscreen changes;
+        cancel interrupted gestures and reset to bottom-right on Stop Spectating or reload
+  - [x] Verify 1,091 tests, TypeScript production build, ESLint, and a live 1280×720 instructor room
+        with exact 16px corner geometry, full 360×280 size, real pointer drag, and clean browser logs
 - [x] **Phase 17 presentation modes — COMPLETE:**
   - [x] Record the confirmed Docked, fixed Floating, and native Fullscreen behavior and lifecycle
   - [x] Implement persistent accessible controls, mode return state, fullscreen rejection status,

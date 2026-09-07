@@ -2,7 +2,46 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(29);
+select plan(31);
+
+select results_eq(
+  $$
+    select table_name::text collate "C", privilege_type::text collate "C"
+      from information_schema.table_privileges
+     where grantee = 'service_role'
+       and table_schema = 'public'
+       and table_name in ('participant_attempts', 'participants', 'session_state', 'student_events')
+       and privilege_type in ('DELETE', 'INSERT', 'SELECT', 'UPDATE')
+     order by table_name, privilege_type
+  $$,
+  $$
+    values
+      ('participant_attempts'::text collate "C", 'INSERT'::text collate "C"),
+      ('participant_attempts'::text collate "C", 'SELECT'::text collate "C"),
+      ('participant_attempts'::text collate "C", 'UPDATE'::text collate "C"),
+      ('participants'::text collate "C", 'INSERT'::text collate "C"),
+      ('participants'::text collate "C", 'SELECT'::text collate "C"),
+      ('participants'::text collate "C", 'UPDATE'::text collate "C"),
+      ('session_state'::text collate "C", 'INSERT'::text collate "C"),
+      ('session_state'::text collate "C", 'SELECT'::text collate "C"),
+      ('session_state'::text collate "C", 'UPDATE'::text collate "C"),
+      ('student_events'::text collate "C", 'INSERT'::text collate "C"),
+      ('student_events'::text collate "C", 'SELECT'::text collate "C")
+  $$,
+  'service_role has exactly the DML privileges used by protected live-Room routes'
+);
+
+select is_empty(
+  $$
+    select table_name
+      from information_schema.table_privileges
+     where grantee in ('anon', 'authenticated', 'PUBLIC')
+       and table_schema = 'public'
+       and table_name in ('participant_attempts', 'participants', 'session_state', 'student_events')
+       and privilege_type in ('DELETE', 'INSERT', 'SELECT', 'UPDATE')
+  $$,
+  'browser and public roles have no direct live-Room table privileges'
+);
 
 select has_column(
   'public',

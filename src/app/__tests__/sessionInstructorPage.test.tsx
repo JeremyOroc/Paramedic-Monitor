@@ -85,5 +85,6 @@ describe('SessionInstructorClient', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Room not found')
     expect(screen.queryByTestId('admin-stub')).toBeNull()
+    expect(screen.getByRole('link', { name: 'Return to console' })).toHaveAttribute('href', '/instructor')
   })
 })

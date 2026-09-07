@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { EvaluationReportPanel } from '../EvaluationReportPanel'
+import { EvaluationReportPanel, formatTimelineCopyTime } from '../EvaluationReportPanel'
 import type {
   ParticipantAttempt,
   SessionStateHistoryEntry,
@@ -70,6 +70,10 @@ function renderPanel(props: Partial<React.ComponentProps<typeof EvaluationReport
 }
 
 describe('EvaluationReportPanel', () => {
+  it('formats persistent-report copy timestamps in Toronto with the EST/EDT abbreviation', () => {
+    expect(formatTimelineCopyTime('2026-01-15T15:00:00.000Z', 'America/Toronto')).toMatch(/10:00:00 EST/)
+    expect(formatTimelineCopyTime('2026-07-15T14:00:00.000Z', 'America/Toronto')).toMatch(/10:00:00 EDT/)
+  })
   it('renders each action in order with its offset, kind, detail and patient state', () => {
     renderPanel({
       stateHistory: [state(1, 0, {})],

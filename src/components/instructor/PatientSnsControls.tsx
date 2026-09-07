@@ -131,7 +131,7 @@ function PatientSnsIcon({ group, active, hasFinding }: PatientSnsIconProps) {
       />
       <h3
         className={cn(
-          'text-[10px] font-semibold uppercase tracking-wider xl:[@media(min-height:800px)]:text-xs',
+          'break-words text-center text-[10px] font-semibold uppercase tracking-wider xl:[@media(min-height:800px)]:text-xs',
           active ? 'text-ecg-green' : 'text-neutral-300',
         )}
       >
@@ -219,7 +219,7 @@ export function PatientSnsControls({
   return (
     <div
       data-testid="patient-sns-controls"
-      className="grid grid-cols-3 items-start gap-2 border-t border-neutral-800 pt-2 xl:[@media(min-height:800px)]:gap-3 xl:[@media(min-height:800px)]:pt-3"
+      className="grid grid-cols-1 items-start gap-2 border-t border-neutral-800 pt-2 min-[420px]:grid-cols-3 xl:[@media(min-height:800px)]:gap-3 xl:[@media(min-height:800px)]:pt-3"
     >
       {PATIENT_SNS_GROUPS.map((group) => {
         const active = selected.has(group.id)

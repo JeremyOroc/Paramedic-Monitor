@@ -26,13 +26,21 @@ vi.mock('@/components/accounts/AcceptInvitePage', () => ({
 vi.mock('@/components/accounts/AccountPanel', () => ({
   AccountPanel: ({ username }: { username: string }) => <div>account:{username}</div>,
 }))
+vi.mock('@/components/reports/ReportsPage', () => ({
+  ReportsPage: () => <div>persistent reports</div>,
+}))
+vi.mock('@/components/instructor/AdminPage', () => ({
+  default: () => <div>instructor console</div>,
+}))
 
+import AdminCompatibilityPage from '@/app/admin/page'
 import AccountPage from '@/app/instructor/account/page'
 import InviteAcceptancePage from '@/app/instructor/accept-invite/page'
 import ForgotPasswordPage from '@/app/instructor/forgot-password/page'
 import LoginPage from '@/app/instructor/login/page'
 import InstructorPage from '@/app/instructor/page'
 import ResetPasswordPage from '@/app/instructor/reset-password/page'
+import ReportsPage from '@/app/instructor/reports/page'
 
 describe('Instructor account pages', () => {
   beforeEach(() => {
@@ -76,9 +84,24 @@ describe('Instructor account pages', () => {
     await expect(ResetPasswordPage()).rejects.toThrow('redirect:/instructor/login')
   })
 
-  it('routes an authenticated Instructor home to Account and anonymous users to login', async () => {
-    await expect(InstructorPage()).rejects.toThrow('redirect:/instructor/account')
+  it('protects the persistent Reports area with the same live Account check', async () => {
+    const reports = render(await ReportsPage())
+    expect(screen.getByText('persistent reports')).toBeInTheDocument()
+    reports.unmount()
+
+    mocks.getCurrentAccount.mockResolvedValue(null)
+    await expect(ReportsPage()).rejects.toThrow('redirect:/instructor/login')
+  })
+
+  it('renders the canonical Console at the authenticated Instructor home', async () => {
+    render(await InstructorPage())
+    expect(screen.getByText('instructor console')).toBeInTheDocument()
+
     mocks.getCurrentAccount.mockResolvedValue(null)
     await expect(InstructorPage()).rejects.toThrow('redirect:/instructor/login')
+  })
+
+  it('keeps the legacy admin route as a compatibility redirect', () => {
+    expect(() => AdminCompatibilityPage()).toThrow('redirect:/instructor')
   })
 })

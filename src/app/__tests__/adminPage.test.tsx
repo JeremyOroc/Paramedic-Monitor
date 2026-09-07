@@ -170,7 +170,7 @@ describe('AdminPage', () => {
     const notice = await screen.findByTestId('room-ended-notice')
     expect(screen.getByRole('button', { name: 'End Room' })).toBeDisabled()
     await user.click(within(notice).getByRole('button', { name: 'Create a new room' }))
-    expect(routerReplace).toHaveBeenCalledWith('/admin')
+    expect(routerReplace).toHaveBeenCalledWith('/instructor')
   })
 
   it('shows a live roster with connection dots and per-student progress', async () => {
@@ -302,6 +302,13 @@ describe('AdminPage', () => {
       'data-spectator-mode',
       'floating',
     )
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Move spectator mini-player' }), {
+      key: 'ArrowUp',
+    })
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-right',
+    )
 
     await user.click(within(screen.getByTestId('student-row-student-2')).getByRole('button', { name: 'Spectate' }))
     expect(screen.queryByText('Connecting to Alice…')).toBeNull()
@@ -310,6 +317,10 @@ describe('AdminPage', () => {
     expect(screen.getByLabelText('Spectating Bob')).toHaveAttribute(
       'data-spectator-mode',
       'floating',
+    )
+    expect(screen.getByLabelText('Spectating Bob')).toHaveAttribute(
+      'data-spectator-corner',
+      'top-right',
     )
 
     resolveAlice?.(new Response(JSON.stringify({
@@ -987,7 +998,10 @@ describe('AdminPage', () => {
     expect(screen.queryByTestId('admin-graph-row-etco2')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'SpO2 off' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'EtCO2 off' })).toBeInTheDocument()
-    expect(screen.getByTestId('patient-sns-controls')).toHaveClass('grid-cols-3')
+    expect(screen.getByTestId('patient-sns-controls')).toHaveClass(
+      'grid-cols-1',
+      'min-[420px]:grid-cols-3',
+    )
     expect(screen.getByRole('heading', { name: 'Pulse' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Respiratory' })).toBeInTheDocument()
     expect(screen.queryByRole('group', { name: 'Pulse measurement options' })).toBeNull()
@@ -1193,6 +1207,7 @@ describe('AdminPage', () => {
     expect(actions.compareDocumentPosition(tabs)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(actions).toContainElement(screen.getByRole('button', { name: 'Save' }))
     expect(actions).toContainElement(screen.getByRole('button', { name: 'Send' }))
+    expect(tabs).toHaveClass('grid-cols-2', 'sm:grid-cols-3', 'lg:grid-cols-5')
   })
 
   it('uses the Caller Info auto-sort scenario box to populate all admin sections', async () => {

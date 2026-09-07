@@ -812,6 +812,10 @@ describe('attempt completion (PLAN 12f)', () => {
 
     const close = stub.opsFor('participant_attempts').find((op) => op.method === 'update')
     expect(close?.payload?.completed_at).toEqual(expect.any(String))
+    expect(stub.opsFor('evaluation_reports')[0]).toMatchObject({
+      method: 'update',
+      payload: { status: 'complete', completion_method: 'room_ended' },
+    })
   })
 
   it('only closes attempts that are still open', async () => {

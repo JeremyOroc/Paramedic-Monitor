@@ -415,12 +415,66 @@ body {
   .embedded-spectator-canvas { --spectator-scale: 0.58; }
 }
 
-.spectator-mode-floating {
-  right: max(16px, env(safe-area-inset-right));
-  bottom: max(16px, env(safe-area-inset-bottom));
+.spectator-corner-position {
+  --spectator-corner-x: 0px;
+  --spectator-corner-y: 0px;
+  --spectator-drag-x: 0px;
+  --spectator-drag-y: 0px;
+  --spectator-edge-left: max(16px, env(safe-area-inset-left));
+  --spectator-edge-right: max(16px, env(safe-area-inset-right));
+  --spectator-edge-top: max(16px, env(safe-area-inset-top));
+  --spectator-edge-bottom: max(16px, env(safe-area-inset-bottom));
+  left: var(--spectator-edge-left);
+  top: var(--spectator-edge-top);
+  transform: translate3d(
+    calc(var(--spectator-corner-x) + var(--spectator-drag-x)),
+    calc(var(--spectator-corner-y) + var(--spectator-drag-y)),
+    0
+  );
+}
+
+.spectator-corner-position[data-spectator-corner='top-right'],
+.spectator-corner-position[data-spectator-corner='bottom-right'] {
+  --spectator-corner-x: calc(
+    100vw - 100% - var(--spectator-edge-left) - var(--spectator-edge-right)
+  );
+}
+
+.spectator-corner-position[data-spectator-corner='bottom-left'],
+.spectator-corner-position[data-spectator-corner='bottom-right'] {
+  --spectator-corner-y: calc(
+    100vh - 100% - var(--spectator-edge-top) - var(--spectator-edge-bottom)
+  );
+}
+
+.spectator-mode-floating,
+.spectator-corner-target {
   width: min(320px, calc(100vw - 32px));
   height: min(250px, calc(100vh - 32px));
+}
+
+.spectator-mode-floating {
   animation: spectator-floating-in 180ms ease-out;
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+
+.spectator-mode-floating[data-spectator-drag-state='dragging'] {
+  transition: none;
+}
+
+.spectator-mode-floating[data-spectator-drag-state='snapping'] {
+  transition: transform 180ms ease-out;
+}
+
+.spectator-mode-floating[data-spectator-drag-state='dragging'] .spectator-drag-handle {
+  cursor: grabbing;
+  border-color: var(--color-cyan-bp);
+  color: var(--color-cyan-bp);
+}
+
+.spectator-corner-target {
+  background: transparent;
 }
 
 .spectator-mode-docked {
@@ -437,14 +491,16 @@ body {
 }
 
 @media (min-width: 1280px) {
-  .spectator-mode-floating {
+  .spectator-mode-floating,
+  .spectator-corner-target {
     width: min(360px, calc(100vw - 32px));
     height: min(280px, calc(100vh - 32px));
   }
 }
 
 @media (min-width: 1600px) {
-  .spectator-mode-floating {
+  .spectator-mode-floating,
+  .spectator-corner-target {
     width: min(400px, calc(100vw - 32px));
     height: min(310px, calc(100vh - 32px));
   }
@@ -477,11 +533,11 @@ body {
 @keyframes spectator-floating-in {
   from {
     opacity: 0;
-    transform: scale(0.97);
+    scale: 0.97;
   }
   to {
     opacity: 1;
-    transform: scale(1);
+    scale: 1;
   }
 }
 
@@ -500,5 +556,10 @@ body {
   .spectator-mode-floating,
   .spectator-mode-docked {
     animation: none;
+  }
+
+  .spectator-mode-floating,
+  .spectator-mode-floating[data-spectator-drag-state='snapping'] {
+    transition: none;
   }
 }

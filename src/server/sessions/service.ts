@@ -6,6 +6,7 @@ import {
 } from '@/lib/supabase/server'
 import { generateSessionCode, isValidSessionCode } from '@/lib/session'
 import type { ActiveAccount } from '@/server/accounts/service'
+import { completeEvaluationReportForRoom } from '@/server/reports/service'
 import { isStudentEventKind } from '@/types/session'
 import {
   MONITOR_PROJECTION_VERSION,
@@ -757,6 +758,11 @@ export async function endSession(
   const session = await verifyRoomController(code, account, controllerToken)
   const supabase = createServiceClient()
   await closeAttempts(session.id, session.active_attempt_version)
+  await completeEvaluationReportForRoom(
+    session.id,
+    session.owner_user_id,
+    session.active_attempt_version,
+  )
   const { data, error } = await supabase
     .from('sessions')
     .update({ status: 'ended' })

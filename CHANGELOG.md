@@ -35,6 +35,152 @@
 - 53 new tests across the service, timeline, recorder component, admin integration, and report panel.
 - Merged Phase 4 and moved the instructor-event route onto Account ownership plus the room-controller
   token. A device watching the room read-only is refused with 409 rather than silently recording.
+- Merged Phases 5-7. The new event kinds and the instructor marker reach persistent Evaluation
+  reports without Phase 5 needing to know about them: its trigger snapshots whole `student_events`
+  rows, and `ReportsPage` renders through the same panel. The copied stream keeps both main's
+  timestamp column and the instructor marker.
+
+## [2026-09-07] [instructor/testing] — Fix Vercel spectator test type check
+
+- Removed the retired `hostToken` prop from the restartable Floating Spectator test harness. The
+  Account-owned Room merge had already removed that prop from the production component and every
+  other caller, leaving this single stale test fixture to fail Next.js production type checking.
+- Re-ran the focused spectator regression, the complete Vitest suite, TypeScript, ESLint, and the
+  production build so the Vercel deployment contract is covered locally.
+
+## [2026-09-07] [merge/instructor] — Integrate draggable Spectator corners
+
+- Resolved the documentation merge by retaining the complete Accounts and production-operations
+  history alongside the Phase 17 draggable-corner planning and implementation records.
+- Kept Accounts Phase 7 as the current project phase and preserved the completed four-corner
+  mini-player behavior in status. No application code changed during conflict resolution.
+- Verified all 1,241 runnable Vitest tests and ESLint with zero errors and the 12 existing warnings;
+  Git reports no unresolved paths and the staged merge diff passes its whitespace check.
+
+## [2026-09-07] [ui] — Unify Console, Reports, and Account page shells
+
+- Extended the shared Instructor layout with active-area and title configuration, then moved Reports
+  and Account onto that full-width Console shell. Their former eyebrow and supporting copy are gone;
+  both titles now use the same green size and weight as Instructor Console, and Account is no longer
+  centered in a maximum-width card.
+- Added current-device Sign Out directly below Account in the shared top-right header, including
+  disabled state, redirect/refresh behavior, and visible failure feedback. Console, Reports, Account,
+  and the live Room Console inherit the same action while their existing workflows remain unchanged.
+- Added component regressions for exact copy, shared geometry, active-area state, Sign Out success and
+  failure, and full-width Account content. Verified 1,235 runnable Vitest tests, TypeScript, the
+  production build, and ESLint with zero errors and the 12 existing warnings. Rendered browser QA was
+  unavailable because neither the Browser plugin nor Playwright is installed.
+
+## [2026-09-07] [planning/ui] — Approve consistent authenticated page shell
+
+- Replaced the earlier Phase 6 requirement to preserve distinct responsive content widths with one
+  Console-based full-width shell for the local Console, Reports, and Account pages. The approved
+  refinement also places Sign Out directly below Account in the shared top-right navigation and
+  reduces the Reports and Account headers to titles matching the Instructor Console treatment.
+- Added the matching component test gate before implementation. Live Room Console layout and all
+  existing Reports and Account workflows remain unchanged.
+
+## [2026-09-07] [operations/security] — Complete Phase 7 launch-readiness tooling locally
+
+- Added an explicit safe-off `MAINTENANCE_MODE` boundary. When enabled, current application pages
+  redirect to a clear non-cacheable maintenance screen, application APIs return sanitized HTTP 503
+  responses with `Retry-After`, and `/api/health` remains available; disabling the flag restores the
+  existing Supabase session-refresh and application paths.
+- Added a nightly/manual GitHub workflow and fail-closed scripts for current Supabase roles/schema/data
+  exports, Auth/ownership verification, checksums, pre-upload `age` encryption, provider-neutral
+  off-site upload, exact 30-daily/12-monthly rotation, two-developer sanitized failure alerts, and a
+  guarded non-production restore rehearsal with content-free evidence and restored-count comparison.
+- Added `20260907194832_phase_7_audit_retention.sql`, which replaces the former unrestricted
+  report-only purge access with one service-only function that refuses cutoffs inside the approved
+  one-year pilot floor and purges both privacy-minimized Account audit stores only after a successful
+  backup.
+- Added operator runbooks for custom Auth SMTP/DNS, backup custody and quarterly recovery, deployment
+  maintenance/forward-fix boundaries, incident/privacy coordination, safe Account offboarding, Free
+  post-break readiness, and the complete classroom release gate. Secrets and backup artifacts remain
+  excluded from source control.
+- Verified a clean migration replay, 128 pgTAP assertions, schema lint with no errors, hosted advisors
+  with no error-level findings, all 1,232 Vitest tests with one opt-in integration test skipped,
+  TypeScript, ESLint with zero errors and the 12 existing warnings, Bash syntax checks, the production
+  build, rendered maintenance behavior, exact maintenance-mode HTTP responses, and restored normal-mode
+  smoke checks. Production remains unchanged; operator-supplied SMTP, backup, alert, privacy-contact,
+  deployment, and acceptance gates are documented for after merge.
+
+## [2026-09-07] [operations] — Start Phase 7 production operations
+
+- Recorded Phase 6 as production-verified after its matching application and Room-grant migration
+  were deployed and all eight health, navigation, compatibility, live-Room, responsive, and cleanup
+  acceptance sections passed.
+- Opened `phase/7-production-operations` from the merged production revision and documented the
+  confirmed final-phase scope: maintenance mode, encrypted whole-project logical backups, guarded
+  restore rehearsals, scheduled off-site retention, SMTP/readiness/incident/offboarding runbooks, and
+  complete release acceptance.
+- Revised the pre-rollout feature-gate default for the already-live system: explicit
+  `MAINTENANCE_MODE=true` enters maintenance, while an unset value preserves the verified production
+  service instead of causing an accidental outage. Added the Phase 7 testing gate; no external
+  credentials or production configuration are committed.
+
+## [2026-09-07] [navigation/sessions] — Complete Phase 6 authenticated navigation locally
+
+- Made `/instructor` the canonical protected Console, retained `/admin` as a compatibility redirect,
+  and added one accessible Console/Reports/Account navigation across the local Console, live Room,
+  Reports, and Account surfaces. Active-page semantics, visible keyboard focus, compact wrapping, and
+  touch-sized targets are covered by component and route tests.
+- Exercised the complete rendered cross-area flow, including Room create/conflict/reopen and live
+  waiting-room access. Corrected narrow-screen overflow in the clinical tabs, scenario library,
+  Vitals, and Patient/SNS controls without changing their desktop layouts.
+- Corrected the Phase 6 start assumption that no migration was needed. Clean-install QA exposed
+  missing service-role DML privileges on four temporary live-Room tables, so
+  `20260907163444_grant_live_room_service_access.sql` now applies exact least-privilege server grants
+  while keeping browser roles out. Added migration-contract and pgTAP regression coverage.
+- Verified a clean migration replay, 120 pgTAP assertions, error-level schema lint, database advisors
+  with no error-level findings, all 1,203 Vitest tests with one opt-in integration test skipped,
+  TypeScript, ESLint with zero errors and the 12 existing warnings, and the production build. The
+  available 319×748 browser passed routing, navigation, Room, compact-overflow, overlay, and console
+  checks; a wider rendered smoke test remains for post-deployment acceptance. Production is unchanged.
+
+## [2026-09-07] [navigation] — Start Phase 6 authenticated Instructor shell
+
+- Recorded the Product operator's Phase 5 merge and report-migration deployment and opened
+  `phase/6-instructor-navigation` from that merged revision.
+- Confirmed `/instructor` as the canonical Console, `/admin` as a backwards-compatible redirect, and
+  one accessible Console/Reports/Account navigation across the local Console, live Room Console,
+  Reports, and Account surfaces without changing Room authorization or report persistence.
+- Added the Phase 6 testing gate for protected/canonical routing, active navigation semantics,
+  regression coverage, full application verification, and rendered desktop/compact cross-area and
+  live-Room browser checks. Phase 6 requires no database migration.
+
+## [2026-09-07] [reports] — Complete Phase 5 persistent Evaluation reports locally
+
+- Added one durable, Account-owned Evaluation report per started Attempt. Database triggers snapshot
+  the scenario and confirmed defibrillator model, backfill pre-start participant/timeline data,
+  autosave subsequent trainee actions and instructor states, synchronize Attempt names, complete on
+  New Attempt, and deliberately leave passive-expiry reports Incomplete. Explicit End Room and Account
+  disablement complete the current report without changing its timeline.
+- Added owner-only report listing and detail APIs with 25-row newest-first pagination, All/Complete/
+  Incomplete filters, Toronto-local date bounds, and search across Attempt, scenario, and Student
+  names. Immutable ownership/snapshots, column-level grants, RLS, manual-only browser completion,
+  Account-deletion cascade, and content-free mutation auditing enforce the persistence boundary.
+- Added the protected Reports UI with metadata editing, repeatable Student names, Toronto timestamps,
+  EST/EDT timeline copying, manual completion, and contextual unrecoverable-deletion confirmation.
+  Account and Reports surfaces link back to the console without introducing the Phase 6 navigation
+  shell early.
+- Verified a clean replay of every migration, 118 pgTAP assertions, error-level Supabase schema lint,
+  all 1,199 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors
+  and the 12 existing warnings, and the Next.js production build. Rendered local QA at 319×748 passed
+  sign-in, list/detail loading, metadata persistence, manual completion, filtering, deletion-dialog,
+  timeline, no-horizontal-overflow, and console-health checks. Production is unchanged.
+
+## [2026-09-07] [reports/sessions] — Start Phase 5 persistent Evaluation reports
+
+- Confirmed Phase 4 in production after the complete owner/controller/trainee acceptance checklist
+  passed, including the provisioned `Jeremy` Administrator flow.
+- Opened `phase/5-persistent-reports` from the merged production revision and recorded the approved
+  implementation contract for Account-owned, per-Attempt Evaluation records, immutable scenario
+  snapshots, autosaved timelines, Student-name metadata, report search/edit/completion/deletion, and
+  privacy-minimized auditing.
+- Added the Phase 5 testing gate covering migration replay, RLS and audit assertions, service/API and
+  component behavior, TypeScript, lint, production build, and rendered report workflows. No production
+  migration has been applied.
 
 ## [2026-09-07] [sessions/auth] — Complete Phase 4 Account-owned Rooms locally
 
@@ -128,6 +274,35 @@
   notice for the protected reserved-name table and the naturally unused new empty-table index.
   `/api/health` returned HTTP 200 with `database: ok` after deployment. The CLI's separate pg-delta
   catalog-cache warning did not affect the applied migration or verified remote state.
+
+## [2026-09-05] [instructor/ui] — Add draggable Floating Spectator corners
+
+- Added an always-visible, keyboard-accessible header grip that moves the Floating Spectator among
+  all four viewport corners. Primary mouse, pen, and touch drags begin after 6px, follow the pointer
+  without rerendering the monitor, stay inside the viewport, preview the targeted quadrant, and snap
+  the complete player to safe-area-aware anchors on release.
+- Added interruption safety for Escape, pointer cancellation, resize/orientation, visibility, mode,
+  room, and participant changes; arrow-key adjacency and live corner announcements; reduced-motion
+  handling; and bottom-right reset after Stop Spectating or reload. Corner choice otherwise survives
+  scrolling, console tabs, trainee switches, attempts, Docked/Floating, Fullscreen, and room ending.
+- Preserved the single inert player and projection poll. Added component and Instructor Console
+  coverage for geometry, gestures, input filtering, all corners, announcements, cancellation, and
+  lifecycle retention. All 1,091 tests, the TypeScript production build, and ESLint pass. A live
+  1280×720 instructor-room run verified exact 16px anchors, full 360×280 resting size, real pointer
+  and keyboard movement, visible focus/controls, and clean browser logs.
+
+## [2026-09-05] [planning/instructor] — Confirm draggable Floating Spectator corners
+
+- Replaced the deliberately fixed bottom-right Floating Spectator contract with a bottom-right-default
+  player that can be dragged by mouse, pen, or touch and moved by keyboard among all four viewport
+  corners. A 6px threshold, player-center quadrant selection, target preview, safe-area anchoring,
+  cancellation semantics, position announcements, and reduced-motion behavior are now explicit.
+- The pinned corner persists across scrolling, console tabs, trainee switches, Docked/Floating and
+  Fullscreen round-trips, New Attempt, and End Room. Stop Spectating or reload resets the next player
+  to bottom-right. The existing player, inert monitor, selection, and polling path remain unchanged.
+- Approved a narrow exception to the Tailwind-only styling convention for temporary pointer-drag
+  coordinates; every resting position remains a static stylesheet-defined corner. This localized,
+  reversible presentation behavior does not warrant an ADR.
 
 ## [2026-09-05] [auth/ui] — Complete invite-only Instructor onboarding
 
