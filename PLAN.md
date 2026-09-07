@@ -1460,7 +1460,7 @@ and Fullscreen modes with clean console logs.
 
 ---
 
-### Next — Accounts & Scenario Ownership (PHASES 1–2 CODE COMPLETE — DATABASE DEPLOYED; HOSTED AUTH CONFIG PENDING)
+### Next — Accounts & Scenario Ownership (PHASES 1–3 PRODUCTION VERIFIED; PHASE 4 NEXT)
 
 The 2026-09-04 requirement change brings accounts and scenario ownership forward. Accounts are for
 instructors and administrators only; trainees continue joining a room with its code and a nickname
@@ -1782,12 +1782,14 @@ and rendered dummy-token failure-path QA in Chrome.
 The linked database now has complete migration parity and the deployed Account authorization objects.
 The production Site URL and invitation routing are confirmed. The hosted public-signup switch is
 disabled, and the real invitation acceptance plus sign-out/sign-in smoke test passed on 2026-09-06.
-Phase 3 is code-complete locally. Its production migration remains intentionally undeployed until
-the phase branch is merged and the matching application code can roll out with it. The previous deferred account note and its
+Phase 3 was merged and deployed to production on 2026-09-07 with its matching ownership migration.
+Production verification passed health, invitation-only Instructor sign-in, fixed Personal and Template
+areas, Template-to-Personal copying, sign-out/sign-in persistence, and the manually provisioned
+`Jeremy` Administrator role plus shared Template controls. The previous deferred account note and its
 assumption that the global library would remain
 until an external sale are superseded by this design.
 
-#### Account implementation Phase 3 — Personal and Template scenario ownership (CODE COMPLETE 2026-09-07)
+#### Account implementation Phase 3 — Personal and Template scenario ownership (PRODUCTION VERIFIED 2026-09-07)
 
 Phase 3 converts the existing global scenario library into the shared `Templates` area without
 changing its folders, ordering, scenario ordering, contents, or identifiers. It adds owner-scoped
@@ -1820,6 +1822,12 @@ Administrator Template creation/update confirmation, and Instructor Template-to-
 The browser console contained no warnings or errors. Local Auth keeps global signup disabled while
 leaving the email/password provider enabled, matching the hosted invite-only behavior: an invited
 Account login returned 200 and an anonymous signup attempt returned 422.
+The matching application branch and `20260907032643_phase_3_scenario_ownership.sql` migration were
+then deployed together. Production health and all ten rollout checks passed. The existing verified
+`JeremyTest` Auth identity was deliberately renamed to the reserved `Jeremy` username and assigned
+the `administrator` role by immutable user ID; subsequent sign-in and Administrator-only shared
+Template operations passed. Phase 3 is complete in production, and Phase 4 account-owned Room
+authorization is next.
 
 ---
 
