@@ -29,7 +29,11 @@ vi.mock('@/components/accounts/AccountPanel', () => ({
 vi.mock('@/components/reports/ReportsPage', () => ({
   ReportsPage: () => <div>persistent reports</div>,
 }))
+vi.mock('@/components/instructor/AdminPage', () => ({
+  default: () => <div>instructor console</div>,
+}))
 
+import AdminCompatibilityPage from '@/app/admin/page'
 import AccountPage from '@/app/instructor/account/page'
 import InviteAcceptancePage from '@/app/instructor/accept-invite/page'
 import ForgotPasswordPage from '@/app/instructor/forgot-password/page'
@@ -89,9 +93,15 @@ describe('Instructor account pages', () => {
     await expect(ReportsPage()).rejects.toThrow('redirect:/instructor/login')
   })
 
-  it('routes an authenticated Instructor home to Account and anonymous users to login', async () => {
-    await expect(InstructorPage()).rejects.toThrow('redirect:/instructor/account')
+  it('renders the canonical Console at the authenticated Instructor home', async () => {
+    render(await InstructorPage())
+    expect(screen.getByText('instructor console')).toBeInTheDocument()
+
     mocks.getCurrentAccount.mockResolvedValue(null)
     await expect(InstructorPage()).rejects.toThrow('redirect:/instructor/login')
+  })
+
+  it('keeps the legacy admin route as a compatibility redirect', () => {
+    expect(() => AdminCompatibilityPage()).toThrow('redirect:/instructor')
   })
 })

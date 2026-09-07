@@ -673,10 +673,10 @@ export function ScenarioLibraryPanel({
     status === 'working' || scenarioAction !== 'idle' || scenarioSelectionDisabled
 
   return (
-    <section className="border border-neutral-800 bg-neutral-950 p-4" aria-label="Scenarios library">
-      <div className="flex items-center justify-between gap-3 border-b border-neutral-800 pb-3">
+    <section className="min-w-0 border border-neutral-800 bg-neutral-950 p-4" aria-label="Scenarios library">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 pb-3">
         <h2 className="text-sm uppercase tracking-wider text-neutral-400">Scenarios</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={startNewScenario}

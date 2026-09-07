@@ -1,10 +1,10 @@
 'use client'
 
-import Link from 'next/link'
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { EvaluationReportPanel, attemptTitle } from '@/components/instructor/EvaluationReportPanel'
+import { InstructorNavigation } from '@/components/instructor/InstructorNavigation'
 import type { EvaluationReport, EvaluationReportSummary, ReportStatus } from '@/server/reports/service'
 
 type ReportListResponse = {
@@ -203,10 +203,7 @@ export function ReportsPage() {
             <h1 className="mt-2 text-3xl font-black tracking-tight">Reports</h1>
             <p className="mt-2 text-sm text-neutral-400">Persistent Evaluation records for your Account.</p>
           </div>
-          <nav aria-label="Instructor" className="flex gap-2">
-            <Link href="/admin" className="border border-cyan-bp px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/10">Console</Link>
-            <Link href="/instructor/account" className="border border-neutral-700 px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-neutral-300 hover:border-cyan-bp hover:text-cyan-bp">Account</Link>
-          </nav>
+          <InstructorNavigation active="reports" />
         </header>
 
         <form onSubmit={applyFilters} className="mt-6 grid gap-3 border border-neutral-800 bg-sidebar-bg p-4 lg:grid-cols-[minmax(14rem,1fr)_10rem_10rem_10rem_auto]">

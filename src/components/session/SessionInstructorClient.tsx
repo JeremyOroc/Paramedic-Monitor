@@ -88,7 +88,7 @@ export function SessionInstructorClient({ code }: { code: string }) {
             Room unavailable
           </h1>
           <p role="alert" className="mt-3 text-sm text-neutral-300">{error}</p>
-          <Link href="/admin" className="mt-5 inline-block font-mono text-xs font-bold uppercase text-cyan-bp">
+          <Link href="/instructor" className="mt-5 inline-block font-mono text-xs font-bold uppercase text-cyan-bp">
             Return to console
           </Link>
         </section>

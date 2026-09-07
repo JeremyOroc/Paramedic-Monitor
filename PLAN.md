@@ -1911,8 +1911,54 @@ manual completion without timeline mutation, contextual permanent-deletion confi
 timeline rendering, Toronto timestamps, no horizontal overflow, no framework overlay, and an empty
 warning/error console. A wider rendered viewport remains a rollout smoke-test item; responsive
 component coverage and the production build pass. The matching application branch and
-`20260907135753_phase_5_persistent_reports.sql` migration remain undeployed until the deliberate
-Phase 5 rollout.
+`20260907135753_phase_5_persistent_reports.sql` migration were merged and applied by the Product
+operator on 2026-09-07. Phase 6 supplies the unified authenticated navigation and complete
+cross-area browser verification.
+
+#### Account implementation Phase 6 — Instructor navigation and full interaction verification (CODE COMPLETE LOCALLY 2026-09-07)
+
+Phase 6 makes `/instructor` the canonical authenticated Console and gives Console, Reports, and
+Account one consistent primary navigation. The existing `/admin` URL remains a backwards-compatible
+authenticated redirect to `/instructor`; live Room consoles retain their existing
+`/session/[code]/instructor` URLs and receive the same navigation without changing controller,
+observer, or trainee behavior. Each surface identifies the active area accessibly, preserves the
+existing responsive content widths, and avoids introducing a redundant dashboard.
+
+##### Testing
+
+- Add component and page coverage for the shared navigation, active `aria-current` state, canonical
+  `/instructor` Console rendering, anonymous redirects, `/admin` compatibility redirect, and all
+  Console/Reports/Account destinations.
+- Regression-test local Console and live Room rendering so the navigation does not alter Room launch,
+  controller takeover, scenario, report, or Account behavior.
+- Run the complete Vitest suite, TypeScript, ESLint, and a production build, then exercise protected
+  Console → Reports → Account navigation and a live Room console in the rendered application at
+  desktop and compact viewports. Check focus, overflow, framework overlays, and browser warnings.
+
+Phase 6 makes `/instructor` the protected Console itself and retains `/admin` only as an unconditional
+compatibility redirect. A shared semantic navigation now links Console, Reports, and Account from the
+local Console and live Room Console, with an accessible active-page marker, keyboard-visible focus,
+touch-sized targets, and compact wrapping. Rendered compact verification also corrected tab, scenario,
+Vitals, and Patient/SNS layouts that could otherwise overflow at very narrow widths.
+
+The initial expectation that this phase needed no database change was corrected during rendered
+live-Room QA. A clean migration replay had never explicitly granted the protected server client the
+least-privilege DML operations used on `session_state`, `participants`, `participant_attempts`, and
+`student_events`; hosted environments could retain historical grants and hide the defect. Migration
+`20260907163444_grant_live_room_service_access.sql` first revokes all access on those tables, then
+grants only the exact server operations the Room routes use while leaving browser roles without
+direct access.
+
+Verification passed a clean replay of every migration, 120 pgTAP authorization assertions, error-level
+schema lint, database security/performance advisors with no error-level findings, all 1,203 Vitest
+tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and the 12 existing
+warnings, and the Next.js production build. Rendered QA at the available 319×748 in-app viewport
+verified canonical and compatibility routing, active Console/Reports/Account navigation, Room
+creation/conflict/reopen behavior, live waiting-room access after the grant correction, compact tabs,
+no horizontal overflow, no framework error overlay, and an empty browser warning/error console. The
+available browser surface could not be resized to a desktop viewport, so a wider rendered smoke test
+remains part of the post-deployment acceptance check; responsive component coverage and the production
+build pass.
 
 ---
 
