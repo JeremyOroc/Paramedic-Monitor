@@ -1921,14 +1921,21 @@ Phase 6 makes `/instructor` the canonical authenticated Console and gives Consol
 Account one consistent primary navigation. The existing `/admin` URL remains a backwards-compatible
 authenticated redirect to `/instructor`; live Room consoles retain their existing
 `/session/[code]/instructor` URLs and receive the same navigation without changing controller,
-observer, or trainee behavior. Each surface identifies the active area accessibly, preserves the
-existing responsive content widths, and avoids introducing a redundant dashboard.
+observer, or trainee behavior. Each surface identifies the active area accessibly and avoids
+introducing a redundant dashboard. An approved post-launch consistency refinement makes the local
+Console, Reports, and Account pages share the Console's full-width shell, outer spacing, divider,
+green title treatment, and top-right navigation placement. Sign Out is a shared navigation action
+positioned directly below Account on those three pages; the Account page no longer uses a centered
+maximum-width card or a separate header action. The live Room Console keeps its existing content
+layout and inherits the same Console header action.
 
 ##### Testing
 
 - Add component and page coverage for the shared navigation, active `aria-current` state, canonical
   `/instructor` Console rendering, anonymous redirects, `/admin` compatibility redirect, and all
   Console/Reports/Account destinations.
+- Cover the shared Sign Out action and the matching full-width Console/Reports/Account shell,
+  including exact page titles and removal of the former Reports and Account supporting copy.
 - Regression-test local Console and live Room rendering so the navigation does not alter Room launch,
   controller takeover, scenario, report, or Account behavior.
 - Run the complete Vitest suite, TypeScript, ESLint, and a production build, then exercise protected

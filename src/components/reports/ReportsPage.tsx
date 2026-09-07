@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { EvaluationReportPanel, attemptTitle } from '@/components/instructor/EvaluationReportPanel'
-import { InstructorNavigation } from '@/components/instructor/InstructorNavigation'
+import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import type { EvaluationReport, EvaluationReportSummary, ReportStatus } from '@/server/reports/service'
 
 type ReportListResponse = {
@@ -195,18 +195,8 @@ export function ReportsPage() {
     : '', [selected])
 
   return (
-    <main className="min-h-screen bg-monitor-bg px-5 py-8 text-white">
-      <div className="mx-auto w-full max-w-7xl">
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-neutral-800 pb-6">
-          <div>
-            <p className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-cyan-bp">Instructor console</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight">Reports</h1>
-            <p className="mt-2 text-sm text-neutral-400">Persistent Evaluation records for your Account.</p>
-          </div>
-          <InstructorNavigation active="reports" />
-        </header>
-
-        <form onSubmit={applyFilters} className="mt-6 grid gap-3 border border-neutral-800 bg-sidebar-bg p-4 lg:grid-cols-[minmax(14rem,1fr)_10rem_10rem_10rem_auto]">
+    <InstructorLayout active="reports" title="Reports">
+      <form onSubmit={applyFilters} className="grid gap-3 border border-neutral-800 bg-sidebar-bg p-4 lg:grid-cols-[minmax(14rem,1fr)_10rem_10rem_10rem_auto]">
           <label className="grid gap-1">
             <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">Search</span>
             <input value={query} onChange={(event) => setQuery(event.target.value)} maxLength={100} placeholder="Attempt, scenario, or Student" className="border border-neutral-700 bg-black px-3 py-2 text-sm outline-none focus:border-cyan-bp" />
@@ -308,8 +298,7 @@ export function ReportsPage() {
             )}
           </section>
         </div>
-      </div>
       <ConfirmationDialog open={deleteOpen} title="Delete report permanently?" description={deleteDescription} confirmLabel="Delete permanently" onConfirm={() => void deleteReport()} onCancel={() => setDeleteOpen(false)} />
-    </main>
+    </InstructorLayout>
   )
 }

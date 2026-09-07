@@ -7,6 +7,15 @@
 
 ## Current Phase
 **Accounts & scenario ownership — PHASE 7 CODE COMPLETE (2026-09-07).**
+The authenticated page-shell consistency refinement is complete locally. Console, Reports, and
+Account now share the Console's full-width outer spacing, header divider, green title treatment, and
+top-right navigation. Reports and Account use title-only headers, the Account settings card is no
+longer centered or width-capped, and current-device Sign Out is positioned directly below Account in
+the shared header on every authenticated Instructor surface. Component coverage verifies shell,
+title, active-area, Sign Out success/failure, and Account-width behavior. All 1,235 runnable Vitest
+tests, TypeScript, the production build, and ESLint with zero errors and the 12 existing warnings pass.
+Rendered browser QA remains unrun because the Browser plugin and Playwright are not installed; no new
+dependency was added without approval.
 The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
 implemented shared-code self-registration flow. Public registration and its deployment secret are
 removed; verified invited instructors complete a unique username and password in the app

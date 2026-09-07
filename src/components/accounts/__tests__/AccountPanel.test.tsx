@@ -17,6 +17,9 @@ describe('AccountPanel', () => {
 
   it('renders immutable account identity fields', () => {
     render(<AccountPanel username="Jeremy" email="jeremy@example.ca" role="administrator" />)
+    expect(screen.getByRole('heading', { name: 'Account' })).toHaveClass('text-2xl', 'font-bold', 'text-ecg-green')
+    expect(screen.queryByText('Your identity and sign-in settings.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Instructor console')).not.toBeInTheDocument()
     expect(screen.getByText('Jeremy')).toBeInTheDocument()
     expect(screen.getByText('jeremy@example.ca')).toBeInTheDocument()
     expect(screen.getByText('administrator')).toBeInTheDocument()
@@ -24,6 +27,9 @@ describe('AccountPanel', () => {
     expect(screen.getByRole('link', { name: 'Reports' })).toHaveAttribute('href', '/instructor/reports')
     expect(screen.getByRole('link', { name: 'Console' })).toHaveAttribute('href', '/instructor')
     expect(screen.getByRole('link', { name: 'Account' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('button', { name: 'Sign Out' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Account settings' })).toHaveClass('w-full')
+    expect(screen.getByRole('region', { name: 'Account settings' })).not.toHaveClass('mx-auto', 'max-w-2xl')
   })
 
   it('updates the password and signs out only the current device', async () => {
@@ -44,7 +50,7 @@ describe('AccountPanel', () => {
     expect(fetch).toHaveBeenNthCalledWith(1, '/api/auth/password', expect.objectContaining({ method: 'POST' }))
     expect(await screen.findByRole('status')).toHaveTextContent('Password updated')
 
-    await user.click(screen.getByRole('button', { name: 'Sign out' }))
+    await user.click(screen.getByRole('button', { name: 'Sign Out' }))
     expect(fetch).toHaveBeenNthCalledWith(2, '/api/auth/signout', { method: 'POST' })
     expect(push).toHaveBeenCalledWith('/instructor/login')
   })
