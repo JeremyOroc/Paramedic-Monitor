@@ -1,3 +1,4 @@
+import type { PatientInformationChecklist } from '@/lib/patientInformationAutoSort'
 import { RHYTHM_LABELS } from '@/lib/rhythmLabels'
 import { CALLER_INFO_FIELDS, type CallerInfoField } from '@/types/callerInfo'
 import type { DefibrillatorModel } from '@/types/defibrillator'
@@ -84,6 +85,13 @@ export type TimelineActionRow = TimelineRowBase & {
   behindBy: number
   /** True when the row is placed by the trainee's own clock rather than the server's. */
   clientTimed: boolean
+  /**
+   * The instructor pressed it, on the trainee's behalf: a drug given with both
+   * hands full, a question asked aloud. Still the trainee's action -- the
+   * report says who typed it so the evaluator knows the timing is the
+   * console's, not the monitor's.
+   */
+  enteredByInstructor: boolean
 }
 
 export type TimelineInstructorRow = TimelineRowBase & {
@@ -105,7 +113,16 @@ export type TimelineInstructorRow = TimelineRowBase & {
 }
 
 /** Where a change belongs, which decides whether the summary names it or counts it. */
-export type ChangeGroup = 'patient' | 'care' | 'scenario' | 'device' | 'timing' | 'dispatch' | 'route'
+export type ChangeGroup =
+  | 'patient'
+  | 'care'
+  | 'scenario'
+  | 'device'
+  | 'timing'
+  | 'dispatch'
+  | 'route'
+  /** SAMPLE and OPQRST answers. Collapsed in the summary, itemised in the expansion. */
+  | 'history'
 
 export type FieldChange = {
   group: ChangeGroup
@@ -116,7 +133,7 @@ export type FieldChange = {
   summary: string
 }
 
-export type StateFactGroup = 'Dispatch' | 'Patient' | 'Device'
+export type StateFactGroup = 'Dispatch' | 'Patient' | 'Device' | 'History'
 
 export type StateFact = {
   group: StateFactGroup
@@ -171,12 +188,49 @@ type NormalizedState = {
   destinationAddress: string
   /** The confirmed response time, or null when none was set. */
   responseSeconds: number | null
+  /**
+   * The history the trainee has to elicit and the findings they have to
+   * palpate for. Console-only: written to history, stripped from the state
+   * the trainee polls. Empty strings for anything the instructor left blank.
+   */
+  patientInformation: Record<PatientInformationChecklist, Record<string, string>>
+  patientSns: Record<PatientSnsFinding, string>
 }
 
 const CALLER_FIELDS: readonly CallerInfoField[] = CALLER_INFO_FIELDS.map((entry) => entry.field)
 const CALLER_LABELS: Record<CallerInfoField, string> = Object.fromEntries(
   CALLER_INFO_FIELDS.map((entry) => [entry.field, entry.label]),
 ) as Record<CallerInfoField, string>
+
+/**
+ * The Pulse / Respiratory / Skin findings, in the order the console lays the
+ * three cards out. `PatientSnsControls` owns the buttons; this owns how the
+ * report names what came off them.
+ */
+const PATIENT_SNS_LABELS = {
+  'pulse-rate': 'Pulse rate',
+  'pulse-rhythm': 'Pulse rhythm',
+  'pulse-strength': 'Pulse strength',
+  'respiratory-rate': 'Resp rate',
+  'respiratory-rhythm': 'Resp rhythm',
+  'respiratory-strength': 'Resp strength',
+  'skin-extremities-note': 'Skin/Extremities',
+} as const
+
+type PatientSnsFinding = keyof typeof PATIENT_SNS_LABELS
+
+const PATIENT_SNS_FINDINGS = Object.keys(PATIENT_SNS_LABELS) as PatientSnsFinding[]
+
+/** SAMPLE and OPQRST, each letter in the order the console stacks them. */
+const CHECKLIST_LETTERS: Record<PatientInformationChecklist, readonly string[]> = {
+  sample: ['S', 'A', 'M', 'P', 'L', 'E'],
+  opqrst: ['O', 'P', 'Q', 'R', 'S', 'T'],
+}
+
+const CHECKLIST_TITLES: Record<PatientInformationChecklist, string> = {
+  sample: 'SAMPLE',
+  opqrst: 'OPQRST',
+}
 
 const SPO2_WAVEFORM_LABELS: Record<Spo2Waveform, string> = { normal: 'Normal', weak: 'Weak', off: 'Off' }
 const ETCO2_WAVEFORM_LABELS: Record<Etco2Waveform, string> = {
@@ -270,7 +324,39 @@ export function normalizeHistoryState(state: unknown): NormalizedState {
     originAddress: stringOrEmpty(route.originAddress),
     destinationAddress: stringOrEmpty(route.destinationAddress),
     responseSeconds: numberOrNull(root.dispatchConfirmedSeconds),
+    ...normalizeInstructorOnly(root.instructorOnly),
   }
+}
+
+/**
+ * The console-only half of a history row.
+ *
+ * Absent on every row written before this existed, and absent from live
+ * `session_state` by design, so it degrades to blanks rather than throwing.
+ * Blank reads as "the instructor had not filled it in", which is what an old
+ * row honestly means.
+ */
+function normalizeInstructorOnly(value: unknown): Pick<
+  NormalizedState,
+  'patientInformation' | 'patientSns'
+> {
+  const root = isRecord(value) ? value : {}
+  const informationRaw = isRecord(root.patientInformation) ? root.patientInformation : {}
+  const valuesRaw = isRecord(informationRaw.values) ? informationRaw.values : {}
+  const snsRaw = isRecord(root.patientSns) ? root.patientSns : {}
+
+  const patientInformation = {} as NormalizedState['patientInformation']
+  for (const checklist of ['sample', 'opqrst'] as const) {
+    const letters = isRecord(valuesRaw[checklist]) ? valuesRaw[checklist] : {}
+    patientInformation[checklist] = Object.fromEntries(
+      CHECKLIST_LETTERS[checklist].map((letter) => [letter, stringOrEmpty(letters[letter])]),
+    )
+  }
+
+  const patientSns = {} as NormalizedState['patientSns']
+  for (const finding of PATIENT_SNS_FINDINGS) patientSns[finding] = stringOrEmpty(snsRaw[finding])
+
+  return { patientInformation, patientSns }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -379,6 +465,16 @@ export function formatEventDetail(event: Pick<StudentEvent, 'kind' | 'label' | '
   // The drug name is the label, and the payload only repeats the timestamp
   // already in the offset column.
   if (event.kind === 'medication') return `"${event.label}"`
+
+  // Read as a sentence, because these rows are quoted straight into a debrief:
+  // "S from SAMPLE was asked". The clearing press says so rather than being
+  // dropped -- a letter marked and then unmarked is something the record
+  // should show, not something it should quietly disagree with the panel about.
+  if (event.kind === 'sample_ask' || event.kind === 'opqrst_ask') {
+    const checklist = event.kind === 'sample_ask' ? 'SAMPLE' : 'OPQRST'
+    const asked = !isRecord(event.payload) || event.payload.asked !== false
+    return `${event.label} from ${checklist} was ${asked ? 'asked' : 'unmarked'}`
+  }
 
   if (!isRecord(event.payload)) return ''
   const parts = Object.entries(event.payload)
@@ -494,6 +590,28 @@ export function diffStates(previous: NormalizedState, next: NormalizedState): Fi
     push('dispatch', CALLER_LABELS[field], before || '(empty)', after || '(empty)')
   }
 
+  // The findings the trainee has to palpate for. Named individually rather
+  // than counted: "Pulse strength weak → thready" is the clinical change the
+  // evaluator is reading the row for.
+  for (const finding of PATIENT_SNS_FINDINGS) {
+    const before = previous.patientSns[finding]
+    const after = next.patientSns[finding]
+    if (before === after) continue
+    push('patient', PATIENT_SNS_LABELS[finding], before || '(empty)', after || '(empty)')
+  }
+
+  // The history answers. Collapsed to a count in the summary line the way the
+  // dispatch card is -- a Send that fills in all six SAMPLE letters must not
+  // become a six-clause row -- with the letters themselves in the expansion.
+  for (const checklist of ['sample', 'opqrst'] as const) {
+    for (const letter of CHECKLIST_LETTERS[checklist]) {
+      const before = previous.patientInformation[checklist][letter]
+      const after = next.patientInformation[checklist][letter]
+      if (before === after) continue
+      push('history', `${CHECKLIST_TITLES[checklist]} ${letter}`, before || '(empty)', after || '(empty)')
+    }
+  }
+
   if (previous.originAddress !== next.originAddress) {
     push('route', 'origin', previous.originAddress || '(empty)', next.originAddress || '(empty)')
   }
@@ -517,13 +635,18 @@ export function summarizeChanges(changes: readonly FieldChange[]): string[] {
   const clauses: string[] = []
   const dispatch = changes.filter((change) => change.group === 'dispatch')
   const route = changes.filter((change) => change.group === 'route')
+  const history = changes.filter((change) => change.group === 'history')
 
   for (const change of changes) {
     if (change.group === 'dispatch' || change.group === 'route') continue
+    if (change.group === 'history') continue
     clauses.push(change.summary)
   }
   if (dispatch.length > 0) {
     clauses.push(`dispatch card · ${dispatch.length} field${dispatch.length === 1 ? '' : 's'}`)
+  }
+  if (history.length > 0) {
+    clauses.push(`patient history · ${history.length} field${history.length === 1 ? '' : 's'}`)
   }
   if (route.length > 0) {
     clauses.push(`route · ${route.map((change) => change.label).join(', ')}`)
@@ -581,6 +704,17 @@ export function describeState(state: NormalizedState): StateFact[] {
   fact('Patient', 'EtCO2', channel('etco2'))
   fact('Patient', 'EtCO2 waveform', ETCO2_WAVEFORM_LABELS[state.etco2Waveform])
   fact('Patient', 'CPR', CPR_LABELS[state.cprMode])
+  for (const finding of PATIENT_SNS_FINDINGS) {
+    fact('Patient', PATIENT_SNS_LABELS[finding], state.patientSns[finding])
+  }
+
+  // The answers the trainee has to earn by asking. In the opening position
+  // they are what the instructor staged, not what the trainee has heard.
+  for (const checklist of ['sample', 'opqrst'] as const) {
+    for (const letter of CHECKLIST_LETTERS[checklist]) {
+      fact('History', `${CHECKLIST_TITLES[checklist]} ${letter}`, state.patientInformation[checklist][letter])
+    }
+  }
 
   if (state.defibrillatorModel) fact('Device', 'Defibrillator', DEFIB_LABELS[state.defibrillatorModel])
 
@@ -744,8 +878,14 @@ export function buildEvaluationTimeline(
   for (const { event, at, clientTimed } of events) {
     const context = contextFor(event.state_version, at)
     const shouldHaveSeen = latestVersionBefore(at)
+    const enteredByInstructor =
+      isRecord(event.payload) && event.payload.source === 'instructor'
     const behindBy =
-      event.state_version !== null && shouldHaveSeen !== null
+      // An instructor-entered row is never "behind": the console posts against
+      // the current version by definition, so the arithmetic that catches a
+      // stale monitor would only ever print a zero here, and a `← n behind`
+      // on a row no monitor produced would be a lie about a trainee.
+      !enteredByInstructor && event.state_version !== null && shouldHaveSeen !== null
         ? Math.max(0, shouldHaveSeen - event.state_version)
         : 0
     rows.push({
@@ -763,6 +903,7 @@ export function buildEvaluationTimeline(
       participantName: names.get(event.participant_id) ?? 'Unknown',
       behindBy,
       clientTimed,
+      enteredByInstructor,
     })
   }
 

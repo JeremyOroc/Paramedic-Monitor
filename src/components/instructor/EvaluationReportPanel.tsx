@@ -59,7 +59,7 @@ function hasDetail(row: TimelineInstructorRow): boolean {
   return row.opening ? row.snapshot.length > 0 : row.fieldChanges.length > 0
 }
 
-const FACT_GROUPS: readonly StateFact['group'][] = ['Dispatch', 'Patient', 'Device']
+const FACT_GROUPS: readonly StateFact['group'][] = ['Dispatch', 'Patient', 'Device', 'History']
 
 /**
  * The opening change shows the whole scenario as sent; every later change
@@ -143,7 +143,10 @@ function toPlainText(
       }
       const who = showNames ? `${row.participantName}\t` : ''
       const behind = row.behindBy > 0 ? `\t← ${row.behindBy} behind` : ''
-      return `${when}${row.offset}\t${who}${row.eventKind}\t${row.detail}\t${contextText(row.context)}${behind}`
+      // Carried into the paste too: a debrief that quotes the stream should not
+      // imply the trainee reached the monitor when the instructor logged it.
+      const source = row.enteredByInstructor ? '\t(by instructor)' : ''
+      return `${when}${row.offset}\t${who}${row.eventKind}\t${row.detail}\t${contextText(row.context)}${behind}${source}`
     })
     .join('\n')
   return `${heading}\n${body}`
@@ -340,6 +343,9 @@ export function EvaluationReportPanel({
               key={row.id}
               data-testid={`report-row-${row.kind}`}
               data-alarm={row.inAlarm ? 'true' : undefined}
+              data-source={
+                row.kind === 'action' && row.enteredByInstructor ? 'instructor' : undefined
+              }
               data-behind={row.kind === 'action' && row.behindBy > 0 ? String(row.behindBy) : undefined}
               className={cn(
                 'border-l-2 px-2 py-1',
@@ -400,7 +406,15 @@ export function EvaluationReportPanel({
                     </span>
                   ) : null}
                   <span className="truncate text-neutral-200">{row.eventKind}</span>
-                  <span className="hidden truncate text-neutral-500 md:block">{row.detail}</span>
+                  <span className="hidden truncate text-neutral-500 md:block">
+                    {row.detail}
+                    {row.enteredByInstructor ? (
+                      // The action is the trainee's; the keypress was not. Said
+                      // here rather than in a column of its own, because it
+                      // qualifies the detail and nothing else.
+                      <span className="ml-2 text-cyan-bp/70">by instructor</span>
+                    ) : null}
+                  </span>
                 </>
               )}
 

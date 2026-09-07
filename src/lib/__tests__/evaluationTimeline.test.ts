@@ -771,3 +771,202 @@ describe('buildEvaluationTimeline', () => {
     expect(rows[0].offset).toBe('t+0:12')
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 16 — actions the instructor recorded, and the console-only state
+// ─────────────────────────────────────────────────────────────────────────────
+
+function instructorOnly(
+  patientSns: Record<string, string> = {},
+  values: { sample?: Record<string, string>; opqrst?: Record<string, string> } = {},
+) {
+  return {
+    instructorOnly: {
+      patientInformation: {
+        selected: { sample: [], opqrst: [] },
+        values: { sample: values.sample ?? {}, opqrst: values.opqrst ?? {} },
+      },
+      patientSns,
+    },
+  }
+}
+
+describe('normalizeHistoryState — instructor-only block', () => {
+  it('reads the SNS findings and checklist answers the console sent', () => {
+    const state = normalizeHistoryState(
+      sharedState({}, {}, instructorOnly(
+        { 'pulse-rate': '112', 'skin-extremities-note': 'cool, diaphoretic' },
+        { sample: { M: 'ASA, metoprolol' } },
+      )),
+    )
+    expect(state.patientSns['pulse-rate']).toBe('112')
+    expect(state.patientSns['skin-extremities-note']).toBe('cool, diaphoretic')
+    expect(state.patientInformation.sample.M).toBe('ASA, metoprolol')
+  })
+
+  it('degrades to blanks on a row written before the block existed', () => {
+    const state = normalizeHistoryState(sharedState({}))
+    expect(state.patientSns['pulse-rate']).toBe('')
+    expect(state.patientInformation.sample.S).toBe('')
+    expect(state.patientInformation.opqrst.T).toBe('')
+  })
+
+  it('survives a malformed block rather than throwing', () => {
+    const state = normalizeHistoryState(
+      sharedState({}, {}, { instructorOnly: { patientSns: 'nope', patientInformation: 7 } }),
+    )
+    expect(state.patientSns['respiratory-rate']).toBe('')
+    expect(state.patientInformation.opqrst.O).toBe('')
+  })
+})
+
+describe('diffStates — SNS findings and patient history', () => {
+  it('names each changed SNS finding individually', () => {
+    const before = normalizeHistoryState(
+      sharedState({}, {}, instructorOnly({ 'pulse-strength': 'strong' })),
+    )
+    const after = normalizeHistoryState(
+      sharedState({}, {}, instructorOnly({ 'pulse-strength': 'thready' })),
+    )
+    const changes = diffStates(before, after)
+    expect(changes).toContainEqual({
+      group: 'patient',
+      label: 'Pulse strength',
+      before: 'strong',
+      after: 'thready',
+      summary: 'Pulse strength strong → thready',
+    })
+    expect(summarizeChanges(changes)).toContain('Pulse strength strong → thready')
+  })
+
+  it('reads a first-time finding as filled in rather than as a change from nothing', () => {
+    const before = normalizeHistoryState(sharedState({}, {}, instructorOnly()))
+    const after = normalizeHistoryState(
+      sharedState({}, {}, instructorOnly({ 'respiratory-rate': '28' })),
+    )
+    expect(diffStates(before, after)).toContainEqual(
+      expect.objectContaining({ label: 'Resp rate', before: '(empty)', after: '28' }),
+    )
+  })
+
+  it('collapses history answers to a count so one Send is not a twelve-clause row', () => {
+    const before = normalizeHistoryState(sharedState({}, {}, instructorOnly()))
+    const after = normalizeHistoryState(
+      sharedState({}, {}, instructorOnly({}, {
+        sample: { S: 'chest pain', A: 'penicillin', M: 'ASA' },
+        opqrst: { O: 'sudden' },
+      })),
+    )
+    const changes = diffStates(before, after)
+    // Itemised for the expansion...
+    expect(changes.filter((change) => change.group === 'history')).toHaveLength(4)
+    expect(changes).toContainEqual(
+      expect.objectContaining({ label: 'SAMPLE A', before: '(empty)', after: 'penicillin' }),
+    )
+    // ...counted for the one-line summary.
+    expect(summarizeChanges(changes)).toEqual(['patient history · 4 fields'])
+  })
+
+  it('says nothing when neither block moved', () => {
+    const state = sharedState({}, {}, instructorOnly({ 'pulse-rate': '88' }, { sample: { S: 'pain' } }))
+    expect(diffStates(normalizeHistoryState(state), normalizeHistoryState(state))).toEqual([])
+  })
+})
+
+describe('describeState — the opening position', () => {
+  it('carries the staged findings and history the trainee has yet to earn', () => {
+    const facts = describeState(
+      normalizeHistoryState(
+        sharedState({}, {}, instructorOnly(
+          { 'pulse-rate': '112' },
+          { sample: { S: 'crushing chest pain' } },
+        )),
+      ),
+    )
+    expect(facts).toContainEqual({ group: 'Patient', label: 'Pulse rate', value: '112' })
+    expect(facts).toContainEqual({
+      group: 'History',
+      label: 'SAMPLE S',
+      value: 'crushing chest pain',
+    })
+  })
+
+  it('leaves out the letters the instructor never filled in', () => {
+    const facts = describeState(normalizeHistoryState(sharedState({}, {}, instructorOnly())))
+    expect(facts.filter((fact) => fact.group === 'History')).toEqual([])
+  })
+})
+
+describe('formatEventDetail — instructor-recorded asks', () => {
+  it('reads as a sentence a debrief can quote', () => {
+    expect(
+      formatEventDetail({ kind: 'sample_ask', label: 'S', payload: { asked: true } }),
+    ).toBe('S from SAMPLE was asked')
+    expect(
+      formatEventDetail({ kind: 'opqrst_ask', label: 'O', payload: { asked: true } }),
+    ).toBe('O from OPQRST was asked')
+  })
+
+  it('says so when the instructor cleared a letter rather than dropping the press', () => {
+    expect(
+      formatEventDetail({ kind: 'sample_ask', label: 'M', payload: { asked: false } }),
+    ).toBe('M from SAMPLE was unmarked')
+  })
+
+  it('treats a press with no flag as an ask, which is what an older row meant', () => {
+    expect(formatEventDetail({ kind: 'opqrst_ask', label: 'P', payload: {} })).toBe(
+      'P from OPQRST was asked',
+    )
+  })
+})
+
+describe('buildEvaluationTimeline — instructor-entered actions', () => {
+  it('credits the trainee and marks who pressed the key', () => {
+    const rows = actions(
+      build({
+        events: [
+          makeEvent({ id: 'e1', kind: 'medication', label: 'Nitro', occurred_at: at(60), payload: { source: 'instructor' } }),
+          makeEvent({ id: 'e2', kind: 'medication', label: 'Epi', occurred_at: at(90), payload: { time: '14:01' } }),
+        ],
+      }).rows,
+    )
+    expect(rows[0].participantName).toBe('Sarah M.')
+    expect(rows[0].enteredByInstructor).toBe(true)
+    // The monitor's own press is unmarked, so the marker means something.
+    expect(rows[1].enteredByInstructor).toBe(false)
+  })
+
+  it('never puts a "behind" warning on a row no monitor produced', () => {
+    const rows = actions(
+      build({
+        stateHistory: [
+          makeState(1, 0, sharedState({})),
+          makeState(2, 30, sharedState({ hr: 130 })),
+        ],
+        events: [
+          // state_version 1 against a room already on 2 would normally read as
+          // "1 behind" -- but the console posts from the instructor's own desk.
+          makeEvent({ id: 'e1', kind: 'medication', label: 'Epi', occurred_at: at(60), state_version: 1, payload: { source: 'instructor' } }),
+          makeEvent({ id: 'e2', kind: 'shock', label: 'Shock', occurred_at: at(61), state_version: 1 }),
+        ],
+      }).rows,
+    )
+    expect(rows[0].behindBy).toBe(0)
+    expect(rows[1].behindBy).toBe(1)
+  })
+
+  it('places an instructor-recorded ask in the stream with its patient context', () => {
+    const rows = actions(
+      build({
+        stateHistory: [makeState(1, 0, sharedState({ hr: 130 }))],
+        events: [
+          makeEvent({ id: 'e1', kind: 'sample_ask', label: 'S', occurred_at: at(45), state_version: 1, payload: { source: 'instructor', asked: true } }),
+        ],
+      }).rows,
+    )
+    expect(rows[0].detail).toBe('S from SAMPLE was asked')
+    expect(rows[0].offset).toBe('t+0:45')
+    // HR rides in the rhythm string rather than the vitals array.
+    expect((rows[0].context as TimelineStateContext).rhythm).toBe('NSR 130')
+  })
+})

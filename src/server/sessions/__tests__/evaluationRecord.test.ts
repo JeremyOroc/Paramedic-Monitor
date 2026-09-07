@@ -24,8 +24,10 @@ import {
   getSessionStatus,
   joinSession,
   publishMonitorProjection,
+  recordInstructorEvent,
   recordStudentEvent,
   renameAttempt,
+  splitInstructorOnlyState,
   startMonitorProjectionStream,
   startNewAttempt,
   stripRouteGeometry,
@@ -841,5 +843,163 @@ describe('RecordedOp harness', () => {
     const recorded = stub.opsFor('student_events')[0] as RecordedOp
     expect(recorded.method).toBe('insert')
     expect(recorded.columns).toContain('state_version')
+  })
+})
+
+describe('splitInstructorOnlyState — the answer key stays on the console', () => {
+  it('keeps the block out of what the trainee polls and in what the record keeps', () => {
+    const instructorOnly = { patientSns: { 'pulse-rate': '112' } }
+    const { shared, history } = splitInstructorOnlyState({ hr: 40, instructorOnly })
+    expect(shared).toEqual({ hr: 40 })
+    expect(history).toEqual({ hr: 40, instructorOnly })
+  })
+
+  it('passes a state with no block through untouched', () => {
+    const state = { hr: 40 }
+    const { shared, history } = splitInstructorOnlyState(state)
+    expect(shared).toEqual(state)
+    expect(history).toEqual(state)
+  })
+
+  it('does not mutate the caller state', () => {
+    const state = { hr: 40, instructorOnly: { patientSns: {} } }
+    splitInstructorOnlyState(state)
+    expect(state.instructorOnly).toBeDefined()
+  })
+})
+
+describe('updateSessionState — instructor-only state', () => {
+  it('strips the answers from session_state and keeps them in history', async () => {
+    const stub = withResolver({
+      session_state: (op) =>
+        op.method === 'upsert'
+          ? { data: { state: op.payload?.state, version: 8, updated_at: 'now' } }
+          : { data: { version: 7 } },
+    })
+
+    const instructorOnly = {
+      patientInformation: { selected: { sample: ['S'], opqrst: [] }, values: { sample: { S: 'chest pain' }, opqrst: {} } },
+      patientSns: { 'pulse-rate': '112' },
+    }
+    await updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, { hr: 40, instructorOnly })
+
+    // The trainee polls this endpoint every 1.5s. The answers they are being
+    // marked on asking for must not be one devtools tab away.
+    const [live] = stub.opsFor('session_state')
+      .filter((op: RecordedOp) => op.method === 'upsert')
+    expect(live.payload?.state).toEqual({ hr: 40 })
+
+    // The evaluator still gets them.
+    const [history] = stub.opsFor('session_state_history')
+    expect(history.payload?.state).toMatchObject({ hr: 40, instructorOnly })
+  })
+})
+
+describe('recordInstructorEvent — actions logged from the console', () => {
+  const OTHER_SESSION_PARTICIPANT = { ...PARTICIPANT, id: 'other-id' }
+
+  it('credits the trainee and stamps the instructor source', async () => {
+    const stub = withResolver({
+      student_events: (op) => (op.method === 'insert' ? { data: { id: 'event-id', ...op.payload } } : undefined),
+    })
+
+    await recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, PARTICIPANT.id, {
+      kind: 'medication',
+      label: 'Nitro',
+    })
+
+    const [write] = stub.opsFor('student_events').filter((op: RecordedOp) => op.method === 'insert')
+    expect(write.payload).toMatchObject({
+      session_id: SESSION.id,
+      participant_id: PARTICIPANT.id,
+      attempt_version: SESSION.active_attempt_version,
+      kind: 'medication',
+      label: 'Nitro',
+      payload: { source: 'instructor' },
+    })
+  })
+
+  it('stamps the source even when the body claims otherwise', async () => {
+    const stub = withResolver({
+      student_events: (op) => (op.method === 'insert' ? { data: { id: 'event-id', ...op.payload } } : undefined),
+    })
+
+    await recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, PARTICIPANT.id, {
+      kind: 'sample_ask',
+      label: 'S',
+      payload: { asked: true, source: 'monitor' },
+    })
+
+    const [write] = stub.opsFor('student_events').filter((op: RecordedOp) => op.method === 'insert')
+    expect(write.payload?.payload).toEqual({ asked: true, source: 'instructor' })
+  })
+
+  it('opens the trainee attempt window so the report has somewhere to place the row', async () => {
+    const stub = withResolver({
+      student_events: (op) => (op.method === 'insert' ? { data: { id: 'event-id', ...op.payload } } : undefined),
+    })
+
+    await recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, PARTICIPANT.id, { kind: 'opqrst_ask', label: 'O' })
+
+    const [attempt] = stub.opsFor('participant_attempts').filter((op: RecordedOp) => op.method === 'upsert')
+    expect(attempt.payload).toMatchObject({
+      participant_id: PARTICIPANT.id,
+      attempt_version: SESSION.active_attempt_version,
+    })
+  })
+
+  it('refuses a device that is not the room controller', async () => {
+    // 409, not 403: the account still owns the room, but this device is
+    // watching it read-only and must not write into the record behind the
+    // controller's back.
+    await expect(
+      recordInstructorEvent(CODE, ACCOUNT, 'wrong_token', PARTICIPANT.id, { kind: 'medication', label: 'Epi' }),
+    ).rejects.toMatchObject({ status: 409 })
+  })
+
+  it('scopes the participant lookup to this room, and refuses what it does not find', async () => {
+    // The stub answers with nothing, which is what a participant id from a
+    // different session looks like to a query filtered on session_id.
+    const stub = withResolver({ participants: () => ({ data: null }) })
+
+    await expect(
+      recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, OTHER_SESSION_PARTICIPANT.id, {
+        kind: 'medication',
+        label: 'Epi',
+      }),
+    ).rejects.toMatchObject({ status: 404 })
+
+    // The scoping is the actual defence: without the session_id filter a host
+    // token for one room could write rows into another room's record.
+    const [lookup] = stub.opsFor('participants')
+    expect(lookup.filters).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', column: 'id', value: OTHER_SESSION_PARTICIPANT.id },
+        { op: 'eq', column: 'session_id', value: SESSION.id },
+      ]),
+    )
+
+    // And nothing was written.
+    expect(stub.opsFor('student_events').filter((op: RecordedOp) => op.method === 'insert')).toEqual([])
+  })
+
+  it('requires a participant to credit', async () => {
+    await expect(
+      recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, '', { kind: 'medication', label: 'Epi' }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('rejects a kind the database constraint would reject', async () => {
+    await expect(
+      recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, PARTICIPANT.id, { kind: 'sabotage', label: 'Epi' }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('refuses to write into a room that has ended', async () => {
+    withResolver({ sessions: () => ({ data: { ...SESSION, status: 'ended' } }) })
+
+    await expect(
+      recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, PARTICIPANT.id, { kind: 'medication', label: 'Epi' }),
+    ).rejects.toMatchObject({ status: 410 })
   })
 })

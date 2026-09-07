@@ -433,4 +433,78 @@ describe('EvaluationReportPanel', () => {
     expect(rows[0]).toHaveTextContent('Sarah M.')
     expect(rows[1]).toHaveTextContent('Dev K.')
   })
+
+  describe('actions the instructor recorded', () => {
+    it('marks the row without moving it out of the trainee stream', () => {
+      renderPanel({
+        stateHistory: [state(1, 0, {})],
+        events: [
+          makeEvent({ id: 'e1', kind: 'medication', label: 'Nitro', occurred_at: at(60), state_version: 1, payload: { source: 'instructor' } }),
+          makeEvent({ id: 'e2', kind: 'medication', label: 'Epi', occurred_at: at(90), state_version: 1 }),
+        ],
+      })
+
+      const rows = screen.getAllByTestId('report-row-action')
+      expect(rows).toHaveLength(2)
+      expect(rows[0]).toHaveAttribute('data-source', 'instructor')
+      expect(rows[0]).toHaveTextContent('by instructor')
+      // The monitor's own press carries no marker, so the marker means something.
+      expect(rows[1]).not.toHaveAttribute('data-source')
+      expect(rows[1]).not.toHaveTextContent('by instructor')
+    })
+
+    it('reads a logged ask as a sentence a debrief can quote', () => {
+      renderPanel({
+        stateHistory: [state(1, 0, {})],
+        events: [
+          makeEvent({ id: 'e1', kind: 'sample_ask', label: 'S', occurred_at: at(30), state_version: 1, payload: { source: 'instructor', asked: true } }),
+          makeEvent({ id: 'e2', kind: 'opqrst_ask', label: 'O', occurred_at: at(40), state_version: 1, payload: { source: 'instructor', asked: false } }),
+        ],
+      })
+
+      const rows = screen.getAllByTestId('report-row-action')
+      expect(rows[0]).toHaveTextContent('S from SAMPLE was asked')
+      expect(rows[1]).toHaveTextContent('O from OPQRST was unmarked')
+    })
+
+    it('carries the marker into the copied stream', async () => {
+      const user = userEvent.setup()
+      const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+
+      renderPanel({
+        stateHistory: [state(1, 0, {})],
+        events: [
+          makeEvent({ id: 'e1', kind: 'medication', label: 'Nitro', occurred_at: at(60), state_version: 1, payload: { source: 'instructor' } }),
+        ],
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Copy' }))
+      expect(writeText.mock.calls[0][0]).toContain('(by instructor)')
+    })
+
+    it('shows the staged history and findings in the opening expansion', async () => {
+      const user = userEvent.setup()
+      renderPanel({
+        stateHistory: [
+          state(1, 0, {}, {
+            instructorOnly: {
+              patientInformation: {
+                selected: { sample: [], opqrst: [] },
+                values: { sample: { S: 'crushing chest pain' }, opqrst: {} },
+              },
+              patientSns: { 'pulse-strength': 'thready' },
+            },
+          }),
+        ],
+      })
+
+      await user.click(screen.getByRole('button', { name: 'Expand instructor change' }))
+      const detail = screen.getByTestId('report-row-detail')
+      expect(detail).toHaveTextContent('Pulse strength')
+      expect(detail).toHaveTextContent('thready')
+      expect(detail).toHaveTextContent('SAMPLE S')
+      expect(detail).toHaveTextContent('crushing chest pain')
+    })
+  })
+
 })

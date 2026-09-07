@@ -5,6 +5,41 @@
 
 ---
 
+## [2026-09-07] [instructor/server] — Record meds and history questions from the console
+
+- Added a med grid as the middle column of the Monitor & Patient SNS tab. All twelve meds, derived
+  from the monitor's `MED_PAGES` rather than retyped, unpaged because the console has the room the
+  monitor's four soft keys do not. One press records the same `medication` event the monitor writes.
+- Each med button carries a running tally of doses given this attempt, counting every dose in the run
+  rather than only console presses — the instructor is watching for "has this patient had three Epi",
+  not "how many did I type". A press counts optimistically so the number moves under the finger
+  instead of 2.5s later at the next poll, and rolls back if the write fails.
+- SAMPLE and OPQRST letter presses are now logged, in both directions: `S from SAMPLE was asked`,
+  `M from SAMPLE was unmarked`. The buttons were local highlight before, so whether the trainee
+  actually asked — the one thing the checklist exists to assess — left no trace in the record.
+- Both are credited to the trainee and marked `by instructor`, rather than split into a second
+  stream the evaluator has to interleave by eye. New host-authenticated
+  `POST /api/session/[code]/instructor-event`; `recordInstructorEvent` verifies the participant
+  belongs to this room, stamps the source server-side, and shares the insert path with the monitor.
+- An instructor-entered row never carries a `← n behind` warning: the console posts against the
+  current version by definition, and the flag would be a lie about a trainee.
+- The SAMPLE/OPQRST answers and the Pulse/Respiratory/Skin findings now travel with each Send and
+  appear in the report — named individually for findings, collapsed to a count for history answers,
+  with a `History` group in the opening expansion. They were console-local state before and reached
+  neither the monitor nor the record.
+- Those answers are stripped from the `session_state` the trainee polls every 1.5s and kept only in
+  `session_state_history`. In the live state they would have been one devtools tab away from being
+  the answer key to the questions the trainee is being marked on asking.
+- Added `20260908120000_instructor_recorded_actions.sql` for the `sample_ask` / `opqrst_ask` kinds.
+  **Not yet applied** — the live constraint rejects both kinds until it is.
+- 53 new tests across the service, timeline, recorder component, admin integration, and report panel.
+- Merged Phase 4 and moved the instructor-event route onto Account ownership plus the room-controller
+  token. A device watching the room read-only is refused with 409 rather than silently recording.
+- Merged Phases 5-7. The new event kinds and the instructor marker reach persistent Evaluation
+  reports without Phase 5 needing to know about them: its trigger snapshots whole `student_events`
+  rows, and `ReportsPage` renders through the same panel. The copied stream keeps both main's
+  timestamp column and the instructor marker.
+
 ## [2026-09-07] [instructor/testing] — Fix Vercel spectator test type check
 
 - Removed the retired `hostToken` prop from the restartable Floating Spectator test harness. The

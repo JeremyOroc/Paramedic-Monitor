@@ -6,6 +6,17 @@
 ---
 
 ## Current Phase
+**Instructor-recorded actions — PHASE 16 CODE COMPLETE, MIGRATION PENDING (2026-09-07).**
+The console can record a med given while the paramedic's hands were full and a SAMPLE/OPQRST
+question asked out loud; both are credited to the trainee and marked as instructor-entered, and the
+staged history and Pulse/Respiratory/Skin findings now reach the report while staying out of the
+state the trainee polls. `20260908120000_instructor_recorded_actions.sql` must be applied before the
+checklist logging works against a live room. Rebased onto Phase 4: instructor-recorded actions are
+authorized as the room's controlling device, so a read-only second device cannot write into the
+record behind the controller's back. Rebased again onto Phases 5-7: persistent Evaluation reports
+snapshot whole `student_events` rows, so the new kinds and the instructor marker carry into a saved
+report without Phase 5 needing to know about them, and `ReportsPage` renders through the same panel.
+
 **Accounts & scenario ownership — PHASE 7 CODE COMPLETE (2026-09-07).**
 The authenticated page-shell consistency refinement is complete locally. Console, Reports, and
 Account now share the Console's full-width outer spacing, header divider, green title treatment, and
@@ -950,6 +961,29 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Recently Completed
+- [x] **Phase 16 — Instructor-Recorded Actions — CODE COMPLETE, MIGRATION NOT APPLIED (2026-09-07):**
+  - [x] Med grid as the middle column of Monitor & Patient SNS: all twelve meds unpaged, derived
+        from the monitor's `MED_PAGES` so the console and the monitor cannot drift
+  - [x] Per-med tally of doses given this attempt, counting the whole run rather than only console
+        presses, incremented optimistically and rolled back on a failed write
+  - [x] SAMPLE and OPQRST presses logged in both directions, reading as a sentence a debrief quotes
+  - [x] Both credited to the trainee and marked `by instructor`, not split into a second stream
+  - [x] Controller-authorized `POST /api/session/[code]/instructor-event`; participant scoped to the
+        room, `source` stamped server-side, insert path shared with the monitor, no false `behind`,
+        and a read-only second device refused with 409
+  - [x] Credit resolved against the live roster each render, so a leaver or New Attempt cannot
+        strand a stale id; picker only when there is a choice; disabled with a stated reason
+  - [x] SAMPLE/OPQRST answers and Pulse/Respiratory/Skin findings reach the report, stripped from
+        the `session_state` the trainee polls and kept only in `session_state_history`
+  - [x] Carries into persistent Evaluation reports for free: Phase 5 snapshots whole
+        `student_events` rows, and `ReportsPage` renders through the same panel
+  - [x] Verified 1,293 tests passing, TypeScript clean, ESLint 0 errors and 12 pre-existing
+        warnings (none in the changed files), production build clean with the new route registered
+  - [ ] **Apply `20260908120000_instructor_recorded_actions.sql`** — until it runs, the live
+        `student_events_kind_check` rejects `sample_ask` and `opqrst_ask`, so every checklist press
+        fails with a 400 while the med grid works
+  - [ ] Visual check of the three-column tab in a signed-in console (invite-only sign-in put this
+        out of reach of automated browser verification)
 - [x] **Vercel spectator test type-check fix — COMPLETE:**
   - [x] Remove the retired `hostToken` prop from the restartable Floating Spectator test harness
   - [x] Verify the focused spectator tests, full suite, TypeScript, ESLint, and production build
