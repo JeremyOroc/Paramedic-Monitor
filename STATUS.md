@@ -6,32 +6,33 @@
 ---
 
 ## Current Phase
-**Accounts & scenario ownership — PHASE 2 CODE COMPLETE; ACCOUNT MIGRATION UNAPPLIED (2026-09-04).**
-Server-mediated registration, verification/resend, username/password sign-in, recovery, cookie-based
-session refresh, protected Instructor entry, password change, current-device sign-out, and the initial
-Account UI are complete locally. Registration enforces the server-only shared code, private
-username-to-email bridge, race-safe profile claim, partial-identity cleanup/quarantine, and generic
-email/recovery responses. The callback is local-redirect-only and protected pages re-check the live
+**Accounts & scenario ownership — PHASE 2 INVITE-ONLY REVISION CODE COMPLETE (2026-09-05); HOSTED CONFIGURATION PENDING.**
+The confirmed single-college enrollment boundary is Supabase invitation-only, superseding the
+implemented shared-code self-registration flow. Public registration and its deployment secret are
+removed; verified invited instructors complete a unique username and password in the app
+before receiving a fixed Instructor profile. Username/password sign-in, recovery, cookie-based session
+refresh, protected Instructor entry, password change, current-device sign-out, and the initial Account
+UI otherwise remain. The callback is local-redirect-only and protected pages re-check the live
 enabled profile. Existing host-token Rooms remain operational until Phase 4. The local Account
 authorization foundation includes protected profiles keyed by Auth user ID, normalized
 case-insensitive usernames, reserved Administrator names, live enabled/Administrator helpers,
-least-privilege grants, RLS, and 24 executable allow/deny database policy assertions. Registration
-and UI are complete; scenario, Room, and report ownership remain later phases. The migration was
+least-privilege grants, RLS, and 24 executable allow/deny database policy assertions. The Account
+authorization foundation is complete; scenario, Room, and report ownership remain later phases. The migration was
 applied and linted successfully only in an isolated local Supabase stack. It has not been applied to
 the linked project because the remote schema contains later structures whose migration versions are
 not all recorded; that drift must be reviewed before deployment.
 Supabase Auth and a
 single-college boundary are accepted. Only instructors and administrators receive Accounts; trainees
-keep the existing room-code-and-nickname flow. Registration requires a verified email, unique
-case-insensitive username, and password, while sign-in presents username/password through a
-server-only email-identity bridge. The only roles are Instructor and Administrator. `Zoid`, `Branden`,
+keep the existing room-code-and-nickname flow. Product operators invite approved instructors through
+Supabase; recipients complete a unique case-insensitive username and password, while sign-in presents
+username/password through a server-only email-identity bridge. The only roles are Instructor and
+Administrator. `Zoid`, `Branden`,
 and `Jeremy` are reserved, deliberately provisioned Administrators whose authority is bound to
 immutable authenticated identities. `My Scenarios` is strictly owner-only; `Templates` is a separate
 fixed area with folders that every Account can read and only Administrators can mutate. Rooms are
 owned and controlled by their creating Account rather than permanently authorized through host-token
-URLs. Self-registration requires one shared Instructor registration code plus a verified email;
-Account administration and Administrator-role changes stay outside the app with Product operators
-using Supabase. Email recovery is self-service. Templates can start Rooms directly, modified
+URLs. Account admission and Administrator-role changes stay outside the app with Product operators
+using Supabase invitations and immutable-ID role assignment. Email recovery is self-service. Templates can start Rooms directly, modified
 Templates save only as independent Personal copies, and the current global library migrates intact
 into Templates. Rooms remain temporary. Each Attempt creates one autosaving, Account-owned
 Evaluation record across all trainees; it remains Incomplete until New Attempt or End Room. Its
@@ -39,11 +40,10 @@ optional Student names are separate from join nicknames. Reports are owner-only,
 copyable, permanently deletable, and retained until deletion; export, sharing, grading, comments, and
 bulk operations are deferred. Student-name lists allow 100 duplicate-capable entries of 100 characters;
 records keep immutable scenario snapshots, and abandoned Incomplete records may be manually completed
-without changing their timeline. Registration has no application CAPTCHA or custom throttling for now;
-its high-entropy case-sensitive shared code lives in server deployment configuration and is expressly
-temporary pending any multi-college expansion. Passwords have an eight-character minimum and no
-composition or rotation rules. Usernames use 3–30 restricted characters; Pending Accounts reserve
-them until verification or operator deletion. The Account page exposes identity/role, password change,
+without changing their timeline. The application has no public signup surface, CAPTCHA, custom signup
+throttling, or shared registration secret. Passwords have an eight-character minimum and no composition
+or rotation rules. Usernames use 3–30 restricted characters and are claimed during verified invitation
+acceptance. The Account page exposes identity/role, password change,
 and current-device Sign out while email and username changes remain operator-assisted.
 An Account may use several devices but has one active Room and one controlling device; native
 persistent Supabase sessions have current-device Sign out and no custom inactivity timeout. Explicit
@@ -62,8 +62,8 @@ Owner-driven report retention is provisional until the college approves its prod
 custom SMTP is an external-launch requirement. Reports are newest-first, paginated by 25, searchable
 and filterable, with UTC storage and Toronto display time. Student data requests flow through the
 college to Product operators. The three initial Administrators are manually provisioned by immutable
-ID. Registration has Check-email/resend and verified callback states plus cleanup/quarantine for
-partial provisioning failures. Six-character unambiguous Room codes are case-insensitive and failed
+ID. Invitation links enter a verified acceptance state, while expired invitations are resent by Product
+operators through Supabase. Six-character unambiguous Room codes are case-insensitive and failed
 join guesses are throttled. Report deletion has a named permanent-confirmation dialog, and consequential
 report mutations are audited without copying Student data. Development and production are isolated;
 SMTP outages never create a password bypass. The current production choice is Supabase Free with
@@ -78,12 +78,16 @@ whole-project backups retain 30 daily/12 monthly copies with two-developer alert
 rehearsals; Free requires a smoke test before classes following five-day breaks; a server-only gate
 controls cutover; critical operational failures are sanitized and emailed; and work follows seven
 tested dependency-ordered phases. The user explicitly confirmed the complete contract as the shared
-implementation baseline and authorized implementation. The combined Phase 1/2 gate passed 24 pgTAP
-assertions, local schema lint, all 1,137 Vitest tests (plus the opt-in local Auth integration),
-TypeScript, ESLint with zero errors and the 12 pre-existing warnings, and the production build. The
-real local Auth check proved confirmation-required signup, confirmed sign-in, enabled self-read, and
-immediate RLS denial after disablement. Multi-tenancy stays deferred. Phase 3 Personal/Template
-scenario ownership is next.
+implementation baseline and authorized implementation. The revised Phase 1/2 gate passed 24 pgTAP
+assertions, local schema lint, all 1,146 Vitest tests with one opt-in integration test skipped,
+TypeScript, ESLint with zero errors and the 12 pre-existing warnings, and the production build. A
+localhost smoke test returned HTTP 200 for health, invitation-only login, and invite handoff, while
+both retired public registration routes returned HTTP 404. The earlier isolated Auth check proved
+confirmed sign-in, enabled self-read, and immediate RLS denial after disablement; its invite-based
+replacement remains opt-in. Multi-tenancy stays deferred. Phase 3 Personal/Template
+scenario ownership is next. Before hosted use, Product operators must deploy this revision, configure
+the production Auth Site URL/redirect allow-list, disable hosted public signup, reconcile and apply the
+Account migration, and complete one real Dashboard invitation acceptance/login smoke test.
 
 **Operational health check — CORRECTED (2026-09-05).** `/api/health` now checks the protected
 `sessions` table with the server-only Supabase secret client. It no longer depends on the deliberately

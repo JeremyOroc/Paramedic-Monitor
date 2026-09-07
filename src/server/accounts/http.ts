@@ -6,10 +6,8 @@ export class AccountServiceError extends Error {
   constructor(
     readonly code:
       | 'disabled'
-      | 'email_unavailable'
+      | 'invalid_invitation'
       | 'invalid_credentials'
-      | 'missing_profile'
-      | 'registration_code'
       | 'retry'
       | 'unverified'
       | 'username_taken',

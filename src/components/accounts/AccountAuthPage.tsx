@@ -4,32 +4,28 @@ import { FormEvent, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-type AuthMode = 'forgot' | 'login' | 'register' | 'resend' | 'reset'
+type AuthMode = 'forgot' | 'login' | 'reset'
 
 interface AccountAuthPageProps {
   mode: AuthMode
-  initialUsername?: string
   verificationError?: boolean
 }
 
 const COPY: Record<AuthMode, { eyebrow: string; title: string; action: string }> = {
   login: { eyebrow: 'Instructor access', title: 'Sign in', action: 'Sign in' },
-  register: { eyebrow: 'Instructor access', title: 'Create account', action: 'Create account' },
-  resend: { eyebrow: 'Email verification', title: 'Check your email', action: 'Resend email' },
   forgot: { eyebrow: 'Account recovery', title: 'Reset password', action: 'Send recovery link' },
   reset: { eyebrow: 'Account recovery', title: 'Choose a new password', action: 'Update password' },
 }
 
-type ApiResult = { error?: string; message?: string; code?: string }
+type ApiResult = { error?: string; message?: string }
 
-export function AccountAuthPage({ mode, initialUsername = '', verificationError = false }: AccountAuthPageProps) {
+export function AccountAuthPage({ mode, verificationError = false }: AccountAuthPageProps) {
   const router = useRouter()
-  const [username, setUsername] = useState(initialUsername)
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [registrationCode, setRegistrationCode] = useState('')
   const [message, setMessage] = useState(
-    verificationError ? 'That verification link is invalid or has expired.' : '',
+    verificationError ? 'That authentication link is invalid or has expired.' : '',
   )
   const [isError, setIsError] = useState(verificationError)
   const [busy, setBusy] = useState(false)
@@ -43,11 +39,11 @@ export function AccountAuthPage({ mode, initialUsername = '', verificationError 
     let response: Response
     let result: ApiResult
     try {
-      const endpoint = mode === 'forgot' ? 'recover' : mode === 'reset' ? 'password' : mode
+      const endpoint = mode === 'forgot' ? 'recover' : mode === 'reset' ? 'password' : 'login'
       response = await fetch(`/api/auth/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, registrationCode }),
+        body: JSON.stringify({ username, email, password }),
       })
       result = await response.json() as ApiResult
     } catch {
@@ -59,10 +55,6 @@ export function AccountAuthPage({ mode, initialUsername = '', verificationError 
     setBusy(false)
 
     if (!response.ok) {
-      if (mode === 'login' && result.code === 'unverified') {
-        router.push(`/instructor/check-email?username=${encodeURIComponent(username.trim())}`)
-        return
-      }
       setIsError(true)
       setMessage(result.error ?? 'Please try again.')
       return
@@ -70,10 +62,6 @@ export function AccountAuthPage({ mode, initialUsername = '', verificationError 
     if (mode === 'login') {
       router.push('/instructor')
       router.refresh()
-      return
-    }
-    if (mode === 'register') {
-      router.push(`/instructor/check-email?username=${encodeURIComponent(username.trim())}`)
       return
     }
     if (mode === 'reset') {
@@ -91,13 +79,13 @@ export function AccountAuthPage({ mode, initialUsername = '', verificationError 
       <section className="w-full max-w-md border border-neutral-800 bg-sidebar-bg p-6 shadow-2xl sm:p-8">
         <p className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-cyan-bp">{copy.eyebrow}</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight">{copy.title}</h1>
-        {mode === 'resend' && (
+        {mode === 'login' && (
           <p className="mt-3 text-sm leading-6 text-neutral-400">
-            Verify your email to continue. The link will return you to the instructor console.
+            Accounts are invitation-only. Use the username and password chosen during invitation setup.
           </p>
         )}
         <form className="mt-7 grid gap-5" onSubmit={submit}>
-          {(mode === 'login' || mode === 'register' || mode === 'resend') && (
+          {mode === 'login' && (
             <label className="grid gap-2">
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-400">Username</span>
               <input
@@ -112,7 +100,7 @@ export function AccountAuthPage({ mode, initialUsername = '', verificationError 
               />
             </label>
           )}
-          {(mode === 'register' || mode === 'forgot') && (
+          {mode === 'forgot' && (
             <label className="grid gap-2">
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-400">Email</span>
               <input
@@ -126,7 +114,7 @@ export function AccountAuthPage({ mode, initialUsername = '', verificationError 
               />
             </label>
           )}
-          {(mode === 'login' || mode === 'register' || mode === 'reset') && (
+          {(mode === 'login' || mode === 'reset') && (
             <label className="grid gap-2">
               <span className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-400">
                 {mode === 'reset' ? 'New password' : 'Password'}
@@ -144,20 +132,6 @@ export function AccountAuthPage({ mode, initialUsername = '', verificationError 
               {mode !== 'login' && <span className="text-xs text-neutral-500">At least 8 characters.</span>}
             </label>
           )}
-          {mode === 'register' && (
-            <label className="grid gap-2">
-              <span className="font-mono text-xs font-bold uppercase tracking-wider text-neutral-400">Instructor registration code</span>
-              <input
-                name="registrationCode"
-                type="password"
-                autoComplete="off"
-                required
-                value={registrationCode}
-                onChange={(event) => setRegistrationCode(event.target.value)}
-                className="border border-neutral-700 bg-black px-3 py-3 text-white outline-none focus:border-cyan-bp focus:ring-1 focus:ring-cyan-bp"
-              />
-            </label>
-          )}
           {message && (
             <p role={isError ? 'alert' : 'status'} className={isError ? 'text-sm font-semibold text-pending-amber' : 'text-sm font-semibold text-ecg-green'}>
               {message}
@@ -173,7 +147,6 @@ export function AccountAuthPage({ mode, initialUsername = '', verificationError 
         </form>
         <nav className="mt-6 grid gap-3 border-t border-neutral-800 pt-5 text-center text-sm">
           {mode !== 'login' && <Link href="/instructor/login" className="text-cyan-bp hover:underline">Return to sign in</Link>}
-          {mode === 'login' && <Link href="/instructor/register" className="text-cyan-bp hover:underline">Create an instructor account</Link>}
           {mode === 'login' && <Link href="/instructor/forgot-password" className="text-neutral-400 hover:text-white">Forgot password?</Link>}
           <Link href="/" className="text-neutral-500 hover:text-white">Return to room access</Link>
         </nav>

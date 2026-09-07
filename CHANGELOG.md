@@ -5,6 +5,35 @@
 
 ---
 
+## [2026-09-05] [auth/ui] — Complete invite-only Instructor onboarding
+
+- Removed public registration, verification-resend, registration-code UI/API routes, and the
+  deployment secret. Disabled signup in the checked-in Supabase configuration and added a hosted
+  configuration/runbook that keeps the production switch and real invitation test explicit.
+- Added support for standard Supabase Dashboard invitation links and customized token-hash callbacks.
+  A live verified invite session now reaches a dedicated setup form that sets the password and claims
+  a case-insensitively unique username; ordinary invitees receive only the fixed Instructor role.
+- Preserved pre-provisioned Administrator profiles by immutable Auth user ID, rejected disabled or
+  non-invited identities, kept profile-less partial setup outside product areas, and retained the
+  server-only username-to-email login bridge and generic recovery behavior.
+- Added invite/config/API/service/callback/page/component regressions. Verified 54 focused tests, all
+  1,146 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors and
+  the 12 pre-existing warnings, and the webpack production build. A localhost smoke test returned
+  HTTP 200 for health/login/invite handoff, exposed the invitation-only copy, and returned HTTP 404
+  for both removed public registration routes.
+
+## [2026-09-05] [planning/auth] — Replace shared-code registration with invite-only onboarding
+
+- Confirmed that the single-college release admits Accounts only through Product-operator Supabase
+  invitations. Superseded ADR 0013, added ADR 0018, and replaced the Pending Account term with Invited
+  Account.
+- Removed the planned public registration/code boundary. Verified invite recipients will choose a
+  unique username and password in the application, receive only the Instructor role, and remain
+  outside product areas if profile creation has not completed. Reserved Administrator identities and
+  rare role assignment remain manual and immutable-ID based.
+- Marked the Phase 2 invite-only revision in progress before application changes, as required by the
+  project workflow.
+
 ## [2026-09-05] [session/operations] — Correct the protected database health check
 
 - Changed `/api/health` to query the protected `sessions` table with the server-only Supabase secret

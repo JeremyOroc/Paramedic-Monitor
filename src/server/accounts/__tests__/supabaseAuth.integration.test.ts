@@ -9,7 +9,7 @@ const runIntegration = process.env.RUN_SUPABASE_INTEGRATION === 'true'
 const describeIntegration = runIntegration ? describe : describe.skip
 
 describeIntegration('local Supabase account integration', () => {
-  it('requires email confirmation, authenticates, and enforces live disabled-profile RLS', async () => {
+  it('invites, authenticates, and enforces live disabled-profile RLS', async () => {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -24,11 +24,11 @@ describeIntegration('local Supabase account integration', () => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const { data: signup, error: signupError } = await browser.auth.signUp({ email, password })
-    expect(signupError).toBeNull()
-    expect(signup.session).toBeNull()
-    expect(signup.user).not.toBeNull()
-    const userId = signup.user!.id
+    const { data: invitation, error: invitationError } = await service.auth.admin
+      .inviteUserByEmail(email)
+    expect(invitationError).toBeNull()
+    expect(invitation.user).not.toBeNull()
+    const userId = invitation.user!.id
 
     const { error: profileError } = await service.from('account_profiles').insert({
       user_id: userId,
@@ -38,10 +38,11 @@ describeIntegration('local Supabase account integration', () => {
     })
     expect(profileError).toBeNull()
 
-    const { error: confirmError } = await service.auth.admin.updateUserById(userId, {
+    const { error: setupError } = await service.auth.admin.updateUserById(userId, {
       email_confirm: true,
+      password,
     })
-    expect(confirmError).toBeNull()
+    expect(setupError).toBeNull()
     const { error: signInError } = await browser.auth.signInWithPassword({ email, password })
     expect(signInError).toBeNull()
 

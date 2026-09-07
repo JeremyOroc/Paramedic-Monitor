@@ -36,6 +36,14 @@ export async function GET(request: Request) {
 
   if (!failed) {
     const { data } = await auth.auth.getUser()
+    const inviteAcceptance = new URL('/instructor/accept-invite', url.origin)
+    const isInviteAcceptance = type === 'invite'
+      || (next === '/instructor/accept-invite' && Boolean(data.user?.invited_at))
+    if (data.user?.email_confirmed_at && data.user.invited_at && isInviteAcceptance) {
+      const response = NextResponse.redirect(inviteAcceptance)
+      response.headers.set('Cache-Control', 'no-store')
+      return response
+    }
     if (data.user && await profileForAuthUser(data.user)) {
       const response = NextResponse.redirect(new URL(next, url.origin))
       response.headers.set('Cache-Control', 'no-store')

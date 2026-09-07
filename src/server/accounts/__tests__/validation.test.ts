@@ -5,7 +5,6 @@ import {
   parseEmail,
   parsePassword,
   parseUsername,
-  registrationCodeMatches,
   safeInstructorPath,
 } from '@/server/accounts/validation'
 
@@ -27,12 +26,6 @@ describe('account validation', () => {
     expect(parsePassword('12345678')).toBe('12345678')
     expect(() => parseEmail('not-an-email')).toThrow()
     expect(() => parsePassword('short')).toThrow('at least 8')
-  })
-
-  it('compares registration codes exactly and fails closed when unconfigured', () => {
-    expect(registrationCodeMatches('Exact-Code', 'Exact-Code')).toBe(true)
-    expect(registrationCodeMatches('exact-code', 'Exact-Code')).toBe(false)
-    expect(registrationCodeMatches('anything', undefined)).toBe(false)
   })
 
   it('allows only instructor-local callback paths', () => {

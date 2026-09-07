@@ -1460,7 +1460,7 @@ and Fullscreen modes with clean console logs.
 
 ---
 
-### Next — Accounts & Scenario Ownership (PHASE 1 CODE COMPLETE — MIGRATION UNAPPLIED)
+### Next — Accounts & Scenario Ownership (PHASES 1–2 CODE COMPLETE — HOSTED CONFIG/MIGRATIONS UNAPPLIED)
 
 The 2026-09-04 requirement change brings accounts and scenario ownership forward. Accounts are for
 instructors and administrators only; trainees continue joining a room with its code and a nickname
@@ -1469,13 +1469,14 @@ and do not register or sign in. Each account owns Personal scenarios, while the 
 save an independent Personal scenario from it, but only Administrators may create, edit, replace, or
 delete the shared original. `Templates` cannot be renamed, moved, or deleted.
 
-Supabase Auth is the accepted authentication provider. Registration requires a username, verified
-email address, and password. The sign-in form presents username and password; a server-only bridge
+Supabase Auth is the accepted authentication provider. Account admission is invitation-only: a Product
+operator sends an approved instructor a Supabase invitation, and the verified recipient completes a
+unique username and password in the application. The sign-in form presents username and password; a server-only bridge
 resolves the normalized username to its underlying email identity and then uses Supabase password
 authentication. The browser must not receive the email mapping, privileged credentials, or different
 errors that reveal whether a submitted username exists. Native email recovery remains available.
 Usernames preserve display capitalization but are trimmed and unique without regard to case, so
-`Jeremy`, `jeremy`, and ` JEREMY ` conflict. A duplicate registration must clearly ask the registrant
+`Jeremy`, `jeremy`, and ` JEREMY ` conflict. A duplicate invitation-acceptance attempt must clearly ask the instructor
 to choose another username, and self-service username changes are excluded from the first release.
 Usernames contain 3–30 characters, start and end with a letter or number, and otherwise permit only
 letters, numbers, periods, underscores, and hyphens. Spaces are not allowed.
@@ -1486,40 +1487,25 @@ administrator authority. Roles and authorization are attached to the immutable a
 identity, not inferred from username text. The only application roles are Instructor and
 Administrator; Administrators inherit every Instructor capability.
 
-Self-registration requires a single shared Instructor registration code in addition to a unique
-username, verified email address, and password. The code is a lightweight gate for the one-college
-release, not an institution, membership, or tenant model. Anyone who obtains the code may register
-as an Instructor; the application does not attempt to prove college affiliation. Administrators do
-not manage Accounts inside the application. Product operators instead use Supabase directly to
-inspect, disable, reactivate, or otherwise support Accounts and to make the deliberately rare
-Administrator-role changes. The login page provides a self-service `Forgot password?` flow through
-the verified email; neither Administrators nor Product operators see or choose a user's replacement
-password. A duplicate username receives the required specific message; an email-related registration
-failure remains generic and directs the person to sign in or reset their password rather than
-confirming whether an email Account exists.
+Public self-registration is disabled. Product operators send and, when necessary, resend Supabase
+invitations outside the application. An Invited Account cannot use ordinary authenticated product
+areas until its invitation link establishes a verified session and the recipient completes the
+application's invitation-acceptance page. That page collects a unique username and a password, never
+an email address, registration code, or role. The server verifies the live invited Auth identity,
+sets its password, and creates an enabled Instructor profile; it never trusts user-editable metadata
+or username text for authorization. Username/profile creation remains race-safe through the protected
+case-insensitive database constraint. If the profile write fails, the invited identity remains outside
+ordinary product areas and may retry acceptance rather than receiving partial product access.
 
-An unverified registration is a Pending Account: it cannot use authenticated application areas but
-reserves its username until verification or deliberate Product-operator deletion. The user may
-request another confirmation email; no scheduled cleanup or automatic username release exists in
-the first release. Registration and its profile creation must be race-safe so two concurrent requests
-cannot claim the same case-insensitive username, and a partially failed registration cannot leave an
-authenticated Account without its protected profile.
-
-After registration, a dedicated `Check your email` state offers resend. Opening the verification link
-establishes the session and enters the Instructor home. A Pending Account that attempts sign-in sees
-`Verify your email to continue` with the same resend route. If Auth identity creation succeeds but the
-required Account profile fails, the server immediately removes the incomplete identity and returns a
-retryable registration error. A cleanup failure quarantines the identity from sign-in and raises an
-operator-visible failure rather than leaving a usable profile-less Account.
-
-The first release deliberately adds no application-level CAPTCHA or custom rate limiting, although
-Supabase's platform controls remain in force. The shared registration code is the only application-
-level signup boundary and is an intentionally temporary implementation rather than the permanent
-enrollment architecture. It must be reconsidered before a second college or broader public rollout.
-Use one high-entropy, case-sensitive code stored only in server-side deployment configuration and
-validate it only within the registration request. The client receives only a generic invalid-code
-error and no endpoint reveals or preflights the value. Product operators rotate it through deployment
-configuration; rotation affects future registration only and does not change existing Accounts.
+Administrators do not manage Accounts inside the application. Product operators use Supabase directly
+to invite, inspect, disable, reactivate, or otherwise support Accounts and to make deliberately rare
+Administrator-role changes. The login page provides self-service `Forgot password?` through the
+verified email; neither Administrators nor Product operators see or choose a replacement password.
+Standard Dashboard invitation links terminate at a dedicated browser handoff that validates the
+Supabase session before entering setup; customized token-hash links remain supported by the server
+callback. Redirect destinations stay application-local and allow-listed. Expired invitations are
+resent by a Product operator. The first release needs no public-signup CAPTCHA,
+custom signup throttling, or shared enrollment secret because it has no public signup surface.
 
 The scenario library has two fixed areas. `My Scenarios` contains folders, ordering, and Personal
 scenarios belonging only to the signed-in account; even Administrators receive no ordinary access to
@@ -1577,7 +1563,7 @@ offers to reopen or end the existing one. A Room expires 24 hours after creation
 trainees, releases the active-Room slot, and leaves the current Evaluation record Incomplete for
 manual completion or deletion. The account rollout expires all active legacy host-token Rooms rather
 than supporting two authorization systems. The public landing page remains split between account-free
-`Join a Room` for trainees and `Instructor` sign-in or registration; scenario management, Room
+`Join a Room` for trainees and `Instructor` sign-in; scenario management, Room
 creation, and saved reports are authenticated Instructor functions. Browser sessions use Supabase's
 normal persistent session behavior across browser restarts, with an obvious Sign out action for the
 current device and no custom inactivity timeout in the first release.
@@ -1600,7 +1586,7 @@ message.
 
 The application imposes no password composition, rotation, or other custom password rules. Supabase
 uses an eight-character provider-level minimum. Provider validation errors are surfaced clearly by
-the registration form.
+the invitation-acceptance form.
 
 The first Account page shows the immutable username, verified email, and current role. It allows a
 signed-in Account to change its password and sign out the current device. Username and email changes
@@ -1654,7 +1640,7 @@ developers on failure, and completes a documented whole-project restore rehearsa
 implementation must be verified against current Supabase tooling because the ordinary CLI dump
 excludes managed schemas such as `auth` by default.
 
-When Free serves scheduled classrooms, a designated developer performs a production registration,
+When Free serves scheduled classrooms, a designated developer performs a production invitation acceptance,
 login, Room, and report smoke test at least one business day before the next class after any break of
 five or more days. If the college cannot accept this dependency or possible reactivation delay, the
 readiness review requires an upgrade rather than representing Free as equivalent availability.
@@ -1678,7 +1664,7 @@ timestamp but no Student names or report contents. Ordinary report views are not
 The initial `Zoid`, `Branden`, and `Jeremy` Administrator Accounts are created and email-verified
 manually by Product operators during deployment, using email addresses supplied privately at that
 time. Operators assign Administrator authority to the resulting immutable Auth user IDs; no username
-or registration input can promote itself.
+or invitation input can promote itself.
 
 After authentication, `/instructor` is the persistent Instructor home with three primary areas:
 `Console`, `Reports`, and `Account`. Console reuses the existing Instructor Console, contains the
@@ -1709,13 +1695,13 @@ backup, migration, and repeated SMTP delivery failures write sanitized operation
 and email a developer distribution list. User-facing errors remain generic and contain no secrets or
 personal data.
 
-The release-acceptance gate covers registration code, duplicate usernames, verification, sign-in,
+The release-acceptance gate covers invitation delivery/acceptance, duplicate usernames, sign-in,
 recovery, disabled Accounts, Instructor/Administrator permissions, cross-Account isolation, Template
 auditing, Room takeover/expiry/joining, Attempt/report persistence, manual completion, deletion,
 migration counts, backup restoration, custom SMTP, and supported desktop/iPad browser flows.
 
 Implementation proceeds in seven tested phases: (1) Account schema, authorization helpers, RLS, and
-policy tests; (2) registration, verification, sign-in, recovery, and Account UI; (3) Personal/Template
+policy tests; (2) invitation acceptance, sign-in, recovery, and Account UI; (3) Personal/Template
 scenario ownership and audit migration; (4) Account-owned Rooms, controller takeover, and expiry;
 (5) persistent Reports, Student names, snapshots, search, and auditing; (6) `/instructor` navigation
 and full interaction/browser testing; and (7) backup tooling, SMTP, rollout scripts, acceptance, and
@@ -1744,40 +1730,37 @@ row on every protected database decision instead of from user-editable metadata 
   complete. The migration remains local until the existing development-project migration-history
   drift is reviewed; Phase 1 does not mutate the linked project as part of local implementation.
 
-#### Account implementation Phase 2 — Authentication and Account UI (CODE COMPLETE 2026-09-04)
+#### Account implementation Phase 2 — Authentication and Account UI (INVITE-ONLY REVISION CODE COMPLETE 2026-09-05)
 
-Phase 2 adds server-mediated registration, username/password sign-in, email verification and resend,
-password recovery, session refresh, protected Instructor entry, current-device sign-out, and the
-first Account page. The server-only registration code and username-to-email bridge never expose the
-registration secret, service-role credential, or email mapping to the browser. Registration creates
-the Auth identity first, claims the username through the database uniqueness constraint, and removes
-the incomplete Auth identity if profile creation fails; a failed removal triggers an immediate ban
-attempt and a sanitized operational error. Existing host-token Rooms remain operational until the
-account-owned Room migration in Phase 4.
+Phase 2 adds invitation-only onboarding, username/password sign-in, password recovery, session refresh,
+protected Instructor entry, current-device sign-out, and the first Account page. Product operators
+send Supabase invitations outside the application. The verified recipient follows the token-hash
+callback to an acceptance page, chooses a unique username and password, and receives a fixed enabled
+Instructor profile. The server-only username-to-email bridge never exposes the secret credential or
+email mapping to the browser. Existing host-token Rooms remain operational until the account-owned
+Room migration in Phase 4.
 
 ##### Testing
 
-- Unit-test username, email, password, registration-code, redirect, and same-origin validation.
-- Test registration success, duplicate/reserved usernames, generic email failures, provider password
-  errors, identity cleanup, and cleanup-failure quarantine without logging credentials or personal data.
-- Test sign-in success, generic invalid credentials, Pending verification, disabled Accounts, resend,
-  recovery, callback exchange, password change, current-device sign-out, and protected-page redirects.
+- Unit-test username, email, password, invitation-state, redirect, and same-origin validation.
+- Test invitation acceptance, duplicate/reserved usernames, provider password errors, fixed Instructor
+  role assignment, existing manually provisioned Administrator setup, and retryable profile failures.
+- Test sign-in success, generic invalid credentials, non-accepted invitations, disabled Accounts,
+  recovery, invite callback exchange, password change, current-device sign-out, and protected redirects.
 - Test each client form's pending, success, error, navigation, and accessibility behavior.
 - Exercise the flows against an isolated local Supabase stack with synthetic identities, then run the
   complete Vitest suite, TypeScript, ESLint, and a production build. Do not apply either Account
   migration to the linked project until its migration-history drift is reviewed.
 
-Phase 2 is code-complete. Cookie-aware Supabase SSR clients and scoped Proxy refresh support the
-server-rendered flow. Same-origin, no-store API routes mediate registration, sign-in, verification
-resend, recovery, password changes, and local sign-out. Registration enforces the server-only shared
-code and case-insensitive username reservation, keeps email mapping private, removes a partial Auth
-identity when profile creation fails, and attempts an immediate long ban with sanitized logging when
-deletion fails. The callback accepts PKCE codes and token-hash email links, permits only local
-Instructor destinations, and rejects missing, disabled, or unverified profiles. `/instructor` now
-has public login/register/check-email/recovery states plus live-profile-protected Account and reset
-pages. The Account page keeps username/email immutable in-app, displays role, changes password, and
-signs out the current device. The pre-account host-token Create Room path remains explicitly visible
-and operational until Phase 4.
+Phase 2's original shared-code self-registration is superseded by the confirmed invitation-only
+revision. Cookie-aware Supabase SSR clients and scoped Proxy refresh retain the server-rendered flow.
+Same-origin, no-store API routes mediate invitation acceptance, sign-in, recovery, password changes,
+and local sign-out. The standard Dashboard invite handoff plus PKCE/token-hash callback paths send
+verified invited identities to onboarding and reject non-invited profile-less identities. `/instructor` exposes login,
+invite acceptance, recovery, and protected Account/reset states; it exposes no public registration.
+The Account page keeps username/email immutable in-app, displays role, changes password, and signs out
+the current device. The pre-account host-token Create Room path remains explicitly visible and
+operational until Phase 4.
 
 The first account release targets one college only. A multi-college SaaS remains a possible future,
 not a committed product requirement. Institution records, tenant memberships, tenant switching,
@@ -1789,8 +1772,11 @@ expansion seam remains part of the design interview; speculative multi-tenant in
 The user explicitly confirmed this complete documented contract on 2026-09-04 as the shared
 implementation baseline and authorized implementation. Phases 1 and 2 are code-complete locally with
 the isolated database, pgTAP suite, generated-schema TypeScript additions, Supabase Auth flow, and
-Account UI. The Account migration remains unapplied to the linked project pending review of the
-existing migration-history drift. Phase 3 is next. The previous deferred account note and its
+Account UI. The invite-only revision passed 1,146 Vitest tests with one opt-in integration test
+skipped, TypeScript, ESLint with zero errors and the 12 pre-existing warnings, and a production build.
+The Account migration remains unapplied to the linked project pending review of the existing
+migration-history drift, and the hosted Site URL, redirect allow-list, public-signup switch, and real
+invitation smoke test remain operational deployment steps. Phase 3 is next. The previous deferred account note and its
 assumption that the global library would remain
 until an external sale are superseded by this design.
 

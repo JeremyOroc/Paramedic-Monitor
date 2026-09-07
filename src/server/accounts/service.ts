@@ -9,9 +9,7 @@ import {
   AccountInputError,
   parseEmail,
   parsePassword,
-  parseRegistrationCode,
   parseUsername,
-  registrationCodeMatches,
 } from '@/server/accounts/validation'
 
 type Profile = {
@@ -22,28 +20,13 @@ type Profile = {
 }
 
 export type ActiveAccount = Profile & { email: string }
+export type InviteSetup = {
+  email: string
+  username: string | null
+  role: Profile['role'] | null
+}
 
 const USERNAME_TAKEN = 'That username already exists. Please use another username.'
-const EMAIL_UNAVAILABLE =
-  'Unable to create an account with that email. Try signing in or resetting your password.'
-
-async function removeOrQuarantineAuthIdentity(
-  service: ReturnType<typeof createServiceClient>,
-  userId: string,
-  profileCode: string,
-) {
-  const { error: deleteError } = await service.auth.admin.deleteUser(userId)
-  if (!deleteError) return true
-  const { error: banError } = await service.auth.admin.updateUserById(userId, {
-    ban_duration: '876000h',
-  })
-  console.error('[accounts] profile provisioning cleanup failed', {
-    profileCode,
-    deleteFailed: true,
-    quarantineFailed: Boolean(banError),
-  })
-  return false
-}
 
 async function getProfile(normalizedUsername: string) {
   const service = createServiceClient()
@@ -63,81 +46,100 @@ async function getAuthUser(userId: string) {
   return data.user
 }
 
-export async function registerAccount(input: unknown, origin: string) {
-  const values = typeof input === 'object' && input !== null ? input as Record<string, unknown> : {}
-  const { username, normalizedUsername } = parseUsername(values.username)
-  const email = parseEmail(values.email)
-  const password = parsePassword(values.password)
-  const registrationCode = parseRegistrationCode(values.registrationCode)
+async function getProfileForUser(userId: string) {
+  const service = createServiceClient()
+  const { data, error } = await service
+    .from('account_profiles')
+    .select('user_id, username, role, status')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (error) throw error
+  return data as Profile | null
+}
 
-  if (!registrationCodeMatches(registrationCode, process.env.INSTRUCTOR_REGISTRATION_CODE)) {
+function isVerifiedInvite(user: User | null): user is User & { email: string; invited_at: string } {
+  return Boolean(user?.email && user.email_confirmed_at && user.invited_at)
+}
+
+async function getVerifiedInvitedUser() {
+  const auth = await createAuthenticatedClient()
+  const { data, error } = await auth.auth.getUser()
+  if (error || !isVerifiedInvite(data.user)) {
     throw new AccountServiceError(
-      'registration_code',
-      'The instructor registration code is incorrect.',
-      403,
+      'invalid_invitation',
+      'This invitation is invalid or has expired. Ask a Product operator for a new invitation.',
+      401,
     )
+  }
+  return { auth, user: data.user }
+}
+
+export async function getInviteSetup(): Promise<InviteSetup | null> {
+  try {
+    const { user } = await getVerifiedInvitedUser()
+    const profile = await getProfileForUser(user.id)
+    if (profile?.status === 'disabled') return null
+    return {
+      email: user.email,
+      username: profile?.username ?? null,
+      role: profile?.role ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function acceptAccountInvitation(input: unknown) {
+  const values = typeof input === 'object' && input !== null ? input as Record<string, unknown> : {}
+  const password = parsePassword(values.password)
+  const { auth, user } = await getVerifiedInvitedUser()
+  const existingProfile = await getProfileForUser(user.id)
+
+  if (existingProfile?.status === 'disabled') {
+    throw new AccountServiceError('disabled', 'This account has been disabled. Contact support.', 403)
+  }
+
+  let username = existingProfile?.username
+  if (!existingProfile) {
+    const parsed = parseUsername(values.username)
+    username = parsed.username
+    const service = createServiceClient()
+    const [profileResult, reservedResult] = await Promise.all([
+      service.from('account_profiles').select('user_id').eq('normalized_username', parsed.normalizedUsername).maybeSingle(),
+      service.from('reserved_account_usernames').select('username').eq('normalized_username', parsed.normalizedUsername).maybeSingle(),
+    ])
+    if (profileResult.error || reservedResult.error) {
+      throw new AccountServiceError('retry', 'Invitation setup is temporarily unavailable.', 503)
+    }
+    if (profileResult.data || reservedResult.data) {
+      throw new AccountServiceError('username_taken', USERNAME_TAKEN, 409)
+    }
+  }
+
+  const { error: passwordError } = await auth.auth.updateUser({ password })
+  if (passwordError?.code === 'weak_password') {
+    throw new AccountInputError(passwordError.message, 'password')
+  }
+  if (passwordError) {
+    throw new AccountServiceError('retry', 'Unable to set the password. Please try again.', 503)
+  }
+
+  if (existingProfile) {
+    return { username: existingProfile.username, role: existingProfile.role }
   }
 
   const service = createServiceClient()
-  const [profileResult, reservedResult] = await Promise.all([
-    service.from('account_profiles').select('user_id').eq('normalized_username', normalizedUsername).maybeSingle(),
-    service.from('reserved_account_usernames').select('username').eq('normalized_username', normalizedUsername).maybeSingle(),
-  ])
-  if (profileResult.error || reservedResult.error) {
-    throw new AccountServiceError('retry', 'Account creation is temporarily unavailable.', 503)
-  }
-  const profile = profileResult.data
-  const reserved = reservedResult.data
-  if (profile || reserved) {
-    throw new AccountServiceError('username_taken', USERNAME_TAKEN, 409)
-  }
-
-  const auth = await createAuthenticatedClient()
-  const redirect = new URL('/auth/callback', origin)
-  redirect.searchParams.set('next', '/instructor')
-  const { data, error } = await auth.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: redirect.toString() },
-  })
-  if (error?.code === 'weak_password') {
-    throw new AccountInputError(error.message, 'password')
-  }
-  if (error || !data.user || data.user.identities?.length === 0) {
-    throw new AccountServiceError('email_unavailable', EMAIL_UNAVAILABLE, 409)
-  }
-
-  if (data.session || data.user.email_confirmed_at) {
-    await auth.auth.signOut({ scope: 'local' })
-    await removeOrQuarantineAuthIdentity(service, data.user.id, 'email_confirmation_disabled')
-    throw new AccountServiceError(
-      'retry',
-      'Email verification is not configured. Contact an administrator.',
-      503,
-    )
-  }
-
   const { error: profileError } = await service.from('account_profiles').insert({
-    user_id: data.user.id,
-    username,
+    user_id: user.id,
+    username: username!,
     role: 'instructor',
     status: 'enabled',
   })
-  if (!profileError) return { username }
-
-  const deleted = await removeOrQuarantineAuthIdentity(
-    service,
-    data.user.id,
-    profileError.code,
-  )
-  if (!deleted) {
-    throw new AccountServiceError('retry', 'Account creation failed. Please try again.', 503)
-  }
-
+  if (!profileError) return { username: username!, role: 'instructor' as const }
   if (profileError.code === '23505' || profileError.code === '23514') {
     throw new AccountServiceError('username_taken', USERNAME_TAKEN, 409)
   }
-  throw new AccountServiceError('retry', 'Account creation failed. Please try again.', 503)
+  throw new AccountServiceError('retry', 'Unable to finish invitation setup. Please try again.', 503)
 }
 
 export async function signInAccount(input: unknown) {
@@ -153,7 +155,7 @@ export async function signInAccount(input: unknown) {
   }
   const user = await getAuthUser(profile.user_id)
   if (!user.email_confirmed_at || !user.email) {
-    throw new AccountServiceError('unverified', 'Verify your email to continue.', 403)
+    throw new AccountServiceError('unverified', 'Accept your invitation to continue.', 403)
   }
   const auth = await createAuthenticatedClient()
   const { data, error } = await auth.auth.signInWithPassword({ email: user.email, password })
@@ -162,31 +164,6 @@ export async function signInAccount(input: unknown) {
     throw new AccountServiceError('invalid_credentials', 'Invalid username or password.', 401)
   }
   return { username: profile.username, role: profile.role }
-}
-
-export async function resendVerification(input: unknown, origin: string) {
-  const values = typeof input === 'object' && input !== null ? input as Record<string, unknown> : {}
-  const { normalizedUsername } = parseUsername(values.username)
-  const profile = await getProfile(normalizedUsername)
-  if (profile) {
-    try {
-      const user = await getAuthUser(profile.user_id)
-      if (user.email && !user.email_confirmed_at) {
-        const redirect = new URL('/auth/callback', origin)
-        redirect.searchParams.set('next', '/instructor')
-        const auth = await createAuthenticatedClient()
-        const { error } = await auth.auth.resend({
-          type: 'signup',
-          email: user.email,
-          options: { emailRedirectTo: redirect.toString() },
-        })
-        if (error) console.error('[accounts] verification resend provider failure')
-      }
-    } catch {
-      console.error('[accounts] verification resend lookup failure')
-    }
-  }
-  return { message: 'If that username has a pending account, a new verification email has been sent.' }
 }
 
 export async function requestPasswordRecovery(input: unknown, origin: string) {

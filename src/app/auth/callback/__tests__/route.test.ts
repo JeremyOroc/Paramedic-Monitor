@@ -26,12 +26,13 @@ describe('Auth callback', () => {
     vi.clearAllMocks()
     mocks.createAuthenticatedClient.mockResolvedValue(auth)
     auth.auth.exchangeCodeForSession.mockResolvedValue({ error: null })
+    auth.auth.verifyOtp.mockResolvedValue({ error: null })
     auth.auth.getUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
     auth.auth.signOut.mockResolvedValue({ error: null })
     mocks.profileForAuthUser.mockResolvedValue({ status: 'enabled' })
   })
 
-  it('exchanges the PKCE code and redirects an enabled profile locally', async () => {
+  it('exchanges a normal PKCE code and redirects an enabled profile locally', async () => {
     const response = await GET(new Request(
       'https://monitor.example/auth/callback?code=abc&next=%2Finstructor%2Faccount',
     ))
@@ -39,7 +40,40 @@ describe('Auth callback', () => {
     expect(response.headers.get('location')).toBe('https://monitor.example/instructor/account')
   })
 
-  it('prevents open redirects and rejects users without an enabled profile', async () => {
+  it('sends a verified token-hash invitation to invitation acceptance without requiring a profile', async () => {
+    mocks.profileForAuthUser.mockResolvedValue(null)
+    auth.auth.getUser.mockResolvedValue({ data: { user: {
+      id: 'invited-1',
+      email: 'medic@example.ca',
+      email_confirmed_at: '2026-09-05T18:00:00Z',
+      invited_at: '2026-09-05T17:00:00Z',
+    } } })
+    const response = await GET(new Request(
+      'https://monitor.example/auth/callback?token_hash=hash&type=invite',
+    ))
+    expect(auth.auth.verifyOtp).toHaveBeenCalledWith({ token_hash: 'hash', type: 'invite' })
+    expect(response.headers.get('location')).toBe(
+      'https://monitor.example/instructor/accept-invite',
+    )
+    expect(mocks.profileForAuthUser).not.toHaveBeenCalled()
+  })
+
+  it('recognizes a PKCE invite redirect only for a Supabase-invited identity', async () => {
+    auth.auth.getUser.mockResolvedValue({ data: { user: {
+      id: 'invited-1',
+      email: 'medic@example.ca',
+      email_confirmed_at: '2026-09-05T18:00:00Z',
+      invited_at: '2026-09-05T17:00:00Z',
+    } } })
+    const response = await GET(new Request(
+      'https://monitor.example/auth/callback?code=abc&next=%2Finstructor%2Faccept-invite',
+    ))
+    expect(response.headers.get('location')).toBe(
+      'https://monitor.example/instructor/accept-invite',
+    )
+  })
+
+  it('prevents open redirects and rejects non-invited users without an enabled profile', async () => {
     mocks.profileForAuthUser.mockResolvedValue(null)
     const response = await GET(new Request(
       'https://monitor.example/auth/callback?code=abc&next=https%3A%2F%2Fevil.example',
@@ -48,14 +82,5 @@ describe('Auth callback', () => {
     expect(response.headers.get('location')).toBe(
       'https://monitor.example/instructor/login?error=verification',
     )
-  })
-
-  it('accepts token-hash signup links', async () => {
-    auth.auth.verifyOtp.mockResolvedValue({ error: null })
-    const response = await GET(new Request(
-      'https://monitor.example/auth/callback?token_hash=hash&type=signup',
-    ))
-    expect(auth.auth.verifyOtp).toHaveBeenCalledWith({ token_hash: 'hash', type: 'signup' })
-    expect(response.headers.get('location')).toBe('https://monitor.example/instructor')
   })
 })

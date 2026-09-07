@@ -8,14 +8,21 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/supabase/server', () => mocks)
 
 import {
+  acceptAccountInvitation,
   getCurrentAccount,
-  registerAccount,
+  getInviteSetup,
   requestPasswordRecovery,
-  resendVerification,
   signInAccount,
   signOutAccount,
   updateAccountPassword,
 } from '@/server/accounts/service'
+
+const INVITED_USER = {
+  id: 'user-1',
+  email: 'medic@example.ca',
+  email_confirmed_at: '2026-09-05T18:00:00Z',
+  invited_at: '2026-09-05T17:00:00Z',
+}
 
 function queryResult(data: unknown, error: unknown = null) {
   const builder = {
@@ -31,48 +38,41 @@ function queryResult(data: unknown, error: unknown = null) {
 function clients(options: {
   profile?: unknown
   reserved?: unknown
+  profileError?: unknown
+  reservedError?: unknown
   insertError?: { code: string } | null
-  deleteError?: unknown
   authUser?: unknown
   currentUser?: unknown
+  currentUserError?: unknown
+  updateUserError?: { code?: string; message?: string } | null
 } = {}) {
-  const profileQuery = queryResult(options.profile ?? null)
-  const reservedQuery = queryResult(options.reserved ?? null)
+  const profileQuery = queryResult(options.profile ?? null, options.profileError ?? null)
+  const reservedQuery = queryResult(options.reserved ?? null, options.reservedError ?? null)
   const insert = vi.fn().mockResolvedValue({ error: options.insertError ?? null })
+  const accountProfiles = { ...profileQuery, insert }
   const service = {
-    from: vi.fn((table: string) => {
-      if (table === 'reserved_account_usernames') return reservedQuery
-      return {
-        ...profileQuery,
-        insert,
-      }
-    }),
+    from: vi.fn((table: string) => (
+      table === 'reserved_account_usernames' ? reservedQuery : accountProfiles
+    )),
     auth: {
       admin: {
-        deleteUser: vi.fn().mockResolvedValue({ error: options.deleteError ?? null }),
-        updateUserById: vi.fn().mockResolvedValue({ error: null }),
         getUserById: vi.fn().mockResolvedValue({ data: { user: options.authUser }, error: null }),
       },
     },
   }
   const auth = {
     auth: {
-      signUp: vi.fn().mockResolvedValue({
-        data: {
-          user: { id: 'user-1', identities: [{ id: 'identity-1' }], email_confirmed_at: null },
-          session: null,
-        },
-        error: null,
-      }),
       signInWithPassword: vi.fn().mockResolvedValue({
         data: { user: { id: 'user-1' }, session: { access_token: 'token' } },
         error: null,
       }),
       signOut: vi.fn().mockResolvedValue({ error: null }),
-      getUser: vi.fn().mockResolvedValue({ data: { user: options.currentUser ?? null }, error: null }),
-      resend: vi.fn().mockResolvedValue({ error: null }),
+      getUser: vi.fn().mockResolvedValue({
+        data: { user: options.currentUser ?? null },
+        error: options.currentUserError ?? null,
+      }),
       resetPasswordForEmail: vi.fn().mockResolvedValue({ error: null }),
-      updateUser: vi.fn().mockResolvedValue({ error: null }),
+      updateUser: vi.fn().mockResolvedValue({ error: options.updateUserError ?? null }),
     },
   }
   mocks.createServiceClient.mockReturnValue(service)
@@ -83,22 +83,15 @@ function clients(options: {
 describe('account service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    process.env.INSTRUCTOR_REGISTRATION_CODE = 'correct-code'
   })
 
-  it('creates an unverified Auth identity and its Instructor profile', async () => {
-    const { auth, insert } = clients()
-    await expect(registerAccount({
-      username: 'Medic.One',
-      email: 'medic@example.ca',
-      password: 'password',
-      registrationCode: 'correct-code',
-    }, 'https://monitor.example')).resolves.toEqual({ username: 'Medic.One' })
+  it('finishes a verified invitation with a password and fixed Instructor profile', async () => {
+    const { auth, insert } = clients({ currentUser: INVITED_USER })
 
-    expect(auth.auth.signUp).toHaveBeenCalledWith(expect.objectContaining({
-      email: 'medic@example.ca',
-      options: { emailRedirectTo: 'https://monitor.example/auth/callback?next=%2Finstructor' },
-    }))
+    await expect(acceptAccountInvitation({ username: 'Medic.One', password: 'password' }))
+      .resolves.toEqual({ username: 'Medic.One', role: 'instructor' })
+
+    expect(auth.auth.updateUser).toHaveBeenCalledWith({ password: 'password' })
     expect(insert).toHaveBeenCalledWith({
       user_id: 'user-1',
       username: 'Medic.One',
@@ -107,83 +100,67 @@ describe('account service', () => {
     })
   })
 
-  it('rejects an occupied or reserved username before creating an Auth user', async () => {
-    const { auth } = clients({ reserved: { username: 'Jeremy' } })
-    await expect(registerAccount({
-      username: 'jeremy',
-      email: 'new@example.ca',
-      password: 'password',
-      registrationCode: 'correct-code',
-    }, 'https://monitor.example')).rejects.toMatchObject({ code: 'username_taken', status: 409 })
-    expect(auth.auth.signUp).not.toHaveBeenCalled()
-  })
-
-  it('rejects an incorrect registration code before any database access', async () => {
-    clients()
-    await expect(registerAccount({
-      username: 'Medic',
+  it('exposes setup only for a verified Supabase-invited identity', async () => {
+    clients({ currentUser: INVITED_USER })
+    await expect(getInviteSetup()).resolves.toEqual({
       email: 'medic@example.ca',
-      password: 'password',
-      registrationCode: 'incorrect',
-    }, 'https://monitor.example')).rejects.toMatchObject({ code: 'registration_code', status: 403 })
-    expect(mocks.createServiceClient).not.toHaveBeenCalled()
+      username: null,
+      role: null,
+    })
+
+    clients({ currentUser: { ...INVITED_USER, invited_at: undefined } })
+    await expect(getInviteSetup()).resolves.toBeNull()
+    await expect(acceptAccountInvitation({ username: 'Medic', password: 'password' }))
+      .rejects.toMatchObject({ code: 'invalid_invitation', status: 401 })
   })
 
-  it('uses a generic response for an existing Auth email', async () => {
-    const { auth } = clients()
-    auth.auth.signUp.mockResolvedValue({
-      data: { user: { id: 'obfuscated', identities: [] }, session: null },
-      error: null,
-    })
-    await expect(registerAccount({
-      username: 'Available',
-      email: 'existing@example.ca',
-      password: 'password',
-      registrationCode: 'correct-code',
-    }, 'https://monitor.example')).rejects.toMatchObject({
-      code: 'email_unavailable',
-      message: expect.stringContaining('signing in or resetting'),
-    })
+  it('rejects an occupied or reserved username before changing the password', async () => {
+    const { auth } = clients({ currentUser: INVITED_USER, reserved: { username: 'Jeremy' } })
+    await expect(acceptAccountInvitation({ username: 'jeremy', password: 'password' }))
+      .rejects.toMatchObject({ code: 'username_taken', status: 409 })
+    expect(auth.auth.updateUser).not.toHaveBeenCalled()
   })
 
-  it('reports provider password rejection as a password-field error', async () => {
-    const { auth } = clients()
-    auth.auth.signUp.mockResolvedValue({
-      data: { user: null, session: null },
-      error: { code: 'weak_password', message: 'Password is known to be compromised.' },
-    })
-    await expect(registerAccount({
-      username: 'Available',
-      email: 'new@example.ca',
-      password: 'password',
-      registrationCode: 'correct-code',
-    }, 'https://monitor.example')).rejects.toMatchObject({ field: 'password' })
+  it('keeps a database-race loser outside product areas with a retryable username error', async () => {
+    const { auth } = clients({ currentUser: INVITED_USER, insertError: { code: '23505' } })
+    await expect(acceptAccountInvitation({ username: 'Medic', password: 'password' }))
+      .rejects.toMatchObject({ code: 'username_taken', status: 409 })
+    expect(auth.auth.updateUser).toHaveBeenCalledWith({ password: 'password' })
   })
 
-  it('quarantines an Auth identity when profile creation and deletion both fail', async () => {
-    const { service } = clients({ insertError: { code: 'XX000' }, deleteError: new Error('unavailable') })
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    await expect(registerAccount({
-      username: 'Medic',
-      email: 'medic@example.ca',
-      password: 'password',
-      registrationCode: 'correct-code',
-    }, 'https://monitor.example')).rejects.toMatchObject({ code: 'retry', status: 503 })
-    expect(service.auth.admin.updateUserById).toHaveBeenCalledWith('user-1', {
-      ban_duration: '876000h',
+  it('surfaces provider password rejection without creating a profile', async () => {
+    const { insert } = clients({
+      currentUser: INVITED_USER,
+      updateUserError: { code: 'weak_password', message: 'Password is compromised.' },
     })
-    expect(errorSpy).toHaveBeenCalledWith(
-      '[accounts] profile provisioning cleanup failed',
-      expect.not.objectContaining({ email: expect.anything(), username: expect.anything() }),
-    )
+    await expect(acceptAccountInvitation({ username: 'Medic', password: 'password' }))
+      .rejects.toMatchObject({ field: 'password' })
+    expect(insert).not.toHaveBeenCalled()
   })
 
-  it('blocks a disabled username before password authentication', async () => {
-    const { auth } = clients({
-      profile: { user_id: 'user-1', username: 'Medic', role: 'instructor', status: 'disabled' },
+  it('preserves a manually provisioned Administrator profile while setting its password', async () => {
+    const profile = {
+      user_id: 'user-1', username: 'Jeremy', role: 'administrator', status: 'enabled',
+    }
+    const { auth, insert } = clients({ currentUser: INVITED_USER, profile })
+
+    await expect(acceptAccountInvitation({ password: 'password' })).resolves.toEqual({
+      username: 'Jeremy', role: 'administrator',
     })
+    expect(auth.auth.updateUser).toHaveBeenCalledWith({ password: 'password' })
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it('blocks a disabled profile during invitation acceptance and normal sign-in', async () => {
+    const profile = {
+      user_id: 'user-1', username: 'Medic', role: 'instructor', status: 'disabled',
+    }
+    const { auth } = clients({ currentUser: INVITED_USER, profile })
+    await expect(acceptAccountInvitation({ password: 'password' }))
+      .rejects.toMatchObject({ code: 'disabled', status: 403 })
     await expect(signInAccount({ username: 'Medic', password: 'password' }))
       .rejects.toMatchObject({ code: 'disabled', status: 403 })
+    expect(auth.auth.updateUser).not.toHaveBeenCalled()
     expect(auth.auth.signInWithPassword).not.toHaveBeenCalled()
   })
 
@@ -210,7 +187,7 @@ describe('account service', () => {
     })
   })
 
-  it('directs a pending account to verification without testing its password', async () => {
+  it('rejects an unaccepted invited identity without testing its password', async () => {
     const { auth } = clients({
       profile: { user_id: 'user-1', username: 'Medic', role: 'instructor', status: 'enabled' },
       authUser: { id: 'user-1', email: 'medic@example.ca', email_confirmed_at: null },
@@ -220,16 +197,8 @@ describe('account service', () => {
     expect(auth.auth.signInWithPassword).not.toHaveBeenCalled()
   })
 
-  it('keeps resend and recovery responses generic while invoking Supabase', async () => {
-    const { auth } = clients({
-      profile: { user_id: 'user-1', username: 'Medic', role: 'instructor', status: 'enabled' },
-      authUser: { id: 'user-1', email: 'medic@example.ca', email_confirmed_at: null },
-    })
-    await expect(resendVerification({ username: 'Medic' }, 'https://monitor.example'))
-      .resolves.toMatchObject({ message: expect.stringContaining('If that username') })
-    expect(auth.auth.resend).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'signup', email: 'medic@example.ca',
-    }))
+  it('keeps recovery responses generic while invoking Supabase', async () => {
+    const { auth } = clients()
     await expect(requestPasswordRecovery({ email: 'medic@example.ca' }, 'https://monitor.example'))
       .resolves.toMatchObject({ message: expect.stringContaining('If an account') })
     expect(auth.auth.resetPasswordForEmail).toHaveBeenCalledWith(

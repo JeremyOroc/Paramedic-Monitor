@@ -20,10 +20,10 @@ _Avoid_: Preset
 A verified instructor identity with a unique username and email that can authenticate, own Personal scenarios, and own Rooms. Trainees participate in Rooms without Accounts.
 _Avoid_: User, trainee account, student account
 
-**Pending Account**:
-An Instructor registration whose email has not yet been verified. It cannot enter authenticated
-product areas but reserves its username until verification or Product-operator deletion.
-_Avoid_: Inactive Account, invited user
+**Invited Account**:
+An instructor identity invited by a Product operator that has not yet completed its username and
+password setup. It cannot enter ordinary authenticated product areas until invitation acceptance.
+_Avoid_: Pending Account, public registrant
 
 **Instructor**:
 The ordinary Account role for preparing scenarios, creating Rooms, and conducting Attempts.

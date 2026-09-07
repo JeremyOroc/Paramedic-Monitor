@@ -2,7 +2,7 @@
 --
 -- Supabase Auth remains the credential authority. This profile is the live,
 -- immutable-ID authorization source for application role and account status.
--- Registration, username-to-email sign-in, and account UI arrive in Phase 2.
+-- Invitation onboarding, username-to-email sign-in, and account UI arrive in Phase 2.
 
 create schema if not exists private;
 
@@ -10,7 +10,7 @@ revoke all on schema private from public, anon;
 grant usage on schema private to authenticated, service_role;
 
 -- Reserved names protect the three deployment-provisioned Administrator
--- identities from being claimed by ordinary Instructor registration. The name
+-- identities from being claimed by ordinary Instructor invitation acceptance. The name
 -- itself never grants authority; role is still stored on the Auth user ID.
 create table public.reserved_account_usernames (
   username            text        primary key,

@@ -3,28 +3,35 @@ import { render, screen } from '@testing-library/react'
 
 const mocks = vi.hoisted(() => ({
   getCurrentAccount: vi.fn(),
+  getInviteSetup: vi.fn(),
   redirect: vi.fn((path: string) => { throw new Error(`redirect:${path}`) }),
 }))
 
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }))
-vi.mock('@/server/accounts/service', () => ({ getCurrentAccount: mocks.getCurrentAccount }))
+vi.mock('@/server/accounts/service', () => ({
+  getCurrentAccount: mocks.getCurrentAccount,
+  getInviteSetup: mocks.getInviteSetup,
+}))
 vi.mock('@/components/accounts/AccountAuthPage', () => ({
-  AccountAuthPage: ({ mode, initialUsername, verificationError }: {
+  AccountAuthPage: ({ mode, verificationError }: {
     mode: string
-    initialUsername?: string
     verificationError?: boolean
-  }) => <div>{mode}:{initialUsername}:{String(Boolean(verificationError))}</div>,
+  }) => <div>{mode}:{String(Boolean(verificationError))}</div>,
+}))
+vi.mock('@/components/accounts/AcceptInvitePage', () => ({
+  AcceptInvitePage: ({ email, initialUsername }: { email: string; initialUsername: string | null }) => (
+    <div>invite:{email}:{initialUsername ?? 'new'}</div>
+  ),
 }))
 vi.mock('@/components/accounts/AccountPanel', () => ({
   AccountPanel: ({ username }: { username: string }) => <div>account:{username}</div>,
 }))
 
 import AccountPage from '@/app/instructor/account/page'
-import CheckEmailPage from '@/app/instructor/check-email/page'
+import InviteAcceptancePage from '@/app/instructor/accept-invite/page'
 import ForgotPasswordPage from '@/app/instructor/forgot-password/page'
 import LoginPage from '@/app/instructor/login/page'
 import InstructorPage from '@/app/instructor/page'
-import RegisterPage from '@/app/instructor/register/page'
 import ResetPasswordPage from '@/app/instructor/reset-password/page'
 
 describe('Instructor account pages', () => {
@@ -33,20 +40,28 @@ describe('Instructor account pages', () => {
     mocks.getCurrentAccount.mockResolvedValue({
       username: 'Medic', email: 'medic@example.ca', role: 'instructor', status: 'enabled', user_id: 'user-1',
     })
+    mocks.getInviteSetup.mockResolvedValue({
+      email: 'invited@example.ca', username: null, role: null,
+    })
   })
 
-  it('renders each public authentication state from URL input', async () => {
-    const { unmount } = render(await LoginPage({ searchParams: Promise.resolve({ error: 'verification' }) }))
-    expect(screen.getByText('login::true')).toBeInTheDocument()
+  it('renders login and recovery as the only public account-entry pages', async () => {
+    const { unmount } = render(await LoginPage({ searchParams: Promise.resolve({ error: 'invitation' }) }))
+    expect(screen.getByText('login:true')).toBeInTheDocument()
     unmount()
-    const check = render(await CheckEmailPage({ searchParams: Promise.resolve({ username: 'Medic' }) }))
-    expect(screen.getByText('resend:Medic:false')).toBeInTheDocument()
-    check.unmount()
-    const register = render(<RegisterPage />)
-    expect(screen.getByText('register::false')).toBeInTheDocument()
-    register.unmount()
     render(<ForgotPasswordPage />)
-    expect(screen.getByText('forgot::false')).toBeInTheDocument()
+    expect(screen.getByText('forgot:false')).toBeInTheDocument()
+  })
+
+  it('renders invitation setup only from a live verified invite session', async () => {
+    const invite = render(await InviteAcceptancePage())
+    expect(screen.getByText('invite:invited@example.ca:new')).toBeInTheDocument()
+    invite.unmount()
+
+    mocks.getInviteSetup.mockResolvedValue(null)
+    await expect(InviteAcceptancePage()).rejects.toThrow(
+      'redirect:/instructor/login?error=invitation',
+    )
   })
 
   it('protects Account and password-reset pages with a live account check', async () => {
@@ -54,7 +69,7 @@ describe('Instructor account pages', () => {
     expect(screen.getByText('account:Medic')).toBeInTheDocument()
     account.unmount()
     render(await ResetPasswordPage())
-    expect(screen.getByText('reset::false')).toBeInTheDocument()
+    expect(screen.getByText('reset:false')).toBeInTheDocument()
 
     mocks.getCurrentAccount.mockResolvedValue(null)
     await expect(AccountPage()).rejects.toThrow('redirect:/instructor/login')

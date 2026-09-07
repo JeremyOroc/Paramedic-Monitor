@@ -1,11 +1,9 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
-
 const USERNAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{1,28}[A-Za-z0-9]$/
 
 export class AccountInputError extends Error {
   constructor(
     message: string,
-    readonly field?: 'username' | 'email' | 'password' | 'registrationCode',
+    readonly field?: 'username' | 'email' | 'password',
   ) {
     super(message)
     this.name = 'AccountInputError'
@@ -45,22 +43,6 @@ export function parsePassword(value: unknown) {
     throw new AccountInputError('Password is too long.', 'password')
   }
   return value
-}
-
-export function parseRegistrationCode(value: unknown) {
-  if (typeof value !== 'string' || value.length === 0) {
-    throw new AccountInputError('Enter the instructor registration code.', 'registrationCode')
-  }
-  if (value.length > 512) {
-    throw new AccountInputError('The instructor registration code is too long.', 'registrationCode')
-  }
-  return value
-}
-
-export function registrationCodeMatches(candidate: string, expected: string | undefined) {
-  if (!expected) return false
-  const digest = (value: string) => createHash('sha256').update(value).digest()
-  return timingSafeEqual(digest(candidate), digest(expected))
 }
 
 export function safeInstructorPath(value: string | null | undefined) {
