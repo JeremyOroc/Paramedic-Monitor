@@ -169,14 +169,22 @@ migration parity and a no-op migration dry run; direct verification confirmed bo
 all three reserved usernames, RLS, the self-read policy, protected client grants, triggers, and private
 authorization helpers. `/api/health` returned HTTP 200 with `database: ok` after deployment.
 
+**Phase 17 floating-corner enhancement — COMPLETE (2026-09-05).** The Floating Spectator is now
+pointer-draggable and keyboard-movable across all four safe-area-aware viewport corners while
+preserving the existing single player, projection poll, and presentation lifecycle. Threshold,
+containment, quadrant snapping, cancellation, accessibility, lifecycle, and reset behavior are
+covered by 1,091 passing tests. The TypeScript production build, ESLint, and a live 1280×720
+instructor room with real pointer and keyboard movement all pass with clean browser logs.
+
 **Operational health check — CORRECTED (2026-09-05).** `/api/health` now checks the protected
 `sessions` table with the server-only Supabase secret client. It no longer depends on the deliberately
 revoked anonymous table grant, and route regressions cover healthy, degraded, and configuration-error
 responses without exposing the secret or reopening room-code reads. The live local endpoint returns
 HTTP 200 with `database: ok`; all 1,140 tests, TypeScript, and ESLint pass.
 
-**Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04).** The Embedded Spectator now
-switches among Docked, a fixed bottom-right Floating mini-player, and browser-native Fullscreen while
+**Phase 17 presentation-mode enhancement — COMPLETE (2026-09-04; corners updated 2026-09-05).** The
+Embedded Spectator switches among Docked, a movable corner-pinned Floating mini-player, and
+browser-native Fullscreen while
 preserving one selected-only polling path and an inert uniformly scaled monitor. Permanent accessible
 controls, return-mode and focus restoration, failure feedback, responsive safe-area sizing, reduced
 motion, and Stop from every mode are verified by tests and a real instructor/trainee browser flow.
@@ -942,6 +950,18 @@ is deliberately out of scope — the evaluator reads the timeline and judges.
 ---
 
 ## Recently Completed
+- [x] **Vercel spectator test type-check fix — COMPLETE:**
+  - [x] Remove the retired `hostToken` prop from the restartable Floating Spectator test harness
+  - [x] Verify the focused spectator tests, full suite, TypeScript, ESLint, and production build
+- [x] **Phase 17 floating-corner enhancement — COMPLETE:**
+  - [x] Add a primary-pointer drag grip with a 6px threshold, viewport containment, target preview,
+        player-center quadrant selection, four safe-area anchors, and reduced-motion-aware snapping
+  - [x] Add adjacent-corner arrow-key movement, accessible naming, focus treatment, and live position
+        announcements while preserving the inert monitor surface
+  - [x] Preserve the selected corner across console, trainee, attempt, dock, and fullscreen changes;
+        cancel interrupted gestures and reset to bottom-right on Stop Spectating or reload
+  - [x] Verify 1,091 tests, TypeScript production build, ESLint, and a live 1280×720 instructor room
+        with exact 16px corner geometry, full 360×280 size, real pointer drag, and clean browser logs
 - [x] **Phase 17 presentation modes — COMPLETE:**
   - [x] Record the confirmed Docked, fixed Floating, and native Fullscreen behavior and lifecycle
   - [x] Implement persistent accessible controls, mode return state, fullscreen rejection status,

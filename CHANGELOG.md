@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-09-07] [instructor/testing] — Fix Vercel spectator test type check
+
+- Removed the retired `hostToken` prop from the restartable Floating Spectator test harness. The
+  Account-owned Room merge had already removed that prop from the production component and every
+  other caller, leaving this single stale test fixture to fail Next.js production type checking.
+- Re-ran the focused spectator regression, the complete Vitest suite, TypeScript, ESLint, and the
+  production build so the Vercel deployment contract is covered locally.
+
+## [2026-09-07] [merge/instructor] — Integrate draggable Spectator corners
+
+- Resolved the documentation merge by retaining the complete Accounts and production-operations
+  history alongside the Phase 17 draggable-corner planning and implementation records.
+- Kept Accounts Phase 7 as the current project phase and preserved the completed four-corner
+  mini-player behavior in status. No application code changed during conflict resolution.
+- Verified all 1,241 runnable Vitest tests and ESLint with zero errors and the 12 existing warnings;
+  Git reports no unresolved paths and the staged merge diff passes its whitespace check.
+
 ## [2026-09-07] [ui] — Unify Console, Reports, and Account page shells
 
 - Extended the shared Instructor layout with active-area and title configuration, then moved Reports
@@ -222,6 +239,35 @@
   notice for the protected reserved-name table and the naturally unused new empty-table index.
   `/api/health` returned HTTP 200 with `database: ok` after deployment. The CLI's separate pg-delta
   catalog-cache warning did not affect the applied migration or verified remote state.
+
+## [2026-09-05] [instructor/ui] — Add draggable Floating Spectator corners
+
+- Added an always-visible, keyboard-accessible header grip that moves the Floating Spectator among
+  all four viewport corners. Primary mouse, pen, and touch drags begin after 6px, follow the pointer
+  without rerendering the monitor, stay inside the viewport, preview the targeted quadrant, and snap
+  the complete player to safe-area-aware anchors on release.
+- Added interruption safety for Escape, pointer cancellation, resize/orientation, visibility, mode,
+  room, and participant changes; arrow-key adjacency and live corner announcements; reduced-motion
+  handling; and bottom-right reset after Stop Spectating or reload. Corner choice otherwise survives
+  scrolling, console tabs, trainee switches, attempts, Docked/Floating, Fullscreen, and room ending.
+- Preserved the single inert player and projection poll. Added component and Instructor Console
+  coverage for geometry, gestures, input filtering, all corners, announcements, cancellation, and
+  lifecycle retention. All 1,091 tests, the TypeScript production build, and ESLint pass. A live
+  1280×720 instructor-room run verified exact 16px anchors, full 360×280 resting size, real pointer
+  and keyboard movement, visible focus/controls, and clean browser logs.
+
+## [2026-09-05] [planning/instructor] — Confirm draggable Floating Spectator corners
+
+- Replaced the deliberately fixed bottom-right Floating Spectator contract with a bottom-right-default
+  player that can be dragged by mouse, pen, or touch and moved by keyboard among all four viewport
+  corners. A 6px threshold, player-center quadrant selection, target preview, safe-area anchoring,
+  cancellation semantics, position announcements, and reduced-motion behavior are now explicit.
+- The pinned corner persists across scrolling, console tabs, trainee switches, Docked/Floating and
+  Fullscreen round-trips, New Attempt, and End Room. Stop Spectating or reload resets the next player
+  to bottom-right. The existing player, inert monitor, selection, and polling path remain unchanged.
+- Approved a narrow exception to the Tailwind-only styling convention for temporary pointer-drag
+  coordinates; every resting position remains a static stylesheet-defined corner. This localized,
+  reversible presentation behavior does not warrant an ADR.
 
 ## [2026-09-05] [auth/ui] — Complete invite-only Instructor onboarding
 
