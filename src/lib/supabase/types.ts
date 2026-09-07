@@ -53,6 +53,72 @@ export type Database = {
         }
         Relationships: []
       }
+      evaluation_reports: {
+        Row: {
+          id: string
+          owner_user_id: string
+          source_session_id: string
+          source_room_code: string
+          attempt_version: number
+          attempt_label: string
+          scenario_name: string
+          defibrillator_model: 'wagamiX' | 'wagamiZ' | null
+          scenario_snapshot: unknown
+          participants: unknown
+          participant_attempts: unknown
+          events: unknown
+          state_history: unknown
+          student_names: string[]
+          status: 'incomplete' | 'complete'
+          completion_method: 'attempt_transition' | 'room_ended' | 'manual' | 'account_disabled' | null
+          started_at: string
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          owner_user_id: string
+          source_session_id: string
+          source_room_code: string
+          attempt_version: number
+          attempt_label?: string
+          scenario_name?: string
+          defibrillator_model?: 'wagamiX' | 'wagamiZ' | null
+          scenario_snapshot?: unknown
+          participants?: unknown
+          participant_attempts?: unknown
+          events?: unknown
+          state_history?: unknown
+          student_names?: string[]
+          status?: 'incomplete' | 'complete'
+          completion_method?: 'attempt_transition' | 'room_ended' | 'manual' | 'account_disabled' | null
+          started_at?: string
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['evaluation_reports']['Insert']>
+        Relationships: []
+      }
+      evaluation_report_audit_log: {
+        Row: {
+          id: string
+          report_id: string
+          actor_user_id: string
+          action: 'create' | 'attempt_name_update' | 'student_names_update' | 'manual_completion' | 'delete' | 'product_correction'
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          report_id: string
+          actor_user_id: string
+          action: 'create' | 'attempt_name_update' | 'student_names_update' | 'manual_completion' | 'delete' | 'product_correction'
+          created_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['evaluation_report_audit_log']['Insert']>
+        Relationships: []
+      }
       sessions: {
         Row: {
           id: string
@@ -379,6 +445,18 @@ export type Database = {
           ordered_folder_ids: string[]
         }
         Returns: Database['public']['Tables']['scenario_folders']['Row'][]
+      }
+      search_evaluation_reports: {
+        Args: {
+          p_owner: string
+          p_status?: 'all' | 'complete' | 'incomplete'
+          p_query?: string
+          p_from?: string | null
+          p_to?: string | null
+          p_offset?: number
+          p_limit?: number
+        }
+        Returns: unknown
       }
     }
     Enums: Record<never, never>

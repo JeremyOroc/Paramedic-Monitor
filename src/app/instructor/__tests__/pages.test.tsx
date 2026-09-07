@@ -26,6 +26,9 @@ vi.mock('@/components/accounts/AcceptInvitePage', () => ({
 vi.mock('@/components/accounts/AccountPanel', () => ({
   AccountPanel: ({ username }: { username: string }) => <div>account:{username}</div>,
 }))
+vi.mock('@/components/reports/ReportsPage', () => ({
+  ReportsPage: () => <div>persistent reports</div>,
+}))
 
 import AccountPage from '@/app/instructor/account/page'
 import InviteAcceptancePage from '@/app/instructor/accept-invite/page'
@@ -33,6 +36,7 @@ import ForgotPasswordPage from '@/app/instructor/forgot-password/page'
 import LoginPage from '@/app/instructor/login/page'
 import InstructorPage from '@/app/instructor/page'
 import ResetPasswordPage from '@/app/instructor/reset-password/page'
+import ReportsPage from '@/app/instructor/reports/page'
 
 describe('Instructor account pages', () => {
   beforeEach(() => {
@@ -74,6 +78,15 @@ describe('Instructor account pages', () => {
     mocks.getCurrentAccount.mockResolvedValue(null)
     await expect(AccountPage()).rejects.toThrow('redirect:/instructor/login')
     await expect(ResetPasswordPage()).rejects.toThrow('redirect:/instructor/login')
+  })
+
+  it('protects the persistent Reports area with the same live Account check', async () => {
+    const reports = render(await ReportsPage())
+    expect(screen.getByText('persistent reports')).toBeInTheDocument()
+    reports.unmount()
+
+    mocks.getCurrentAccount.mockResolvedValue(null)
+    await expect(ReportsPage()).rejects.toThrow('redirect:/instructor/login')
   })
 
   it('routes an authenticated Instructor home to Account and anonymous users to login', async () => {

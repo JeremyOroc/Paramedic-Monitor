@@ -1825,10 +1825,10 @@ The matching application branch and `20260907032643_phase_3_scenario_ownership.s
 then deployed together. Production health and all ten rollout checks passed. The existing verified
 `JeremyTest` Auth identity was deliberately renamed to the reserved `Jeremy` username and assigned
 the `administrator` role by immutable user ID; subsequent sign-in and Administrator-only shared
-Template operations passed. Phase 3 is complete in production, and Phase 4 account-owned Room
-authorization is next.
+Template operations passed. Phase 3 is complete in production, Phase 4 account-owned Room
+authorization is production-verified, and Phase 5 persistent Reports are code-complete locally.
 
-#### Account implementation Phase 4 — Account-owned Rooms, controller takeover, and expiry (CODE COMPLETE — LOCAL VERIFICATION PASSED 2026-09-07)
+#### Account implementation Phase 4 — Account-owned Rooms, controller takeover, and expiry (PRODUCTION VERIFIED 2026-09-07)
 
 Phase 4 removes the legacy host-token authorization path and deletes its existing temporary Room
 rows at rollout. Every new Room belongs to the immutable Auth user ID of the enabled Account that
@@ -1867,8 +1867,52 @@ offers only trainee Join and Instructor sign-in, `/admin` redirects anonymous vi
 and the browser console remains clean. Application integration coverage exercises Account-owned
 creation, one-live-Room conflicts, reopen/end-and-replace choices, clean instructor URLs, local
 controller persistence, read-only observation, confirmed takeover, and immediate stale-controller
-rejection. The migration remains local until the matching application branch is merged and the
-destructive legacy-Room cleanup is deliberately deployed in the Phase 4 maintenance window.
+rejection. The matching application branch and destructive legacy-Room migration were deployed
+together. The complete production owner/controller/trainee acceptance checklist passed, so Phase 4
+is closed.
+
+#### Account implementation Phase 5 — Persistent Evaluation reports (CODE COMPLETE — LOCAL VERIFICATION PASSED 2026-09-07)
+
+Phase 5 implements the approved persistent-report contract above without introducing college or
+organization multi-tenancy. Starting an Attempt creates one Account-owned Evaluation record that
+autosaves the complete multi-trainee timeline and an immutable snapshot of the scenario name,
+confirmed defibrillator model, and report-relevant configuration. New Attempt and explicit End Room
+complete the outgoing record; expiry leaves it Incomplete. Ending or later deleting temporary Room
+state cannot erase the durable record, while deliberate Account deletion cascades its Reports.
+
+The authenticated Reports area lists the current Account's records newest-first in pages of 25 with
+All, Complete, and Incomplete status filters, optional Toronto-local date bounds, and search across
+Attempt name, scenario name, and Student names. A report can be opened, have its optional Attempt name
+and repeatable Student names edited within their existing limits, copy its Toronto-time timeline,
+manually complete an abandoned record, or be permanently deleted through contextual confirmation.
+Report creation and consequential mutations write privacy-minimized audit entries containing only
+actor, action, report ID, and timestamp.
+
+##### Testing
+
+- Add migration-contract and transactional pgTAP coverage for per-Attempt creation, immutable owner
+  and scenario snapshot, autosaved durable participants/events/state, explicit versus expiry
+  completion, owner isolation, Account-deletion cascade, grants, RLS, and content-free auditing.
+- Add service and route coverage for owner-only paginated filtering/search, Toronto date bounds,
+  report detail reconstruction, Attempt/Student-name validation and editing, manual completion,
+  permanent deletion, and inaccessible-record responses.
+- Add component and page coverage for list states, pagination and filters, detail rendering, editable
+  metadata, timeline copying, contextual deletion confirmation, and incomplete/manual-complete state.
+- Replay every migration locally, run pgTAP and Supabase schema lint, run the complete Vitest suite,
+  TypeScript, ESLint, and a production build, then exercise the Reports workflow in the rendered
+  application before marking Phase 5 code complete.
+
+Phase 5 passed a clean replay of every migration, all 118 pgTAP assertions, error-level Supabase
+schema lint, 1,199 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero
+errors and the 12 pre-existing warnings, and the Next.js production build. Rendered local QA used a
+disposable invited-style Account and persistent report at the available 319×748 in-app viewport to
+verify protected entry, report list/detail loading, search/status filtering, metadata persistence,
+manual completion without timeline mutation, contextual permanent-deletion confirmation, durable
+timeline rendering, Toronto timestamps, no horizontal overflow, no framework overlay, and an empty
+warning/error console. A wider rendered viewport remains a rollout smoke-test item; responsive
+component coverage and the production build pass. The matching application branch and
+`20260907135753_phase_5_persistent_reports.sql` migration remain undeployed until the deliberate
+Phase 5 rollout.
 
 ---
 

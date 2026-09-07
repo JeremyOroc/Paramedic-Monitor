@@ -572,6 +572,31 @@ describe('buildEvaluationTimeline', () => {
     expect(durationMs).toBe(252_000)
   })
 
+  it('uses the persistent report start as the baseline when it is provided', () => {
+    const { rows, baselineMs } = build({
+      baselineAt: at(30),
+      attempts: [{ ...ATTEMPTS[0], started_at: at(-60) }],
+      events: [makeEvent({ occurred_at: at(42) })],
+    })
+
+    expect(baselineMs).toBe(startMs + 30_000)
+    expect(rows[0].offset).toBe('t+0:12')
+  })
+
+  it('keeps the corrected action timestamp for persistent report display and copying', () => {
+    const { rows } = build({
+      events: [
+        makeEvent({
+          occurred_at: at(100),
+          occurred_at_client: at(40),
+          clock_offset_ms: 2_000,
+        }),
+      ],
+    })
+
+    expect(rows[0].occurredAt).toBe(at(42))
+  })
+
   it('falls back to the first recorded row when the attempt has no start time', () => {
     const { rows, baselineMs } = build({
       attempts: [],

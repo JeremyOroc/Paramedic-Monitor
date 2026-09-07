@@ -5,6 +5,39 @@
 
 ---
 
+## [2026-09-07] [reports] — Complete Phase 5 persistent Evaluation reports locally
+
+- Added one durable, Account-owned Evaluation report per started Attempt. Database triggers snapshot
+  the scenario and confirmed defibrillator model, backfill pre-start participant/timeline data,
+  autosave subsequent trainee actions and instructor states, synchronize Attempt names, complete on
+  New Attempt, and deliberately leave passive-expiry reports Incomplete. Explicit End Room and Account
+  disablement complete the current report without changing its timeline.
+- Added owner-only report listing and detail APIs with 25-row newest-first pagination, All/Complete/
+  Incomplete filters, Toronto-local date bounds, and search across Attempt, scenario, and Student
+  names. Immutable ownership/snapshots, column-level grants, RLS, manual-only browser completion,
+  Account-deletion cascade, and content-free mutation auditing enforce the persistence boundary.
+- Added the protected Reports UI with metadata editing, repeatable Student names, Toronto timestamps,
+  EST/EDT timeline copying, manual completion, and contextual unrecoverable-deletion confirmation.
+  Account and Reports surfaces link back to the console without introducing the Phase 6 navigation
+  shell early.
+- Verified a clean replay of every migration, 118 pgTAP assertions, error-level Supabase schema lint,
+  all 1,199 Vitest tests with one opt-in integration test skipped, TypeScript, ESLint with zero errors
+  and the 12 existing warnings, and the Next.js production build. Rendered local QA at 319×748 passed
+  sign-in, list/detail loading, metadata persistence, manual completion, filtering, deletion-dialog,
+  timeline, no-horizontal-overflow, and console-health checks. Production is unchanged.
+
+## [2026-09-07] [reports/sessions] — Start Phase 5 persistent Evaluation reports
+
+- Confirmed Phase 4 in production after the complete owner/controller/trainee acceptance checklist
+  passed, including the provisioned `Jeremy` Administrator flow.
+- Opened `phase/5-persistent-reports` from the merged production revision and recorded the approved
+  implementation contract for Account-owned, per-Attempt Evaluation records, immutable scenario
+  snapshots, autosaved timelines, Student-name metadata, report search/edit/completion/deletion, and
+  privacy-minimized auditing.
+- Added the Phase 5 testing gate covering migration replay, RLS and audit assertions, service/API and
+  component behavior, TypeScript, lint, production build, and rendered report workflows. No production
+  migration has been applied.
+
 ## [2026-09-07] [sessions/auth] — Complete Phase 4 Account-owned Rooms locally
 
 - Replaced public host-token Room creation with authenticated Account ownership. The migration removes
