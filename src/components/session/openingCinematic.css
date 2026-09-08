@@ -1,0 +1,109 @@
+@reference "../../app/globals.css";
+
+@layer utilities {
+  .cinematic-scroll-lock, .cinematic-scroll-lock body { overflow: hidden; }
+  .cinematic { height: 100dvh; contain: layout paint; }
+  .cinematic-aura {
+    background: radial-gradient(ellipse at 50% 58%, color-mix(in srgb, var(--color-dispatch-orange) 18%, transparent), transparent 62%);
+    opacity: 0;
+  }
+  .cinematic-figure { position: absolute; inset: 3% 4% 0; display: grid; place-items: center; opacity: 0; }
+  .cinematic-figure img { width: 100%; height: 100%; object-fit: contain; }
+  .cinematic-figure, .cinematic-flying-blade { mix-blend-mode: screen; }
+  .cinematic-windup { inset: 3% 13% 0; }
+  .cinematic-apex { inset: 5% 3% 0; }
+  .cinematic-chains { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--color-dispatch-accent); opacity: 0; }
+  .cinematic-flying-blade { position: absolute; top: 30%; width: 38%; opacity: 0; }
+  .cinematic-flying-blade img { width: 100%; }
+  .cinematic-blade-left { left: 32%; }
+  .cinematic-blade-right { right: 32%; }
+  .cinematic-slash { position: absolute; left: -15%; top: 50%; width: 130%; height: 4px; opacity: 0;
+    background: var(--color-dispatch-paper); border-radius: 50%;
+    box-shadow: 0 0 12px 3px var(--color-pending-amber), 0 0 38px 9px var(--color-dispatch-orange); }
+  .cinematic-slash-second { top: 51%; }
+  .cinematic-impact { position: absolute; inset: 25% 0; opacity: 0;
+    background: radial-gradient(ellipse, var(--color-dispatch-paper), color-mix(in srgb, var(--color-pending-amber) 55%, transparent) 35%, transparent 72%); }
+  .cinematic-slab { position: absolute; inset: 0; opacity: 0;
+    background: linear-gradient(110deg, color-mix(in srgb, var(--color-sidebar-bg) 40%, transparent), var(--color-monitor-bg)),
+      repeating-linear-gradient(125deg, transparent 0 80px, color-mix(in srgb, var(--color-dispatch-muted) 15%, transparent) 81px 82px, transparent 83px 180px); }
+  .cinematic-slab-upper { clip-path: polygon(0 0,100% 0,100% 48%,94% 49%,88% 48.7%,80% 50%,75% 49.4%,65% 51%,61% 50.5%,53% 51.8%,47% 51.4%,41% 53%,33% 52%,27% 53.5%,20% 53%,12% 54%,7% 53.6%,0 55%); }
+  .cinematic-slab-lower { clip-path: polygon(0 55%,7% 53.6%,12% 54%,20% 53%,27% 53.5%,33% 52%,41% 53%,47% 51.4%,53% 51.8%,61% 50.5%,65% 51%,75% 49.4%,80% 50%,88% 48.7%,94% 49%,100% 48%,100% 100%,0 100%); }
+  .cinematic-seam { position: absolute; top: 47%; left: -2%; width: 104%; height: 9%; opacity: 0;
+    clip-path: polygon(0 80%,7% 65%,12% 70%,20% 60%,27% 66%,33% 47%,41% 59%,47% 40%,53% 45%,61% 30%,65% 35%,75% 16%,80% 23%,88% 8%,94% 12%,100% 0,100% 4%,94% 17%,88% 13%,80% 29%,75% 23%,65% 43%,61% 37%,53% 53%,47% 48%,41% 67%,33% 55%,27% 74%,20% 68%,12% 78%,7% 74%,0 89%);
+    background: var(--color-pending-amber); filter: drop-shadow(0 0 5px var(--color-dispatch-orange)); }
+  .cinematic-title { position: absolute; left: 6%; right: 6%; display: grid; place-items: center; opacity: 0; text-align: center; }
+  .cinematic-title-upper { top: 22%; height: 24%; }
+  .cinematic-title-lower { top: 58%; height: 17%; }
+  .cinematic-wordmark { font-family: Georgia, 'Times New Roman', serif; font-weight: 900; font-size: clamp(3.5rem, 14vw, 13rem); line-height: 1; letter-spacing: 0.025em;
+    color: var(--color-dispatch-wall); -webkit-text-stroke: 1px var(--color-dispatch-accent);
+    background: repeating-linear-gradient(115deg, transparent 0 31px, color-mix(in srgb, var(--color-dispatch-ink) 60%, transparent) 32px 33px, transparent 34px 72px),
+      linear-gradient(165deg,var(--color-dispatch-paper) 5%,var(--color-dispatch-muted) 35%,var(--color-dispatch-wall) 48%,var(--color-dispatch-accent) 63%,var(--color-dispatch-muted) 85%);
+    background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 0 var(--color-dispatch-accent)) drop-shadow(0 5px 0 var(--color-dispatch-ink)) drop-shadow(0 8px 12px var(--color-monitor-bg)); }
+  .cinematic-subtitle { max-width: 100%; font-family: var(--font-geist-mono), monospace; font-weight: 500;
+    font-size: clamp(1rem, 3.5vw, 3rem); line-height: 1.5; letter-spacing: 0.25em;
+    color: var(--color-cyan-bp); text-shadow: 0 0 14px color-mix(in srgb, var(--color-cyan-bp) 65%, transparent); }
+  .cinematic-embers { position: absolute; inset: 0; opacity: 0; }
+  .cinematic-embers i { position: absolute; top: 52%; left: 50%; width: 3px; height: 8px; border-radius: 100%;
+    background: var(--color-pending-amber); box-shadow: 0 0 8px var(--color-dispatch-orange); }
+  .cinematic-embers i:nth-child(3n) { left: 22%; top: 54%; }
+  .cinematic-embers i:nth-child(3n + 1) { left: 77%; top: 48%; }
+  .cinematic-embers i:nth-child(2n) { animation-delay: 90ms; }
+  .cinematic-embers i:nth-child(4n) { animation-delay: 180ms; }
+  .cinematic-embers i:nth-child(5n) { animation-delay: 260ms; }
+  .cinematic-running .cinematic-aura { animation: cinematic-aura 4.3s both; }
+  .cinematic-running { animation: cinematic-exit 4.3s both; }
+  .cinematic-running .cinematic-art { animation: cinematic-shake 4.3s both; }
+  .cinematic-running .cinematic-windup { animation: cinematic-windup 4.3s both; }
+  .cinematic-running .cinematic-apex { animation: cinematic-apex 4.3s both; }
+  .cinematic-running .cinematic-chains { animation: cinematic-chain 4.3s both; }
+  .cinematic-running .cinematic-blade-left { animation: cinematic-blade-left 4.3s both; }
+  .cinematic-running .cinematic-blade-right { animation: cinematic-blade-right 4.3s both; }
+  .cinematic-running .cinematic-slash-first { animation: cinematic-slash 4.3s both; }
+  .cinematic-running .cinematic-slash-second { animation: cinematic-slash 4.3s 45ms both; }
+  .cinematic-running .cinematic-impact { animation: cinematic-impact 4.3s both; }
+  .cinematic-running .cinematic-slab-upper { animation: cinematic-upper 4.3s both; }
+  .cinematic-running .cinematic-slab-lower { animation: cinematic-lower 4.3s both; }
+  .cinematic-running .cinematic-seam { animation: cinematic-seam 4.3s both; }
+  .cinematic-running .cinematic-title-upper { animation: cinematic-title-upper 4.3s both; }
+  .cinematic-running .cinematic-title-lower { animation: cinematic-title-lower 4.3s both; }
+  .cinematic-running .cinematic-embers { animation: cinematic-particles 4.3s both; }
+  .cinematic-running .cinematic-embers i { animation-name: cinematic-spark; animation-duration: 1s; animation-iteration-count: 4; }
+  .cinematic-running .cinematic-embers i:nth-child(even) { animation-name: cinematic-spark-reverse; }
+  .cinematic-static .cinematic-aura, .cinematic-static .cinematic-seam,
+  .cinematic-static .cinematic-slab, .cinematic-static .cinematic-title { opacity: 1; }
+  @media (max-width: 600px) {
+    .cinematic-figure { inset: 17% -34% 12%; }
+    .cinematic-windup { inset: 9% -12% 7%; }
+    .cinematic-title { left: 5%; right: 5%; }
+    .cinematic-title-upper { top: 30%; height: 15%; }
+    .cinematic-title-lower { top: 59%; height: 15%; }
+    .cinematic-wordmark { font-size: 17vw; }
+    .cinematic-subtitle { max-width: 19ch; font-size: 5.5vw; letter-spacing: 0.2em; }
+    .cinematic-embers i:nth-child(n + 9) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cinematic *, .cinematic *::before, .cinematic *::after { animation: none !important; transition: none !important; }
+    .cinematic-figure, .cinematic-impact, .cinematic-slash, .cinematic-flying-blade, .cinematic-chains, .cinematic-embers { display: none; }
+    .cinematic-title, .cinematic-seam, .cinematic-slab { opacity: 1; }
+  }
+}
+
+@keyframes cinematic-aura { 0% {opacity:0} 15%,80% {opacity:1} 100% {opacity:0} }
+@keyframes cinematic-exit { 0%,95% {opacity:1} 100% {opacity:0} }
+@keyframes cinematic-windup { 0% {opacity:0;transform:scale(.86) translateX(3%)} 10% {opacity:1} 21% {opacity:1;transform:scale(.96) rotate(-4deg)} 26% {opacity:1;transform:scale(1.08) rotate(3deg)} 28%,100% {opacity:0;transform:scale(1.12)} }
+@keyframes cinematic-apex { 0%,25% {opacity:0;transform:scale(.94)} 28% {opacity:1;transform:scale(1.08)} 36% {opacity:.55;transform:scale(1.02) translateY(-3%)} 55%,86% {opacity:.3;transform:scale(1.04) translateY(-7%)} 100% {opacity:0;transform:scale(1.09) translateY(-9%)} }
+@keyframes cinematic-chain { 0%,18% {opacity:0;transform:rotate(-35deg) scale(.45)} 23% {opacity:.9;transform:rotate(-15deg) scale(.8)} 28% {opacity:.8;transform:rotate(6deg) scale(1.3)} 33%,100% {opacity:0;transform:rotate(15deg) scale(1.5)} }
+@keyframes cinematic-blade-left { 0%,20% {opacity:0;transform:translate(0,0) scale(.25) rotate(-60deg)} 23% {opacity:1} 28% {opacity:1;transform:translate(-145%,15%) scale(1.1) rotate(-15deg)} 33%,100% {opacity:0;transform:translate(-230%,35%) scale(1.2) rotate(5deg)} }
+@keyframes cinematic-blade-right { 0%,20% {opacity:0;transform:translate(0,0) scale(.25) rotate(120deg)} 23% {opacity:1} 28% {opacity:1;transform:translate(145%,-15%) scale(1.1) rotate(175deg)} 33%,100% {opacity:0;transform:translate(230%,-35%) scale(1.2) rotate(195deg)} }
+@keyframes cinematic-slash { 0%,23% {opacity:0;transform:scaleX(.01) rotate(-10deg)} 26% {opacity:1;transform:scaleX(1) rotate(-3deg)} 33% {opacity:.5} 38%,100% {opacity:0;transform:scaleX(1.1) rotate(-3deg)} }
+@keyframes cinematic-impact { 0%,25% {opacity:0;transform:scaleY(.05)} 27% {opacity:.95;transform:scaleY(1)} 30%,100% {opacity:0;transform:scaleY(.4)} }
+@keyframes cinematic-shake { 0%,26% {transform:translate(0)} 27% {transform:translate(-5px,3px)} 28% {transform:translate(4px,-2px)} 29% {transform:translate(-2px,1px)} 30%,100% {transform:translate(0)} }
+@keyframes cinematic-upper { 0%,27% {opacity:0;transform:translate(0)} 31% {opacity:.8} 38%,91% {opacity:.9;transform:translate(-.5%,-1.4%)} 100% {opacity:0;transform:translateY(-9%)} }
+@keyframes cinematic-lower { 0%,27% {opacity:0;transform:translate(0)} 31% {opacity:.8} 38%,91% {opacity:.96;transform:translate(.5%,1.4%)} 100% {opacity:0;transform:translateY(9%)} }
+@keyframes cinematic-title-upper { 0%,30% {opacity:0;transform:translateY(12px) scale(.96)} 36%,92% {opacity:1;transform:translateY(0) scale(1)} 100% {opacity:0;transform:translateY(-15px)} }
+@keyframes cinematic-title-lower { 0%,30% {opacity:0;transform:translateY(-8px)} 36%,92% {opacity:1;transform:translateY(0)} 100% {opacity:0;transform:translateY(15px)} }
+@keyframes cinematic-seam { 0%,26% {opacity:0;transform:scaleX(.01)} 28%,70% {opacity:1;transform:scaleX(1);background:var(--color-pending-amber)} 90% {opacity:1;background:var(--color-cyan-bp)} 100% {opacity:0;transform:scaleX(.35);background:var(--color-cyan-bp)} }
+@keyframes cinematic-particles { 0%,24% {opacity:0} 27%,40% {opacity:1} 85%,100% {opacity:0} }
+@keyframes cinematic-spark { 0% {opacity:1;transform:translate(0,0) rotate(20deg)} 100% {opacity:0;transform:translate(110px,-180px) rotate(130deg)} }
+@keyframes cinematic-spark-reverse { 0% {opacity:1;transform:translate(0,0) rotate(-20deg)} 100% {opacity:0;transform:translate(-130px,150px) rotate(-90deg)} }

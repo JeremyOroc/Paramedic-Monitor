@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
-import MonitorPage from '../page'
+import { MonitorPage } from '@/components/monitor/MonitorPage'
 
 // Uses the real DeviceShell (no mock) so the physical soft-key wiring is
 // exercised end to end: 12-lead → Back must return to the main waveform view.

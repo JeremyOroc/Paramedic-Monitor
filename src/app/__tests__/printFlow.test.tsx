@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 
 import { useMonitorStore } from '@/store/monitorStore'
-import MonitorPage from '../page'
+import { MonitorPage } from '@/components/monitor/MonitorPage'
 
 // Exercises the main-view PRINT key (real DeviceShell + page wiring): it is inert
 // until a 12-lead has been acquired, then reprints the latest capture over the main

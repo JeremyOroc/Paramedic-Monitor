@@ -216,6 +216,108 @@ paramedic-monitor/
 
 **Milestone:** Create session → land on instructor page. Join with code → land on monitor page. Instructor slot is exclusive.
 
+#### Landing-page opening cinematic enhancement (CODE COMPLETE, DEVICE QA PENDING — 2026-09-08)
+
+The requested cinematic belongs to the public root route at `https://paramedic-monitor.vercel.app`,
+not to Account authentication. Every ordinary arrival at `/` starts with the cinematic before
+revealing the existing Join Room and Instructor sign-in surface, including browser refresh, browser
+Back, and client-side return. No session/local-storage marker suppresses it. `/?dev=1` bypasses it so
+the local monitor-development shortcut remains immediate. It must not run merely because an Account
+successfully signs in or an authenticated page refreshes.
+
+Confirmed presentation constraints:
+
+- The full-motion treatment features newly generated layered artwork of Kratos in his God of War
+  III-era appearance wielding the Blades of Chaos. The supplied character and weapon images are
+  visual references. The replacement pose reference at
+  `https://www.youtube.com/watch?v=zRxdCYNxzAY` from `02:10`–`02:14` establishes a square-on,
+  braced Kratos resolving through a white-gold bloom into an arms-wide double-blade extension. The
+  generated choreography uses that extension as the apex that pulls the upper and lower screen
+  halves apart. Reference media is not copied into the application as the finished artwork.
+- The blade strike divides the presentation into upper and lower halves. The upper half reveals the
+  exact text `WAGAMI`; the lower half reveals the exact text `PARAMEDIC MONITOR`.
+- The full-motion storyboard begins on black with ash and chain movement, brings Kratos forward for a
+  cross-body chained-blade strike, flashes and jolts briefly at impact, separates the viewport into
+  two jagged upper/lower polygons around a molten seam, then cools that seam into the landing page's
+  cyan divider as the existing Room-access interface is revealed.
+- The approximately 4.3-second primary timeline lands the strike near `01.15`, begins the title reveal
+  and spoken-title cue near `01.30`, and exposes the usable landing page between `04.15` and `04.30`.
+  The full supplied title cue is preserved. A separately derived grunt may retain approximately one
+  second around its strongest attack; the supplied source file remains unchanged.
+- The first strike is unskippable. After it lands, a subtle lower-right `SKIP ›` control appears;
+  pointer activation outside other interactive controls, Enter, Space, or Escape finishes the
+  cinematic immediately while active audio fades over approximately 120ms. Asset or playback failure
+  must reveal the landing page rather than trap access.
+- `prefers-reduced-motion` replaces the action with the completed static split-screen title reveal.
+  It omits Kratos movement, sweeping chains, grunt, impact, camera shake, and flashes, but attempts the
+  supplied spoken-title cue before revealing the landing page.
+- The cinematic starts without an entrance gate. It attempts audio where browser policy permits,
+  continues silently when autoplay is blocked, and exposes `Replay with sound` on the revealed
+  landing page. `public/audio/Kratos Grunt.mp3` accompanies the slice and may be non-destructively
+  trimmed from its approximately 2.19-second source. `public/audio/Kratos WAGAMI PARAMEDIC MONITOR.mp3`
+  begins with the split-title reveal and is approximately 2.77 seconds long.
+- `Replay with sound` restarts the complete synchronized cinematic after a user gesture. Replays are
+  skippable immediately rather than repeating the initial mandatory-strike boundary.
+- `WAGAMI` uses massive weathered stone-and-bronze lettering lit by the molten seam. `PARAMEDIC
+  MONITOR` uses a sharp cyan clinical/monospaced treatment. The seam cools from orange fire into cyan
+  electricity before becoming the landing page's existing divider.
+- The blade strikes only the interface: sparks, embers, chains, and screen damage are allowed, but
+  blood, gore, people other than Kratos, and injury imagery are not.
+- The ident preserves the responsive public landing-page contract. Desktop and landscape iPad show
+  the full choreography; portrait phones use a tighter Kratos crop and reduced particle density while
+  keeping both title halves legible. It does not inherit the monitor surface's 1024px minimum width.
+- The visual uses two newly generated composited Kratos poses (wind-up and arms-wide apex) plus
+  separate blade, chain, glow, spark, and slash-trail layers. CSS transforms, opacity, masks, and
+  `clip-path` animate those layers; the impact bloom hides the pose swap. No rendered video or new
+  animation dependency is introduced.
+  Production refinement: the image tool returned painted checkerboards instead of alpha, so the final
+  background-only edits use black-backed WebP sprites with screen blending. The visual layering stays
+  unchanged; three compressed assets total approximately 464 KiB. Prompts and provenance are saved in
+  `docs/cinematic/production-assets.md`.
+- Critical visual layers receive at most `1.2s` to preload over an immediate black frame. Missing
+  essential art falls back to a brief static split-title treatment and then reveals the landing page.
+  Audio loading or playback never delays the visual sequence or Room access.
+- The landing card places a quiet `Replay with sound` text control below its existing links and hides
+  that control on `/?dev=1`. Replay opens the same overlay above the unchanged landing page and uses
+  its activating gesture to unlock the supplied sounds.
+- Cinematic artwork is decorative. A polite announcement says `Opening Paramedic Monitor`, and the
+  post-impact Skip control participates in keyboard focus. Timed completion does not steal focus;
+  manual Skip and replay completion move focus to the Room code input.
+- Before animation implementation, generate a concept sheet for explicit visual review. It must show
+  the wind-up, impact silhouette, and arms-wide apex plus representative desktop and portrait crops.
+  Animation code begins only after that artwork direction is approved.
+- ADR 0019 records the selected generated-art and supplied-audio provenance boundary. The application
+  does not copy the reference images or video, and the product owner remains responsible for public-
+  use rights to the recognizable character and supplied voice recordings.
+
+##### Testing
+
+- Component tests will cover every ordinary root arrival, refresh-equivalent remount behavior,
+  `/?dev=1` bypass, exact title copy and placement semantics, the unskippable strike boundary, all
+  supported skip inputs after that boundary, and final landing-page reveal.
+- Accessibility tests will cover reduced motion, keyboard operation, focus handoff, non-blocking
+  asset/audio failures, the polite opening announcement, decorative art exclusion, timed no-focus-
+  theft, manual focus transfer, and a silent fallback when playback is unavailable.
+- Loading tests will cover the `1.2s` preload ceiling, essential-art failure, late media completion,
+  cleanup on unmount, and audio loading never extending the visual gate.
+- Existing landing-page Join Room, Instructor sign-in, local development link, and routing tests must
+  continue to pass unchanged after the cinematic completes.
+- Rendered browser QA must cover the public desktop landing page, supported iPad landscape, and a
+  portrait-phone crop, including refresh/back/internal-return replay, timing, compositing seams,
+  allowed and blocked audio, replay-with-sound synchronization, and transition into the interactive
+  landing page.
+
+**Planning milestone:** The complete cinematic behavior, artwork pipeline, supplied-audio timing,
+responsive/accessibility treatment, fallback behavior, replay/skip interaction, test gate, and asset-
+approval checkpoint are accepted. The programmer switched models and authorized implementation on
+2026-09-08. The first concept sheet is generated at `docs/cinematic/concept-v1.png`, with its exact
+prompt at `docs/cinematic/concept-v1-prompt.md`. It shows the wind-up, impact, apex, and desktop/portrait
+title compositions. The programmer approved the concept and continued implementation. Production
+sprites and animation code now follow that approved checkpoint; verification results are recorded
+in `docs/cinematic/verification.md`. All 34 focused tests, TypeScript, and the Webpack production build
+pass. Desktop/portrait browser QA is complete; physical-device sound/Safari checks remain before
+release. The full suite's two expired-fixture failures are unrelated and documented there.
+
 ---
 
 ### Phase 3 — Student Monitor UI (Static Shell)

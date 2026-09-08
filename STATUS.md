@@ -6,6 +6,26 @@
 ---
 
 ## Current Phase
+**Landing-page opening cinematic — CODE COMPLETE, NOT DEPLOYED (2026-09-08).**
+The approved Kratos/Blades of Chaos sequence now opens the public `/` route and replays on ordinary
+arrivals, refresh, and client-side return. Development monitor shortcuts bypass it. The 4.3-second
+sequence uses generated wind-up/apex/weapon artwork, animated chains and slashes, jagged split halves,
+upper WAGAMI and lower cyan PARAMEDIC MONITOR titles. Three WebP sprites total about 464 KiB;
+background-only image edits and screen blending replace the generator's unsuccessful alpha output.
+Both supplied audio recordings are integrated; the grunt is shortened during playback only and
+the full title is preserved. The first strike is mandatory, followed by pointer/keyboard Skip with
+audio fade; Replay with sound is immediately skippable. Reduced motion, silent autoplay fallback,
+1.2-second critical-art preload ceiling, static fail-open, inert underlying controls, and focus
+handoff are implemented. All 34 focused cinematic/landing tests and TypeScript pass. ESLint has
+zero errors and the same 12 existing warnings. A production Webpack build passes; Turbopack's build
+worker cannot bind a port in this execution environment. Browser QA verified desktop/portrait
+compositions, refresh and client-return replay, immediate replay skip/focus, and no console errors.
+Physical iPad Safari and audible device-level timing remain manual release checks. The wider suite
+finishes with 1,323 passed, two unrelated expired Room-fixture failures, and one skipped test; an
+earlier spectator assertion passed on rerun. Results are detailed in
+`docs/cinematic/verification.md`. Concept approval is complete; artwork prompts and saved paths are
+in `docs/cinematic/production-assets.md`. No production deployment or database change was made.
+
 **Instructor-recorded actions — PHASE 16 CODE COMPLETE, MIGRATION PENDING (2026-09-07).**
 The console can record a med given while the paramedic's hands were full and a SAMPLE/OPQRST
 question asked out loud; both are credited to the trainee and marked as instructor-entered, and the

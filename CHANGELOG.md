@@ -5,6 +5,79 @@
 
 ---
 
+## [2026-09-08] [ui/qa] — Verify opening cinematic implementation
+
+- Completed the approved cinematic implementation milestone locally. All 34 focused tests and
+  TypeScript pass; ESLint has zero errors and the 12 existing warnings. The Webpack production build
+  passes. Default Turbopack cannot bind its local CSS-worker port in this execution environment.
+- Final full suite: 1,323 passed, two failures in unchanged Room tests with a now-expired fixed
+  fixture, one skipped. An initial spectator assertion passed on isolated and full reruns.
+- Browser-checked desktop/phone title compositions, landscape sizing, refresh and client-return
+  replay, immediate replay Skip and Room-code focus, development-monitor bypass, and clean console.
+- Recorded exact scope and remaining physical-device Safari/audible timing checks in
+  `docs/cinematic/verification.md`. No deployment or database change was made.
+
+## [2026-09-08] [ui/art] — Implement the approved opening cinematic
+
+- Continued after explicit concept approval: generated wind-up, apex, and independent blade artwork;
+  implemented the 4.3-second root-route cinematic with chained-blade sweep, split titles, molten/cyan
+  seam, and responsive phone crop. No rendered video or animation dependency was added.
+- Refined the production pipeline after the image tool painted checkerboards instead of alpha:
+  background-only generated corrections use black-backed WebP and screen compositing (464 KiB total).
+  Exact prompts and saved asset paths are in `docs/cinematic/production-assets.md`.
+- Wired both supplied recordings to the slice/title beats; grunt playback is limited to one second,
+  while the full title and both original audio files remain intact. Autoplay denial is silent and
+  Replay with sound unlocks audio through a user gesture.
+- Added post-strike keyboard/pointer Skip, immediate replay Skip, independent Mute, reduced-motion
+  static titles, bounded image preload/fail-open behavior, inert landing controls, and focus handoff.
+- Split the public landing entry from the dynamically loaded development monitor; preserved dev=1/2
+  bypasses and moved monitor regression tests to the actual monitor component.
+- Added cinematic, route, landing lifecycle, artwork loading, and isolated audio-controller tests.
+  Verification is in progress; final results will be recorded in a subsequent entry.
+
+## [2026-09-08] [ui/art] — Create opening cinematic concept for visual approval
+
+- Began the authorized implementation with the agreed visual checkpoint. Generated and inspected
+  `docs/cinematic/concept-v1.png` using the built-in image tool and supplied character/blade references.
+- The sheet shows wind-up, impact, arms-wide apex, desktop split titles, and portrait split titles.
+  Preserved the exact generation prompt in `docs/cinematic/concept-v1-prompt.md`.
+- Recorded implementation authorization and the completed concept milestone. Final production layers
+  and animation code await the programmer's concept approval; the supplied audio files remain intact.
+
+
+## [2026-09-08] [planning/ui] — Move Kratos cinematic to public landing-page load
+
+- Replaced the initial post-login concept with an opening cinematic on every new document load of the
+  public `/` landing page, including browser refreshes. Account sign-in and authenticated refreshes no
+  longer trigger it.
+- Confirmed an unskippable opening strike followed by keyboard/pointer skipping, a fail-open landing
+  page transition, and a reduced-motion static split-title treatment.
+- Confirmed replay on every ordinary root arrival, including refresh, Back, and client navigation,
+  while exempting `/?dev=1`; no browser-storage suppression is allowed.
+- Accepted the black/ash, cross-body chained-blade strike, jagged molten split, exact upper `WAGAMI`
+  and lower `PARAMEDIC MONITOR`, cyan-divider landing reveal, responsive crop, and no-gore direction.
+- Selected newly generated layered Kratos artwork based on the supplied visual/video references. The
+  supplied approximately 2.19-second grunt and 2.77-second spoken-title files will drive the slice and
+  title beats, with a silent autoplay fallback and a landing-page replay-with-sound affordance.
+- Replaced the inaccessible first video with the supplied playable `02:10`–`02:14` reference and
+  captured its square-on, white-gold, arms-wide double-blade extension as the split's apex pose.
+- Extended the accepted timeline to approximately 4.3 seconds so the complete spoken title can play,
+  authorized a non-destructive derived grunt trim, and fixed the strike/title/landing beats near
+  `01.15`, `01.30`, and `04.15`–`04.30` respectively.
+- Confirmed full-sequence sound-enabled replay, immediate replay skipping, spoken-title-only reduced
+  motion, the stone/bronze-to-cyan title treatment, and a post-impact `SKIP ›` affordance with a short
+  audio fade.
+- Selected two generated transparent character poses with separate weapon/effect layers animated by
+  CSS, avoiding both rendered video and a new animation dependency. Added an immediate black frame,
+  `1.2s` preload ceiling, and static fail-open behavior that never lets audio delay Room access.
+- Placed `Replay with sound` beneath the landing links, defined the `/?dev=1` exception, and settled
+  the polite opening announcement, decorative-art semantics, keyboard Skip, timed no-focus-theft, and
+  manual focus transfer to Room code.
+- Completed the component, accessibility, loading, regression, and rendered-browser test gate. Added
+  a mandatory concept-sheet approval checkpoint before code and ADR 0019 for the generated-art and
+  supplied-audio provenance boundary. Planning is complete; implementation awaits a GPT-6 Astra model
+  switch and explicit programmer authorization.
+
 ## [2026-09-07] [instructor/server] — Record meds and history questions from the console
 
 - Added a med grid as the middle column of the Monitor & Patient SNS tab. All twelve meds, derived

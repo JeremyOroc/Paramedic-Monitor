@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 
 import { useMonitorStore } from '@/store/monitorStore'
-import MonitorPage from '../page'
+import { MonitorPage } from '@/components/monitor/MonitorPage'
 
 // Exercises the real DeviceShell + page wiring: Capture soft key → "Acquiring"
 // card → static printout, and the Back precedence (cancel mid-acquire / dismiss).

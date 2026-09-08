@@ -7,9 +7,8 @@ import { pauseAlarm, playAlarm, playCallerInfoAlert, stopAllAudio } from '@/lib/
 import { useMonitorStore } from '@/store/monitorStore'
 import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 
-import MonitorPage from '../page'
-// The default export is the route wrapper and renders MonitorPage without
-// props; the session monitor page uses this named export to pass onStudentEvent.
+import { MonitorPage } from '@/components/monitor/MonitorPage'
+// Monitor behavior is independent of the public landing route.
 import { MonitorPage as MonitorPageWithProps } from '@/components/monitor/MonitorPage'
 
 vi.mock('@/lib/audio', () => ({

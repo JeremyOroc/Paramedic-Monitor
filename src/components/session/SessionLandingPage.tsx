@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type Ref } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -8,7 +8,12 @@ function participantStorageKey(code: string) {
   return `paramedic-monitor.participant.${code.toUpperCase()}`
 }
 
-export function SessionLandingPage() {
+interface SessionLandingPageProps {
+  roomCodeRef?: Ref<HTMLInputElement>
+  onReplay?: () => void
+}
+
+export function SessionLandingPage({ roomCodeRef, onReplay }: SessionLandingPageProps) {
   const router = useRouter()
   const [code, setCode] = useState('')
   const [nickname, setNickname] = useState('')
@@ -68,6 +73,7 @@ export function SessionLandingPage() {
                 Room code
               </span>
               <input
+                ref={roomCodeRef}
                 value={code}
                 onChange={(event) => setCode(event.target.value.toUpperCase())}
                 maxLength={6}
@@ -113,6 +119,12 @@ export function SessionLandingPage() {
             >
               Open local monitor dev mode
             </Link>
+            {onReplay && (
+              <button type="button" onClick={onReplay}
+                className="mt-1 min-h-11 text-center font-mono text-xs tracking-wide text-neutral-400 transition-colors hover:text-cyan-bp focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-bp">
+                Replay with sound
+              </button>
+            )}
         </div>
       </section>
     </main>

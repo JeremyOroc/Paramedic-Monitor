@@ -210,3 +210,7 @@ _Avoid_: Primary display, production monitor
 **Training display**:
 An explicitly supported non-mini iPad, ordinarily an iPad 8th generation, used in landscape orientation by a trainee to view a Wagami X or Wagami Z during an attempt. Full-screen Safari and standalone display modes are supported; narrow multitasking windows and portrait layouts are outside the monitor surface. iPad mini is not tested, certified, or optimized, although its device surface may render when its usable viewport passes the general capability threshold.
 _Avoid_: Mobile display, tablet monitor
+
+**Opening cinematic**:
+The full-screen branded presentation shown on every ordinary arrival at the public landing page, before its Room-access controls are revealed. It is independent of Account authentication, replays on refresh and client-side return, and does not obstruct the local monitor development shortcut.
+_Avoid_: Login animation, sign-in animation, splash screen

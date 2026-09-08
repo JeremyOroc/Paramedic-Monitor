@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
-import MonitorPage from '../page'
+import { MonitorPage } from '@/components/monitor/MonitorPage'
 
 // Real DeviceShell (no mock): exercises the full Patient Info flow driven by the
 // physical soft keys + right-cluster nav buttons.

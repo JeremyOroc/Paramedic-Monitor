@@ -1,0 +1,19 @@
+# Opening cinematic concept v1
+
+Generated with the built-in image-generation tool for the approved visual checkpoint.
+This sheet is a storyboard preview, not a production sprite sheet. Final transparent layers
+will be generated after approval; text will be rendered by the application.
+
+## Generation prompt
+
+Use case: stylized-concept
+Asset type: polished concept approval sheet for a 4.3-second website opening cinematic. This is a new artwork generation guided by reference images, not an edit of their layouts.
+Input images: Image 1 is the character appearance reference (Greek-era Kratos: ash-white skin, red tattoo, bald head, short dark goatee, bronze shoulder armor, chained bracers, leather Greek battle skirt). Image 2 is a weapon-design reference; use the upper fiery broad hooked blade with a sculpted bronze guard and glowing orange-red core for BOTH Blades of Chaos.
+Primary request: Create ONE beautiful, exceptionally clear wide cinematic storyboard/contact sheet on near-black, with five well-separated panels. Top row: THREE equal landscape action panels labeled only "01 WIND-UP", "02 IMPACT", "03 APEX". Bottom row: a LARGE landscape frame occupying the lower-left two thirds labeled "DESKTOP REVEAL", and a tall portrait frame at lower right labeled "PORTRAIT REVEAL". Restrained tiny cream editorial labels outside panels; fine dark rules, generous orderly gutters. Keep each panel fully contained.
+Top panel 1: dynamic full-body Kratos with planted bent knees, torso wound up, both blade-bearing arms drawn inward across body, taut chains, readable face, black void and scarce ash. His body position gives an obvious imminent explosive outward sweep. Both hands grip blades correctly.
+Top panel 2: same character square to camera in powerful explosive outward strike, white-gold impact bloom concentrated in a thin band at chest height, readable dark silhouette through bloom; two curved fire blade trails tearing across center. Keep bloom local so it will be implementable without a prolonged full-screen strobe.
+Top panel 3: same full-body Kratos, front-facing, legs braced, arms spread wide near shoulder level with one hooked blade in each hand, chain wraps around forearms; unmistakable strong wide apex silhouette. Ultra-detailed ash skin, short goatee, red marking, bronze and worn leather, fierce expression. No modern beard or axe.
+Bottom desktop reveal: full-screen black split into upper and lower jagged dark slabs by ONE shallow diagonal near-horizontal molten orange-gold seam at mid-height. Upper half: exact giant word "WAGAMI" (W A G A M I), weathered stone face with bronze beveled edges, centered comfortably inside upper half. Lower half: exact text "PARAMEDIC MONITOR" in crisp luminous cyan clinical monospaced uppercase, horizontally centered comfortably inside lower half. Spacious readable composition. A dim receding arms-wide Kratos silhouette behind, never occluding letters. Upper slab offset slightly upward, lower slightly down. Minimal sparks. Small "SKIP ›" at bottom right.
+Bottom portrait: tall phone-proportioned black composition with same upper WAGAMI, shallow molten split, lower PARAMEDIC MONITOR (may wrap to two lines to fit but remain entirely in lower half). More tightly cropped Kratos background and minimal particles. Strong legibility and margins; no phone hardware mockup.
+Style: premium dark Greek action-game cinematic illustration, realistic painted/3D hybrid, beautiful crisp material detail, strong deliberate anatomy and dynamic poses; production art direction board, not a comic.
+Constraints: only Kratos; no victims, no blood, no gore, no injury, no additional people; the weapon cuts the screen itself. No God of War logos, no game UI, no watermarks. Maintain character and matching pair of blade designs across all panels. Both titles spelled exactly. No extra explanatory paragraphs. Show distinct poses and preserve the literal upper-versus-lower split.
