@@ -73,6 +73,42 @@ _Avoid_: Session, lobby, class
 A single instructor-led dispatch simulation run whose confirmed scenario and defibrillator model remain fixed until the attempt ends.
 _Avoid_: Drill, run, session
 
+**Assignment dashboard**:
+The trainee-facing dispatch surface that presents New Assignment at the beginning of an Attempt and
+when CALL INFO is reopened later. It is distinct from the legacy classic caller-information view.
+_Avoid_: Ambulance monitor alert, map page
+
+**Incident scene**:
+The caller address to which the unit responds during the Dispatch leg and from which the patient
+departs during the Transport leg.
+_Avoid_: Starting address, destination address
+
+**Dispatch leg**:
+The response route from the instructor-configured unit origin to the Incident scene.
+_Avoid_: Initial route, first route
+
+**Transport leg**:
+The trainee-local route carrying the patient toward the Selected receiving hospital. It begins at the
+Incident scene, or at the unit's current position when the trainee reroutes after Transport begins.
+_Avoid_: Hospital route, second route
+
+**Receiving hospital**:
+A hospital the trainee may select as the destination of the Transport leg.
+_Avoid_: Hospital pin, new destination
+
+**Selected receiving hospital**:
+The Receiving hospital currently chosen by one trainee for the Transport leg of an Attempt. The
+choice is independent for each trainee, may change while Transport is underway, becomes final at the
+hospital, and is cleared when the Attempt, monitor, dispatch run, or Incident scene changes.
+_Avoid_: Confirmed hospital, shared destination
+
+**Receiving Hospital Directory**:
+The curated set of 18 Montréal-area Receiving hospitals available to trainees: 16 adult hospitals
+and 2 pediatric hospitals. Its names, designations, and notes are authored simulation curriculum,
+while its routing locations come from reviewed institutional addresses. It is not a directory of
+every hospital in Québec and does not claim to be current clinical-routing guidance.
+_Avoid_: All Québec hospitals, nearby hospitals
+
 **Spectator view**:
 A host-authorized, read-only reproduction of one trainee's current simulator presentation, shown either inside the Instructor Console or as a standalone page. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
 _Avoid_: Remote monitor, screen share, instructor monitor

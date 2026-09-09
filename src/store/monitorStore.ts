@@ -665,7 +665,13 @@ export const useMonitorStore = create<MonitorState>()(
           // confirmed) makes this Send a re-dispatch: the timing restarts and the
           // trainee must Acknowledge/Arrive again. The first Send is always one.
           const countdownChanged = s.dispatchSavedSeconds !== s.dispatchConfirmedSeconds
-          const redispatch = !s.dispatch.armed || countdownChanged
+          const previousDestination = s.dispatchRouteConfirmed.destination
+          const nextDestination = s.dispatchRouteSaved.destination
+          const incidentChanged =
+            s.dispatchRouteSaved.destinationAddress !== s.dispatchRouteConfirmed.destinationAddress ||
+            nextDestination?.lat !== previousDestination?.lat ||
+            nextDestination?.lng !== previousDestination?.lng
+          const redispatch = !s.dispatch.armed || countdownChanged || incidentChanged
 
           const dispatchDurationSeconds = s.dispatchSavedSeconds
           const routeReady = s.dispatchRouteSaved.status === 'ready'
@@ -707,6 +713,7 @@ export const useMonitorStore = create<MonitorState>()(
               countdownEndsAt: now + durationMs,
               acknowledgedAt: null,
               arrivedAt: null,
+              transportedAt: null,
             },
           }
         }),
@@ -744,8 +751,15 @@ export const useMonitorStore = create<MonitorState>()(
             shared.dispatch,
             s.dispatchConfirmedSeconds * 1000,
           )
+          const incomingRoute = normalizeDispatchRoute(shared.dispatchRouteConfirmed)
+          const previousDestination = s.dispatchRouteConfirmed.destination
+          const nextDestination = incomingRoute.destination
+          const incidentChanged =
+            incomingRoute.destinationAddress !== s.dispatchRouteConfirmed.destinationAddress ||
+            nextDestination?.lat !== previousDestination?.lat ||
+            nextDestination?.lng !== previousDestination?.lng
           let dispatch: DispatchState
-          if (incoming.runId === s.dispatch.runId) {
+          if (incoming.runId === s.dispatch.runId && !incidentChanged) {
             dispatch = {
               ...incoming,
               acknowledgedAt: s.dispatch.acknowledgedAt,
@@ -758,7 +772,7 @@ export const useMonitorStore = create<MonitorState>()(
               ...incoming,
               acknowledgedAt: null,
               arrivedAt: null,
-              transportedAt: s.dispatch.transportedAt,
+              transportedAt: null,
               callerEvents: s.dispatch.callerEvents,
             }
           } else {
@@ -789,7 +803,7 @@ export const useMonitorStore = create<MonitorState>()(
             confirmedVitalActive,
             confirmedVitalsActive: anyVitalActive(confirmedVitalActive),
             callerInfoConfirmed: normalizeCallerInfo(shared.callerInfoConfirmed),
-            dispatchRouteConfirmed: normalizeDispatchRoute(shared.dispatchRouteConfirmed),
+            dispatchRouteConfirmed: incomingRoute,
             dispatch,
             dispatchConfirmedSeconds:
               typeof shared.dispatchConfirmedSeconds === 'number'

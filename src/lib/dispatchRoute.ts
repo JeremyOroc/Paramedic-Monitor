@@ -31,6 +31,10 @@ type OsrmResponse = {
   routes?: OsrmRoute[]
 }
 
+type OsrmTableResponse = {
+  distances?: Array<Array<number | null>>
+}
+
 export function getGeoapifyApiKey(): string {
   return process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY ?? ''
 }
@@ -109,10 +113,12 @@ export async function geocodeAddress(
 export async function fetchDrivingRoute(
   origin: LatLng,
   destination: LatLng,
+  signal?: AbortSignal,
 ): Promise<Pick<DispatchRoute, 'distanceMeters' | 'durationSeconds' | 'geometry'>> {
   const coordinates = `${origin.lng},${origin.lat};${destination.lng},${destination.lat}`
   const response = await fetch(
     `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`,
+    { signal },
   )
   if (!response.ok) {
     throw new Error('Route lookup unavailable')
@@ -133,6 +139,31 @@ export async function fetchDrivingRoute(
     durationSeconds: route.duration,
     geometry: route.geometry.coordinates.map(([lng, lat]) => ({ lat, lng })),
   }
+}
+
+export async function fetchDrivingDistances(
+  origin: LatLng,
+  destinations: readonly LatLng[],
+  signal?: AbortSignal,
+): Promise<Array<number | null>> {
+  if (destinations.length === 0) return []
+
+  const coordinates = [origin, ...destinations]
+    .map((point) => `${point.lng},${point.lat}`)
+    .join(';')
+  const destinationIndexes = destinations.map((_, index) => index + 1).join(';')
+  const response = await fetch(
+    `https://router.project-osrm.org/table/v1/driving/${coordinates}?sources=0&destinations=${destinationIndexes}&annotations=distance`,
+    { signal },
+  )
+  if (!response.ok) throw new Error('Distance ranking unavailable')
+
+  const data = await response.json() as OsrmTableResponse
+  const distances = data.distances?.[0]
+  if (!Array.isArray(distances) || distances.length !== destinations.length) {
+    throw new Error('Distance ranking unavailable')
+  }
+  return distances.map((distance) => typeof distance === 'number' ? distance : null)
 }
 
 export function formatDistance(meters: number | null): string {

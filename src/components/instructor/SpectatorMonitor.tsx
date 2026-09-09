@@ -231,6 +231,9 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
         canEnterMonitor={projection.gateSatisfied}
         onEnterMonitor={noop}
         route={projection.dispatchRoute}
+        hospitalMap={projection.hospitalMap}
+        transported={projection.dispatch.transportedAt !== null}
+        mapReadOnly
       />
     )
   }
@@ -319,6 +322,9 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
         responseFormatted={projection.responseTimer}
         countdownFormatted={projection.countdownFormatted}
         route={projection.dispatchRoute}
+        hospitalMap={projection.hospitalMap}
+        transported={projection.dispatch.transportedAt !== null}
+        mapReadOnly
       />
     </div>
   )

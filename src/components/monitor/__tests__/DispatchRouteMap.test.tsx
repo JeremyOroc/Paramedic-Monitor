@@ -12,7 +12,19 @@ const leaflet = vi.hoisted(() => {
   mapInstance.fitBounds = vi.fn(() => mapInstance)
   mapInstance.invalidateSize = vi.fn(() => mapInstance)
   mapInstance.remove = vi.fn(() => mapInstance)
-  return { mapInstance }
+  const markerInstance: {
+    addTo: ReturnType<typeof vi.fn>
+    bindTooltip: ReturnType<typeof vi.fn>
+    on: ReturnType<typeof vi.fn>
+  } = {
+    addTo: vi.fn(),
+    bindTooltip: vi.fn(),
+    on: vi.fn(),
+  }
+  markerInstance.addTo.mockImplementation(() => markerInstance)
+  markerInstance.bindTooltip.mockImplementation(() => markerInstance)
+  markerInstance.on.mockImplementation(() => markerInstance)
+  return { mapInstance, markerInstance }
 })
 
 vi.mock('leaflet', () => {
@@ -21,7 +33,7 @@ vi.mock('leaflet', () => {
     map: vi.fn(() => leaflet.mapInstance),
     tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
     layerGroup: vi.fn(() => layerGroup),
-    marker: vi.fn(() => ({ addTo: vi.fn() })),
+    marker: vi.fn(() => leaflet.markerInstance),
     divIcon: vi.fn(() => ({})),
     polyline: vi.fn(() => ({ addTo: vi.fn(() => ({ remove: vi.fn() })), remove: vi.fn() })),
     latLngBounds: vi.fn(() => ({})),
@@ -107,5 +119,64 @@ describe('DispatchRouteMap track toggle', () => {
     expect(() => vi.runOnlyPendingTimers()).not.toThrow()
     expect(leaflet.mapInstance.invalidateSize).not.toHaveBeenCalled()
     expect(leaflet.mapInstance.remove).toHaveBeenCalled()
+  })
+
+  it('exposes hospital and fullscreen controls for the assignment map', async () => {
+    const onOpenDirectory = vi.fn()
+    const onFullscreenChange = vi.fn()
+    render(
+      <DispatchRouteMap
+        route={readyRoute()}
+        hospitalMap={{
+          routeKind: 'dispatch',
+          selectedHospitalId: null,
+          pendingHospitalId: null,
+          failedHospitalId: null,
+          failureMessage: '',
+          directoryOpen: false,
+          fullscreen: false,
+          distances: {},
+          distanceStatus: 'idle',
+          rankingOrigin: null,
+        }}
+        onOpenDirectory={onOpenDirectory}
+        onFullscreenChange={onFullscreenChange}
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Toggle hospital directory' }))
+    expect(onOpenDirectory).toHaveBeenCalledOnce()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open full screen map' }))
+    expect(onFullscreenChange).toHaveBeenCalledWith(true)
+  })
+
+  it('renders and wires all 18 permanently-labelled hospital pins', async () => {
+    const onSelectHospital = vi.fn()
+    render(
+      <DispatchRouteMap
+        route={readyRoute()}
+        hospitalMap={{
+          routeKind: 'dispatch',
+          selectedHospitalId: null,
+          pendingHospitalId: null,
+          failedHospitalId: null,
+          failureMessage: '',
+          directoryOpen: true,
+          fullscreen: false,
+          distances: {},
+          distanceStatus: 'loading',
+          rankingOrigin: { lat: 45.4, lng: -73.95 },
+        }}
+        onSelectHospital={onSelectHospital}
+      />,
+    )
+
+    await waitFor(() => expect(leaflet.markerInstance.bindTooltip).toHaveBeenCalledTimes(18))
+    expect(leaflet.markerInstance.on).toHaveBeenCalledTimes(18)
+    const lastPinClick = leaflet.markerInstance.on.mock.calls.at(-1)?.[1]
+    if (typeof lastPinClick === 'function') lastPinClick()
+    expect(onSelectHospital).toHaveBeenCalledWith('montreal-childrens')
+    expect(screen.getByTestId('map-track-toggle')).toBeEnabled()
   })
 })

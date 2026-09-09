@@ -19,6 +19,7 @@ export default function SessionMonitorPage() {
   const code = params.code.toUpperCase()
   const storageKey = useMemo(() => participantStorageKey(code), [code])
   const [participantToken, setParticipantToken] = useState('')
+  const [participantId, setParticipantId] = useState('')
 
   // localStorage does not exist during SSR, so this cannot move into a lazy
   // useState initializer — hydrating from storage after mount is the only
@@ -30,12 +31,13 @@ export default function SessionMonitorPage() {
       router.replace('/')
       return
     }
-    const parsed = JSON.parse(raw) as { participantToken?: string }
-    if (!parsed.participantToken) {
+    const parsed = JSON.parse(raw) as { participantToken?: string; participantId?: string }
+    if (!parsed.participantToken || !parsed.participantId) {
       router.replace('/')
       return
     }
     setParticipantToken(parsed.participantToken)
+    setParticipantId(parsed.participantId)
   }, [router, storageKey])
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -65,6 +67,7 @@ export default function SessionMonitorPage() {
       onStudentEvent={recordStudentEvent}
       onProjectionChange={publishProjection}
       vfDisplaySync={vfDisplaySync}
+      transportStorageScope={`${code}.${participantId}.${attemptVersion}`}
     />
   )
 }

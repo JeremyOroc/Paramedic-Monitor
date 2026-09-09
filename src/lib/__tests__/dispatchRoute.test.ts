@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
+  fetchDrivingDistances,
+  fetchDrivingRoute,
   formatDistance,
   formatDuration,
   getPointAlongRoute,
@@ -12,6 +14,49 @@ import {
 } from '@/types/dispatchRoute'
 
 describe('dispatchRoute helpers', () => {
+  it('requests one-to-many driving distances in destination order', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(JSON.stringify({ distances: [[1200, null, 800]] }), { status: 200 }),
+    )
+
+    await expect(
+      fetchDrivingDistances(
+        { lat: 45.4, lng: -73.9 },
+        [
+          { lat: 45.5, lng: -73.6 },
+          { lat: 45.6, lng: -73.5 },
+          { lat: 45.45, lng: -73.8 },
+        ],
+      ),
+    ).resolves.toEqual([1200, null, 800])
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('sources=0&destinations=1;2;3')
+    fetchMock.mockRestore()
+  })
+
+  it('passes an abort signal to route lookup', async () => {
+    const controller = new AbortController()
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          routes: [{
+            distance: 1000,
+            duration: 120,
+            geometry: { coordinates: [[-73.9, 45.4], [-73.6, 45.5]] },
+          }],
+        }),
+        { status: 200 },
+      ),
+    )
+
+    await fetchDrivingRoute(
+      { lat: 45.4, lng: -73.9 },
+      { lat: 45.5, lng: -73.6 },
+      controller.signal,
+    )
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual({ signal: controller.signal })
+    fetchMock.mockRestore()
+  })
+
   it('formats distance and duration for the dispatch map readouts', () => {
     expect(formatDistance(null)).toBe('-- km')
     expect(formatDistance(430)).toBe('430 m')
