@@ -6,6 +6,22 @@
 ---
 
 ## Current Phase
+**Receiving-hospital map workflow — COMPLETE (2026-09-09).**
+The assignment dashboard now provides the approved 18-entry Montréal-area Receiving Hospital
+Directory, always-labelled Leaflet pins, OSRM driving-distance ordering, a native/fallback
+full-screen map with an exact 30% internally scrolling Adult/Pediatric table, and pin/row route
+selection. Transport routing is trainee-local and Attempt-scoped, persists through CALL INFO and
+refresh, starts moving on Transport, supports atomic current-position rerouting with latest-choice
+wins, and is mirrored semantically to Spectator without entering native fullscreen there. It remains
+deliberately absent from Evaluation records. Re-dispatch and Incident-scene changes now clear
+Acknowledge, Arrival, Transport, and hospital state. Dataset, routing, directory, persistence,
+component, concurrency, store-reset, and projection validation coverage passes; TypeScript and ESLint
+pass with only the 12 pre-existing warnings. The webpack production build passes. Rendered QA at a
+1440×900 desktop viewport confirmed the full-screen 30% panel, internal vertical scroll, no horizontal
+overflow, the exact columns/sections/copy, and no console errors. The full Vitest run has two unrelated
+date-sensitive failures in `roomOwnership.test.ts` because its fixed 2026-09-08 expiration is no longer
+future; the other 1,311 tests pass and one opt-in integration test is skipped.
+
 **Instructor-recorded actions — PHASE 16 CODE COMPLETE, MIGRATION PENDING (2026-09-07).**
 The console can record a med given while the paramedic's hands were full and a SAMPLE/OPQRST
 question asked out loud; both are credited to the trainee and marked as instructor-entered, and the

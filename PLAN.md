@@ -8,6 +8,56 @@
 
 ## Current Requirement Updates
 
+- 2026-09-08 requirement update — Receiving-hospital map workflow: the assignment dashboard, both
+  at initial dispatch and when CALL INFO is reopened, adds a trainee-local Receiving Hospital
+  Directory containing the exact 18 Montréal-area hospitals supplied by the product reference
+  (16 adult, 2 pediatric); the legacy classic caller-information variant is unchanged. The hospital
+  control toggles the complete set of labeled pins and fits the Incident scene plus the directory,
+  then restores the active-route overview when toggled off. Selecting a pin or its matching row
+  immediately previews a Transport leg from the Incident scene without changing the instructor's
+  Dispatch leg or another trainee's route. Before Transport, later choices keep the Incident scene as
+  origin. During Transport, a successful reroute starts from a snapshot of the unit's current position
+  and the selection time, resets route ETA from that moment, and atomically replaces the active route.
+  While a reroute loads, the active route and moving unit continue uninterrupted and only the candidate
+  row/pin receives the amber loading state. A failed candidate leaves the active hospital and route
+  untouched. Rerouting locks once the route reaches At hospital. Directory mode keeps
+  every hospital pin inside the viewport until Track unit or the hospital toggle closes it.
+- Distance and ETA use OSRM driving routes. The unit remains at the Incident scene until Transport,
+  then moves along the active route. Transport remains valid without a hospital; a first route selected
+  afterward starts at the successful selection time. The trainee-local choice survives CALL INFO and
+  browser refresh in the same Attempt. New Attempt and monitor reset clear it. A new dispatch run or
+  instructor change to the Incident scene clears it plus Acknowledge, Arrival, and Transport so no
+  route milestone or timestamp leaks across the changed response. It appears in the trainee's
+  Spectator view and is
+  deliberately omitted from Evaluation records. A failed pre-Transport lookup retains the candidate,
+  removes stale geometry/readouts, shows Route unavailable, and supports retry.
+- Directory rows and pins appear immediately in reference order with Calculating distances…, then each
+  Adult/Pediatric section reorders by OSRM driving distance. Before Transport, ranking uses the Incident
+  scene; during Transport, opening the directory snapshots the current unit position and does not
+  continuously reorder. Ranking failure retains reference order and reports Distance ranking
+  unavailable without blocking selection. Rapid choices remain interactive, strictly latest-choice-wins,
+  and discard stale responses.
+- Fullscreen always opens the directory workspace. A bottom-right control uses browser-native
+  fullscreen with an edge-to-edge in-page fallback; the presentation retains its controls and
+  Distance/ETA/Status strip, Escape exits, and a scrollable 30%-width left overlay presents separate
+  Adult Hospitals and Pediatric Hospitals tables with exactly Hospital, Designation, and Key Notes
+  columns. Hospital names remain visible on the pins, and table-row selection equals pin selection.
+  When labels would collide, they may shift with leader lines but are never hidden or abbreviated.
+  Hospital and Track unit modes are mutually exclusive. Track unit is unavailable in fullscreen and
+  explains that the trainee must exit fullscreen to follow the unit. Neutral hospitals use dispatch blue, the
+  Selected receiving hospital uses destination red, the Incident scene uses green, and the unit uses
+  cyan. The hospital control remains visible but disabled with an explanation until the Incident scene
+  is located. Statuses distinguish En route, On scene, Route ready, Transporting, At hospital, and
+  Route unavailable. Spectator reproduces the semantic directory, pins, selection, and fullscreen
+  composition without entering native fullscreen itself. The directory overlay remains exactly 30%
+  wide at every supported landscape size, wraps its three columns, and scrolls internally without a
+  page-level or horizontal scrollbar.
+- The directory is a versioned local dataset. Its supplied names, designations, and notes remain exact
+  simulation curriculum; reviewed institutional emergency addresses are used when published and
+  ordinary civic addresses otherwise. The 18 entries occupy 17 physical sites, so the adult MUHC Glen
+  entry and Montréal Children's Hospital render as two offset selectors while both route to their
+  shared true coordinate. The complete interaction contract is settled; implementation remains gated
+  on explicit approval of the implementation and testing plan.
 - 2026-09-02 correction: base Expand-UI on the current main layout. Widen the shared console to the available browser width with 24px side padding across all four tabs; remove the Monitor-only centered 1152px breakout. Preserve Vitals on the left and equal-height SAMPLE/OPQRST stacked on the right, existing 55/45 and expanded 8:5 proportions, all control sizing, and the compact spacing through 900px height. Use 24px outer vertical padding and section gaps only above that height. This supersedes the former tab-only width restriction.
 - Wagami X uses a resting vital layout on the ordinary main waveform view before the first accepted physical Analyze or Charge action: FC, PNI, EtCO2, and SpO2 render as four equal-width, full-featured cells in the fixed `110px` bottom region, and the idle `APPL ELECT.` banner plus its three lower boxes are removed. The first accepted physical Analyze or Charge action moves the same vital displays instantly to the existing `96px` right column for the rest of the powered-on attempt, including analysis, CPR, charge, charged, shock, and delivered states; charge states keep both the energy scale and right-side vitals. Power-off/on, monitor reset, and New Attempt restore the resting layout. The left Call Info/Analyse soft key does not change placement. Collapsing the bottom region with the existing minus control temporarily moves vitals right and preserves the expanded three-waveform view; 12-lead and full-screen overlays retain their specialized layouts. Vital values, units, alarms, PNI reading phases, SpO2 pulse bar, French labels, selection identifiers, navigation order, and Enter-on-PNI behavior remain unchanged. Wagami Z is unaffected.
 - In both the local and live-room Instructor Console, the `Monitor & Patient SNS` area uses a centered responsive two-column composition. At the compact accepted landscapes (`1080×700` and `1280×720`), it retains the approximately 55/45 Vitals-left and equal-height SAMPLE/OPQRST-right layout and compact controls so the complete ordinary-content tab remains visible without horizontal overflow. At landscape viewports at least `1280px` wide and `800px` high, this tab alone breaks out from the console shell into a centered container up to approximately `1152px`, uses an approximately `8:5` split, and grows Vitals by roughly one third to about `700px` while SAMPLE/OPQRST remains about `438px`; other tabs keep the existing console maximum width. The full `1440×900` layout enlarges and horizontally centers the interactive contents in both columns, with the largest growth applied to buttons: Vitals inputs/toggles, ECG, CPR, timed-vitals controls, SNS cards/options, checklist letter buttons, and checklist fields all receive roomier targets and modestly larger text/icons. Below `1024px` or in portrait, the tab stacks vertically and permits page scrolling without horizontal overflow. The Instructor Console is primarily presented on a MacBook or desktop monitor and must also fit a landscape iPad 8th generation as a supported secondary instructor display. Live-room content above the tabs may make the overall page scroll vertically. Vitals retains its two internal columns and clinical ordering. SAMPLE/OPQRST retain equal heights, stable two-line textareas without focus-driven reflow, and bounded field scrolling for longer notes.
@@ -579,6 +629,70 @@ button is inert until a drill gate is satisfied.
   edits follow the same strict Save -> Send workflow as other admin fields:
   changing the value unlocks Save, Save unlocks Send, and Send locks until a new
   value is saved.
+- The assignment dashboard's route map also supports a trainee-local Receiving Hospital Directory.
+  It uses the exact supplied set of 16 adult and 2 pediatric Montréal-area Receiving hospitals and
+  appears both on initial New Assignment and when the assignment dashboard is reopened through CALL
+  INFO; the legacy classic caller-information variant remains unchanged. The hospital control sits
+  below Track unit and toggles the complete set of always-labeled hospital pins. Enabling it fits the
+  Incident scene and all directory hospitals; after selection it keeps every hospital pin inside the
+  viewport. Disabling it removes those pins and restores the active
+  route overview. Selecting a hospital pin immediately previews a Transport leg from the Incident
+  scene to that hospital, and selecting another hospital changes only the destination while all
+  directory pins remain visible. The choice is local to that trainee, appears in their Spectator view,
+  is deliberately omitted from Evaluation records, and never replaces the instructor-confirmed
+  Dispatch leg or another trainee's route. It survives CALL INFO closure and browser refresh in the
+  same Attempt. New Attempt and monitor reset clear it. A new dispatch run or instructor change to the
+  Incident scene clears the selection plus Acknowledge, Arrival, and Transport. OSRM supplies the
+  Transport-leg geometry, distance, ETA, and driving-distance
+  ordering for each Adult and Pediatric directory section. Rows and pins appear immediately in
+  reference order with Calculating distances…, then each section reorders when ranking resolves;
+  ranking failure retains reference order and shows Distance ranking unavailable without blocking
+  selection. Before Transport, ranking uses the Incident scene. During Transport, opening the
+  directory snapshots the unit's current position for ranking and does not continuously reorder.
+  The unit remains at the Incident scene until the trainee presses Transport, when movement along the
+  Transport leg begins. Transport remains valid without a hospital; a first route selected afterward
+  starts movement at the successful selection time. A successful in-Transport reroute uses the
+  unit's current position and selection time as its new green origin and clock, removes the old
+  Incident scene from the active route view, resets the ETA, and
+  atomically replaces the active route. While it loads, the active route and moving unit continue and
+  only the candidate row/pin shows amber loading. A failed reroute leaves the active route and Selected
+  receiving hospital untouched while marking only the failed candidate. Rerouting becomes unavailable
+  once the route reaches At hospital. A failed pre-Transport route
+  lookup retains the candidate, clears stale geometry and readouts, shows both endpoints with Route
+  unavailable, and may be retried by selecting it again. Rapid selections stay interactive and use
+  strict latest-choice-wins response handling.
+- A bottom-right map control enters browser-native fullscreen with an edge-to-edge in-page fallback
+  where element fullscreen is unavailable. Entering fullscreen always opens the hospital-directory
+  workspace; all hospital pins remain visible. The presentation keeps the map controls and
+  Distance/ETA/Status strip, exits with Escape, and adds a scrollable left overlay at exactly 30% of
+  the width at every supported landscape size. Its columns wrap, it scrolls internally, and it creates
+  no page-level or horizontal scrollbar.
+  The overlay contains separate Adult Hospitals and Pediatric Hospitals tables with exactly Hospital,
+  Designation, and Key Notes columns. Selecting a table row is identical to selecting its map pin.
+  Exiting returns to the compact map focused on the Selected receiving hospital's route, or the
+  Dispatch leg if no hospital is selected. Hospital and Track unit camera modes are mutually
+  exclusive; either Track unit or the hospital toggle closes directory mode. Track unit is unavailable
+  in fullscreen with an explanation that fullscreen must be exited first. Neutral hospitals use
+  dispatch-blue pins with permanent white labels, the Selected receiving hospital becomes the labeled
+  red destination, the Incident scene remains green, and the unit remains cyan. The hospital control
+  remains visible but disabled with an accessible explanation until the Incident scene has coordinates.
+  Permanent labels may displace with leader lines to avoid collisions but never hide or abbreviate.
+  Statuses distinguish En route, On scene, Route ready, Transporting, At hospital, and Route
+  unavailable. The Spectator reproduces the trainee's complete semantic hospital pins, directory mode,
+  selection, and fullscreen table inside its own frame without forcing the instructor browser into
+  native fullscreen. The directory is a versioned local dataset whose supplied names, designations,
+  and notes remain exact simulation curriculum. Routing uses reviewed institutional emergency
+  addresses where published and ordinary civic addresses otherwise. The adult MUHC Glen entry and
+  Montréal Children's Hospital render as two offset selectors at their shared campus while both route
+  to the same true coordinate. The approved interaction contract is implemented.
+- Testing for the Receiving-hospital map workflow: pure unit coverage for directory normalization,
+  participant/Room/Attempt persistence keys, route-state transitions, reroute clocks, status labels,
+  ranking fallback, and latest-request wins; component coverage for controls, permanent labels,
+  selection/failure/loading states, the 30% table, keyboard operation, fullscreen fallback, focus
+  restoration, and no-scroll layouts; store tests for reset/re-dispatch/Incident-scene clearing and
+  trainee isolation; projection tests for semantic Spectator parity without browser fullscreen;
+  rendered QA at 1024×768, 1280×720, and 1920×1080, including native fullscreen where available and
+  the in-page fallback.
 - Testing: route math helpers cover distance/duration formatting, progress, and
   point interpolation; store tests cover default John Abbott origin plus route
   Save -> Send timestamping; Caller Info form/modal tests cover route controls

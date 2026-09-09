@@ -354,12 +354,9 @@ describe('monitorStore', () => {
     const firstRunId = useMonitorStore.getState().dispatch.runId
     useMonitorStore.getState().acknowledgeCall('14:05:11')
 
-    // Push new caller-info content (a different field) without touching the countdown.
+    // Push new caller-info content without touching the countdown or incident.
     nowSpy.mockReturnValue(1_500_000)
-    useMonitorStore.getState().setDispatchRouteDraft({
-      ...DEFAULT_DISPATCH_ROUTE,
-      destinationAddress: '200 Sainte-Anne Street',
-    })
+    useMonitorStore.getState().setCallerInfoDraft('problem', 'Updated caller details')
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
 
@@ -368,6 +365,30 @@ describe('monitorStore', () => {
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + 300_000)
     expect(dispatch.acknowledgedAt).toBe('14:05:11')
     expect(dispatch.runId).toBe(firstRunId)
+  })
+
+  it('treats an incident-address change as a re-dispatch and clears transport', () => {
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().acknowledgeCall('14:05:11')
+    useMonitorStore.getState().arriveCall('14:06:00')
+    useMonitorStore.getState().transportCall('14:10:00')
+    const firstRunId = useMonitorStore.getState().dispatch.runId
+
+    useMonitorStore.getState().setDispatchRouteDraft({
+      ...DEFAULT_DISPATCH_ROUTE,
+      destinationAddress: '200 Sainte-Anne Street',
+      destination: { lat: 45.4, lng: -73.95 },
+    })
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    const { dispatch } = useMonitorStore.getState()
+    expect(dispatch.runId).not.toBe(firstRunId)
+    expect(dispatch.acknowledgedAt).toBeNull()
+    expect(dispatch.arrivedAt).toBeNull()
+    expect(dispatch.transportedAt).toBeNull()
   })
 
   it('numeric values save and send without changing their inactive state', () => {

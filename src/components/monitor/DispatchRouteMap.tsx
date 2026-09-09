@@ -3,28 +3,43 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type * as Leaflet from 'leaflet'
 
+import { HospitalDirectoryPanel } from '@/components/monitor/HospitalDirectoryPanel'
 import {
   formatDistance,
   formatDuration,
   getPointAlongRoute,
   getRouteProgress,
 } from '@/lib/dispatchRoute'
+import { hospitalDisplayPosition, RECEIVING_HOSPITALS } from '@/lib/receivingHospitals'
 import { cn } from '@/lib/utils'
 import type { DispatchRoute, LatLng } from '@/types/dispatchRoute'
+import type { HospitalMapState } from '@/types/receivingHospital'
 
 type DispatchRouteMapProps = {
   route: DispatchRoute
+  hospitalMap?: HospitalMapState
+  transported?: boolean
+  atHospital?: boolean
+  contained?: boolean
+  readOnly?: boolean
+  onOpenDirectory?: () => void
+  onCloseDirectory?: () => void
+  onFullscreenChange?: (fullscreen: boolean) => void
+  onSelectHospital?: (hospitalId: string) => void
 }
 
-// Zoom used when the camera follows the moving unit up close.
 const FOLLOW_ZOOM = 16
 
-function markerIcon(L: typeof Leaflet, kind: 'origin' | 'destination' | 'unit') {
+function markerIcon(
+  L: typeof Leaflet,
+  kind: 'origin' | 'destination' | 'unit' | 'hospital' | 'hospital-selected' | 'hospital-pending',
+) {
+  const size = kind === 'unit' ? 18 : kind.startsWith('hospital') ? 14 : 16
   return L.divIcon({
     className: '',
     html: `<span class="dispatch-map-marker dispatch-map-marker-${kind}"></span>`,
-    iconSize: kind === 'unit' ? [18, 18] : [16, 16],
-    iconAnchor: kind === 'unit' ? [9, 9] : [8, 8],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   })
 }
 
@@ -33,27 +48,87 @@ function routePoints(route: DispatchRoute, unitPosition: LatLng | null): LatLng[
   return [route.origin, route.destination, unitPosition].filter((point) => point !== null)
 }
 
-export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
+export function DispatchRouteMap({
+  route,
+  hospitalMap,
+  transported = false,
+  atHospital = false,
+  contained = false,
+  readOnly = false,
+  onOpenDirectory,
+  onCloseDirectory,
+  onFullscreenChange,
+  onSelectHospital,
+}: DispatchRouteMapProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const fullscreenButtonRef = useRef<HTMLButtonElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Leaflet.Map | null>(null)
   const leafletRef = useRef<typeof Leaflet | null>(null)
   const routeLayerRef = useRef<Leaflet.Polyline | null>(null)
   const markerLayerRef = useRef<Leaflet.LayerGroup | null>(null)
+  const hospitalLayerRef = useRef<Leaflet.LayerGroup | null>(null)
   const fittedRouteKeyRef = useRef('')
   const invalidateTimerRef = useRef<number | null>(null)
   const [ready, setReady] = useState(false)
   const [now, setNow] = useState(() => Date.now())
-  // 'overview' fits the whole route (default); 'follow' tracks the unit up close.
   const [trackMode, setTrackMode] = useState<'overview' | 'follow'>('overview')
+  const hospitalMode = hospitalMap?.directoryOpen === true
+  const fullscreen = hospitalMap?.fullscreen === true
 
   const toggleTrackMode = () => {
+    if (fullscreen) return
+    if (hospitalMode) {
+      onCloseDirectory?.()
+      setTrackMode('follow')
+      fittedRouteKeyRef.current = ''
+      return
+    }
     setTrackMode((mode) => {
       const next = mode === 'follow' ? 'overview' : 'follow'
-      // Returning to overview must refit the route even if it has not changed.
       if (next === 'overview') fittedRouteKeyRef.current = ''
       return next
     })
   }
+
+  const toggleHospitalMode = () => {
+    setTrackMode('overview')
+    fittedRouteKeyRef.current = ''
+    if (hospitalMode) {
+      if (fullscreen) void toggleFullscreen()
+      onCloseDirectory?.()
+    }
+    else onOpenDirectory?.()
+  }
+
+  const toggleFullscreen = async () => {
+    const next = !fullscreen
+    if (!readOnly && !contained) {
+      try {
+        if (next && rootRef.current?.requestFullscreen) {
+          await rootRef.current.requestFullscreen()
+        } else if (!next && document.fullscreenElement) {
+          await document.exitFullscreen()
+        }
+      } catch {
+        // Fixed positioning below is the fallback when native fullscreen fails.
+      }
+    }
+    onFullscreenChange?.(next)
+    if (!next) window.setTimeout(() => fullscreenButtonRef.current?.focus(), 0)
+  }
+
+  useEffect(() => {
+    if (readOnly || contained) return
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && fullscreen) {
+        onFullscreenChange?.(false)
+        window.setTimeout(() => fullscreenButtonRef.current?.focus(), 0)
+      }
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [contained, fullscreen, onFullscreenChange, readOnly])
 
   useEffect(() => {
     let disposed = false
@@ -78,6 +153,7 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
         }).addTo(map)
 
         markerLayerRef.current = L.layerGroup().addTo(map)
+        hospitalLayerRef.current = L.layerGroup().addTo(map)
         mapRef.current = map
       }
       setReady(true)
@@ -85,14 +161,12 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
 
     return () => {
       disposed = true
-      if (invalidateTimerRef.current !== null) {
-        window.clearTimeout(invalidateTimerRef.current)
-        invalidateTimerRef.current = null
-      }
+      if (invalidateTimerRef.current !== null) window.clearTimeout(invalidateTimerRef.current)
       mapRef.current?.remove()
       mapRef.current = null
       routeLayerRef.current = null
       markerLayerRef.current = null
+      hospitalLayerRef.current = null
       leafletRef.current = null
       fittedRouteKeyRef.current = ''
     }
@@ -100,7 +174,6 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
 
   useEffect(() => {
     if (route.status !== 'ready') return
-
     const interval = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(interval)
   }, [route.status])
@@ -110,62 +183,51 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
     () => getPointAlongRoute(route.geometry, progress),
     [progress, route.geometry],
   )
-  const remainingSeconds =
-    route.durationSeconds === null
-      ? null
-      : Math.max(0, route.durationSeconds * (1 - progress))
+  const remainingSeconds = route.durationSeconds === null
+    ? null
+    : Math.max(0, route.durationSeconds * (1 - progress))
 
   useEffect(() => {
-    if (!ready || !mapRef.current || !leafletRef.current || !markerLayerRef.current) return
+    if (
+      !ready ||
+      !mapRef.current ||
+      !leafletRef.current ||
+      !markerLayerRef.current ||
+      !hospitalLayerRef.current
+    ) return
     const L = leafletRef.current
     const map = mapRef.current
     const markerLayer = markerLayerRef.current
+    const hospitalLayer = hospitalLayerRef.current
 
     markerLayer.clearLayers()
+    hospitalLayer.clearLayers()
 
     const points = routePoints(route, unitPosition)
-    if (points.length === 0) {
-      if (fittedRouteKeyRef.current !== 'empty') {
-        map.setView([45.4068, -73.9412], 12)
-        fittedRouteKeyRef.current = 'empty'
-      }
-      return
-    }
-
-    const firstGeometryPoint = route.geometry[0]
-    const lastGeometryPoint = route.geometry.at(-1)
     const routeKey = [
       route.origin ? `${route.origin.lat},${route.origin.lng}` : 'none',
       route.destination ? `${route.destination.lat},${route.destination.lng}` : 'none',
       route.geometry.length,
-      firstGeometryPoint ? `${firstGeometryPoint.lat},${firstGeometryPoint.lng}` : 'none',
-      lastGeometryPoint ? `${lastGeometryPoint.lat},${lastGeometryPoint.lng}` : 'none',
+      hospitalMode ? 'hospitals' : 'route',
+      fullscreen ? 'fullscreen' : 'embedded',
     ].join('|')
 
     if (route.geometry.length > 1) {
       if (fittedRouteKeyRef.current !== routeKey) {
-        if (routeLayerRef.current) {
-          routeLayerRef.current.remove()
-          routeLayerRef.current = null
-        }
+        routeLayerRef.current?.remove()
         routeLayerRef.current = L.polyline(
           route.geometry.map((point) => [point.lat, point.lng]),
-          {
-            color: 'var(--color-cyan-bp)',
-            weight: 4,
-            opacity: 0.85,
-          },
+          { color: 'var(--color-cyan-bp)', weight: 4, opacity: 0.85 },
         ).addTo(map)
       }
-    } else if (routeLayerRef.current) {
-      routeLayerRef.current.remove()
+    } else {
+      routeLayerRef.current?.remove()
       routeLayerRef.current = null
     }
 
     if (route.origin) {
-      L.marker([route.origin.lat, route.origin.lng], {
-        icon: markerIcon(L, 'origin'),
-      }).addTo(markerLayer)
+      L.marker([route.origin.lat, route.origin.lng], { icon: markerIcon(L, 'origin') })
+        .addTo(markerLayer)
     }
     if (route.destination) {
       L.marker([route.destination.lat, route.destination.lng], {
@@ -173,94 +235,211 @@ export function DispatchRouteMap({ route }: DispatchRouteMapProps) {
       }).addTo(markerLayer)
     }
     if (unitPosition) {
-      L.marker([unitPosition.lat, unitPosition.lng], {
-        icon: markerIcon(L, 'unit'),
-      }).addTo(markerLayer)
+      L.marker([unitPosition.lat, unitPosition.lng], { icon: markerIcon(L, 'unit') })
+        .addTo(markerLayer)
     }
 
-    if (trackMode === 'follow' && unitPosition) {
-      // Keep the moving unit centered and zoomed in; this overrides any manual
-      // pan/zoom on the next tick, which is the point of tracking mode.
+    if (hospitalMode) {
+      RECEIVING_HOSPITALS.forEach((hospital) => {
+        const displayPosition = hospitalDisplayPosition(hospital)
+        if (
+          displayPosition.lat !== hospital.position.lat ||
+          displayPosition.lng !== hospital.position.lng
+        ) {
+          L.polyline([
+            [hospital.position.lat, hospital.position.lng],
+            [displayPosition.lat, displayPosition.lng],
+          ], { color: 'white', weight: 1, opacity: 0.65 }).addTo(hospitalLayer)
+        }
+        const markerKind = hospitalMap?.pendingHospitalId === hospital.id
+          ? 'hospital-pending'
+          : hospitalMap?.selectedHospitalId === hospital.id
+            ? 'hospital-selected'
+            : 'hospital'
+        const marker = L.marker([displayPosition.lat, displayPosition.lng], {
+          icon: markerIcon(L, markerKind),
+          keyboard: !readOnly,
+          title: hospital.name,
+        }).addTo(hospitalLayer)
+        marker.bindTooltip(hospital.name, {
+          permanent: true,
+          direction: 'top',
+          className: 'hospital-map-label',
+          opacity: 1,
+        })
+        if (!readOnly && !atHospital) marker.on('click', () => onSelectHospital?.(hospital.id))
+      })
+    }
+
+    if (trackMode === 'follow' && unitPosition && !hospitalMode) {
       map.setView([unitPosition.lat, unitPosition.lng], FOLLOW_ZOOM, { animate: true })
     } else if (fittedRouteKeyRef.current !== routeKey) {
-      const bounds = L.latLngBounds(points.map((point) => [point.lat, point.lng]))
-      map.fitBounds(bounds, { padding: [18, 18], maxZoom: 15 })
+      const fitPoints = hospitalMode
+        ? [...points, ...RECEIVING_HOSPITALS.map(hospitalDisplayPosition)]
+        : points
+      if (fitPoints.length > 0) {
+        const bounds = L.latLngBounds(fitPoints.map((point) => [point.lat, point.lng]))
+        map.fitBounds(bounds, { padding: hospitalMode ? [54, 54] : [18, 18], maxZoom: 15 })
+      } else {
+        map.setView([45.4068, -73.9412], 12)
+      }
       fittedRouteKeyRef.current = routeKey
     }
-    if (invalidateTimerRef.current !== null) {
-      window.clearTimeout(invalidateTimerRef.current)
-    }
+
+    if (invalidateTimerRef.current !== null) window.clearTimeout(invalidateTimerRef.current)
     invalidateTimerRef.current = window.setTimeout(() => {
       invalidateTimerRef.current = null
-      if (mapRef.current !== map || containerRef.current?.isConnected !== true) return
-      map.invalidateSize()
+      if (mapRef.current === map && containerRef.current?.isConnected === true) map.invalidateSize()
     }, 0)
 
     return () => {
-      if (invalidateTimerRef.current !== null) {
-        window.clearTimeout(invalidateTimerRef.current)
-        invalidateTimerRef.current = null
-      }
+      if (invalidateTimerRef.current !== null) window.clearTimeout(invalidateTimerRef.current)
     }
-  }, [ready, route, unitPosition, trackMode])
+  }, [atHospital, fullscreen, hospitalMap, hospitalMode, onSelectHospital, ready, readOnly, route, trackMode, unitPosition])
 
-  const statusText =
-    route.status === 'loading'
-      ? 'Loading route'
-      : route.status === 'failed'
-        ? route.error || 'Route unavailable'
-        : route.status === 'ready'
-          ? 'En route'
-          : 'Awaiting address'
+  const statusText = route.status === 'loading'
+    ? 'Loading route'
+    : route.status === 'failed'
+      ? route.error || 'Route unavailable'
+      : route.status === 'ready'
+        ? hospitalMap?.routeKind === 'transport'
+          ? progress >= 1
+            ? 'At hospital'
+            : transported && route.startedAt
+              ? 'Transporting'
+              : 'Route ready'
+          : progress >= 1
+            ? 'On scene'
+            : 'En route'
+        : 'Awaiting address'
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-md border border-neutral-700 bg-dispatch-panel-soft">
-      <div className="relative min-h-0 flex-1 bg-black">
-        <div ref={containerRef} data-testid="dispatch-route-map" className="h-full w-full" />
-        {route.status === 'ready' && (
-          <button
-            type="button"
-            onClick={toggleTrackMode}
-            aria-label="Toggle unit tracking"
-            aria-pressed={trackMode === 'follow'}
-            data-testid="map-track-toggle"
-            className={cn(
-              'absolute right-2 top-2 z-[1000] rounded border px-2 py-1',
-              'font-mono text-[10px] font-black uppercase tracking-[0.12em]',
-              trackMode === 'follow'
-                ? 'border-dispatch-blue bg-dispatch-blue text-black'
-                : 'border-neutral-600 bg-black/70 text-neutral-200 hover:text-white',
-            )}
-          >
-            {trackMode === 'follow' ? 'Tracking' : 'Track unit'}
-          </button>
-        )}
-        {route.status !== 'ready' && (
-          <div className="absolute inset-0 grid place-items-center bg-black/72 px-4 text-center">
-            <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-300">
-              {statusText}
-            </span>
+    <div
+      ref={rootRef}
+      data-testid="dispatch-route-map-shell"
+      className={cn(
+        'flex overflow-hidden border border-neutral-700 bg-dispatch-panel-soft',
+        fullscreen
+          ? contained
+            ? 'absolute inset-0 z-[1200] rounded-none'
+            : 'fixed inset-0 z-[1200] rounded-none'
+          : 'h-full min-h-0 flex-col rounded-md',
+      )}
+    >
+      {fullscreen && hospitalMap && (
+        <HospitalDirectoryPanel
+          distances={hospitalMap.distances}
+          distanceStatus={hospitalMap.distanceStatus}
+          selectedHospitalId={hospitalMap.selectedHospitalId}
+          pendingHospitalId={hospitalMap.pendingHospitalId}
+          failedHospitalId={hospitalMap.failedHospitalId}
+          disabled={readOnly || atHospital}
+          onSelectHospital={(hospitalId) => onSelectHospital?.(hospitalId)}
+        />
+      )}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="relative min-h-0 flex-1 bg-black">
+          <div ref={containerRef} data-testid="dispatch-route-map" className="h-full w-full" />
+          {route.status === 'ready' && (
+            <button
+              type="button"
+              onClick={toggleTrackMode}
+              disabled={fullscreen || readOnly}
+              title={fullscreen ? 'Exit full screen to track the unit' : undefined}
+              aria-label="Toggle unit tracking"
+              aria-pressed={trackMode === 'follow'}
+              data-testid="map-track-toggle"
+              className={cn(
+                'absolute right-2 top-2 z-[1000] rounded border px-2 py-1 font-mono text-[10px] font-black uppercase tracking-[0.12em]',
+                trackMode === 'follow'
+                  ? 'border-dispatch-blue bg-dispatch-blue text-black'
+                  : 'border-neutral-600 bg-black/80 text-neutral-200 enabled:hover:text-white',
+                'disabled:cursor-not-allowed disabled:opacity-45',
+              )}
+            >
+              {trackMode === 'follow' ? 'Tracking' : 'Track unit'}
+            </button>
+          )}
+          {hospitalMap && (
+            <button
+              type="button"
+              onClick={toggleHospitalMode}
+              disabled={!route.destination || readOnly}
+              title={!route.destination ? 'Hospital directory requires incident coordinates' : undefined}
+              aria-label="Toggle hospital directory"
+              aria-pressed={hospitalMode}
+              data-testid="map-hospital-toggle"
+              className={cn(
+                'absolute right-2 z-[1000] grid h-8 w-8 place-items-center rounded border bg-black/80 text-white',
+                route.status === 'ready' ? 'top-11' : 'top-2',
+                hospitalMode ? 'border-dispatch-blue text-dispatch-blue' : 'border-neutral-600',
+                'disabled:cursor-not-allowed disabled:opacity-45',
+              )}
+            >
+              <HospitalIcon />
+            </button>
+          )}
+          {hospitalMap && (
+            <button
+              ref={fullscreenButtonRef}
+              type="button"
+              onClick={() => void toggleFullscreen()}
+              disabled={readOnly}
+              aria-label={fullscreen ? 'Exit full screen map' : 'Open full screen map'}
+              aria-pressed={fullscreen}
+              data-testid="map-fullscreen-toggle"
+              className="absolute bottom-2 right-2 z-[1000] grid h-8 w-8 place-items-center rounded border border-neutral-600 bg-black/80 text-white disabled:cursor-default"
+            >
+              <FullscreenIcon collapse={fullscreen} />
+            </button>
+          )}
+          {route.status !== 'ready' && (
+            <div className="pointer-events-none absolute inset-0 z-[800] grid place-items-center bg-black/72 px-4 text-center">
+              <span className="text-xs font-black uppercase tracking-[0.16em] text-neutral-300">
+                {statusText}
+              </span>
+            </div>
+          )}
+        </div>
+        <div className="grid shrink-0 grid-cols-3 border-t border-neutral-700 bg-black/25">
+          <div className="px-3 py-2">
+            <p className="text-[10px] font-black uppercase text-dispatch-blue">Distance</p>
+            <p className="text-sm font-black text-white">{formatDistance(route.distanceMeters)}</p>
           </div>
-        )}
-      </div>
-      <div className="grid shrink-0 grid-cols-3 border-t border-neutral-700 bg-black/25">
-        <div className="px-3 py-2">
-          <p className="text-[10px] font-black uppercase text-dispatch-blue">Distance</p>
-          <p className="text-sm font-black text-white">{formatDistance(route.distanceMeters)}</p>
-        </div>
-        <div className="border-l border-neutral-700 px-3 py-2">
-          <p className="text-[10px] font-black uppercase text-dispatch-blue">ETA</p>
-          <p aria-label="Route ETA" className="font-mono text-sm font-black text-white">
-            {formatDuration(remainingSeconds)}
-          </p>
-        </div>
-        <div className="border-l border-neutral-700 px-3 py-2">
-          <p className="text-[10px] font-black uppercase text-dispatch-blue">Status</p>
-          <p className="truncate text-sm font-black uppercase text-dispatch-green">
-            {route.status === 'ready' && progress >= 1 ? 'Arrived' : statusText}
-          </p>
+          <div className="border-l border-neutral-700 px-3 py-2">
+            <p className="text-[10px] font-black uppercase text-dispatch-blue">ETA</p>
+            <p aria-label="Route ETA" className="font-mono text-sm font-black text-white">
+              {formatDuration(remainingSeconds)}
+            </p>
+          </div>
+          <div className="border-l border-neutral-700 px-3 py-2">
+            <p className="text-[10px] font-black uppercase text-dispatch-blue">Status</p>
+            <p className="truncate text-sm font-black uppercase text-dispatch-green">
+              {statusText}
+            </p>
+          </div>
         </div>
       </div>
     </div>
+  )
+}
+
+function HospitalIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none">
+      <path d="M5 21V4h14v17M3 21h18M9 8h6M12 5v6M8 21v-5h8v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function FullscreenIcon({ collapse }: { collapse: boolean }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none">
+      {collapse ? (
+        <path d="M9 3v6H3M15 3v6h6M9 21v-6H3M15 21v-6h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      ) : (
+        <path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      )}
+    </svg>
   )
 }

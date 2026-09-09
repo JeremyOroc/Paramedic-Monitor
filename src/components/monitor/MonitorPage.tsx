@@ -41,6 +41,7 @@ import { useCountdown } from '@/hooks/useCountdown'
 import { useElapsedTimer } from '@/hooks/useElapsedTimer'
 import { useNibpReading } from '@/hooks/useNibpReading'
 import { useNibpAutoMode } from '@/hooks/useNibpAutoMode'
+import { useReceivingHospitalRouting } from '@/hooks/useReceivingHospitalRouting'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -67,10 +68,12 @@ export function MonitorPage({
   onStudentEvent,
   vfDisplaySync,
   onProjectionChange,
+  transportStorageScope,
 }: {
   onStudentEvent?: (event: StudentEventRecord) => void
   vfDisplaySync?: VfDisplaySync | null
   onProjectionChange?: (projection: MonitorProjection) => void
+  transportStorageScope?: string
 } = {}) {
   const { date, time } = useMonitorClock()
 
@@ -106,6 +109,14 @@ export function MonitorPage({
   const etco2Loaded = etco2CalibrationStatus === 'calibrated'
   const cprHeartRate = getCprHeartRate(cprMode)
   const cprOverrideActive = cprHeartRate !== null
+  const hospitalRouting = useReceivingHospitalRouting({
+    dispatchRoute: dispatchRouteConfirmed,
+    dispatchRunId: dispatchState.runId,
+    incidentAddress: dispatchRouteConfirmed.destinationAddress,
+    monitorResetVersion,
+    storageScope: transportStorageScope,
+    transported: dispatchState.transportedAt !== null,
+  })
 
   const searchParams = useSearchParams()
   const devMode = searchParams.get('dev')
@@ -157,7 +168,10 @@ export function MonitorPage({
     const stamp = createEventLogStamp()
     if (key === 'acknowledge') acknowledgeCall(stamp)
     else if (key === 'arrival') arriveCall(stamp)
-    else transportCall(stamp)
+    else {
+      hospitalRouting.startTransport(stamp.occurredAtMs)
+      transportCall(stamp)
+    }
     onStudentEvent?.({
       kind: key,
       label: key === 'acknowledge' ? 'Acknowledge' : key === 'arrival' ? 'Arrival' : 'Transport',
@@ -488,7 +502,8 @@ export function MonitorPage({
       gateSatisfied,
       callerInfoVariant,
       callerInfo: callerInfoConfirmed,
-      dispatchRoute: dispatchRouteConfirmed,
+      dispatchRoute: hospitalRouting.effectiveRoute,
+      hospitalMap: hospitalRouting.mapState,
       dispatch: dispatchState,
       patientInfo,
       confirmed,
@@ -547,7 +562,8 @@ export function MonitorPage({
       cprOverrideActive,
       date,
       devicePowerState,
-      dispatchRouteConfirmed,
+      hospitalRouting.effectiveRoute,
+      hospitalRouting.mapState,
       dispatchState,
       displayedEtco2,
       displayedHr,
@@ -775,7 +791,14 @@ export function MonitorPage({
         canEnterMonitor={gateSatisfied}
         onEnterMonitor={enterCurrentDispatch}
         onBack={gateSatisfied ? enterCurrentDispatch : undefined}
-        route={dispatchRouteConfirmed}
+        route={hospitalRouting.effectiveRoute}
+        hospitalMap={hospitalRouting.mapState}
+        transported={dispatchState.transportedAt !== null}
+        atHospital={hospitalRouting.atHospital}
+        onOpenHospitalDirectory={hospitalRouting.openDirectory}
+        onCloseHospitalDirectory={hospitalRouting.closeDirectory}
+        onMapFullscreenChange={hospitalRouting.setFullscreen}
+        onSelectHospital={hospitalRouting.selectHospital}
         alertFlash={callerInfoAlertFlash}
       />
     )
@@ -967,7 +990,14 @@ export function MonitorPage({
         onEnterMonitor={controller.onBack}
         responseFormatted={responseTimer.formatted}
         countdownFormatted={countdown.formatted}
-        route={dispatchRouteConfirmed}
+        route={hospitalRouting.effectiveRoute}
+        hospitalMap={hospitalRouting.mapState}
+        transported={dispatchState.transportedAt !== null}
+        atHospital={hospitalRouting.atHospital}
+        onOpenHospitalDirectory={hospitalRouting.openDirectory}
+        onCloseHospitalDirectory={hospitalRouting.closeDirectory}
+        onMapFullscreenChange={hospitalRouting.setFullscreen}
+        onSelectHospital={hospitalRouting.selectHospital}
       />
     </div>
   )

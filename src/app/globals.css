@@ -336,6 +336,43 @@ body {
   color: var(--color-cyan-bp);
 }
 
+.dispatch-map-marker-hospital,
+.dispatch-map-marker-hospital-selected,
+.dispatch-map-marker-hospital-pending {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--color-monitor-bg);
+  background: var(--color-dispatch-blue);
+  color: var(--color-dispatch-blue);
+}
+
+.dispatch-map-marker-hospital-selected {
+  background: var(--color-dispatch-red);
+  color: var(--color-dispatch-red);
+}
+
+.dispatch-map-marker-hospital-pending {
+  background: var(--color-pending-amber);
+  color: var(--color-pending-amber);
+}
+
+.hospital-map-label {
+  max-width: 210px;
+  white-space: normal;
+  border: 1px solid var(--color-dispatch-line);
+  background: color-mix(in srgb, var(--color-monitor-bg) 88%, transparent);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  text-shadow: 0 1px 2px var(--color-monitor-bg);
+}
+
+.hospital-map-label::before {
+  border-top-color: var(--color-dispatch-line);
+}
+
 .leaflet-container {
   background: var(--color-monitor-bg);
   font-family: Arial, Helvetica, sans-serif;

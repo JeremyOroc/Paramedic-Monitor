@@ -80,6 +80,7 @@ export function isMonitorProjection(value: unknown): value is MonitorProjection 
     isRecord(projection.acceptedBpActive) &&
     isRecord(projection.callerInfo) &&
     isRecord(projection.dispatch) &&
+    (projection.hospitalMap === undefined || isRecord(projection.hospitalMap)) &&
     isRecord(route) &&
     Array.isArray(route.geometry) &&
     isRecord(projection.patientInfo) &&

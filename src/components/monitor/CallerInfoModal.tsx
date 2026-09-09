@@ -9,6 +9,7 @@ import {
 import { DispatchRouteMap } from '@/components/monitor/DispatchRouteMap'
 import { cn } from '@/lib/utils'
 import type { DispatchRoute } from '@/types/dispatchRoute'
+import type { HospitalMapState } from '@/types/receivingHospital'
 
 export type CallerEventKey = 'acknowledge' | 'arrival' | 'transport'
 export type CallerInfoVariant = 'classic' | 'assignment'
@@ -37,6 +38,14 @@ type CallerInfoModalProps = {
   /** Whether the "Go to Monitor" action is currently allowed (gate satisfied). */
   canEnterMonitor?: boolean
   route?: DispatchRoute
+  hospitalMap?: HospitalMapState
+  transported?: boolean
+  atHospital?: boolean
+  mapReadOnly?: boolean
+  onOpenHospitalDirectory?: () => void
+  onCloseHospitalDirectory?: () => void
+  onMapFullscreenChange?: (fullscreen: boolean) => void
+  onSelectHospital?: (hospitalId: string) => void
   alertFlash?: boolean
 }
 
@@ -135,6 +144,14 @@ export function CallerInfoModal({
   onEnterMonitor,
   canEnterMonitor = false,
   route,
+  hospitalMap,
+  transported = false,
+  atHospital = false,
+  mapReadOnly = false,
+  onOpenHospitalDirectory,
+  onCloseHospitalDirectory,
+  onMapFullscreenChange,
+  onSelectHospital,
   alertFlash = false,
 }: CallerInfoModalProps) {
   if (!open) return null
@@ -225,6 +242,15 @@ export function CallerInfoModal({
               onEnterMonitor={onEnterMonitor}
               canEnterMonitor={canEnterMonitor}
               route={route}
+              hospitalMap={hospitalMap}
+              transported={transported}
+              atHospital={atHospital}
+              contained={contained}
+              mapReadOnly={mapReadOnly}
+              onOpenHospitalDirectory={onOpenHospitalDirectory}
+              onCloseHospitalDirectory={onCloseHospitalDirectory}
+              onMapFullscreenChange={onMapFullscreenChange}
+              onSelectHospital={onSelectHospital}
             />
           )}
           {alertFlash && (
@@ -254,6 +280,15 @@ type CallerInfoContentProps = {
   onEnterMonitor?: () => void
   canEnterMonitor?: boolean
   route?: DispatchRoute
+  hospitalMap?: HospitalMapState
+  transported?: boolean
+  atHospital?: boolean
+  contained?: boolean
+  mapReadOnly?: boolean
+  onOpenHospitalDirectory?: () => void
+  onCloseHospitalDirectory?: () => void
+  onMapFullscreenChange?: (fullscreen: boolean) => void
+  onSelectHospital?: (hospitalId: string) => void
 }
 
 function ClassicCallerInfoContent({
@@ -345,6 +380,15 @@ function AssignmentCallerInfoContent({
   onEnterMonitor,
   canEnterMonitor = false,
   route,
+  hospitalMap,
+  transported = false,
+  atHospital = false,
+  contained = false,
+  mapReadOnly = false,
+  onOpenHospitalDirectory,
+  onCloseHospitalDirectory,
+  onMapFullscreenChange,
+  onSelectHospital,
 }: CallerInfoContentProps) {
   const priority = info.priority.trim() || 'Priority Pending'
   const assignmentDisplayFields = displayFields.filter(({ field }) => field !== 'priority')
@@ -452,7 +496,18 @@ function AssignmentCallerInfoContent({
           </p>
           <div className="h-[58%] min-h-[140px]">
             {route ? (
-              <DispatchRouteMap route={route} />
+              <DispatchRouteMap
+                route={route}
+                hospitalMap={hospitalMap}
+                transported={transported}
+                atHospital={atHospital}
+                contained={contained}
+                readOnly={mapReadOnly}
+                onOpenDirectory={onOpenHospitalDirectory}
+                onCloseDirectory={onCloseHospitalDirectory}
+                onFullscreenChange={onMapFullscreenChange}
+                onSelectHospital={onSelectHospital}
+              />
             ) : (
               <div className="flex h-full min-h-0 flex-col justify-between rounded-md border border-neutral-700 bg-dispatch-panel-soft p-4">
                 <div className="flex items-start gap-3">

@@ -8,6 +8,7 @@ import type { VitalLogEntry } from '@/hooks/useVitalLog'
 import type { CallerInfo } from '@/types/callerInfo'
 import type { DefibrillatorModel } from '@/types/defibrillator'
 import type { DispatchRoute } from '@/types/dispatchRoute'
+import type { HospitalMapState } from '@/types/receivingHospital'
 import type { PatientInfo, PatientSex } from '@/types/patientInfo'
 import type { MonitorSelection } from '@/types/monitorSelection'
 import type { AlarmChannel, VitalActiveState } from '@/types/vitals'
@@ -35,6 +36,7 @@ export type MonitorProjection = {
   callerInfoVariant: CallerInfoVariant
   callerInfo: CallerInfo
   dispatchRoute: DispatchRoute
+  hospitalMap?: HospitalMapState
   dispatch: DispatchState
   patientInfo: PatientInfo
   confirmed: Vitals

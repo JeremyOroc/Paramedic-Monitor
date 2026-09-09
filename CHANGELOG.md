@@ -5,6 +5,95 @@
 
 ---
 
+## [2026-09-09] [ui/routing] — Add trainee receiving-hospital routing
+
+- Added the exact supplied 16 adult and 2 pediatric Montréal-area curriculum entries with reviewed
+  routing addresses, shared-campus selector offsets, stable reference ordering, and OSRM driving
+  distance ranking within each section.
+- Added the assignment-map Hospital control below Track unit, 18 permanent named pins, selected and
+  pending marker states, route/scene/unit marker hierarchy, full-viewport hospital fitting, and
+  accessible disabled explanations when the Incident scene is not located.
+- Added native Fullscreen API support with a fixed-position fallback. The full-screen composition has
+  an exact 30% left directory, the exact Hospital / Designation / Key Notes columns, Adult and
+  Pediatric sections, internal vertical scrolling, row/pin selection parity, and no horizontal or
+  page overflow.
+- Kept Transport routing separate from instructor Dispatch routing and scoped it by trainee, Room,
+  Attempt, dispatch run, Incident scene, and monitor reset. Route previews start on Transport; active
+  reroutes snapshot current unit position, keep the previous route moving while loading, replace it
+  atomically, preserve it on failure, and ignore stale rapid-selection responses.
+- Projected the semantic route/directory/fullscreen composition to Spectator without logging hospital
+  interaction to Evaluation records. Re-dispatch and Incident-scene changes now clear all three call
+  milestones, including Transport.
+- Added unit/component/store coverage for the dataset, OSRM table calls, abort signals, stable distance
+  sorting, persistence validation, race handling, Transport timestamps, all 18 permanent pin bindings,
+  controls, the 30% table, row selection, and reset semantics. TypeScript, ESLint, focused tests, and
+  a webpack production build pass. Rendered 1440×900 browser QA confirms panel sizing/scroll/overflow
+  and zero console errors; the full suite's only failures are two unrelated date-expired Room fixtures.
+
+## [2026-09-08] [planning/domain] — Complete hospital-map interaction design
+
+- Kept the active route moving while a reroute candidate loads, with amber candidate-only feedback
+  and an atomic successful replacement.
+- Allowed permanent hospital labels to displace with leader lines while forbidding hidden or
+  abbreviated names, and closed rerouting once the unit reaches At hospital.
+- Added the complete unit, component, store, projection, and rendered-QA test plan.
+- Recorded ADR 0019 for the boundary between instructor-confirmed Dispatch routing and trainee-local
+  Transport routing. No implementation code changed.
+
+## [2026-09-08] [planning/domain] — Resolve hospital-map camera and reset edges
+
+- Kept all directory pins inside the viewport until directory mode closes, and kept the fullscreen
+  table at exactly 30% width with wrapped columns and internal scrolling.
+- Made a re-dispatch or Incident-scene change clear Acknowledge, Arrival, Transport, and the hospital
+  selection.
+- Set a first post-Transport hospital route to begin when its lookup succeeds, and made an active
+  reroute's current-position origin the new green route origin.
+- Kept Track unit unavailable while fullscreen forces hospital-directory mode. No implementation
+  code changed.
+
+## [2026-09-08] [planning/domain] — Define active-transport rerouting and directory data
+
+- Defined an in-Transport reroute as an atomic replacement beginning at a snapshot of the moving
+  unit's current position and the new selection time; a failed candidate leaves the active route
+  untouched.
+- Made driving-distance order use the Incident scene before Transport and a non-continuously-updating
+  unit-position snapshot when reopened during Transport.
+- Defined the Receiving Hospital Directory as versioned local simulation curriculum with reviewed
+  routing addresses. Preserved the supplied display copy and defined separate offset selectors for
+  the two entries sharing the MUHC Glen coordinate.
+- No implementation code changed.
+
+## [2026-09-08] [planning/domain] — Define hospital-map interaction states
+
+- Excluded hospital browsing and selection from Evaluation records while preserving trainee-local
+  selection in the Spectator projection, including semantic fullscreen content without changing the
+  instructor browser's fullscreen state.
+- Made Hospital and Track unit mutually exclusive modes; defined map status language, disabled-scene
+  behavior, marker hierarchy, progressive distance ordering, and latest-choice-wins concurrency.
+- Allowed operational rerouting after Transport. The replacement route's origin, timing, and failure
+  behavior remain open because this changes the earlier Incident-scene-origin rule.
+- No implementation code changed.
+
+## [2026-09-08] [planning/domain] — Set hospital-map lifecycle and ordering
+
+- Kept all hospital pins visible after selection and made fullscreen always open the hospital-directory
+  workspace, with the compact selected route restored on exit.
+- Defined the Selected receiving hospital as trainee-local Attempt state that survives CALL INFO and
+  refresh, but clears with a new Attempt, reset, dispatch run, or changed Incident scene.
+- Chose OSRM driving-distance ordering, explicit failed-route state with retry, Transport without a
+  required hospital, and an in-page fullscreen fallback. Evaluation event granularity remains open.
+
+## [2026-09-08] [planning/domain] — Define receiving-hospital map workflow
+
+- Defined the Assignment dashboard, Incident scene, Dispatch leg, Transport leg, Receiving hospital,
+  and curated 18-entry Receiving Hospital Directory in the domain glossary.
+- Recorded the confirmed assignment-map boundary: assignment variant only, initial and reopened views,
+  trainee-local hospital choice, Incident-scene origin, OSRM Transport distance/ETA, and movement only
+  after Transport.
+- Specified the hospital-pin toggle and browser-native fullscreen presentation, including the 30%-width
+  Adult/Pediatric directory overlay and row/pin selection parity. Failure, persistence, concurrency,
+  and accessibility decisions remain open; no implementation code changed.
+
 ## [2026-09-07] [instructor/server] — Record meds and history questions from the console
 
 - Added a med grid as the middle column of the Monitor & Patient SNS tab. All twelve meds, derived

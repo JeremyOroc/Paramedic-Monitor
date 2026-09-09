@@ -90,7 +90,7 @@ describe('monitorStore shared session state', () => {
     expect(dispatch.callerEvents).toHaveLength(2)
   })
 
-  it('clears Acknowledge/Arrival but keeps Transport and events on a new run', () => {
+  it('clears Acknowledge/Arrival/Transport but keeps event history on a new run', () => {
     const s = useMonitorStore.getState()
     s.applySharedState(makeShared({ dispatch: armedDispatch('run-1') }))
     useMonitorStore.getState().acknowledgeCall('10:00:00')
@@ -105,7 +105,7 @@ describe('monitorStore shared session state', () => {
     expect(dispatch.runId).toBe('run-2')
     expect(dispatch.acknowledgedAt).toBeNull()
     expect(dispatch.arrivedAt).toBeNull()
-    expect(dispatch.transportedAt).toBe('10:05:00')
+    expect(dispatch.transportedAt).toBeNull()
     expect(dispatch.callerEvents).toHaveLength(3)
   })
 
@@ -117,6 +117,36 @@ describe('monitorStore shared session state', () => {
     useMonitorStore.getState().applySharedState(makeShared())
 
     expect(useMonitorStore.getState().dispatch).toEqual(DEFAULT_DISPATCH)
+  })
+
+  it('clears all dispatch milestones when the Incident scene changes in the same run', () => {
+    const firstRoute = {
+      ...DEFAULT_DISPATCH_ROUTE,
+      destinationAddress: '100 First Street',
+      destination: { lat: 45.4, lng: -73.8 },
+    }
+    useMonitorStore.getState().applySharedState(makeShared({
+      dispatch: armedDispatch('run-1'),
+      dispatchRouteConfirmed: firstRoute,
+    }))
+    useMonitorStore.getState().acknowledgeCall('10:00:00')
+    useMonitorStore.getState().arriveCall('10:01:00')
+    useMonitorStore.getState().transportCall('10:05:00')
+
+    useMonitorStore.getState().applySharedState(makeShared({
+      dispatch: armedDispatch('run-1'),
+      dispatchRouteConfirmed: {
+        ...firstRoute,
+        destinationAddress: '200 Second Street',
+        destination: { lat: 45.5, lng: -73.7 },
+      },
+    }))
+
+    expect(useMonitorStore.getState().dispatch).toMatchObject({
+      acknowledgedAt: null,
+      arrivedAt: null,
+      transportedAt: null,
+    })
   })
 
   it('leaves patient info, EtCO2 calibration, and accepted BP untouched', () => {
