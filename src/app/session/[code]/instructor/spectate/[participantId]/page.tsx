@@ -2,9 +2,14 @@
 
 import { useParams } from 'next/navigation'
 
+import { SpectatorAvailabilityOverlay } from '@/components/instructor/SpectatorAvailabilityOverlay'
 import { SpectatorMonitor } from '@/components/instructor/SpectatorMonitor'
 import { useSpectatorProjection } from '@/hooks/useSpectatorProjection'
 import { isConnected } from '@/lib/sessionRoster'
+import {
+  resolveSpectatorAvailability,
+  spectatorAvailabilityAnnouncement,
+} from '@/lib/spectatorAvailability'
 import { cn } from '@/lib/utils'
 
 export default function SpectatePage() {
@@ -16,21 +21,18 @@ export default function SpectatePage() {
   })
 
   const envelope = data?.projection ?? null
-  const traineeOffline = data ? !isConnected(data.participant.last_seen_at, now) : false
-  const roomEnded = data?.session.status === 'ended'
-  const connectionLabel = connecting
-    ? 'Connecting to trainee…'
-    : connectionLost
-      ? 'Spectator connection lost'
-      : roomEnded
-        ? 'Room ended'
-        : traineeOffline && !envelope
-          ? 'Trainee offline · No monitor received'
-          : traineeOffline
-            ? 'Trainee offline'
-            : envelope
-              ? 'Live'
-              : 'Waiting for trainee monitor'
+  const traineeConnected = data
+    ? isConnected(data.participant.last_seen_at, now)
+    : false
+  const availability = resolveSpectatorAvailability({
+    sessionStatus: data?.session.status ?? null,
+    connecting,
+    connectionLost,
+    traineeConnected,
+    hasProjection: envelope !== null,
+    traineeName: data?.participant.nickname ?? 'trainee',
+  })
+  const showUpdatedAt = Boolean(envelope && !availability.isLive)
 
   return (
     <main className="flex h-screen min-w-[1024px] flex-col overflow-hidden bg-black text-white">
@@ -40,39 +42,38 @@ export default function SpectatePage() {
           {envelope?.projection.model === 'wagamiZ' ? 'Wagami Z' : envelope ? 'Wagami X' : 'Monitor pending'}
         </span>
         <span
-          role="status"
+          aria-hidden={!availability.isLive}
           className={cn(
             'ml-auto font-bold',
-            !connectionLost && !traineeOffline && !roomEnded && envelope
-              ? 'text-ecg-green'
-              : connectionLost || traineeOffline
-                ? 'text-pending-amber'
-                : 'text-neutral-400',
+            availability.isLive ? 'text-ecg-green' : 'text-transparent',
           )}
         >
-          {connectionLabel}
+          {availability.isLive ? 'Live' : null}
         </span>
         <span className="text-neutral-500">
-          {envelope && (connectionLost || traineeOffline || roomEnded)
+          {showUpdatedAt && envelope
             ? `Updated ${new Date(envelope.updatedAt).toLocaleTimeString()}`
             : envelope
               ? null
               : `Attempt ${data?.session.active_attempt_version ?? '—'}`}
         </span>
       </header>
-      <div className="relative min-h-0 flex-1 overflow-hidden">
+      <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {spectatorAvailabilityAnnouncement(availability)}
+      </p>
+      <div className="spectator-availability-surface relative min-h-0 flex-1 overflow-hidden">
         {envelope ? (
           <div inert className="h-full w-full select-none pointer-events-none" aria-label="Read-only student monitor">
             <SpectatorMonitor projection={envelope.projection} />
           </div>
         ) : (
-          <div className="grid h-full place-items-center bg-black">
-            <div className="text-center font-mono uppercase tracking-[0.25em] text-neutral-500">
-              <p>{roomEnded ? 'Room ended' : 'Waiting for trainee monitor'}</p>
-              {!roomEnded ? <p className="mt-3 text-xs text-neutral-700">The view appears when the student opens the monitor.</p> : null}
-            </div>
-          </div>
+          <div className="h-full bg-black" />
         )}
+        <SpectatorAvailabilityOverlay
+          key={availability.kind}
+          availability={availability}
+          hasProjection={envelope !== null}
+        />
       </div>
     </main>
   )

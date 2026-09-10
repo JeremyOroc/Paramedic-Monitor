@@ -146,6 +146,10 @@ _Avoid_: Event replay, screen capture, shared monitor state
 How current a trainee monitor projection is relative to the trainee's latest accepted simulator state. It is distinct from trainee presence and the Spectator presentation's own connection to the server.
 _Avoid_: Connection status, participant presence
 
+**Spectator availability state**:
+The instructor-facing assessment of whether a selected trainee's Spectator view can be trusted as live. Its precise states distinguish Room lifecycle, Spectator connectivity, trainee presence, and whether a Trainee monitor projection exists.
+_Avoid_: Student status, connection status, live badge
+
 **Evaluation record**:
 The persistent Account-owned report of one Attempt across all participating trainees. It is created
 when the Attempt starts, autosaves each trainee action, confirmed clinical state, and Instructor

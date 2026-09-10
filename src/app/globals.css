@@ -417,6 +417,24 @@ body {
   transform-origin: center;
 }
 
+.spectator-availability-surface {
+  container-type: size;
+}
+
+.spectator-availability-overlay {
+  animation: spectator-availability-in 180ms ease-out;
+}
+
+.spectator-availability-headline {
+  font-size: clamp(1rem, 7cqi, 4.5rem);
+  line-height: 1;
+}
+
+.spectator-availability-detail {
+  font-size: clamp(0.625rem, 2.5cqi, 1.125rem);
+  line-height: 1.35;
+}
+
 @container (min-width: 260px) {
   .embedded-spectator-canvas { --spectator-scale: 0.24; }
 }
@@ -594,7 +612,13 @@ body {
   }
 }
 
+@keyframes spectator-availability-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .spectator-availability-overlay,
   .spectator-mode-floating,
   .spectator-mode-docked {
     animation: none;

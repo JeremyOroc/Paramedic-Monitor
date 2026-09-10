@@ -27,7 +27,10 @@ describe('SpectatePage', () => {
 
     render(<SpectatePage />)
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Waiting for trainee monitor')
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'WAITING FOR TRAINEE MONITOR. The view appears when the trainee opens the monitor',
+    )
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
     expect(screen.getByText('Alice')).toBeInTheDocument()
   })
 
@@ -48,8 +51,30 @@ describe('SpectatePage', () => {
 
     expect(await screen.findByTestId('projected-monitor')).toBeInTheDocument()
     expect(screen.getByText('Wagami Z')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Live')
+    expect(screen.getByRole('status')).toHaveTextContent('LIVE')
+    expect(screen.queryByTestId('spectator-availability-overlay')).toBeNull()
+    expect(screen.getAllByRole('status')).toHaveLength(1)
     await waitFor(() => expect(container.querySelector('[inert]')).not.toBeNull())
+  })
+
+  it('keeps a healthy projection Live when the simulated monitor is powered off', async () => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
+      projection: {
+        streamId: 'stream-1',
+        clientSequence: 3,
+        attemptVersion: 1,
+        updatedAt: new Date().toISOString(),
+        projection: { version: 1, model: 'wagamiX', powerState: 'off' },
+      },
+    }), { status: 200 }))
+
+    render(<SpectatePage />)
+
+    expect(await screen.findByTestId('projected-monitor')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('LIVE')
+    expect(screen.queryByTestId('spectator-availability-overlay')).toBeNull()
   })
 
   it('distinguishes a stale trainee heartbeat from a spectator connection failure', async () => {
@@ -68,7 +93,9 @@ describe('SpectatePage', () => {
     render(<SpectatePage />)
 
     expect(await screen.findByTestId('projected-monitor')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Trainee offline')
+    expect(screen.getByRole('status')).toHaveTextContent('TRAINEE OFFLINE')
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black/85')
+    expect(screen.getByText(/Updated/)).toBeInTheDocument()
   })
 
   it('reports spectator connection loss without discarding the page', async () => {
@@ -76,8 +103,10 @@ describe('SpectatePage', () => {
 
     render(<SpectatePage />)
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Spectator connection lost')
-    expect(screen.getByText('Waiting for trainee monitor', { selector: 'p' })).toBeInTheDocument()
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'SPECTATOR CONNECTION LOST. Trying to reconnect…',
+    )
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
   })
 
   it('keeps the last monitor visible after the instructor ends the room', async () => {
@@ -96,7 +125,8 @@ describe('SpectatePage', () => {
     render(<SpectatePage />)
 
     expect(await screen.findByTestId('projected-monitor')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Room ended')
+    expect(screen.getByRole('status')).toHaveTextContent('ROOM ENDED. Final monitor state')
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black/85')
   })
 
   it('clears the previous frame when a new attempt starts', async () => {
@@ -124,6 +154,34 @@ describe('SpectatePage', () => {
     await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1), { timeout: 2500 })
     await waitFor(() => expect(screen.queryByTestId('projected-monitor')).toBeNull())
     expect(screen.getByText('Attempt 2')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'ATTEMPT NOT STARTED. Start / Dispatch to begin the attempt',
+    )
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
+  })
+
+  it('shows the first failed poll immediately and clears the veil on the next healthy poll', async () => {
+    const fetchMock = vi.spyOn(window, 'fetch')
+      .mockRejectedValueOnce(new Error('network down'))
+      .mockResolvedValue(new Response(JSON.stringify({
+        session: { status: 'active', active_attempt_version: 1 },
+        participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
+        projection: {
+          streamId: 'stream-1',
+          clientSequence: 3,
+          attemptVersion: 1,
+          updatedAt: new Date().toISOString(),
+          projection: { version: 1, model: 'wagamiX' },
+        },
+      }), { status: 200 }))
+
+    render(<SpectatePage />)
+
+    expect(await screen.findByRole('status')).toHaveTextContent('SPECTATOR CONNECTION LOST')
+    expect(screen.getByTestId('spectator-availability-overlay')).toBeInTheDocument()
+    await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(1), { timeout: 2500 })
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('LIVE'))
+    expect(screen.queryByTestId('spectator-availability-overlay')).toBeNull()
   })
 
   it('supports eight independently polling spectator views without a client-side cap', async () => {

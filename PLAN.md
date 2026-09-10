@@ -8,6 +8,38 @@
 
 ## Current Requirement Updates
 
+- 2026-09-10 requirement update — Spectator availability presentation: a Spectator view is Live only
+  while the Room is active, the Spectator polling path is healthy, the selected trainee remains
+  present within the existing eight-second heartbeat window, and that trainee has published a
+  monitor projection. Every other condition retains a precise Spectator availability state rather
+  than being collapsed into trainee Offline. The standalone Spectator and every Embedded Spectator
+  mode—Docked, Floating, and Fullscreen—replace the small top-right non-Live state with a large
+  treatment covering the spectator player surface only, never the surrounding Instructor Console.
+  When a previous projection exists, the view preserves it beneath a strongly dimmed veil; before any
+  projection exists, it uses a solid-black state screen. Trainee identity, confirmed device model,
+  stale-frame update time, and all Spectator presentation/Stop controls remain visible and usable
+  outside the veil. Large non-Live headlines use `CONNECTING`, `ROOM ENDED`, `SPECTATOR CONNECTION
+  LOST`, `ATTEMPT NOT STARTED`, `TRAINEE OFFLINE`, and `WAITING FOR TRAINEE MONITOR`; explanations
+  such as `No monitor received` and `Trying to reconnect` remain supporting copy rather than distinct
+  states. Before the first response Connecting wins; once a response exists, a conclusively known
+  Room ended state wins, followed by Spectator connection lost, Attempt not started, Trainee offline,
+  Waiting for trainee monitor, and finally Live. Expected and terminal states use neutral white/gray,
+  while Trainee offline and Spectator connection lost use the existing pending amber; none uses the
+  clinical alarm red. A brief state-entry fade becomes static immediately and is removed for reduced
+  motion—there is no flashing or continuous pulse. The veil disappears as soon as the next successful
+  poll confirms every Live condition, without added dwell time. `Fullscreen unavailable` remains
+  short-lived Instructor control feedback and never becomes a screen-covering availability state.
+  Live alone retains the compact green top-right header label. Supporting lines are
+  `Connecting to [trainee]…`, `Trying to reconnect…`, `Final monitor state`, `No monitor received`,
+  `Start / Dispatch to begin the attempt`, and `The view appears when the trainee opens the monitor`,
+  selected according to the resolved state and whether a retained frame exists; the stale timestamp
+  stays in the header and is not duplicated. Simulated monitor power is independent: a healthy live
+  projection of a powered-off device remains Live. Switching trainees clears the former trainee's
+  frame before showing the new identity and Connecting screen; New Attempt clears the frame and shows
+  Attempt not started; no selection retains the existing subdued selection placeholder; offline
+  trainees remain selectable. The non-Live veil is authoritative and cannot be dismissed to make a
+  stale frame appear current. A single failed one-second Spectator request shows Spectator connection
+  lost immediately, and the next fully healthy response restores Live immediately.
 - 2026-09-10 requirement update — Wagami X CPR interval and power-off audio: after either a no-shock
   analysis result or an advised shock, the CPR screen enters with the timer at `2:00`. The two-minute
   CPR interval begins when the 1.752-second Perform CPR cue completes. A state-owned absolute fallback
@@ -1577,6 +1609,15 @@ use a 160–200ms fade/scale motion that is removed for `prefers-reduced-motion`
 - Identity-safety coverage verifies a previous trainee frame disappears before the next trainee's
   name or frame can render, including slow and failed switch requests.
 - Distinct waiting, trainee-offline, Spectator-disconnected, and room-ended states with the latest frame preserved where applicable.
+- State-presentation coverage verifies the shared priority and exact headline/supporting-copy mapping;
+  solid-black no-frame states; strongly dimmed retained projections; a green Live-only header label;
+  neutral versus pending-amber severity; immediate first-failure and next-success transitions; an
+  authoritative non-dismissible veil; powered-off-device Live semantics; and no duplicated stale
+  timestamp or accessibility announcement.
+- Presentation coverage verifies the large treatment stays inside the standalone/Embedded player,
+  scales without overflow in Docked, Floating, and Fullscreen, leaves identity/model/timestamp and all
+  presentation controls usable above it, uses only a brief entry fade, and becomes static under
+  reduced motion.
 - Read-only interaction tests proving pointer, keyboard, touch, and focus cannot mutate the projection or simulator.
 - Compact containment checks for dispatch, Wagami X, and Wagami Z in the Embedded Spectator at the
   supported Instructor Console viewports, with uniform scaling, allowed letterboxing, no internal
@@ -1624,6 +1665,17 @@ positions remain stylesheet-defined and safe-area aware; only transient drag coo
 CSS variables. Verification passed 1,091 tests, the TypeScript production build, ESLint, and a live
 1280×720 instructor-room browser flow with exact 16px corner offsets, full 360×280 size, real pointer
 and keyboard movement, and clean browser logs.
+
+**Availability-presentation milestone — COMPLETE (2026-09-10):** Standalone and all Embedded
+Spectator modes now derive the approved state priority from one typed resolver and render every
+non-Live state through one responsive player-surface veil. The implementation preserves stale frames
+under strong dimming, uses solid black before a projection exists, keeps all identity and presentation
+controls outside the veil, retains only the green Live header label, and provides one polite status
+announcement. Focused state, overlay, standalone, Embedded-mode, and instructor integration coverage
+passes all 83 tests; TypeScript, ESLint with the 12 existing warnings, and the webpack production build
+pass. Rendered QA at 1440×900 and 1024×768 confirms clean responsive wrapping, exact surface
+containment, no page overflow, healthy Connecting-to-connection-loss transition, and clean browser
+logs. The full suite retains only the three unrelated previously documented failures.
 
 ---
 

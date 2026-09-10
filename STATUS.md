@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**Spectator availability presentation — COMPLETE (2026-09-10).**
+Standalone and Embedded Spectator views now share one typed availability resolver and one large,
+non-dismissible player-surface veil for every non-Live state. Retained monitor frames remain beneath
+an 85% black veil; states without a frame use solid black. Connecting, Room ended, Attempt not
+started, and Waiting remain neutral, while Trainee offline and Spectator connection lost use pending
+amber. Live alone keeps the small green header label. Identity, model, stale timestamp, and Docked,
+Floating, Fullscreen, and Stop controls remain visible and usable; powered-off simulated monitors
+remain Live when their projection path is healthy. The entry fade becomes static immediately and is
+removed for reduced motion. All 83 focused tests, TypeScript, full ESLint with the 12 existing
+warnings, the webpack production build, and rendered 1440×900 plus 1024×768 standalone QA pass with
+no overflow, framework overlay, or console errors. The full suite has 1,346 passing tests and one
+skipped test; its three unrelated failures remain two date-expired Room fixtures and one stale
+Patient Info modal-color assertion.
+
 **Wagami X CPR cue/timer and power-off audio — FIXED (2026-09-10).**
 After either no-shock analysis or an advised shock, the CPR screen now holds `2:00` through the exact
 1.752-second Perform CPR prompt and begins the two-minute interval on cue completion. A guarded,
