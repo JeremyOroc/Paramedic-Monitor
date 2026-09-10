@@ -1256,6 +1256,15 @@ describe('MonitorPage', () => {
     expect(stopAllAudio).toHaveBeenCalled()
   })
 
+  it('silences all in-flight audio when the monitor powers off', () => {
+    render(<MonitorPage />)
+    vi.mocked(stopAllAudio).mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Power off' }))
+
+    expect(stopAllAudio).toHaveBeenCalledOnce()
+  })
+
   it('silences audio when the monitor unmounts', () => {
     const { unmount } = render(<MonitorPage />)
     vi.mocked(stopAllAudio).mockClear()

@@ -200,6 +200,10 @@ _Avoid_: Active model, selected monitor
 The instructor-approved vital values, channel states, rhythm, patient category, and energy setting available to the trainee during an attempt.
 _Avoid_: Draft vitals, admin inputs
 
+**CPR interval**:
+The two-minute compression period shown by Wagami X after its Perform CPR prompt phase following a no-shock analysis result or an advised shock. It is distinct from the Instructor CPR override and from the prompt/metronome cues that surround it.
+_Avoid_: CPR override, SNS measurement countdown, dispatch countdown
+
 **EtCO₂ calibration**:
 The trainee-local Wagami X readiness state for capnography, distinct from the instructor-confirmed EtCO₂ channel state. It remains valid through instructor channel and value changes until the monitor is reset.
 _Avoid_: EtCO₂ On, CO₂ selection

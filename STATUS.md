@@ -6,6 +6,19 @@
 ---
 
 ## Current Phase
+**Wagami X CPR cue/timer and power-off audio — FIXED (2026-09-10).**
+After either no-shock analysis or an advised shock, the CPR screen now holds `2:00` through the exact
+1.752-second Perform CPR prompt and begins the two-minute interval on cue completion. A guarded,
+state-owned absolute fallback starts at the same deadline when playback is muted, blocked, interrupted,
+or missing its completion event, while delayed callbacks catch up instead of extending the interval.
+Reset, Analyze, Charge, unmount, and power-off invalidate pending starts. Power-off now stops every
+audible monitor cue before resetting the defibrillator, including streamed metronome media and decoded
+one-shot buffers, while preserving the silent iOS keepalive and existing unmuted reboot default. All
+94 focused page, defibrillator, timer, and audio tests pass; TypeScript, ESLint with the 12 existing
+warnings, and the webpack production build pass. The full suite has 1,330 passing tests and one skipped
+test; its three unrelated failures are two date-expired Room fixtures and one stale Patient Info
+modal-color assertion.
+
 **Wagami X 12-lead transmission — CODE COMPLETE, MIGRATION PENDING (2026-09-09).**
 The third 12-lead soft key is now an envelope-only control that remains dim and inert until a capture
 completes. It opens the confirmed seven-hospital destination panel, supports wraparound hardware

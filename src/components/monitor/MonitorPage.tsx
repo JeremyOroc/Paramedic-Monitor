@@ -611,6 +611,7 @@ export function MonitorPage({
 
   const handlePowerOff = () => {
     onStudentEvent?.({ kind: 'power_off', label: 'Power Off' })
+    stopAllAudio()
     if (etco2Loading) cancelEtco2Loading()
     cancelNibpReading()
     controller.onPowerOff()

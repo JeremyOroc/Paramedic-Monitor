@@ -412,6 +412,23 @@ describe('decoded cue playback', () => {
     vi.unstubAllGlobals()
   })
 
+  it('stops active one-shot buffers when all monitor audio is silenced', async () => {
+    stubFetch()
+    const ctx = installFakeAudioContext()
+    const audio = await import('@/lib/audio')
+
+    locked = false
+    window.dispatchEvent(new Event('pointerdown'))
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    audio.playSystemAudio('stand_clear.mp3')
+    const before = ctx.stopped.length
+    audio.stopAllAudio()
+
+    expect(ctx.stopped.length).toBeGreaterThan(before)
+    vi.unstubAllGlobals()
+  })
+
   it('falls back to the element when a cue has not decoded', async () => {
     // Decoding never resolves, so the buffer path is unavailable.
     vi.stubGlobal('fetch', () => new Promise(() => {}))

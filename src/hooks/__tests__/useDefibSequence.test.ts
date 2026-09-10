@@ -1,10 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+
+import { PERFORM_CPR_DURATION_MS } from '@/lib/defib/defibMachine'
+
 import { useDefibSequence } from '../useDefibSequence'
+
+const audioMocks = vi.hoisted(() => ({
+  playSystemAudio: vi.fn(),
+  playCprAudioSequence: vi.fn((onEnded?: () => void) => void onEnded),
+}))
+
+vi.mock('@/lib/audio', () => audioMocks)
 
 describe('useDefibSequence', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.clearAllMocks()
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -52,6 +63,93 @@ describe('useDefibSequence', () => {
     })
     expect(result.current.state).toBe('cpr')
     expect(result.current.canCharge).toBe(true)
+    expect(result.current.cprStartTime).toBeNull()
+    expect(audioMocks.playCprAudioSequence).toHaveBeenCalledOnce()
+
+    act(() => {
+      vi.advanceTimersByTime(PERFORM_CPR_DURATION_MS - 1)
+    })
+    expect(result.current.cprStartTime).toBeNull()
+
+    act(() => {
+      vi.advanceTimersByTime(1)
+    })
+    expect(result.current.cprStartTime).toBe(Date.now())
+  })
+
+  it('starts the CPR interval when the Perform CPR cue completes after an advised shock', () => {
+    const { result } = renderHook(() =>
+      useDefibSequence({ patientMode: 'adult', rhythm: 'vf' }),
+    )
+
+    act(() => result.current.onAnalyse())
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    expect(result.current.state).toBe('shock_advised')
+
+    act(() => result.current.onShock())
+
+    expect(result.current.state).toBe('cpr')
+    expect(result.current.cprStartTime).toBeNull()
+    expect(audioMocks.playCprAudioSequence).toHaveBeenCalledOnce()
+
+    const onCueEnded = audioMocks.playCprAudioSequence.mock.calls[0]?.[0]
+    expect(onCueEnded).toBeTypeOf('function')
+
+    act(() => {
+      vi.advanceTimersByTime(1000)
+      onCueEnded?.()
+    })
+    const cueEndedAt = Date.now()
+    expect(result.current.cprStartTime).toBe(cueEndedAt)
+
+    act(() => {
+      vi.advanceTimersByTime(PERFORM_CPR_DURATION_MS)
+    })
+    expect(result.current.cprStartTime).toBe(cueEndedAt)
+  })
+
+  it('uses the absolute prompt deadline when the fallback callback is throttled', () => {
+    const { result } = renderHook(() =>
+      useDefibSequence({ patientMode: 'adult', rhythm: 'vf' }),
+    )
+
+    act(() => result.current.onAnalyse())
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    act(() => result.current.onShock())
+    const scheduledStartTime = Date.now() + PERFORM_CPR_DURATION_MS
+
+    act(() => {
+      vi.setSystemTime(Date.now() + 10_000)
+      vi.advanceTimersByTime(PERFORM_CPR_DURATION_MS)
+    })
+
+    expect(result.current.cprStartTime).toBe(scheduledStartTime)
+  })
+
+  it('ignores a stale cue callback and fallback after reset', () => {
+    const { result } = renderHook(() =>
+      useDefibSequence({ patientMode: 'adult', rhythm: 'vf' }),
+    )
+
+    act(() => result.current.onAnalyse())
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    act(() => result.current.onShock())
+    const onCueEnded = audioMocks.playCprAudioSequence.mock.calls[0]?.[0]
+
+    act(() => result.current.reset())
+    act(() => {
+      onCueEnded?.()
+      vi.advanceTimersByTime(PERFORM_CPR_DURATION_MS)
+    })
+
+    expect(result.current.state).toBe('idle')
+    expect(result.current.cprStartTime).toBeNull()
   })
 
   it('transitions charge_prompt → charging → charged', () => {
