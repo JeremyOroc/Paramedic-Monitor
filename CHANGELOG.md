@@ -5,6 +5,58 @@
 
 ---
 
+## [2026-09-10] [instructor/ui] — Make non-Live Spectator states unmistakable
+
+- Added one typed Spectator availability resolver shared by the standalone page and every Embedded
+  mode, with the approved state priority, exact headline/supporting copy, and neutral/degraded tone.
+- Replaced compact non-Live header badges with a responsive player-wide status veil: stale frames are
+  retained beneath 85% black, no-frame states use solid black, and only Offline/Connection lost use
+  pending amber. The veil is non-dismissible and uses a brief reduced-motion-safe entry fade rather
+  than flashing.
+- Kept trainee identity, device model, stale timestamp, and Docked/Floating/Fullscreen/Stop controls
+  visible and usable. Live alone retains the compact green header label, with one polite accessibility
+  announcement and powered-off simulated monitors correctly remaining Live.
+- Added pure resolver, overlay, standalone, presentation-mode, transition, powered-off, and identity
+  regressions. All 83 focused tests, TypeScript, full ESLint with the 12 existing warnings, and the
+  webpack production build pass. Rendered 1440×900 and 1024×768 QA confirms correct containment,
+  wrapping, transition, zero overflow, and clean browser logs. The full suite has 1,346 passes, one
+  skip, and the same three unrelated documented failures.
+
+## [2026-09-10] [planning/ui] — Complete Spectator availability edge-case design
+
+- Kept the small green header indicator only for Live and approved concise supporting copy for every
+  large non-Live state without duplicating the stale-frame timestamp.
+- Confirmed that a healthy projection of a powered-off simulated monitor remains Live, trainee
+  switches clear the former frame before showing the next identity, New Attempt becomes Attempt not
+  started, the no-selection placeholder remains unchanged, and offline trainees remain selectable.
+- Made the stale-state veil authoritative and non-dismissible; one failed poll presents connection
+  loss immediately and the next fully healthy poll restores Live immediately.
+- Added the complete state, containment, accessibility, severity, motion, and lifecycle test gate to
+  Phase 17. Application code remains unchanged pending explicit implementation approval.
+
+## [2026-09-10] [planning/ui] — Settle Spectator availability states and severity
+
+- Approved distinct Connecting, Room ended, Spectator connection lost, Attempt not started, Trainee
+  offline, Waiting for trainee monitor, and Live states with an explicit conflict priority.
+- Reserved pending amber for offline and connection-loss degradation, kept expected/terminal states
+  neutral, and excluded clinical alarm red.
+- Chose a brief reduced-motion-safe entry fade with no flashing, pulsing, or recovery dwell; Live
+  removes the veil on the next successful poll.
+- Kept Fullscreen unavailable as transient Instructor control feedback outside the availability-state
+  treatment. Application code remains unchanged while the remaining edge cases are reviewed.
+
+## [2026-09-10] [planning/ui] — Define Spectator availability presentation boundary
+
+- Defined Live as the conjunction of an active Room, a healthy Spectator polling path, current
+  trainee presence, and an available Trainee monitor projection; other conditions keep distinct
+  causes instead of being mislabeled as trainee Offline.
+- Applied the planned large non-Live treatment to the standalone Spectator and all three Embedded
+  modes while limiting it to the spectator player rather than the surrounding Instructor Console.
+- Chose a dimmed retained frame when one exists and a solid-black state screen otherwise, with
+  identity, device model, update time, and Spectator controls remaining visible and usable.
+- Added `Spectator availability state` to the domain language. Exact state presentation and recovery
+  behavior remain under review; application code has not changed.
+
 ## [2026-09-10] [monitor/audio] — Sequence CPR timing after its cue and silence power-off
 
 - Superseded the earlier same-day immediate-start behavior: the CPR screen now holds `2:00` until the

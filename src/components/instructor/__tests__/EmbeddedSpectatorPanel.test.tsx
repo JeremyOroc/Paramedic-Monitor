@@ -419,7 +419,10 @@ describe('EmbeddedSpectatorPanel', () => {
     const { unmount } = render(
       <EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />,
     )
-    expect(await screen.findByRole('status')).toHaveTextContent('Waiting for trainee monitor')
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'WAITING FOR TRAINEE MONITOR. The view appears when the trainee opens the monitor',
+    )
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
     unmount()
 
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({
@@ -435,9 +438,11 @@ describe('EmbeddedSpectatorPanel', () => {
     )
     await waitFor(() => {
       expect(screen.getByRole('status')).toHaveTextContent(
-        'Trainee offline · No monitor received',
+        'TRAINEE OFFLINE. No monitor received',
       )
     })
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
+    expect(screen.getByText('TRAINEE OFFLINE')).toHaveClass('text-pending-amber')
   })
 
   it('contains the full frame in one inert uniformly-scaled canvas', async () => {
@@ -456,7 +461,9 @@ describe('EmbeddedSpectatorPanel', () => {
 
     expect(await screen.findByTestId('projected-monitor')).toHaveAttribute('data-embedded', 'true')
     expect(screen.getByText('Wagami Z')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Live')
+    expect(screen.getByRole('status')).toHaveTextContent('LIVE')
+    expect(screen.getAllByRole('status')).toHaveLength(1)
+    expect(screen.queryByTestId('spectator-availability-overlay')).toBeNull()
     expect(screen.queryByText(/Updated/)).toBeNull()
     expect(container.querySelector('[inert]')).not.toBeNull()
     expect(container.querySelector('.embedded-spectator-canvas')).toHaveClass(
@@ -480,8 +487,73 @@ describe('EmbeddedSpectatorPanel', () => {
     )
 
     expect(await screen.findByTestId('projected-monitor')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('Room ended')
+    expect(screen.getByRole('status')).toHaveTextContent('ROOM ENDED. Final monitor state')
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black/85')
     await waitFor(() => expect(screen.getByText(/Updated/)).toBeInTheDocument())
+  })
+
+  it('keeps the authoritative stale veil and controls across every presentation mode', async () => {
+    const user = userEvent.setup()
+    installFullscreenMock()
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participant: {
+        nickname: 'Alice',
+        last_seen_at: new Date(Date.now() - 20_000).toISOString(),
+      },
+      projection: {
+        updatedAt: new Date(Date.now() - 20_000).toISOString(),
+        projection: { model: 'wagamiX' },
+      },
+    }), { status: 200 }))
+
+    render(<SpectatorHarness />)
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('TRAINEE OFFLINE')
+    })
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black/85')
+    expect(screen.getByRole('button', { name: 'Pin spectator mini-player' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Enter spectator fullscreen' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: 'Pin spectator mini-player' }))
+    expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-mode',
+      'floating',
+    )
+    expect(screen.getByText(/Updated/)).toBeInTheDocument()
+    expect(screen.getByTestId('spectator-availability-overlay')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Return spectator to dock' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Stop spectating' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: 'Enter spectator fullscreen' }))
+    await waitFor(() => expect(screen.getByLabelText('Spectating Alice')).toHaveAttribute(
+      'data-spectator-mode',
+      'fullscreen',
+    ))
+    expect(screen.getByTestId('spectator-availability-overlay')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Stop spectating' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Exit spectator fullscreen' })).toBeEnabled()
+  })
+
+  it('uses the Attempt-not-started screen after New Attempt clears the frame', async () => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      session: { status: 'waiting', active_attempt_version: 2 },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
+      projection: null,
+    }), { status: 200 }))
+
+    render(
+      <EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'ATTEMPT NOT STARTED. Start / Dispatch to begin the attempt',
+      )
+    })
+    expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
+    expect(screen.queryByTestId('projected-monitor')).toBeNull()
   })
 
   it('pins and restores one player without starting another projection poll', async () => {
@@ -493,7 +565,7 @@ describe('EmbeddedSpectatorPanel', () => {
     }), { status: 200 }))
 
     render(<SpectatorHarness />)
-    await screen.findByText('Waiting for trainee monitor', { selector: 'p' })
+    await screen.findByText('WAITING FOR TRAINEE MONITOR', { selector: 'p' })
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: 'Pin spectator mini-player' }))
@@ -629,7 +701,7 @@ describe('EmbeddedSpectatorPanel', () => {
     const errorTimer = timeoutSpy.mock.calls.find(([, delay]) => delay === 3000)?.[0]
     expect(errorTimer).toBeTypeOf('function')
     if (typeof errorTimer === 'function') act(() => errorTimer())
-    expect(screen.getByRole('status')).toHaveTextContent('Waiting for trainee monitor')
+    expect(screen.getByRole('status')).toHaveTextContent('WAITING FOR TRAINEE MONITOR')
   })
 
   it('disables fullscreen with an explanatory tooltip when the API is unavailable', () => {

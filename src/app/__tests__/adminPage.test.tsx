@@ -312,7 +312,7 @@ describe('AdminPage', () => {
 
     await user.click(within(screen.getByTestId('student-row-student-2')).getByRole('button', { name: 'Spectate' }))
     expect(screen.queryByText('Connecting to Alice…')).toBeNull()
-    expect(screen.getAllByText('Connecting to Bob…')).toHaveLength(2)
+    expect(screen.getByText('Connecting to Bob…')).toBeInTheDocument()
     expect(screen.queryByTestId('projected-monitor')).toBeNull()
     expect(screen.getByLabelText('Spectating Bob')).toHaveAttribute(
       'data-spectator-mode',

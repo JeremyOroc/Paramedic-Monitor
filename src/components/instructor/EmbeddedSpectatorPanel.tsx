@@ -8,9 +8,14 @@ import type {
   RefObject,
 } from 'react'
 
+import { SpectatorAvailabilityOverlay } from '@/components/instructor/SpectatorAvailabilityOverlay'
 import { SpectatorMonitor } from '@/components/instructor/SpectatorMonitor'
 import { useSpectatorProjection } from '@/hooks/useSpectatorProjection'
 import { isConnected } from '@/lib/sessionRoster'
+import {
+  resolveSpectatorAvailability,
+  spectatorAvailabilityAnnouncement,
+} from '@/lib/spectatorAvailability'
 import { cn } from '@/lib/utils'
 
 export type SpectatorPresentationMode = 'docked' | 'floating' | 'fullscreen'
@@ -461,30 +466,24 @@ export function EmbeddedSpectatorPanel({
   const envelope = data?.projection ?? null
   const lastSeenAt = data?.participant.last_seen_at ?? participant.last_seen_at
   const traineeConnected = isConnected(lastSeenAt, now)
-  const roomEnded = data?.session.status === 'ended'
-  const connectionLabel = connecting
-    ? `Connecting to ${participant.nickname}…`
-    : connectionLost
-      ? 'Spectator connection lost'
-      : roomEnded
-        ? 'Room ended'
-        : !traineeConnected && !envelope
-          ? 'Trainee offline · No monitor received'
-          : !traineeConnected
-            ? 'Trainee offline'
-            : envelope
-              ? 'Live'
-              : 'Waiting for trainee monitor'
-  const showUpdatedAt = Boolean(
-    envelope && (connectionLost || roomEnded || !traineeConnected),
-  )
+  const availability = resolveSpectatorAvailability({
+    sessionStatus: data?.session.status ?? null,
+    connecting,
+    connectionLost,
+    traineeConnected,
+    hasProjection: envelope !== null,
+    traineeName: participant.nickname,
+  })
+  const showUpdatedAt = Boolean(envelope && !availability.isLive)
   const updatedLabel = envelope
     ? `Updated ${new Date(envelope.updatedAt).toLocaleTimeString()}`
     : ''
-  const displayedStatus = fullscreenError || (
-    mode === 'floating' && showUpdatedAt
-      ? `${connectionLabel} · ${updatedLabel}`
-      : connectionLabel
+  const compactHeaderLabel = fullscreenError || (
+    availability.isLive
+      ? 'Live'
+      : mode === 'floating' && showUpdatedAt
+        ? updatedLabel
+        : ''
   )
 
   const enterFullscreen = async () => {
@@ -592,8 +591,7 @@ export function EmbeddedSpectatorPanel({
             </span>
           ) : null}
           <span
-            role="status"
-            aria-live="polite"
+            aria-hidden={!compactHeaderLabel}
             className={cn(
               'truncate text-right font-bold',
               mode === 'floating'
@@ -601,14 +599,12 @@ export function EmbeddedSpectatorPanel({
                 : 'ml-auto',
               fullscreenError
                 ? 'text-pending-amber'
-                : connectionLabel === 'Live'
+                : availability.isLive
                   ? 'text-ecg-green'
-                  : connectionLost || !traineeConnected
-                    ? 'text-pending-amber'
-                    : 'text-neutral-500',
+                  : 'text-neutral-600',
             )}
           >
-            {displayedStatus}
+            {compactHeaderLabel}
           </span>
           {mode !== 'floating' && showUpdatedAt ? (
             <span className="shrink-0 text-neutral-600">{updatedLabel}</span>
@@ -632,7 +628,10 @@ export function EmbeddedSpectatorPanel({
             </button>
           ) : null}
         </header>
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+          {fullscreenError || spectatorAvailabilityAnnouncement(availability)}
+        </p>
+        <div className="spectator-availability-surface relative min-h-0 flex-1 overflow-hidden">
           {envelope ? (
             <div
               inert
@@ -644,12 +643,13 @@ export function EmbeddedSpectatorPanel({
               </div>
             </div>
           ) : (
-            <div className="grid h-full place-items-center bg-black px-6 text-center">
-              <p className="font-mono text-xs uppercase tracking-[0.2em] text-neutral-600">
-                {connectionLabel}
-              </p>
-            </div>
+            <div className="h-full bg-black" />
           )}
+          <SpectatorAvailabilityOverlay
+            key={availability.kind}
+            availability={availability}
+            hasProjection={envelope !== null}
+          />
         </div>
 
         {mode === 'docked' ? (
