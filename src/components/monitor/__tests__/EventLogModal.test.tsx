@@ -48,7 +48,7 @@ describe('EventLogModal', () => {
     expect(screen.getByText(/Prev/)).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByText(/Prev/)).toHaveAttribute('aria-current', 'true')
     expect(screen.getByText(/Prev/)).toHaveClass(
-      'bg-[var(--color-selection-blue)]',
+      'bg-selection-blue',
       'border-2',
       'border-white',
       'opacity-30',
@@ -64,7 +64,7 @@ describe('EventLogModal', () => {
     expect(screen.getByText(/Next/)).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByText(/Next/)).toHaveAttribute('aria-current', 'true')
     expect(screen.getByText(/Next/)).toHaveClass(
-      'bg-[var(--color-selection-blue)]',
+      'bg-selection-blue',
       'opacity-30',
     )
     expect(screen.getByText('Event 9').closest('ul')).toHaveClass('gap-px')
@@ -77,10 +77,10 @@ describe('EventLogModal', () => {
     const title = screen.getByRole('heading', { name: 'Event Log' })
     expect(title.parentElement).toHaveClass('bg-white', 'px-5', 'py-2')
     expect(title.parentElement?.nextElementSibling).toHaveClass(
-      'bg-[var(--color-modal-surface)]',
+      'bg-modal-surface',
     )
     expect(screen.getByText('Exit')).toHaveClass(
-      'bg-[var(--color-selection-blue)]',
+      'bg-selection-blue',
       'border-2',
       'border-white',
       'text-white',

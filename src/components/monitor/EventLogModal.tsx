@@ -41,7 +41,7 @@ export function EventLogModal({
       <header className="bg-white px-5 py-2 text-black">
         <h2 className="text-lg font-bold">Event Log</h2>
       </header>
-      <div className="flex-1 overflow-hidden bg-[var(--color-modal-surface)] px-4 py-2">
+      <div className="flex-1 overflow-hidden bg-modal-surface px-4 py-2">
         {log.length > 0 ? (
           <ul className="flex flex-col gap-px">
             {pageEntries.map((entry, i) => (
@@ -62,7 +62,7 @@ export function EventLogModal({
       </div>
       <div
         data-testid="event-log-actions"
-        className="border-t border-black/20 bg-[var(--color-modal-surface)] px-4 py-1.5 font-mono text-xs"
+        className="border-t border-black/20 bg-modal-surface px-4 py-1.5 font-mono text-xs"
       >
         <div className="flex justify-start">
           <MonitorModalAction

@@ -13,6 +13,9 @@ vi.mock('@/lib/audio', () => ({
 type Overrides = {
   twelveLeadActive?: boolean
   captureLock?: boolean
+  twelveLeadTransmissionOpen?: boolean
+  twelveLeadTransmissionBusy?: boolean
+  twelveLeadTransmissionReady?: boolean
   initialPowerState?: 'on' | 'booting' | 'off'
   powerLocked?: boolean
   lockScreen?: ReactNode
@@ -62,6 +65,7 @@ function makeProps(overrides: Overrides = {}) {
     onBack: vi.fn(),
     onPatientInfo: vi.fn(),
     onCaptureTwelveLead: vi.fn(),
+    onTransmitTwelveLead: vi.fn(),
     onPrint: vi.fn(),
   }
   const nav = {
@@ -75,6 +79,9 @@ function makeProps(overrides: Overrides = {}) {
     screen: <div>monitor-screen</div>,
     twelveLeadActive: overrides.twelveLeadActive ?? false,
     captureLock: overrides.captureLock,
+    twelveLeadTransmissionOpen: overrides.twelveLeadTransmissionOpen,
+    twelveLeadTransmissionBusy: overrides.twelveLeadTransmissionBusy,
+    twelveLeadTransmissionReady: overrides.twelveLeadTransmissionReady,
     initialPowerState: overrides.initialPowerState,
     powerLocked: overrides.powerLocked,
     lockScreen: overrides.lockScreen,
@@ -280,12 +287,76 @@ describe('DeviceShell', () => {
     expect(screen.queryByRole('button', { name: 'Toggle EtCO2' })).not.toBeInTheDocument()
   })
 
-  it('keeps all physical left soft keys visible in 12-lead view', () => {
+  it('keeps the envelope visible but disabled before capture', () => {
     render(<DeviceShell {...makeProps({ twelveLeadActive: true })} />)
-    // slot 1 is the Capture key; the still-unassigned slots remain present too
     expect(screen.getByRole('button', { name: 'Capture 12-lead' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Soft key 3' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send 12-lead' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Soft key 6' })).toBeInTheDocument()
+  })
+
+  it('opens transmission from the third key after capture eligibility', async () => {
+    const user = userEvent.setup()
+    const props = makeProps({
+      twelveLeadActive: true,
+      twelveLeadTransmissionReady: true,
+    })
+    render(<DeviceShell {...props} />)
+
+    await user.click(screen.getByRole('button', { name: 'Send 12-lead' }))
+    expect(props.softKeys.onTransmitTwelveLead).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps only destination navigation and Back active while the panel is open', async () => {
+    const user = userEvent.setup()
+    const onToggleMute = vi.fn()
+    const onPatientEvent = vi.fn()
+    const props = makeProps({
+      twelveLeadActive: true,
+      twelveLeadTransmissionReady: true,
+      twelveLeadTransmissionOpen: true,
+      audio: { onToggleMute, onPatientEvent },
+    })
+    render(<DeviceShell {...props} />)
+
+    await user.click(screen.getByRole('button', { name: 'Capture 12-lead' }))
+    await user.click(screen.getByRole('button', { name: 'Patient Info' }))
+    await user.click(screen.getByRole('button', { name: 'Send 12-lead' }))
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    await user.click(screen.getByRole('button', { name: 'Alarm' }))
+    await user.click(screen.getByRole('button', { name: 'Patient event' }))
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    await user.click(screen.getByRole('button', { name: 'Enter' }))
+
+    expect(props.softKeys.onCaptureTwelveLead).not.toHaveBeenCalled()
+    expect(props.softKeys.onPatientInfo).not.toHaveBeenCalled()
+    expect(props.softKeys.onTransmitTwelveLead).not.toHaveBeenCalled()
+    expect(props.nav.onHome).not.toHaveBeenCalled()
+    expect(onToggleMute).not.toHaveBeenCalled()
+    expect(onPatientEvent).not.toHaveBeenCalled()
+    expect(props.nav.onMoveDown).toHaveBeenCalledTimes(1)
+    expect(props.nav.onEnter).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Analyze rhythm' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(props.softKeys.onBack).toHaveBeenCalledTimes(1)
+  })
+
+  it('freezes destination navigation during the SENT confirmation', async () => {
+    const user = userEvent.setup()
+    const props = makeProps({
+      twelveLeadActive: true,
+      twelveLeadTransmissionReady: true,
+      twelveLeadTransmissionOpen: true,
+      twelveLeadTransmissionBusy: true,
+    })
+    render(<DeviceShell {...props} />)
+
+    await user.click(screen.getByRole('button', { name: 'Move up' }))
+    await user.click(screen.getByRole('button', { name: 'Move down' }))
+    await user.click(screen.getByRole('button', { name: 'Enter' }))
+    expect(props.nav.onMoveUp).not.toHaveBeenCalled()
+    expect(props.nav.onMoveDown).not.toHaveBeenCalled()
+    expect(props.nav.onEnter).not.toHaveBeenCalled()
   })
 
   it('fires onPatientInfo when the slot-2 key is clicked in 12-lead view', async () => {
@@ -377,15 +448,16 @@ describe('DeviceShell', () => {
     expect(screen.getByRole('button', { name: 'Dispatch touchscreen' })).toBeEnabled()
   })
 
-  it('keeps unmapped 12-lead soft keys inert', async () => {
+  it('keeps the remaining unmapped 12-lead soft keys inert', async () => {
     const user = userEvent.setup()
     const props = makeProps({ twelveLeadActive: true })
     render(<DeviceShell {...props} />)
-    await user.click(screen.getByRole('button', { name: 'Soft key 3' }))
     await user.click(screen.getByRole('button', { name: 'Soft key 4' }))
+    await user.click(screen.getByRole('button', { name: 'Soft key 5' }))
     expect(props.softKeys.onPatientInfo).toHaveBeenCalledTimes(0)
     expect(props.softKeys.onBack).toHaveBeenCalledTimes(0)
     expect(props.softKeys.onCaptureTwelveLead).toHaveBeenCalledTimes(0)
+    expect(props.softKeys.onTransmitTwelveLead).toHaveBeenCalledTimes(0)
     expect(props.softKeys.onToggleEtco2).toHaveBeenCalledTimes(0)
   })
 

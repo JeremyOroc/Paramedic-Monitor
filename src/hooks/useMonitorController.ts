@@ -17,6 +17,11 @@ import { DEFAULT_VITALS, type PatientMode, type Rhythm } from '@/types/vitals'
 import { setAudioMuted } from '@/lib/audio'
 import { buildEventLogEntry } from '@/lib/eventLog'
 import { NEXT_MED_PAGE, type MedicationPage } from '@/lib/monitor/medications'
+import {
+  TWELVE_LEAD_SENT_MS,
+  TWELVE_LEAD_TRANSMISSION_DESTINATIONS,
+  TWELVE_LEAD_TRANSMISSION_RETURN_INDEX,
+} from '@/lib/twelveLeadTransmission'
 import type { EventLogStamp } from '@/types/eventLog'
 import {
   NIBP_AUTO_INTERVALS,
@@ -93,6 +98,10 @@ export type MonitorControllerState = {
   capturedHr: number
   lastCapture: CaptureSnapshot | null
   printPreviewOpen: boolean
+  twelveLeadTransmissionOpen: boolean
+  twelveLeadTransmissionHighlightedIndex: number
+  twelveLeadSentDestination: string | null
+  twelveLeadSentUntil: number | null
 }
 
 /**
@@ -115,6 +124,7 @@ function hasBlockingOverlay(state: MonitorControllerState): boolean {
     state.vitalLogOpen ||
     state.callerInfoOpen ||
     state.printPreviewOpen ||
+    state.twelveLeadTransmissionOpen ||
     state.captureState === 'acquiring' ||
     state.captureState === 'result'
   )
@@ -129,6 +139,7 @@ function hasAnyModalOrOverlay(state: MonitorControllerState): boolean {
     state.eventLogOpen ||
     state.vitalLogOpen ||
     state.printPreviewOpen ||
+    state.twelveLeadTransmissionOpen ||
     state.captureState === 'acquiring' ||
     state.captureState === 'result'
   )
@@ -170,6 +181,11 @@ type Action =
   | { type: 'startCapture'; snapshot: CaptureSnapshot }
   | { type: 'completeCapture'; snapshot: CaptureSnapshot }
   | { type: 'openPrintPreview' }
+  | { type: 'openTwelveLeadTransmission' }
+  | { type: 'closeTwelveLeadTransmission' }
+  | { type: 'moveTwelveLeadTransmission'; direction: 1 | -1 }
+  | { type: 'sendTwelveLead'; destination: string; sentUntil: number }
+  | { type: 'clearTwelveLeadSent'; sentUntil: number }
   | { type: 'back' }
   | { type: 'toggleMute' }
   | { type: 'powerOn' }
@@ -225,6 +241,10 @@ const initialState: MonitorControllerState = {
   capturedHr: DEFAULT_VITALS.hr,
   lastCapture: null,
   printPreviewOpen: false,
+  twelveLeadTransmissionOpen: false,
+  twelveLeadTransmissionHighlightedIndex: 0,
+  twelveLeadSentDestination: null,
+  twelveLeadSentUntil: null,
 }
 
 function getSelectableControls(state: MonitorControllerState): MonitorSelection[] {
@@ -453,7 +473,7 @@ function reducer(
     case 'closeCallerInfo':
       return { ...state, callerInfoOpen: false }
     case 'openPatientInfo':
-      if (state.vitalLogOpen || state.nibpModalOpen) return state
+      if (state.vitalLogOpen || state.nibpModalOpen || state.twelveLeadTransmissionOpen) return state
       return {
         ...state,
         patientInfoOpen: true,
@@ -525,7 +545,7 @@ function reducer(
         isMuted: state.isMuted,
       }
     case 'startCapture':
-      if (state.vitalLogOpen || state.nibpModalOpen) return state
+      if (state.vitalLogOpen || state.nibpModalOpen || state.twelveLeadTransmissionOpen) return state
       return {
         ...state,
         patientInfoOpen: false,
@@ -542,6 +562,54 @@ function reducer(
     case 'openPrintPreview':
       if (state.vitalLogOpen || state.nibpModalOpen) return state
       return state.lastCapture ? { ...state, printPreviewOpen: true } : state
+    case 'openTwelveLeadTransmission':
+      if (
+        state.view !== '12lead' ||
+        state.captureState !== 'idle' ||
+        state.lastCapture === null ||
+        hasAnyModalOrOverlay(state)
+      ) {
+        return state
+      }
+      return {
+        ...state,
+        twelveLeadTransmissionOpen: true,
+        twelveLeadTransmissionHighlightedIndex: 0,
+        twelveLeadSentDestination: null,
+        twelveLeadSentUntil: null,
+      }
+    case 'closeTwelveLeadTransmission':
+      return {
+        ...state,
+        twelveLeadTransmissionOpen: false,
+        twelveLeadTransmissionHighlightedIndex: 0,
+        twelveLeadSentDestination: null,
+        twelveLeadSentUntil: null,
+      }
+    case 'moveTwelveLeadTransmission': {
+      if (!state.twelveLeadTransmissionOpen || state.twelveLeadSentUntil !== null) return state
+      const optionCount = TWELVE_LEAD_TRANSMISSION_RETURN_INDEX + 1
+      return {
+        ...state,
+        twelveLeadTransmissionHighlightedIndex:
+          (state.twelveLeadTransmissionHighlightedIndex + action.direction + optionCount) %
+          optionCount,
+      }
+    }
+    case 'sendTwelveLead':
+      if (!state.twelveLeadTransmissionOpen || state.twelveLeadSentUntil !== null) return state
+      return {
+        ...state,
+        twelveLeadSentDestination: action.destination,
+        twelveLeadSentUntil: action.sentUntil,
+      }
+    case 'clearTwelveLeadSent':
+      if (state.twelveLeadSentUntil !== action.sentUntil) return state
+      return {
+        ...state,
+        twelveLeadSentDestination: null,
+        twelveLeadSentUntil: null,
+      }
     case 'back':
       if (state.vitalLogOpen) return { ...state, vitalLogOpen: false }
       if (state.callerInfoOpen) return { ...state, callerInfoOpen: false }
@@ -552,6 +620,15 @@ function reducer(
       }
       if (state.patientModalOpen) return { ...state, patientModalOpen: false }
       if (state.printPreviewOpen) return { ...state, printPreviewOpen: false }
+      if (state.twelveLeadTransmissionOpen) {
+        return {
+          ...state,
+          twelveLeadTransmissionOpen: false,
+          twelveLeadTransmissionHighlightedIndex: 0,
+          twelveLeadSentDestination: null,
+          twelveLeadSentUntil: null,
+        }
+      }
       if (state.editing) return { ...state, editing: false, editValue: null }
       if (state.captureState === 'acquiring') return { ...state, captureState: 'idle' }
       if (state.captureState === 'result') return { ...state, captureState: 'idle' }
@@ -570,6 +647,10 @@ function reducer(
         eventLog: [],
         lastCapture: null,
         printPreviewOpen: false,
+        twelveLeadTransmissionOpen: false,
+        twelveLeadTransmissionHighlightedIndex: 0,
+        twelveLeadSentDestination: null,
+        twelveLeadSentUntil: null,
         medicationMode: false,
         medicationPage: 1,
         flashedMed: null,
@@ -618,6 +699,7 @@ export function useMonitorController({
   }))
   const captureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const transmissionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearCaptureTimer = useCallback(() => {
     if (captureTimerRef.current) {
@@ -633,12 +715,20 @@ export function useMonitorController({
     }
   }, [])
 
+  const clearTransmissionTimer = useCallback(() => {
+    if (transmissionTimerRef.current) {
+      clearTimeout(transmissionTimerRef.current)
+      transmissionTimerRef.current = null
+    }
+  }, [])
+
   useEffect(() => {
     return () => {
       clearCaptureTimer()
       clearFlashTimer()
+      clearTransmissionTimer()
     }
-  }, [clearCaptureTimer, clearFlashTimer])
+  }, [clearCaptureTimer, clearFlashTimer, clearTransmissionTimer])
 
   const selectableControls = useMemo(() => getSelectableControls(state), [state])
   const activeSelectedControl = useMemo(() => getActiveSelectedControl(state), [state])
@@ -660,12 +750,37 @@ export function useMonitorController({
 
   const onBack = useCallback(() => {
     if (state.captureState === 'acquiring') clearCaptureTimer()
+    if (state.twelveLeadTransmissionOpen) clearTransmissionTimer()
     dispatch({ type: 'back' })
-  }, [clearCaptureTimer, state.captureState])
+  }, [clearCaptureTimer, clearTransmissionTimer, state.captureState, state.twelveLeadTransmissionOpen])
 
   const blockingOverlay = hasBlockingOverlay(state)
 
   const onEnter = useCallback((vitalLogTotalPages = 1) => {
+    if (state.twelveLeadTransmissionOpen) {
+      if (state.twelveLeadSentUntil !== null) return null
+      if (
+        state.twelveLeadTransmissionHighlightedIndex ===
+        TWELVE_LEAD_TRANSMISSION_RETURN_INDEX
+      ) {
+        clearTransmissionTimer()
+        dispatch({ type: 'closeTwelveLeadTransmission' })
+        return null
+      }
+      const destination =
+        TWELVE_LEAD_TRANSMISSION_DESTINATIONS[
+          state.twelveLeadTransmissionHighlightedIndex
+        ]
+      if (!destination) return null
+      const sentUntil = Date.now() + TWELVE_LEAD_SENT_MS
+      clearTransmissionTimer()
+      dispatch({ type: 'sendTwelveLead', destination, sentUntil })
+      transmissionTimerRef.current = setTimeout(() => {
+        transmissionTimerRef.current = null
+        dispatch({ type: 'clearTwelveLeadSent', sentUntil })
+      }, TWELVE_LEAD_SENT_MS)
+      return destination
+    }
     if (state.vitalLogOpen) {
       dispatch({ type: 'activateVitalLogButton', totalPages: vitalLogTotalPages })
       return
@@ -711,9 +826,17 @@ export function useMonitorController({
     state.nibpModalOpen,
     state.selectedField,
     state.vitalLogOpen,
+    state.twelveLeadTransmissionHighlightedIndex,
+    state.twelveLeadTransmissionOpen,
+    state.twelveLeadSentUntil,
+    clearTransmissionTimer,
   ])
 
   const onMoveUp = useCallback((vitalLogHasPagination = false) => {
+    if (state.twelveLeadTransmissionOpen) {
+      dispatch({ type: 'moveTwelveLeadTransmission', direction: -1 })
+      return
+    }
     if (state.vitalLogOpen) {
       dispatch({
         type: 'moveVitalLogHighlight',
@@ -754,9 +877,14 @@ export function useMonitorController({
     state.nibpModalOpen,
     state.nibpFocusSide,
     state.vitalLogOpen,
+    state.twelveLeadTransmissionOpen,
   ])
 
   const onMoveDown = useCallback((vitalLogHasPagination = false) => {
+    if (state.twelveLeadTransmissionOpen) {
+      dispatch({ type: 'moveTwelveLeadTransmission', direction: 1 })
+      return
+    }
     if (state.vitalLogOpen) {
       dispatch({
         type: 'moveVitalLogHighlight',
@@ -797,6 +925,7 @@ export function useMonitorController({
     state.nibpModalOpen,
     state.nibpFocusSide,
     state.vitalLogOpen,
+    state.twelveLeadTransmissionOpen,
   ])
 
   const onCaptureTwelveLead = useCallback(() => {
@@ -825,15 +954,17 @@ export function useMonitorController({
   }, [state.isMuted])
 
   const onResetMonitorUi = useCallback(() => {
+    clearTransmissionTimer()
     dispatch({ type: 'resetMonitorUi' })
-  }, [])
+  }, [clearTransmissionTimer])
 
   const onPowerOff = useCallback(() => {
     clearCaptureTimer()
     clearFlashTimer()
+    clearTransmissionTimer()
     setAudioMuted(false)
     dispatch({ type: 'powerOff' })
-  }, [clearCaptureTimer, clearFlashTimer])
+  }, [clearCaptureTimer, clearFlashTimer, clearTransmissionTimer])
 
   return {
     ...state,
@@ -843,6 +974,10 @@ export function useMonitorController({
     isTwelveLead: state.view === '12lead',
     captureLock: (state.view === '12lead' && state.captureState !== 'idle') ||
       state.printPreviewOpen,
+    twelveLeadTransmissionReady:
+      state.view === '12lead' && state.captureState === 'idle' && state.lastCapture !== null,
+    twelveLeadTransmissionBusy:
+      state.twelveLeadTransmissionOpen && state.twelveLeadSentUntil !== null,
     displayAge,
     displaySex,
     onBack,
@@ -860,6 +995,7 @@ export function useMonitorController({
     onCloseCallerInfo: () => dispatch({ type: 'closeCallerInfo' }),
     onPatientInfo: () => dispatch({ type: 'openPatientInfo' }),
     onCaptureTwelveLead,
+    onOpenTwelveLeadTransmission: () => dispatch({ type: 'openTwelveLeadTransmission' }),
     onPrint: () => dispatch({ type: 'openPrintPreview' }),
     onMedClick,
     onMedPageChange: () => dispatch({ type: 'nextMedicationPage' }),

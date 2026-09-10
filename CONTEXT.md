@@ -109,6 +109,11 @@ while its routing locations come from reviewed institutional addresses. It is no
 every hospital in Québec and does not claim to be current clinical-routing guidance.
 _Avoid_: All Québec hospitals, nearby hospitals
 
+**12-lead transmission destination**:
+One of seven fixed hospital recipients to which a trainee may simulate sending a captured 12-lead.
+It is independent of the Selected receiving hospital and does not change the Transport leg.
+_Avoid_: Receiving hospital, transport destination
+
 **Spectator view**:
 A host-authorized, read-only reproduction of one trainee's current simulator presentation, shown either inside the Instructor Console or as a standalone page. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
 _Avoid_: Remote monitor, screen share, instructor monitor

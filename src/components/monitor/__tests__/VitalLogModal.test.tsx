@@ -34,6 +34,9 @@ describe('VitalLogModal', () => {
       'bottom-[110px]',
     )
     expect(screen.getByRole('heading', { name: 'Vital Log' })).toBeInTheDocument()
+    expect(screen.getByText('No vitals recorded.').parentElement).toHaveClass(
+      'bg-modal-surface',
+    )
     expect(screen.getByText('No vitals recorded.')).toBeInTheDocument()
     expect(screen.getByText('FC')).toHaveClass('text-ecg-green')
     expect(screen.getByText('PNI SYS')).toHaveClass('text-cyan-bp')
@@ -42,6 +45,7 @@ describe('VitalLogModal', () => {
     expect(screen.getByText('SPO2')).toHaveClass('text-yellow-spo2')
     expect(screen.queryByText(/Page \d+ of \d+/)).toBeNull()
     expect(screen.getByText('Exit')).toHaveAttribute('aria-current', 'true')
+    expect(screen.getByText('Exit')).toHaveClass('bg-selection-blue')
   })
 
   it('renders separate PNI columns, colors, and dashes for unavailable values', () => {

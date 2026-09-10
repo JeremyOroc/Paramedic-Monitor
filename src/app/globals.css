@@ -89,6 +89,11 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Keep the monitor's shared modal colors stable under Turbopack's incremental
+   Tailwind scan. These utilities use the centralized palette above. */
+.bg-modal-surface { background-color: var(--color-modal-surface); }
+.bg-selection-blue { background-color: var(--color-selection-blue); }
+
 /* The Z shell is a bespoke surface rather than part of the general monitor
    palette. Explicit utilities keep these classes stable under Turbopack's
    incremental Tailwind scan while the values remain centralized above. */

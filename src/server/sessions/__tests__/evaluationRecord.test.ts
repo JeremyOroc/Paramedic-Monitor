@@ -357,6 +357,7 @@ describe('recordStudentEvent — action/state linkage (PLAN 12c, 12d)', () => {
       'power_off',
       'twelve_lead',
       'twelve_lead_capture',
+      'twelve_lead_send',
       'print',
       'etco2_toggle',
       'energy_change',

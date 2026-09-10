@@ -17,6 +17,7 @@ import { SubBar } from '@/components/monitor/SubBar'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { TwelveLeadPrintout } from '@/components/monitor/TwelveLeadPrintout'
+import { TwelveLeadTransmissionPanel } from '@/components/monitor/TwelveLeadTransmissionPanel'
 import { VitalLogModal, VITAL_LOG_ITEMS_PER_PAGE } from '@/components/monitor/VitalLogModal'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { WagamiZDevice } from '@/components/monitor/WagamiZDevice'
@@ -92,6 +93,12 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
             medicationPage={controller.medicationPage}
             activeMed={controller.flashedMed}
             printActive={controller.printPreviewOpen}
+            twelveLeadTransmissionReady={
+              controller.view === '12lead' &&
+              controller.captureState === 'idle' &&
+              controller.lastCapture !== null
+            }
+            twelveLeadTransmissionOpen={controller.twelveLeadTransmissionOpen}
           />
         }
         main={
@@ -174,6 +181,12 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
         sex={projection.displaySex}
         selectedField={controller.selectedField}
         editing={controller.editing}
+      />
+      <TwelveLeadTransmissionPanel
+        open={controller.twelveLeadTransmissionOpen}
+        highlightedIndex={controller.twelveLeadTransmissionHighlightedIndex}
+        sentDestination={controller.twelveLeadSentDestination}
+        sentUntil={controller.twelveLeadSentUntil}
       />
       <EventLogModal
         open={controller.eventLogOpen}
@@ -294,6 +307,15 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
           (controller.view === '12lead' && controller.captureState !== 'idle') ||
           controller.printPreviewOpen
         }
+        twelveLeadTransmissionOpen={controller.twelveLeadTransmissionOpen}
+        twelveLeadTransmissionBusy={
+          controller.twelveLeadTransmissionOpen && controller.twelveLeadSentUntil !== null
+        }
+        twelveLeadTransmissionReady={
+          controller.view === '12lead' &&
+          controller.captureState === 'idle' &&
+          controller.lastCapture !== null
+        }
         powerStateOverride={projection.powerState}
         powerLocked={!projection.gateSatisfied}
         lockScreen={
@@ -302,7 +324,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
           </div>
         }
         defib={{ ...defib, progress: defibProgress, onAnalyse: noop, onCharge: noop, onShock: noop, onEnergyUp: noop, onEnergyDown: noop }}
-        softKeys={{ onTwelveLead: noop, onToggleEtco2: noop, onTreatment: noop, onLeftAnalyse: noop, onBack: noop, onPatientInfo: noop, onCaptureTwelveLead: noop, onPrint: noop }}
+        softKeys={{ onTwelveLead: noop, onToggleEtco2: noop, onTreatment: noop, onLeftAnalyse: noop, onBack: noop, onPatientInfo: noop, onCaptureTwelveLead: noop, onTransmitTwelveLead: noop, onPrint: noop }}
         nav={{ onHome: noop, onMoveUp: noop, onMoveDown: noop, onEnter: noop }}
         meds={{ mode: controller.medicationMode, page: controller.medicationPage, onMedClick: noop, onMedPageChange: noop, onMedInfo: noop, onMedBack: noop }}
         power={{ onPowerOn: noop, onPowerOff: noop }}

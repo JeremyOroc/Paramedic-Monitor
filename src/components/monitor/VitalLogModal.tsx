@@ -41,7 +41,7 @@ export function VitalLogModal({
       <header className="bg-white px-4 py-1.5 text-black">
         <h2 className="text-base font-bold">Vital Log</h2>
       </header>
-      <div className="flex-1 overflow-hidden bg-[var(--color-modal-surface)] px-3 py-2">
+      <div className="flex-1 overflow-hidden bg-modal-surface px-3 py-2">
         <div className="grid grid-cols-[1.2fr_repeat(5,minmax(0,1fr))] gap-px bg-black/30 text-center text-[10px] font-bold tabular-nums">
           <div className="bg-black px-1 py-1 text-white">TIME</div>
           <div className="bg-black px-1 py-1 text-ecg-green">FC</div>
@@ -64,14 +64,14 @@ export function VitalLogModal({
           <p className="mt-2 text-sm text-black/70">No vitals recorded.</p>
         )}
       </div>
-      <div className="border-t border-black/20 bg-[var(--color-modal-surface)] px-4 py-1.5 text-xs">
+      <div className="border-t border-black/20 bg-modal-surface px-4 py-1.5 text-xs">
         <div className="flex justify-start">
           <span
             aria-current={highlightedButton === 'exit' ? 'true' : undefined}
             className={cn(
               'px-2 py-1 font-bold',
               highlightedButton === 'exit'
-                ? 'bg-[var(--color-selection-blue)] text-white'
+                ? 'bg-selection-blue text-white'
                 : 'text-black opacity-50',
             )}
           >
@@ -86,7 +86,7 @@ export function VitalLogModal({
               className={cn(
                 'px-2 py-1 font-bold',
                 highlightedButton === 'prev'
-                  ? 'bg-[var(--color-selection-blue)] text-white'
+                  ? 'bg-selection-blue text-white'
                   : 'text-black opacity-50',
                 page === 1 && 'opacity-30',
               )}
@@ -100,7 +100,7 @@ export function VitalLogModal({
               className={cn(
                 'px-2 py-1 font-bold',
                 highlightedButton === 'next'
-                  ? 'bg-[var(--color-selection-blue)] text-white'
+                  ? 'bg-selection-blue text-white'
                   : 'text-black opacity-50',
                 page === totalPages && 'opacity-30',
               )}
