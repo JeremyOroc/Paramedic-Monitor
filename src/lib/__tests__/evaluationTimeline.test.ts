@@ -116,6 +116,16 @@ describe('formatEventDetail', () => {
     ).toBe('"Epinephrine"')
   })
 
+  it('shows the complete 12-lead transmission action as a report sentence', () => {
+    expect(
+      formatEventDetail({
+        kind: 'twelve_lead_send',
+        label: '12-lead sent — CHUM',
+        payload: { hospital: 'CHUM' },
+      }),
+    ).toBe('12-lead sent — CHUM')
+  })
+
   it('formats a payload as the mockup does', () => {
     expect(
       formatEventDetail({ kind: 'nibp_result', label: 'NIBP 82/48', payload: { bp_sys: 82, bp_dia: 48 } }),

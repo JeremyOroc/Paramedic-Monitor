@@ -11,6 +11,7 @@ import { LeftSidebar } from '@/components/monitor/LeftSidebar'
 import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { TwelveLeadPrintout } from '@/components/monitor/TwelveLeadPrintout'
+import { TwelveLeadTransmissionPanel } from '@/components/monitor/TwelveLeadTransmissionPanel'
 import { AcquiringDialog } from '@/components/monitor/AcquiringDialog'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
@@ -665,6 +666,8 @@ export function MonitorPage({
             medicationPage={controller.medicationPage}
             activeMed={controller.flashedMed}
             printActive={controller.printPreviewOpen}
+            twelveLeadTransmissionReady={controller.twelveLeadTransmissionReady}
+            twelveLeadTransmissionOpen={controller.twelveLeadTransmissionOpen}
           />
         }
         main={
@@ -739,6 +742,12 @@ export function MonitorPage({
         sex={controller.displaySex}
         selectedField={controller.selectedField}
         editing={controller.editing}
+      />
+      <TwelveLeadTransmissionPanel
+        open={controller.twelveLeadTransmissionOpen}
+        highlightedIndex={controller.twelveLeadTransmissionHighlightedIndex}
+        sentDestination={controller.twelveLeadSentDestination}
+        sentUntil={controller.twelveLeadSentUntil}
       />
       <EventLogModal
         open={controller.eventLogOpen}
@@ -864,6 +873,9 @@ export function MonitorPage({
         }
         twelveLeadActive={controller.isTwelveLead}
         captureLock={controller.captureLock}
+        twelveLeadTransmissionOpen={controller.twelveLeadTransmissionOpen}
+        twelveLeadTransmissionBusy={controller.twelveLeadTransmissionBusy}
+        twelveLeadTransmissionReady={controller.twelveLeadTransmissionReady}
         defib={{
           state: defib.state,
           energy: defib.energy,
@@ -941,6 +953,7 @@ export function MonitorPage({
             })
             controller.onCaptureTwelveLead()
           },
+          onTransmitTwelveLead: controller.onOpenTwelveLeadTransmission,
           onPrint: () => {
             onStudentEvent?.({ kind: 'print', label: 'Print' })
             controller.onPrint()
@@ -950,7 +963,16 @@ export function MonitorPage({
           onHome: controller.onHome,
           onMoveUp: () => controller.onMoveUp(vitalLogHasPagination),
           onMoveDown: () => controller.onMoveDown(vitalLogHasPagination),
-          onEnter: () => controller.onEnter(vitalLogTotalPages),
+          onEnter: () => {
+            const destination = controller.onEnter(vitalLogTotalPages)
+            if (destination) {
+              onStudentEvent?.({
+                kind: 'twelve_lead_send',
+                label: `12-lead sent — ${destination}`,
+                payload: { hospital: destination },
+              })
+            }
+          },
         }}
         meds={{
           mode: controller.medicationMode,

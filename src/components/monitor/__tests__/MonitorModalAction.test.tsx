@@ -23,7 +23,7 @@ describe('MonitorModalAction', () => {
     )
 
     const action = screen.getByText('Previous')
-    expect(action).toHaveClass('bg-[var(--color-selection-blue)]', 'opacity-30')
+    expect(action).toHaveClass('bg-selection-blue', 'opacity-30')
     expect(action).toHaveAttribute('aria-current', 'true')
     expect(action).toHaveAttribute('aria-disabled', 'true')
     expect(screen.queryByRole('button')).toBeNull()

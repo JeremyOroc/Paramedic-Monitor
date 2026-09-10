@@ -60,14 +60,22 @@ export function buildMedicationSoftKeys(
 export type TwelveLeadSoftKeyActions = {
   onCaptureTwelveLead: () => void
   onPatientInfo: () => void
+  onTransmitTwelveLead: () => void
   onBack: () => void
+  transmissionReady: boolean
+  transmissionOpen: boolean
 }
 
 export function buildTwelveLeadSoftKeys(a: TwelveLeadSoftKeyActions): SoftKey[] {
   return [
     { id: 'capture', ariaLabel: 'Capture 12-lead', onClick: a.onCaptureTwelveLead },
     { id: 'patient-info', ariaLabel: 'Patient Info', onClick: a.onPatientInfo },
-    { id: 'slot3', ariaLabel: 'Soft key 3' },
+    {
+      id: 'twelve-lead-transmission',
+      ariaLabel: 'Send 12-lead',
+      onClick: a.transmissionReady ? a.onTransmitTwelveLead : undefined,
+      active: a.transmissionOpen,
+    },
     { id: 'slot4', ariaLabel: 'Soft key 4' },
     { id: 'slot5', ariaLabel: 'Soft key 5' },
     { id: 'slot6', ariaLabel: 'Soft key 6' },

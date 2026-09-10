@@ -11,6 +11,8 @@ import {
 type LeftSidebarProps = {
   twelveLeadActive: boolean
   etco2Active: boolean
+  twelveLeadTransmissionReady?: boolean
+  twelveLeadTransmissionOpen?: boolean
   medicationMode?: boolean
   medicationPage?: MedicationPage
   activeMed?: string | null
@@ -20,6 +22,8 @@ type LeftSidebarProps = {
 export function LeftSidebar({
   twelveLeadActive,
   etco2Active,
+  twelveLeadTransmissionReady = false,
+  twelveLeadTransmissionOpen = false,
   medicationMode = false,
   medicationPage = 1,
   activeMed = null,
@@ -62,7 +66,8 @@ export function LeftSidebar({
     )
   }
 
-  // In 12-lead view the menu collapses to Patient Info (slot 2) + Back (bottom).
+  // In 12-lead view the menu collapses to Capture, Patient Info, the
+  // capture-gated transmission envelope, and Back.
   // The other slots stay as empty spacers so both controls land on the same
   // levels as the main-view menu — and align 1:1 with the physical soft keys.
   if (twelveLeadActive) {
@@ -70,7 +75,13 @@ export function LeftSidebar({
       <div className="h-full w-full flex flex-col justify-between bg-sidebar-bg pb-[54px]">
         <SidebarButton icon="📷" label="CAPTURE" ariaLabel="Capture 12-lead" interactive={false} />
         <SidebarButton icon="ⓘ" label="PT INFO" ariaLabel="Patient Info" interactive={false} />
-        <SidebarSlotSpacer />
+        <SidebarButton
+          icon={<EnvelopeIcon />}
+          ariaLabel="Send 12-lead"
+          active={twelveLeadTransmissionOpen}
+          disabled={!twelveLeadTransmissionReady}
+          interactive={false}
+        />
         <SidebarSlotSpacer />
         <SidebarSlotSpacer />
         <SidebarSlotSpacer />
@@ -101,6 +112,22 @@ export function LeftSidebar({
       <SidebarButton icon="🖨" label="PRINT" ariaLabel="Print" active={printActive} interactive={false} />
       <SidebarButton icon="←" label="BACK" ariaLabel="Back" interactive={false} />
     </div>
+  )
+}
+
+function EnvelopeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <rect x="2.5" y="5" width="19" height="14" rx="1.5" />
+      <path d="m3.5 7 8.5 6 8.5-6" />
+    </svg>
   )
 }
 

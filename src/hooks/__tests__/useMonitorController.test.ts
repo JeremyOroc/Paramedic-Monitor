@@ -3,6 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { PatientInfo, PatientSex } from '@/types/patientInfo'
 import type { Vitals } from '@/store/monitorStore'
+import {
+  TWELVE_LEAD_SENT_MS,
+  TWELVE_LEAD_TRANSMISSION_DESTINATIONS,
+  TWELVE_LEAD_TRANSMISSION_RETURN_INDEX,
+} from '@/lib/twelveLeadTransmission'
 
 import { ACQUIRE_MS, useMonitorController } from '../useMonitorController'
 
@@ -67,6 +72,8 @@ describe('useMonitorController', () => {
     expect(result.current.captureState).toBe('idle')
     expect(result.current.captureLock).toBe(false)
     expect(result.current.lastCapture).toBeNull()
+    expect(result.current.twelveLeadTransmissionReady).toBe(false)
+    expect(result.current.twelveLeadTransmissionOpen).toBe(false)
     expect(result.current.eventLogPage).toBe(1)
     expect(result.current.eventLogHighlightedButton).toBe('exit')
     expect(result.current.vitalLogOpen).toBe(false)
@@ -351,6 +358,99 @@ describe('useMonitorController', () => {
     expect(result.current.printPreviewOpen).toBe(false)
     expect(result.current.view).toBe('main')
     expect(result.current.selectedControl).toBe('dateTime')
+  })
+
+  it('gates transmission on a completed capture and reuses that capture', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTwelveLead())
+    act(() => result.current.onOpenTwelveLeadTransmission())
+    expect(result.current.twelveLeadTransmissionOpen).toBe(false)
+
+    act(() => result.current.onCaptureTwelveLead())
+    expect(result.current.twelveLeadTransmissionReady).toBe(false)
+    act(() => vi.advanceTimersByTime(ACQUIRE_MS))
+    act(() => result.current.onBack())
+
+    expect(result.current.twelveLeadTransmissionReady).toBe(true)
+    act(() => result.current.onOpenTwelveLeadTransmission())
+    expect(result.current.twelveLeadTransmissionOpen).toBe(true)
+    expect(result.current.twelveLeadTransmissionHighlightedIndex).toBe(0)
+
+    let destination: string | null | undefined
+    act(() => {
+      destination = result.current.onEnter()
+    })
+    expect(destination).toBe(TWELVE_LEAD_TRANSMISSION_DESTINATIONS[0])
+    expect(result.current.twelveLeadSentDestination).toBe(destination)
+    expect(result.current.twelveLeadTransmissionBusy).toBe(true)
+
+    act(() => vi.advanceTimersByTime(TWELVE_LEAD_SENT_MS))
+    expect(result.current.twelveLeadSentDestination).toBeNull()
+    expect(result.current.twelveLeadTransmissionOpen).toBe(true)
+
+    act(() => {
+      destination = result.current.onEnter()
+    })
+    expect(destination).toBe(TWELVE_LEAD_TRANSMISSION_DESTINATIONS[0])
+  })
+
+  it('wraps through destinations and Return, freezes while sent, and resets on reopen', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTwelveLead())
+    act(() => result.current.onCaptureTwelveLead())
+    act(() => vi.advanceTimersByTime(ACQUIRE_MS))
+    act(() => result.current.onBack())
+    act(() => result.current.onOpenTwelveLeadTransmission())
+
+    act(() => result.current.onMoveUp())
+    expect(result.current.twelveLeadTransmissionHighlightedIndex).toBe(
+      TWELVE_LEAD_TRANSMISSION_RETURN_INDEX,
+    )
+    act(() => result.current.onMoveDown())
+    expect(result.current.twelveLeadTransmissionHighlightedIndex).toBe(0)
+    act(() => result.current.onMoveDown())
+    expect(result.current.twelveLeadTransmissionHighlightedIndex).toBe(1)
+
+    act(() => result.current.onEnter())
+    expect(result.current.twelveLeadSentDestination).toBe('CHUM')
+    act(() => result.current.onMoveDown())
+    expect(result.current.twelveLeadTransmissionHighlightedIndex).toBe(1)
+
+    act(() => vi.advanceTimersByTime(TWELVE_LEAD_SENT_MS))
+    act(() => result.current.onMoveUp())
+    expect(result.current.twelveLeadTransmissionHighlightedIndex).toBe(0)
+    act(() => result.current.onBack())
+    expect(result.current.twelveLeadTransmissionOpen).toBe(false)
+
+    act(() => result.current.onOpenTwelveLeadTransmission())
+    expect(result.current.twelveLeadTransmissionHighlightedIndex).toBe(0)
+    act(() => result.current.onMoveUp())
+    let destination: string | null | undefined = 'unexpected'
+    act(() => {
+      destination = result.current.onEnter()
+    })
+    expect(destination).toBeNull()
+    expect(result.current.twelveLeadTransmissionOpen).toBe(false)
+  })
+
+  it('cancels the SENT deadline and clears capture eligibility on power-off', () => {
+    const { result } = setup()
+
+    act(() => result.current.onTwelveLead())
+    act(() => result.current.onCaptureTwelveLead())
+    act(() => vi.advanceTimersByTime(ACQUIRE_MS))
+    act(() => result.current.onBack())
+    act(() => result.current.onOpenTwelveLeadTransmission())
+    act(() => result.current.onEnter())
+    act(() => result.current.onPowerOff())
+
+    expect(result.current.twelveLeadTransmissionOpen).toBe(false)
+    expect(result.current.twelveLeadSentDestination).toBeNull()
+    expect(result.current.twelveLeadTransmissionReady).toBe(false)
+    act(() => vi.advanceTimersByTime(TWELVE_LEAD_SENT_MS))
+    expect(result.current.twelveLeadSentDestination).toBeNull()
   })
 
   it('keeps power and mute across a drill reset', () => {

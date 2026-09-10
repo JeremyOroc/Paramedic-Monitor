@@ -54,20 +54,37 @@ describe('buildMainSoftKeys', () => {
 })
 
 describe('buildTwelveLeadSoftKeys', () => {
-  it('wires capture / patient-info / back and leaves slots 3–6 inert', () => {
+  it('gates the transmission key on a completed capture', () => {
+    const onTransmitTwelveLead = vi.fn()
     const keys = buildTwelveLeadSoftKeys({
       onCaptureTwelveLead: noop,
       onPatientInfo: noop,
+      onTransmitTwelveLead,
       onBack: noop,
+      transmissionReady: false,
+      transmissionOpen: false,
     })
     expect(keys.map((k) => k.id)).toEqual([
-      'capture', 'patient-info', 'slot3', 'slot4', 'slot5', 'slot6', 'back',
+      'capture', 'patient-info', 'twelve-lead-transmission', 'slot4', 'slot5', 'slot6', 'back',
     ])
     expect(keys[0].onClick).toBeTypeOf('function')
     expect(keys[1].onClick).toBeTypeOf('function')
-    for (const id of ['slot3', 'slot4', 'slot5', 'slot6']) {
+    expect(keys[2].onClick).toBeUndefined()
+    for (const id of ['slot4', 'slot5', 'slot6']) {
       expect(keys.find((k) => k.id === id)?.onClick).toBeUndefined()
     }
+
+    const readyKeys = buildTwelveLeadSoftKeys({
+      onCaptureTwelveLead: noop,
+      onPatientInfo: noop,
+      onTransmitTwelveLead,
+      onBack: noop,
+      transmissionReady: true,
+      transmissionOpen: true,
+    })
+    readyKeys[2].onClick?.()
+    expect(onTransmitTwelveLead).toHaveBeenCalledTimes(1)
+    expect(readyKeys[2].active).toBe(true)
   })
 })
 

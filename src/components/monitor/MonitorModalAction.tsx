@@ -24,7 +24,7 @@ export function MonitorModalAction({
       aria-disabled={disabled}
       className={cn(
         'inline-flex items-center justify-center border-2 border-white bg-black px-4 py-2 font-bold text-white',
-        selected && 'bg-[var(--color-selection-blue)]',
+        selected && 'bg-selection-blue',
         disabled && 'opacity-30',
         className,
       )}

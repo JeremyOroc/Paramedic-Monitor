@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 
 import { useMonitorStore } from '@/store/monitorStore'
+import { SpectatorMonitor } from '@/components/instructor/SpectatorMonitor'
+import { MonitorPage as InstrumentedMonitorPage } from '@/components/monitor/MonitorPage'
+import type { MonitorProjection } from '@/types/monitorProjection'
 import MonitorPage from '../page'
 
 // Exercises the real DeviceShell + page wiring: Capture soft key → "Acquiring"
@@ -235,5 +238,77 @@ describe('MonitorPage — 12-lead capture flow', () => {
     expect(screen.queryByTestId('twelve-lead-printout')).not.toBeInTheDocument()
     // Still in the live 12-lead view (not bounced to main).
     expect(screen.getByText('aVR')).toBeInTheDocument()
+  })
+
+  it('gates the envelope on capture and sends with hardware navigation only', () => {
+    const onStudentEvent = vi.fn()
+    const onProjectionChange = vi.fn()
+    const trainee = render(
+      <InstrumentedMonitorPage
+        onStudentEvent={onStudentEvent}
+        onProjectionChange={onProjectionChange}
+      />,
+    )
+    clickButton('12-lead view')
+
+    expect(screen.getByRole('button', { name: 'Send 12-lead' })).toBeDisabled()
+    clickButton('Capture 12-lead')
+    act(() => vi.advanceTimersByTime(4000))
+    clickButton('Back')
+
+    const transmissionKey = screen.getByRole('button', { name: 'Send 12-lead' })
+    expect(transmissionKey).toBeEnabled()
+    fireEvent.click(transmissionKey)
+
+    expect(screen.getByLabelText('12-lead transmission destinations')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Institut de Cardiologie de Montréal' }),
+    ).not.toBeInTheDocument()
+
+    clickButton('Move down')
+    clickButton('Enter')
+
+    expect(screen.getByRole('status')).toHaveTextContent('SENTCHUM')
+    expect(onStudentEvent).toHaveBeenCalledWith({
+      kind: 'twelve_lead_send',
+      label: '12-lead sent — CHUM',
+      payload: { hospital: 'CHUM' },
+    })
+    expect(onProjectionChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        controller: expect.objectContaining({
+          twelveLeadTransmissionOpen: true,
+          twelveLeadTransmissionHighlightedIndex: 1,
+          twelveLeadSentDestination: 'CHUM',
+          twelveLeadSentUntil: expect.any(Number),
+        }),
+      }),
+    )
+
+    clickButton('Move down')
+    clickButton('Enter')
+    expect(
+      onStudentEvent.mock.calls.filter(([event]) => event.kind === 'twelve_lead_send'),
+    ).toHaveLength(1)
+
+    act(() => vi.advanceTimersByTime(3000))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('12-lead transmission destinations')).toBeInTheDocument()
+
+    clickButton('Enter')
+    expect(
+      onStudentEvent.mock.calls.filter(([event]) => event.kind === 'twelve_lead_send'),
+    ).toHaveLength(2)
+
+    const mirroredProjection = onProjectionChange.mock.lastCall?.[0] as MonitorProjection
+    trainee.unmount()
+    render(<SpectatorMonitor projection={mirroredProjection} embedded />)
+
+    expect(screen.getByLabelText('12-lead transmission destinations')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'CHUM' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('SENTCHUM')
   })
 })

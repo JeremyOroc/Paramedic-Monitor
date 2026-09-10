@@ -5,6 +5,30 @@
 
 ---
 
+## [2026-09-09] [ui] — Restore monitor modal background colors
+
+- Replaced unreliable arbitrary CSS-variable background classes with named monitor-palette utilities
+  for Vital Log, Medication Info/Event Log, and 12-lead Send.
+- Added stable global utility definitions for the shared green modal surface and blue selection color
+  so Turbopack incremental builds retain both rules.
+- Updated component assertions and verified all three panels through their physical monitor controls;
+  rendered computed colors, 25 focused tests, TypeScript, and ESLint pass.
+
+## [2026-09-09] [monitor/realtime] — Add simulated 12-lead transmission
+
+- Added the capture-gated, envelope-only Wagami X soft key and a reference-style panel containing the
+  seven confirmed Montréal hospital destinations plus Return.
+- Added wraparound Up/Down/Enter navigation, Back cancellation, control locking, exact three-second
+  SENT feedback, repeat sends, retained-capture eligibility, and reset/power/New Attempt cleanup.
+- Projected the panel, selected destination, and confirmation deadline to Spectator, and recorded each
+  simulated send as `12-lead sent — [hospital]` in the Evaluation timeline without an on-monitor log or
+  external transmission.
+- Added the `twelve_lead_send` event kind and forward database constraint migration, and documented
+  12-lead transmission destinations separately from transport destinations in the domain model.
+- Added unit, integration, server, migration, report-formatting, and direct Spectator coverage. All 245
+  focused tests, TypeScript, ESLint with the 12 existing warnings, the production build, and rendered
+  browser QA pass. The full suite retains ten unrelated Windows, line-ending, and date-fixture failures.
+
 ## [2026-09-09] [ui/routing] — Add trainee receiving-hospital routing
 
 - Added the exact supplied 16 adult and 2 pediatric Montréal-area curriculum entries with reviewed

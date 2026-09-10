@@ -25,16 +25,29 @@ describe('LeftSidebar', () => {
     expect(screen.queryByRole('button', { name: 'Print' })).not.toBeInTheDocument()
   })
 
-  it('collapses to Capture + Patient Info + Back in 12-lead view', () => {
+  it('adds a capture-gated envelope beneath Patient Info in 12-lead view', () => {
     setup({ twelveLeadActive: true })
     expect(screen.getByLabelText('Capture 12-lead')).toBeInTheDocument()
     expect(screen.getByLabelText('Patient Info')).toBeInTheDocument()
     expect(screen.getByLabelText('Back')).toBeInTheDocument()
+    expect(screen.getByLabelText('Send 12-lead')).toHaveClass('opacity-40')
     expect(screen.queryByLabelText('12-lead view')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Toggle EtCO2')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Brightness')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Medications')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Analyse (sidebar)')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Print')).not.toBeInTheDocument()
+  })
+
+  it('highlights the envelope while the transmission panel is open', () => {
+    setup({
+      twelveLeadActive: true,
+      twelveLeadTransmissionReady: true,
+      twelveLeadTransmissionOpen: true,
+    })
+
+    expect(screen.getByLabelText('Send 12-lead')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Send 12-lead')).not.toHaveClass('opacity-40')
+    expect(screen.queryByText('SEND')).not.toBeInTheDocument()
   })
 })

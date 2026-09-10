@@ -466,6 +466,8 @@ export function formatEventDetail(event: Pick<StudentEvent, 'kind' | 'label' | '
   // already in the offset column.
   if (event.kind === 'medication') return `"${event.label}"`
 
+  if (event.kind === 'twelve_lead_send') return event.label
+
   // Read as a sentence, because these rows are quoted straight into a debrief:
   // "S from SAMPLE was asked". The clearing press says so rather than being
   // dropped -- a letter marked and then unmarked is something the record

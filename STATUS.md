@@ -6,6 +6,29 @@
 ---
 
 ## Current Phase
+**Wagami X 12-lead transmission — CODE COMPLETE, MIGRATION PENDING (2026-09-09).**
+The third 12-lead soft key is now an envelope-only control that remains dim and inert until a capture
+completes. It opens the confirmed seven-hospital destination panel, supports wraparound hardware
+Up/Down/Enter navigation plus Back/Return, freezes destination controls during the exact three-second
+SENT confirmation, and permits repeated sends from the retained capture. Each send creates a separate
+Evaluation action using `12-lead sent — [hospital]` without adding an on-monitor event or performing an
+external transmission. Spectator mirrors the panel, selection, destination, and absolute confirmation
+deadline. Power-off, reset, and New Attempt lifecycle behavior clears transmission eligibility as
+specified. The transmission destination is recorded separately from transport routing in the domain
+model. Focused coverage passes all 245 tests across nine files, including direct Spectator rendering;
+TypeScript, ESLint with the 12 existing warnings, the production build, and rendered browser QA pass.
+The complete suite has 1,316 passing tests, one skipped opt-in test, and ten unrelated failures: seven
+Windows/Bash subprocess assertions in `operationsScripts.test.ts`, one line-ending assertion in
+`inviteOnlyConfig.test.ts`, and two date-expired fixtures in `roomOwnership.test.ts`. Apply
+`20260909120000_twelve_lead_transmission.sql` with the application deployment so live Rooms accept the
+new event kind.
+
+Follow-up rendered QA restored the shared green background and blue selected-control color in Vital
+Log, Medication Info/Event Log, and 12-lead Send. Their earlier arbitrary CSS-variable utilities were
+present in markup but emitted no usable runtime background rule under the current Turbopack/Tailwind
+incremental build; named palette utilities with stable global definitions now produce the intended
+computed colors.
+
 **Receiving-hospital map workflow — COMPLETE (2026-09-09).**
 The assignment dashboard now provides the approved 18-entry Montréal-area Receiving Hospital
 Directory, always-labelled Leaflet pins, OSRM driving-distance ordering, a native/fallback

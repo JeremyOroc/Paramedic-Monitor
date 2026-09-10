@@ -8,6 +8,23 @@
 
 ## Current Requirement Updates
 
+- 2026-09-09 requirement update — Wagami X 12-lead transmission: after a trainee completes a
+  12-lead capture, the third 12-lead soft key becomes an envelope-only transmission control. Before
+  capture it remains visible but dimmed and inert. The completed capture remains eligible until a
+  newer capture replaces it, power-off, monitor reset, or New Attempt clears it. Activating the
+  envelope opens a reference-style panel containing only Return and seven fixed 12-lead transmission
+  destinations, in this order: Institut de Cardiologie de Montréal; CHUM; Jewish General Hospital;
+  Hôpital du Sacré-Cœur-de-Montréal; Royal Victoria Hospital; Hôpital Pierre-Boucher; Hôpital
+  Charles-Le Moyne. The first destination is initially selected; Up/Down wraps through all seven
+  destinations plus Return, Enter sends or returns, and the physical Back key also returns. Other
+  monitor controls are inert while the panel is open. A send shows a centered icon, SENT, and the
+  destination name for exactly three seconds; Up/Down/Enter are frozen during that interval while
+  Back remains available. The panel remains open afterward, and the same capture may be sent
+  repeatedly to the same or another destination. Each send is a separate Evaluation action displayed
+  as `12-lead sent — [hospital name]`; it creates no permanent on-monitor log entry and performs no
+  external transmission. Spectator reproduces the panel, selected item, and deadline-based
+  confirmation. The feature is Wagami X-only and remains independent of transport routing and the
+  Receiving Hospital Directory.
 - 2026-09-08 requirement update — Receiving-hospital map workflow: the assignment dashboard, both
   at initial dispatch and when CALL INFO is reopened, adds a trainee-local Receiving Hospital
   Directory containing the exact 18 Montréal-area hospitals supplied by the product reference
@@ -2259,6 +2276,32 @@ trainee's stream marked as instructor-entered, against the patient state they we
 
 **Code complete 2026-09-07.** Migration `20260908120000_instructor_recorded_actions.sql` is written
 but **not yet applied** — the two new kinds are rejected by the live constraint until it is.
+
+---
+
+### Phase 18 — Wagami X 12-Lead Transmission
+**Status:** CODE COMPLETE (2026-09-09); the forward Supabase migration remains to be applied with deployment.
+
+**Goal:** Let a trainee simulate transmitting an existing 12-lead capture to a fixed Montréal
+hospital destination and preserve each send in the Evaluation record.
+
+**Scope:**
+- Add the envelope-only third soft key, capture eligibility, seven-destination hardware-navigation
+  panel, Return/Back behavior, three-second SENT confirmation, repeat-send behavior, and reset rules.
+- Project semantic panel and deadline state to Spectator without enabling interaction there.
+- Add a validated `twelve_lead_send` trainee event and a forward migration extending the database
+  constraint; format the report row as `12-lead sent — [hospital name]`.
+- Keep the transmission list separate from transport routing and do not perform external network
+  transmission.
+
+**Testing:**
+- Unit-test destination order, soft-key eligibility, controller navigation/wrapping, blocking,
+  timeout, repeated sends, Back/Return, and reset/power lifecycle.
+- Integration-test capture-gated panel opening, hardware-only destination selection, three-second
+  feedback, evaluation event payloads, and Spectator projection/validation.
+- Test server event validation, report formatting, and migration coverage for `twelve_lead_send`.
+- Run focused Vitest coverage, the complete Vitest suite, TypeScript, ESLint, and the production
+  build; perform rendered monitor QA if the local app can be exercised without unavailable services.
 
 ---
 

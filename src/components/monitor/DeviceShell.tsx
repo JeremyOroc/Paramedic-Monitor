@@ -126,6 +126,7 @@ export type SoftKeyHandlers = {
   onBack: () => void
   onPatientInfo: () => void
   onCaptureTwelveLead: () => void
+  onTransmitTwelveLead: () => void
   onPrint: () => void
 }
 
@@ -162,6 +163,12 @@ type DeviceShellProps = {
   twelveLeadActive?: boolean
   /** When true (e.g. during a 12-lead capture), every control except Back is inert. */
   captureLock?: boolean
+  /** Keeps only destination navigation and Back active while the transmission panel is open. */
+  twelveLeadTransmissionOpen?: boolean
+  /** Freezes destination navigation during the three-second SENT confirmation. */
+  twelveLeadTransmissionBusy?: boolean
+  /** Enables the transmission soft key once a completed capture exists. */
+  twelveLeadTransmissionReady?: boolean
   /** Initial power state — normal users boot 'off' (locked), dev bypass boots 'on'. */
   initialPowerState?: PowerState
   /** Controlled power state used by the read-only spectator renderer. */
@@ -187,6 +194,9 @@ export function DeviceShell({
   screenModal,
   twelveLeadActive = false,
   captureLock = false,
+  twelveLeadTransmissionOpen = false,
+  twelveLeadTransmissionBusy = false,
+  twelveLeadTransmissionReady = false,
   initialPowerState = 'on',
   powerStateOverride,
   onPowerStateChange,
@@ -222,6 +232,7 @@ export function DeviceShell({
     onBack,
     onPatientInfo,
     onCaptureTwelveLead,
+    onTransmitTwelveLead,
     onPrint,
   } = softKeys
   const { onHome, onMoveUp, onMoveDown, onEnter } = nav
@@ -338,9 +349,13 @@ export function DeviceShell({
   const noop = () => {}
   const powerGuard = <T extends () => void>(fn: T): T | (() => void) =>
     controlsEnabled ? fn : noop
+  const generalLock = captureLock || twelveLeadTransmissionOpen
+  const navigationLock = captureLock || twelveLeadTransmissionBusy
   const lock = <T extends () => void>(fn: T): T | (() => void) =>
-    captureLock || !controlsEnabled ? noop : fn
-  const allow = (flag: boolean) => controlsEnabled && !captureLock && flag
+    generalLock || !controlsEnabled ? noop : fn
+  const lockNavigation = <T extends () => void>(fn: T): T | (() => void) =>
+    navigationLock || !controlsEnabled ? noop : fn
+  const allow = (flag: boolean) => controlsEnabled && !generalLock && flag
 
   // Resolve the 7 physical left soft keys for the current view. Back stays live
   // during captureLock; medication keys are unaffected by captureLock (the modes
@@ -356,7 +371,10 @@ export function DeviceShell({
       ? buildTwelveLeadSoftKeys({
           onCaptureTwelveLead: lock(onCaptureTwelveLead),
           onPatientInfo: lock(onPatientInfo),
+          onTransmitTwelveLead: lock(onTransmitTwelveLead),
           onBack: powerGuard(onBack),
+          transmissionReady: twelveLeadTransmissionReady,
+          transmissionOpen: twelveLeadTransmissionOpen,
         })
       : buildMainSoftKeys({
           onTwelveLead: lock(onTwelveLead),
@@ -469,13 +487,13 @@ export function DeviceShell({
               </div>
               <RightControlCluster
                 onHome={lock(onHome)}
-                onMoveUp={lock(onMoveUp)}
-                onMoveDown={lock(onMoveDown)}
-                onEnter={lock(onEnter)}
+                onMoveUp={lockNavigation(onMoveUp)}
+                onMoveDown={lockNavigation(onMoveDown)}
+                onEnter={lockNavigation(onEnter)}
                 isMuted={isMuted}
                 disabled={!controlsEnabled}
-                onToggleMute={onToggleMute ?? (() => {})}
-                onPatientEvent={onPatientEvent}
+                onToggleMute={lock(onToggleMute ?? (() => {}))}
+                onPatientEvent={onPatientEvent ? lock(onPatientEvent) : undefined}
               />
             </div>
             <BottomDefibStrip
