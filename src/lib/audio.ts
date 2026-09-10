@@ -234,6 +234,7 @@ const PERFORM_CPR_SRC = '/audio/perform_cpr.mp3'
 let _performCpr: HTMLAudioElement | null = null
 let _100bpm: HTMLAudioElement | null = null
 let _onPerformCprEnded: (() => void) | null = null
+const NOOP_CPR_SEQUENCE_CALLBACK = () => undefined
 
 if (typeof window !== 'undefined') {
   _performCpr = createCue(PERFORM_CPR_SRC, AUDIO_LEVELS.performCpr)
@@ -264,7 +265,10 @@ export function playCprAudioSequence(onEnded?: () => void): void {
   _100bpm.currentTime = 0
   _performCpr.pause()
   _performCpr.currentTime = 0
-  _onPerformCprEnded = onEnded ?? null
+  // The callback is optional because clinical CPR timing is owned by the
+  // defibrillator state transition. Keep an internal sentinel when no caller
+  // needs notification so buffered playback still advances to the metronome.
+  _onPerformCprEnded = onEnded ?? NOOP_CPR_SEQUENCE_CALLBACK
   if (_muted) return
   // The spoken instruction goes through a buffer like every other short cue.
   // The metronome that follows stays an element: at 11 MB it would be hundreds
@@ -380,6 +384,7 @@ function audioContext(): AudioContext | null {
 
 const _buffers = new Map<string, AudioBuffer>()
 const _activeLoops = new Map<string, AudioBufferSourceNode>()
+const _activeOneShots = new Set<AudioBufferSourceNode>()
 let _buffersRequested = false
 
 /** Cues small enough to hold decoded. Excludes the 11 MB metronome. */
@@ -440,8 +445,15 @@ function playFromBuffer(src: string, level: number, loop: boolean): boolean {
     source.connect(gain)
     gain.connect(ctx.destination)
     source.start()
-    if (loop) _activeLoops.set(src, source)
-    else source.addEventListener('ended', () => source.disconnect())
+    if (loop) {
+      _activeLoops.set(src, source)
+    } else {
+      _activeOneShots.add(source)
+      source.addEventListener('ended', () => {
+        _activeOneShots.delete(source)
+        source.disconnect()
+      })
+    }
     return true
   } catch {
     return false
@@ -462,6 +474,15 @@ function stopBuffer(src: string): void {
 
 function stopAllBuffers(): void {
   for (const src of [..._activeLoops.keys()]) stopBuffer(src)
+  for (const source of [..._activeOneShots]) {
+    _activeOneShots.delete(source)
+    try {
+      source.stop()
+      source.disconnect()
+    } catch {
+      // Already stopped.
+    }
+  }
 }
 
 function canStartCue(): boolean {

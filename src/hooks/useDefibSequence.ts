@@ -8,6 +8,7 @@ import {
   ANALYZE_ECG_MS,
   ANALYZE_RESULT_MS,
   CHARGE_DURATION_MS,
+  PERFORM_CPR_DURATION_MS,
   type DefibState,
   type EnergyState,
   canAdjustEnergy as canAdjustEnergyIn,
@@ -50,6 +51,8 @@ export function useDefibSequence({
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rafRef = useRef<number | null>(null)
+  const cprStartDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cprSequenceRef = useRef(0)
   const startedAtRef = useRef<number>(0)
   const durationRef = useRef<number>(0)
   // Capture rhythm at analyze time so mid-analyze changes don't affect the result
@@ -77,6 +80,16 @@ export function useDefibSequence({
   }, [])
 
   useEffect(() => clearTimers, [clearTimers])
+
+  const cancelPendingCprStart = useCallback(() => {
+    cprSequenceRef.current += 1
+    if (cprStartDelayRef.current !== null) {
+      clearTimeout(cprStartDelayRef.current)
+      cprStartDelayRef.current = null
+    }
+  }, [])
+
+  useEffect(() => cancelPendingCprStart, [cancelPendingCprStart])
 
   const runTimedPhase = useCallback(
     (durationMs: number, onComplete: () => void) => {
@@ -106,8 +119,33 @@ export function useDefibSequence({
     [clearTimers],
   )
 
+  const enterCpr = useCallback(() => {
+    cancelPendingCprStart()
+    const sequence = cprSequenceRef.current
+    const scheduledStartTime = Date.now() + PERFORM_CPR_DURATION_MS
+    const startCprInterval = (startTime: number) => {
+      if (cprSequenceRef.current !== sequence) return
+      if (cprStartDelayRef.current !== null) {
+        clearTimeout(cprStartDelayRef.current)
+        cprStartDelayRef.current = null
+      }
+      setCprStartTime((current) => current ?? startTime)
+    }
+
+    setState('cpr')
+    setCprStartTime(null)
+    cprStartDelayRef.current = setTimeout(
+      () => startCprInterval(scheduledStartTime),
+      PERFORM_CPR_DURATION_MS,
+    )
+    playCprAudioSequence(() => {
+      startCprInterval(Math.min(Date.now(), scheduledStartTime))
+    })
+  }, [cancelPendingCprStart])
+
   const onAnalyse = useCallback(() => {
     if (!canAnalyseIn(state)) return
+    cancelPendingCprStart()
     rhythmAtAnalyzeRef.current = rhythm
     setState('analyzing_ecg')
     setCprStartTime(null)
@@ -125,23 +163,24 @@ export function useDefibSequence({
           onAnalyzeResultRef.current?.('no_shock')
           playSystemAudio('shock_not_advised.mp3')
           runTimedPhase(ANALYZE_RESULT_MS, () => {
-            setState('cpr')
-            playCprAudioSequence(() => setCprStartTime(Date.now()))
+            enterCpr()
           })
         }
       })
     })
-  }, [state, rhythm, runTimedPhase])
+  }, [state, rhythm, runTimedPhase, cancelPendingCprStart, enterCpr])
 
   const onCharge = useCallback(() => {
     const next = chargeTransition(state)
     if (next === 'charging') {
+      cancelPendingCprStart()
       setState('charging')
       runTimedPhase(CHARGE_DURATION_MS, () => setState('charged'))
     } else if (next === 'charge_prompt') {
+      cancelPendingCprStart()
       setState('charge_prompt')
     }
-  }, [state, runTimedPhase])
+  }, [state, runTimedPhase, cancelPendingCprStart])
 
   const onShock = useCallback(() => {
     const action = shockTransition(state)
@@ -149,8 +188,7 @@ export function useDefibSequence({
       const joulesDelivered = resolveEnergy(energyState, patientMode)
       setShockCount((n) => n + 1)
       setLastDeliveredJoules(joulesDelivered)
-      setState('cpr')
-      playCprAudioSequence(() => setCprStartTime(Date.now()))
+      enterCpr()
       setProgress(0)
       return
     }
@@ -160,7 +198,7 @@ export function useDefibSequence({
     setProgress(0)
     setPhaseStartedAt(null)
     setPhaseEndsAt(null)
-  }, [state, energyState, patientMode])
+  }, [state, energyState, patientMode, enterCpr])
 
   const onEnergyUp = useCallback(() => {
     if (!canAdjustEnergyIn(state)) return
@@ -179,12 +217,13 @@ export function useDefibSequence({
 
   const reset = useCallback(() => {
     clearTimers()
+    cancelPendingCprStart()
     setState('idle')
     setShockCount(0)
     setProgress(0)
     setCprStartTime(null)
     setLastDeliveredJoules(null)
-  }, [clearTimers])
+  }, [clearTimers, cancelPendingCprStart])
 
   return {
     state,

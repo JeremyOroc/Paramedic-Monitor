@@ -8,6 +8,16 @@
 
 ## Current Requirement Updates
 
+- 2026-09-10 requirement update — Wagami X CPR interval and power-off audio: after either a no-shock
+  analysis result or an advised shock, the CPR screen enters with the timer at `2:00`. The two-minute
+  CPR interval begins when the 1.752-second Perform CPR cue completes. A state-owned absolute fallback
+  starts it at that same nominal boundary if the cue is muted, blocked, interrupted, or never reports
+  completion; delayed/background callbacks retain the scheduled boundary so they cannot extend or
+  freeze the interval. The countdown then continues against its absolute start, reaches `0:00`, and
+  retains the existing Stop CPR then Check Patient presentation. Switching the monitor off immediately
+  stops all audible monitor cues, including a playing or pending CPR prompt/metronome, alarms, and
+  charge sounds, while retaining the inaudible iOS audio-session keepalive. The next power-on retains
+  the existing unmuted default.
 - 2026-09-09 requirement update — Wagami X 12-lead transmission: after a trainee completes a
   12-lead capture, the third 12-lead soft key becomes an envelope-only transmission control. Before
   capture it remains visible but dimmed and inert. The completed capture remains eligible until a
@@ -326,6 +336,10 @@ paramedic-monitor/
     the reducer-backed `useMonitorController` hook.
 
 **Testing:**
+- CPR interval and audio-lifecycle tests cover both no-shock and advised-shock entry, `2:00` throughout
+  the Perform CPR prompt, actual cue completion, the absolute 1.752-second muted/blocked/interrupted
+  fallback, delayed callback catch-up, stale callback/deadline cancellation, `2:00` to `1:59`
+  progression, `0:00` completion, inactive reset, and immediate all-cue cleanup on power-off.
 - Resting/defib vital-placement tests cover four equal horizontal default cells, complete vital behavior in both orientations, absence of every Wagami X Apply Electrodes path, immediate Analyze and Charge relocation, simultaneous Charge energy scale plus right vitals, persistence through CPR/result/delivered states, power/reset/New Attempt restoration, minus-collapse relocation, unchanged 12-lead/overlay placement, stable selection order, and Enter-on-PNI behavior.
 - Component tests cover the physical shell chrome, power-button toggle state, defib control actions, 12-lead/EtCO2/back navigation soft keys, active 12-lead state, shock disabled/ready behavior, inert PACER behavior, and non-clickable inner sidebar labels.
 - Jumpscare removal tests cover former off-state rolls, boot-screen clips, alarm-ack Easter eggs, and battery-triggered overlays staying inactive while legitimate simulator cues remain available.

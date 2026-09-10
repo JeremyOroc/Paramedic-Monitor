@@ -22,6 +22,7 @@ export const ANALYZE_ECG_MS = 2500
 export const ANALYZE_CLEAR_MS = 2500
 export const ANALYZE_RESULT_MS = 4000
 export const CHARGE_DURATION_MS = 4000
+export const PERFORM_CPR_DURATION_MS = 1752
 export const ENERGY_STEP = 10
 
 export function isShockable(rhythm: Rhythm): boolean {

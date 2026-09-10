@@ -5,6 +5,34 @@
 
 ---
 
+## [2026-09-10] [monitor/audio] — Sequence CPR timing after its cue and silence power-off
+
+- Superseded the earlier same-day immediate-start behavior: the CPR screen now holds `2:00` until the
+  exact 1.752-second Perform CPR cue completes, then starts the two-minute interval.
+- Added a guarded absolute fallback at the nominal cue deadline so muted, blocked, interrupted, or
+  missing media completion cannot freeze or extend the interval; reset and state-exit paths invalidate
+  stale deadlines and callbacks.
+- Made monitor power-off stop all audio before resetting defibrillator state while retaining the
+  existing unmuted reboot behavior and inaudible iOS keepalive.
+- Extended global audio cleanup to terminate decoded one-shot buffers as well as looping buffers and
+  media elements, preventing an in-flight prompt from remaining audible after shutdown.
+- Updated the CPR interval domain definition and timing/power-off requirements. All 94 focused tests,
+  TypeScript, ESLint with the 12 existing warnings, and the webpack production build pass; the full
+  suite has 1,330 passing tests, one skipped test, and the same three unrelated existing failures.
+
+## [2026-09-10] [monitor] — Decouple CPR interval from audio playback
+
+- Started the two-minute CPR interval immediately on both no-shock and advised-shock CPR state
+  transitions instead of waiting for the Perform CPR audio completion callback.
+- Kept the prompt-to-metronome audio sequence intact while making mute state, playback rejection,
+  interruption, and missing media events unable to freeze the trainee or Spectator clock at `2:00`.
+- Defined the CPR interval separately from the Instructor CPR override and recorded its state-owned,
+  elapsed-wall-clock behavior in the plan.
+- Added regression coverage for both transition paths, `2:00` to `1:59` progression, absolute-time
+  catch-up, `0:00` completion, and inactive reset. All 30 focused tests, TypeScript, ESLint with the
+  12 existing warnings, and the webpack production build pass; the complete suite retains three
+  unrelated failures in date-expired Room fixtures and a stale modal-color assertion.
+
 ## [2026-09-09] [ui] — Restore monitor modal background colors
 
 - Replaced unreliable arbitrary CSS-variable background classes with named monitor-palette utilities
