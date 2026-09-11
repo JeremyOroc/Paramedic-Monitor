@@ -8,6 +8,29 @@
 
 ## Current Requirement Updates
 
+- 2026-09-10 requirement update — Instructor Console discoverability polish: when the authenticated
+  Instructor Account already owns a waiting or active Room, the Console launcher presents that Room
+  immediately instead of revealing it only after Create Room fails. The existing-Room state shows
+  its code and status, replaces Create Room with Reopen Room and confirmation-protected Close Room
+  actions, and returns to the empty launcher after closure. `Close Room` is launcher presentation
+  language for the existing `End Room` lifecycle transition; the active Room console retains its
+  `End Room` action. The scenario-title input moves from the collapsible Caller Info editor into the
+  always-visible Scenarios library surface while retaining the same draft, dirty, save, and
+  active-Attempt locking behavior. Student roster rows retain presence, nickname, selection, and
+  Spectate controls but no longer present the live `Ack`, `Arr`, `Txp`, `Shk`, or `Med` summary;
+  event capture, evaluation reports, and instructor-recorded action controls remain unchanged. The
+  sign-in page removes its invitation-only explanatory paragraph without replacement.
+
+### Testing — Instructor Console discoverability polish
+
+- Cover immediate existing-Room presentation, create suppression, reopen, confirmation-protected
+  close, and the empty launcher restored after closure.
+- Cover Account-scoped live-Room lookup, including no-Room and expired-Room behavior, plus the
+  authenticated Instructor page's initial-Room handoff.
+- Cover the always-visible scenario-title input, title editing and dirty/save behavior, its removal
+  from Caller Info, removal of roster progress markings without loss of presence/Spectate, and
+  removal of the sign-in paragraph.
+
 - 2026-09-10 requirement update — Spectator availability presentation: a Spectator view is Live only
   while the Room is active, the Spectator polling path is healthy, the selected trainee remains
   present within the existing eight-second heartbeat window, and that trainee has published a

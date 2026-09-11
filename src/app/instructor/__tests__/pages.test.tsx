@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 const mocks = vi.hoisted(() => ({
   getCurrentAccount: vi.fn(),
   getInviteSetup: vi.fn(),
+  getLiveRoomForAccount: vi.fn(),
   redirect: vi.fn((path: string) => { throw new Error(`redirect:${path}`) }),
 }))
 
@@ -11,6 +12,9 @@ vi.mock('next/navigation', () => ({ redirect: mocks.redirect }))
 vi.mock('@/server/accounts/service', () => ({
   getCurrentAccount: mocks.getCurrentAccount,
   getInviteSetup: mocks.getInviteSetup,
+}))
+vi.mock('@/server/sessions/service', () => ({
+  getLiveRoomForAccount: mocks.getLiveRoomForAccount,
 }))
 vi.mock('@/components/accounts/AccountAuthPage', () => ({
   AccountAuthPage: ({ mode, verificationError }: {
@@ -30,7 +34,9 @@ vi.mock('@/components/reports/ReportsPage', () => ({
   ReportsPage: () => <div>persistent reports</div>,
 }))
 vi.mock('@/components/instructor/AdminPage', () => ({
-  default: () => <div>instructor console</div>,
+  default: ({ initialExistingRoom }: {
+    initialExistingRoom?: { code: string; status: 'waiting' | 'active' } | null
+  }) => <div>instructor console:{initialExistingRoom?.code ?? 'no room'}</div>,
 }))
 
 import AdminCompatibilityPage from '@/app/admin/page'
@@ -51,6 +57,7 @@ describe('Instructor account pages', () => {
     mocks.getInviteSetup.mockResolvedValue({
       email: 'invited@example.ca', username: null, role: null,
     })
+    mocks.getLiveRoomForAccount.mockResolvedValue({ code: 'LIVE12', status: 'active' })
   })
 
   it('renders login and recovery as the only public account-entry pages', async () => {
@@ -95,7 +102,10 @@ describe('Instructor account pages', () => {
 
   it('renders the canonical Console at the authenticated Instructor home', async () => {
     render(await InstructorPage())
-    expect(screen.getByText('instructor console')).toBeInTheDocument()
+    expect(screen.getByText('instructor console:LIVE12')).toBeInTheDocument()
+    expect(mocks.getLiveRoomForAccount).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: 'user-1',
+    }))
 
     mocks.getCurrentAccount.mockResolvedValue(null)
     await expect(InstructorPage()).rejects.toThrow('redirect:/instructor/login')

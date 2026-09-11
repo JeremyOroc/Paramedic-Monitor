@@ -26,7 +26,7 @@ import {
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
 import { RoomCodeCopy } from '@/components/session/RoomCodeCopy'
-import { RoomLauncher } from '@/components/session/RoomLauncher'
+import { RoomLauncher, type ExistingRoom } from '@/components/session/RoomLauncher'
 import {
   CALLER_INFO_AUTO_SORT_FIELDS,
   parseCallerInfoAutoSort,
@@ -41,7 +41,7 @@ import {
   parsePatientPhysicalAutoSort,
   type PatientPhysicalFindings,
 } from '@/lib/patientPhysicalAutoSort'
-import { anyoneCalibratedEtco2, isConnected, participantProgress } from '@/lib/sessionRoster'
+import { anyoneCalibratedEtco2, isConnected } from '@/lib/sessionRoster'
 import {
   createEmptyScenarioSnapshot,
   createScenarioSnapshot,
@@ -95,6 +95,7 @@ const AUTO_SORT_VITAL_FIELDS: ReadonlyArray<NumericVitalField> = [
 ]
 
 type SessionAdminProps = {
+  initialExistingRoom?: ExistingRoom | null
   session?: {
     code: string
     controllerToken: string
@@ -146,7 +147,7 @@ function getResponseError(data: unknown, fallback: string): string {
   return fallback
 }
 
-export default function AdminPage({ session }: SessionAdminProps = {}) {
+export default function AdminPage({ initialExistingRoom, session }: SessionAdminProps = {}) {
   useStoreHydration()
   // Only the "Room ended" notice navigates; End Room itself stays put.
   const router = useRouter()
@@ -1069,7 +1070,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
 
   return (
     <InstructorLayout>
-      {!session ? <RoomLauncher /> : null}
+      {!session ? <RoomLauncher initialExistingRoom={initialExistingRoom} /> : null}
       {session && (
         <div className="grid gap-4 lg:grid-cols-2" data-testid="session-overview-grid">
           <section
@@ -1174,11 +1175,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                   participants.map((participant) => {
                     const connected = isConnected(participant.last_seen_at)
                     const selected = spectatedParticipantId === participant.id
-                    const progress = participantProgress(
-                      studentEvents,
-                      participant.id,
-                      attemptVersion,
-                    )
                     return (
                       <div
                         key={participant.id}
@@ -1226,15 +1222,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
                             {selected ? 'Stop Spectating' : 'Spectate'}
                           </button>
                         </div>
-                        <span className="font-mono text-[10px] uppercase tracking-wider text-neutral-500">
-                          <span className={cn(progress.acknowledged && 'text-ecg-green')}>Ack</span>
-                          {' · '}
-                          <span className={cn(progress.arrived && 'text-ecg-green')}>Arr</span>
-                          {' · '}
-                          <span className={cn(progress.transported && 'text-ecg-green')}>Txp</span>
-                          {' · '}Shk {progress.shocks}
-                          {' · '}Med {progress.medications}
-                        </span>
                       </div>
                     )
                   })
@@ -1401,6 +1388,7 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             loadedScenarioId={loadedScenarioId}
             scenarioDraftActive={scenarioDraftActive}
             scenarioDraftTitle={scenarioTitle}
+            onScenarioTitleChange={setScenarioTitle}
             scenarioIsDirty={scenarioIsDirty}
             scenarioAction={scenarioAction}
             scenarioError={scenarioError}
@@ -1421,8 +1409,6 @@ export default function AdminPage({ session }: SessionAdminProps = {}) {
             key={scenarioEditorVersion}
             autoSortText={universalAutoSortText}
             onAutoSortChange={handleUniversalAutoSortChange}
-            scenarioTitle={scenarioTitle}
-            onScenarioTitleChange={setScenarioTitle}
           />
         </div>
       )}

@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**Instructor Console discoverability polish — COMPLETE (2026-09-10).**
+The authenticated Console now resolves the Account's waiting or active Room during server rendering,
+so the launcher immediately shows its code/status with Reopen Room and confirmation-protected Close
+Room actions while suppressing Create Room. Closing ends the Room without creating a replacement,
+clears the local controller token, and restores the empty launcher. Scenario title editing is always
+visible in the Scenarios library and no longer hidden in Caller Info. Student roster rows retain
+presence, nickname, and Spectate while omitting Ack/Arr/Txp/Shk/Med summaries; event capture and
+reports are unchanged. The sign-in invitation paragraph is removed. All 99 focused tests and
+TypeScript pass; full ESLint has zero errors and the same 12 existing warnings; the webpack production
+build passes. Rendered sign-in QA confirms the tighter form, removed copy, working input, clean
+console, and no framework overlay. The full suite has 1,350 passing tests and one skipped test; its
+three unrelated failures remain two date-expired Room fixtures and one stale Patient Info color-class
+assertion.
+
 **Spectator availability presentation — COMPLETE (2026-09-10).**
 Standalone and Embedded Spectator views now share one typed availability resolver and one large,
 non-dismissible player-surface veil for every non-Live state. Retained monitor frames remain beneath

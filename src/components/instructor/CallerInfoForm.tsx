@@ -41,8 +41,6 @@ type CallerInfoDraft = ReturnType<typeof useMonitorStore.getState>['callerInfoDr
 type CallerInfoFormProps = {
   autoSortText: string
   onAutoSortChange: (value: string) => void
-  scenarioTitle: string
-  onScenarioTitleChange: (value: string) => void
 }
 
 function getInitialExtraCount(callerInfoDraft: CallerInfoDraft) {
@@ -64,8 +62,6 @@ function formatDispatchCountdownPreview(minutes: number, seconds: number): strin
 export function CallerInfoForm({
   autoSortText,
   onAutoSortChange,
-  scenarioTitle,
-  onScenarioTitleChange,
 }: CallerInfoFormProps) {
   const callerInfoDraft = useMonitorStore((s) => s.callerInfoDraft)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
@@ -193,16 +189,6 @@ export function CallerInfoForm({
       </div>
       {expanded ? (
         <div id="caller-info-editor" className="grid gap-3">
-        <label className="grid gap-1">
-          <span className="text-xs uppercase tracking-wider text-neutral-400">Title</span>
-          <input
-            value={scenarioTitle}
-            onChange={(event) => onScenarioTitleChange(event.target.value)}
-            aria-label="Scenario title"
-            placeholder="Scenario title"
-            className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
-          />
-        </label>
         <label className="grid gap-1">
           <span className="text-xs uppercase tracking-wider text-neutral-400">
             Auto-sort scenario

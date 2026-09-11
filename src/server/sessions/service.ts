@@ -34,6 +34,11 @@ export type SessionRecord = {
   expires_at: string | null
 }
 
+export type LiveRoomSummary = {
+  code: string
+  status: 'waiting' | 'active'
+}
+
 export type ParticipantRecord = {
   id: string
   session_id: string
@@ -146,6 +151,26 @@ export function applySessionExpiry(
   const expiresAt = Date.parse(session.expires_at)
   if (!Number.isFinite(expiresAt) || expiresAt > now) return session
   return { ...session, status: 'ended' }
+}
+
+export async function getLiveRoomForAccount(
+  account: Pick<ActiveAccount, 'user_id'>,
+): Promise<LiveRoomSummary | null> {
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('sessions')
+    .select('id, code, owner_user_id, status, active_attempt_version, created_at, expires_at')
+    .eq('owner_user_id', account.user_id)
+    .in('status', ['waiting', 'active'])
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw new SessionError(error.message, 500)
+  if (!data) return null
+
+  const effective = applySessionExpiry(data as SessionRecord)
+  if (effective.status === 'ended') return null
+  return { code: effective.code, status: effective.status }
 }
 
 function normalizeNickname(nickname: string): string {

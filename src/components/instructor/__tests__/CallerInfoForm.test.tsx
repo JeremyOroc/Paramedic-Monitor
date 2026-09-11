@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { describe, expect, it, beforeEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -27,8 +27,6 @@ function renderCallerInfoForm({ expand = true }: { expand?: boolean } = {}) {
     <CallerInfoForm
       autoSortText=""
       onAutoSortChange={handleAutoSortChange}
-      scenarioTitle=""
-      onScenarioTitleChange={vi.fn()}
     />,
   )
 
@@ -48,7 +46,7 @@ describe('CallerInfoForm', () => {
     renderCallerInfoForm()
 
     expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Scenario title')).toBeNull()
     expect(screen.getByLabelText('Auto-sort scenario')).toBeInTheDocument()
     expect(screen.getByText('Call / Priority / MPDS')).toBeInTheDocument()
     expect(screen.getByLabelText('Call #')).toBeInTheDocument()
@@ -84,7 +82,7 @@ describe('CallerInfoForm', () => {
       'aria-expanded',
       'true',
     )
-    expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Scenario title')).toBeNull()
     expect(screen.queryByRole('button', { name: /Save Scenario/ })).toBeNull()
   })
 

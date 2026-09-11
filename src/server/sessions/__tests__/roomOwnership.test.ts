@@ -13,6 +13,7 @@ vi.mock('@/lib/supabase/server', () => ({
 import {
   claimRoomControl,
   createSession,
+  getLiveRoomForAccount,
   getRoomAccess,
   verifyRoomController,
   verifyRoomOwner,
@@ -76,6 +77,34 @@ describe('Account-owned Rooms', () => {
       details: { existingRoom: { code: 'ABC234', status: 'active' } },
     })
     expect(currentStub.opsFor('sessions').filter((op) => op.method === 'insert')).toHaveLength(0)
+  })
+
+  it('finds the Account live Room for immediate launcher presentation', async () => {
+    const liveSession = { ...SESSION, expires_at: '2099-09-08T12:00:00.000Z' }
+    currentStub = createSupabaseStub((op) =>
+      op.table === 'sessions' ? { data: liveSession } : { data: null },
+    )
+
+    await expect(getLiveRoomForAccount(ACCOUNT)).resolves.toEqual({
+      code: 'ABC234',
+      status: 'active',
+    })
+    expect(currentStub.opsFor('sessions')[0].filters).toEqual(expect.arrayContaining([
+      { op: 'eq', column: 'owner_user_id', value: ACCOUNT.user_id },
+      { op: 'in', column: 'status', value: ['waiting', 'active'] },
+    ]))
+  })
+
+  it('returns no launcher Room when the Account has none or its row has expired', async () => {
+    currentStub = createSupabaseStub(() => ({ data: null }))
+    await expect(getLiveRoomForAccount(ACCOUNT)).resolves.toBeNull()
+
+    currentStub = createSupabaseStub((op) =>
+      op.table === 'sessions'
+        ? { data: { ...SESSION, expires_at: '2020-09-08T12:00:00.000Z' } }
+        : { data: null },
+    )
+    await expect(getLiveRoomForAccount(ACCOUNT)).resolves.toBeNull()
   })
 
   it('scopes owner observation through the authenticated client and hides another Account Room', async () => {

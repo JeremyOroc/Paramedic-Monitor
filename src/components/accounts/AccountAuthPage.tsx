@@ -79,11 +79,6 @@ export function AccountAuthPage({ mode, verificationError = false }: AccountAuth
       <section className="w-full max-w-md border border-neutral-800 bg-sidebar-bg p-6 shadow-2xl sm:p-8">
         <p className="font-mono text-xs font-bold uppercase tracking-[0.22em] text-cyan-bp">{copy.eyebrow}</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight">{copy.title}</h1>
-        {mode === 'login' && (
-          <p className="mt-3 text-sm leading-6 text-neutral-400">
-            Accounts are invitation-only. Use the username and password chosen during invitation setup.
-          </p>
-        )}
         <form className="mt-7 grid gap-5" onSubmit={submit}>
           {mode === 'login' && (
             <label className="grid gap-2">

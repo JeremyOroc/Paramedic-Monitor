@@ -24,14 +24,24 @@ vi.mock('@/components/instructor/ScenarioLibraryPanel', () => ({
     scenarioDraftActive,
     scenarioDraftTitle,
     scenarioIsDirty,
+    onScenarioTitleChange,
     onNewScenario,
   }: {
     scenarioDraftActive: boolean
     scenarioDraftTitle: string
     scenarioIsDirty: boolean
+    onScenarioTitleChange: (value: string) => void
     onNewScenario: () => void
   }) => (
     <section aria-label="Scenarios library">
+      <label>
+        Scenario title
+        <input
+          aria-label="Scenario title"
+          value={scenarioDraftTitle}
+          onChange={(event) => onScenarioTitleChange(event.target.value)}
+        />
+      </label>
       <button type="button" onClick={onNewScenario}>New Scenario</button>
       {scenarioDraftActive ? (
         <button type="button" disabled={!scenarioIsDirty}>
@@ -232,9 +242,10 @@ describe('AdminPage', () => {
     expect(within(studentsPanel).getAllByLabelText('Offline')).toHaveLength(1)
 
     const aliceRow = screen.getByTestId('student-row-student-1')
-    expect(within(aliceRow).getByText('Ack')).toHaveClass('text-ecg-green')
-    expect(within(aliceRow).getByText('Arr')).not.toHaveClass('text-ecg-green')
-    expect(within(aliceRow).getByText(/Shk 1/)).toBeInTheDocument()
+    expect(within(aliceRow).queryByText('Ack')).toBeNull()
+    expect(within(aliceRow).queryByText('Arr')).toBeNull()
+    expect(within(aliceRow).queryByText(/Shk 1/)).toBeNull()
+    expect(within(aliceRow).queryByText(/Med/)).toBeNull()
     expect(within(aliceRow).getByRole('button', { name: 'Spectate' })).toBeEnabled()
     expect(within(studentsPanel).getAllByRole('button', { name: 'Spectate' })).toHaveLength(2)
     expect(screen.queryByText('Live evaluation')).toBeNull()

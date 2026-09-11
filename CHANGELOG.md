@@ -5,6 +5,33 @@
 
 ---
 
+## [2026-09-10] [instructor/ui] — Surface existing Rooms and simplify console presentation
+
+- Resolved the signed-in Account's live Room during server rendering and supplied it to the launcher,
+  which now immediately shows Room code/status plus Reopen Room and confirmation-protected Close
+  Room actions instead of requiring a failed Create Room attempt.
+- Made Close Room end only the existing Room, clear its local controller token, and restore Create
+  Room without silently creating a replacement; race-time create conflicts retain the same choices.
+- Moved scenario-title editing into the always-visible Scenarios library while preserving title dirty
+  and save behavior, and removed it from the collapsible Caller Info editor.
+- Removed Ack/Arr/Txp/Shk/Med summaries from student roster rows without changing presence, Spectate,
+  event capture, reports, or instructor-recorded actions. Removed the invitation-only sign-in copy.
+- Added Account lookup, page handoff, launcher lifecycle, scenario placement/editing, roster, and auth
+  regressions. All 99 focused tests and TypeScript pass; ESLint has zero errors with the 12 existing
+  warnings; the webpack build and rendered sign-in QA pass. The full suite retains exactly its three
+  documented unrelated failures with 1,350 tests passing and one skipped.
+
+## [2026-09-10] [planning/ui] — Settle Instructor Console discoverability polish
+
+- Confirmed immediate existing-Room presentation with code/status, Reopen Room, and
+  confirmation-protected Close Room actions in place of Create Room. `Close Room` is launcher copy
+  for the existing End Room lifecycle; the active console keeps `End Room`.
+- Moved scenario naming conceptually into the always-visible Scenarios library, removed live
+  milestone/count summaries from student roster rows while retaining presence and Spectate, and
+  removed the invitation-only sign-in paragraph without replacement.
+- Added the server, component, integration, and regression test gate. Application code remained
+  unchanged pending the now-received implementation approval.
+
 ## [2026-09-10] [instructor/ui] — Make non-Live Spectator states unmistakable
 
 - Added one typed Spectator availability resolver shared by the standalone page and every Embedded
