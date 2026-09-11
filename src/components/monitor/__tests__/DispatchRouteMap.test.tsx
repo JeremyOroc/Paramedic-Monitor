@@ -151,6 +151,83 @@ describe('DispatchRouteMap track toggle', () => {
     expect(onFullscreenChange).toHaveBeenCalledWith(true)
   })
 
+  it('retains app fullscreen after native fullscreen loss and exits only from Minimize', async () => {
+    const onCloseDirectory = vi.fn()
+    const onFullscreenChange = vi.fn()
+    render(
+      <DispatchRouteMap
+        route={readyRoute()}
+        hospitalMap={{
+          routeKind: 'dispatch',
+          selectedHospitalId: null,
+          pendingHospitalId: null,
+          failedHospitalId: null,
+          failureMessage: '',
+          directoryOpen: true,
+          fullscreen: true,
+          distances: {},
+          distanceStatus: 'ready',
+          rankingOrigin: { lat: 45.4, lng: -73.95 },
+        }}
+        onCloseDirectory={onCloseDirectory}
+        onFullscreenChange={onFullscreenChange}
+      />,
+    )
+
+    const shell = screen.getByTestId('dispatch-route-map-shell')
+    expect(shell).toHaveClass('fixed', 'inset-0', 'overscroll-none')
+
+    const hospitalToggle = await screen.findByRole('button', {
+      name: 'Toggle hospital directory',
+    })
+    expect(hospitalToggle).toBeDisabled()
+    expect(hospitalToggle).toHaveAttribute(
+      'title',
+      'Use Minimize to leave the full screen hospital directory',
+    )
+    fireEvent.click(hospitalToggle)
+    expect(onCloseDirectory).not.toHaveBeenCalled()
+
+    fireEvent(document, new Event('fullscreenchange'))
+    expect(onFullscreenChange).not.toHaveBeenCalled()
+    expect(shell).toHaveClass('fixed', 'inset-0')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Exit full screen map' }))
+    expect(onFullscreenChange).toHaveBeenCalledOnce()
+    expect(onFullscreenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('uses the same fullscreen directory composition in a contained read-only projection', () => {
+    render(
+      <DispatchRouteMap
+        route={readyRoute()}
+        contained
+        readOnly
+        hospitalMap={{
+          routeKind: 'dispatch',
+          selectedHospitalId: null,
+          pendingHospitalId: null,
+          failedHospitalId: null,
+          failureMessage: '',
+          directoryOpen: true,
+          fullscreen: true,
+          distances: {},
+          distanceStatus: 'ready',
+          rankingOrigin: { lat: 45.4, lng: -73.95 },
+        }}
+      />,
+    )
+
+    expect(screen.getByTestId('dispatch-route-map-shell')).toHaveClass('absolute', 'inset-0')
+    expect(
+      screen.getByRole('complementary', { name: 'Receiving Hospital Directory' }),
+    ).toHaveClass('w-[30%]')
+    expect(screen.getByTestId('hospital-directory-scroll')).toHaveAttribute(
+      'data-visible-row-capacity',
+      '10',
+    )
+  })
+
   it('renders and wires all 18 permanently-labelled hospital pins', async () => {
     const onSelectHospital = vi.fn()
     render(

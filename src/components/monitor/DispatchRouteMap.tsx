@@ -92,12 +92,10 @@ export function DispatchRouteMap({
   }
 
   const toggleHospitalMode = () => {
+    if (fullscreen) return
     setTrackMode('overview')
     fittedRouteKeyRef.current = ''
-    if (hospitalMode) {
-      if (fullscreen) void toggleFullscreen()
-      onCloseDirectory?.()
-    }
+    if (hospitalMode) onCloseDirectory?.()
     else onOpenDirectory?.()
   }
 
@@ -117,18 +115,6 @@ export function DispatchRouteMap({
     onFullscreenChange?.(next)
     if (!next) window.setTimeout(() => fullscreenButtonRef.current?.focus(), 0)
   }
-
-  useEffect(() => {
-    if (readOnly || contained) return
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement && fullscreen) {
-        onFullscreenChange?.(false)
-        window.setTimeout(() => fullscreenButtonRef.current?.focus(), 0)
-      }
-    }
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
-  }, [contained, fullscreen, onFullscreenChange, readOnly])
 
   useEffect(() => {
     let disposed = false
@@ -321,8 +307,8 @@ export function DispatchRouteMap({
         'flex overflow-hidden border border-neutral-700 bg-dispatch-panel-soft',
         fullscreen
           ? contained
-            ? 'absolute inset-0 z-[1200] rounded-none'
-            : 'fixed inset-0 z-[1200] rounded-none'
+            ? 'absolute inset-0 z-[1200] overscroll-none rounded-none'
+            : 'fixed inset-0 z-[1200] overscroll-none rounded-none'
           : 'h-full min-h-0 flex-col rounded-md',
       )}
     >
@@ -364,8 +350,14 @@ export function DispatchRouteMap({
             <button
               type="button"
               onClick={toggleHospitalMode}
-              disabled={!route.destination || readOnly}
-              title={!route.destination ? 'Hospital directory requires incident coordinates' : undefined}
+              disabled={fullscreen || !route.destination || readOnly}
+              title={
+                fullscreen
+                  ? 'Use Minimize to leave the full screen hospital directory'
+                  : !route.destination
+                    ? 'Hospital directory requires incident coordinates'
+                    : undefined
+              }
               aria-label="Toggle hospital directory"
               aria-pressed={hospitalMode}
               data-testid="map-hospital-toggle"

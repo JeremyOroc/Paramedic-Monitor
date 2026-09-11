@@ -40,26 +40,34 @@ export function HospitalDirectoryPanel({
   disabled,
   onSelectHospital,
 }: HospitalDirectoryPanelProps) {
+  const distanceStatusMessage = distanceStatus === 'loading'
+    ? 'Calculating driving distances…'
+    : distanceStatus === 'failed'
+      ? 'Distance ranking unavailable — reference order shown'
+      : distanceStatus === 'idle'
+        ? 'Reference order'
+        : null
+
   return (
     <aside
       aria-label="Receiving Hospital Directory"
       className="flex h-full min-h-0 w-[30%] shrink-0 flex-col border-r border-neutral-700 bg-black/95 text-white"
     >
       <header className="shrink-0 border-b border-neutral-700 px-4 py-3">
-        <p className="text-sm font-black uppercase tracking-[0.12em] text-dispatch-blue">
+        <p className="text-base font-black uppercase tracking-[0.12em] text-dispatch-blue">
           Receiving Hospital Directory
         </p>
-        <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-neutral-400">
-          {distanceStatus === 'loading'
-            ? 'Calculating driving distances…'
-            : distanceStatus === 'failed'
-              ? 'Distance ranking unavailable — reference order shown'
-              : distanceStatus === 'ready'
-                ? 'Ordered by driving distance from current scene origin'
-                : 'Reference order'}
-        </p>
+        {distanceStatusMessage && (
+          <p className="mt-1 text-xs font-bold uppercase tracking-wide text-neutral-400">
+            {distanceStatusMessage}
+          </p>
+        )}
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+      <div
+        data-testid="hospital-directory-scroll"
+        data-visible-row-capacity="10"
+        className="hospital-directory-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden"
+      >
         {SECTIONS.map(({ patientGroup, title }) => (
           <HospitalSection
             key={patientGroup}
@@ -102,11 +110,11 @@ function HospitalSection({
 }) {
   return (
     <section aria-label={title}>
-      <h3 className="sticky top-0 z-10 border-y border-neutral-800 bg-dispatch-panel px-3 py-2 text-xs font-black">
+      <h3 className="sticky top-0 z-10 border-y border-neutral-800 bg-dispatch-panel px-3 py-2 text-sm font-black">
         {title}
       </h3>
-      <table className="w-full table-fixed border-collapse text-left text-[10px] leading-tight">
-        <thead className="bg-black text-[9px] uppercase tracking-wide text-neutral-300">
+      <table className="w-full table-fixed border-collapse text-left text-sm leading-tight">
+        <thead className="bg-black text-[11px] uppercase tracking-wide text-neutral-300">
           <tr>
             <th className="w-[42%] px-3 py-2">Hospital</th>
             <th className="w-[23%] px-2 py-2">Designation</th>
@@ -133,38 +141,48 @@ function HospitalSection({
                   onSelectHospital(hospital.id)
                 }}
                 className={cn(
-                  'border-t border-neutral-800 align-top outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dispatch-blue',
+                  'hospital-directory-row border-t border-neutral-800 align-top outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dispatch-blue',
                   !disabled && !pending && 'cursor-pointer hover:bg-white/5',
                   selected && 'bg-dispatch-red/20',
                   pending && 'bg-pending-amber/20',
                   failed && 'bg-dispatch-red/10',
                 )}
               >
-                <td className="break-words px-3 py-2">
+                <td className="h-full overflow-hidden break-words px-3 py-2">
                   <button
                     type="button"
                     disabled={disabled || pending}
+                    aria-label={hospital.name}
+                    title={hospital.name}
                     onClick={(event) => {
                       event.stopPropagation()
                       onSelectHospital(hospital.id)
                     }}
-                    className="w-full text-left font-bold text-white underline decoration-dotted underline-offset-2 enabled:hover:text-dispatch-blue disabled:cursor-not-allowed disabled:opacity-60"
+                    className="hospital-directory-clamp w-full text-left font-bold text-white underline decoration-dotted underline-offset-2 enabled:hover:text-dispatch-blue disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {hospital.name}
                   </button>
                   {typeof distances[hospital.id] === 'number' && (
-                    <span className="mt-1 block font-mono text-[9px] text-dispatch-blue">
+                    <span className="mt-1 block font-mono text-xs text-dispatch-blue">
                       {formatDistance(distances[hospital.id])}
                     </span>
                   )}
-                  {pending && <span className="block text-pending-amber">Routing…</span>}
-                  {failed && <span className="block text-dispatch-red">Route unavailable</span>}
+                  {pending && <span className="block text-sm text-pending-amber">Routing…</span>}
+                  {failed && <span className="block text-sm text-dispatch-red">Route unavailable</span>}
                 </td>
-                <td className="break-words px-2 py-2 text-neutral-200">
-                  {hospital.designation}
+                <td
+                  aria-label={hospital.designation}
+                  title={hospital.designation}
+                  className="h-full overflow-hidden break-words px-2 py-2 text-neutral-200"
+                >
+                  <span className="hospital-directory-clamp">{hospital.designation}</span>
                 </td>
-                <td className="break-words px-2 py-2 text-neutral-300">
-                  {hospital.keyNotes}
+                <td
+                  aria-label={hospital.keyNotes}
+                  title={hospital.keyNotes}
+                  className="h-full overflow-hidden break-words px-2 py-2 text-neutral-300"
+                >
+                  <span className="hospital-directory-clamp">{hospital.keyNotes}</span>
                 </td>
               </tr>
             )

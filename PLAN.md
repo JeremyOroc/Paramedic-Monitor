@@ -8,6 +8,35 @@
 
 ## Current Requirement Updates
 
+- 2026-09-10 requirement update — larger hospital directory row text: in both Adult and Pediatric
+  sections, hospital names, designations, key notes, and routing statuses use 14px text, while driving
+  distances use 12px text. The 30% directory width, three-line clamps, ten-row maximum, authored text,
+  routing behavior, and all other directory presentation remain unchanged.
+- 2026-09-10 requirement update — fullscreen Receiving Hospital Directory retention and readability:
+  the fullscreen route map exits only when its bottom-right Minimize button is activated. If native
+  element fullscreen ends through an iPad swipe, desktop Escape, or another browser action, the map
+  retains its edge-to-edge in-page fullscreen presentation within the available browser viewport;
+  ordinary directory scrolling contains vertical overscroll. The hospital-directory toggle is
+  disabled while fullscreen keeps the directory open. In every trainee and contained Spectator
+  fullscreen presentation, the directory occupies 30% of the width and shows at most ten fixed-height
+  hospital rows before internal scrolling reveals the remainder. Adult and Pediatric sections and
+  sticky context headers remain. Long hospital names, designations, and notes are clamped to three
+  lines while their complete authored text and accessible labels remain intact. Directory typography
+  uses a 16px title, 12px directory status, 14px section headings, 11px column headings, 12px distances,
+  and 14px hospital names, designations, notes, and row statuses. All 18 hospitals, three columns, distance
+  ordering, selection/routing behavior, and permanently visible map-pin label sizing remain unchanged.
+  Once distance ranking is ready, the directory omits the redundant `Ordered by driving distance from
+  current scene origin` sentence.
+- 2026-09-10 requirement update — compact Instructor Caller Info editor: when expanded on a desktop,
+  the editor uses two equal columns with the existing 12px gutter. Scenario Title pairs with Dispatch
+  countdown, with their input controls aligned and no first-Send countdown helper sentence; Auto-sort
+  scenario remains full width; Response route pairs Start address with its
+  status/distance/ETA summary; Call / Priority / MPDS retains its existing three-column row; Adresse
+  pairs with Probleme; Information pairs with Mise a jour; Heure occupies half a row; and each custom
+  field places its Title and Input side by side. Probleme, Information, and Mise a jour begin at half
+  their former height while retaining vertical resizing. Narrow layouts continue stacking at full
+  width. Autocomplete, auto-sort, Save/Send state, extra-field limits, source/focus order, and all
+  data behavior remain unchanged.
 - 2026-09-10 requirement update — Spectator availability presentation: a Spectator view is Live only
   while the Room is active, the Spectator polling path is healthy, the selected trainee remains
   present within the existing eight-second heartbeat window, and that trainee has published a
@@ -727,9 +756,13 @@ button is inert until a drill gate is satisfied.
 - A bottom-right map control enters browser-native fullscreen with an edge-to-edge in-page fallback
   where element fullscreen is unavailable. Entering fullscreen always opens the hospital-directory
   workspace; all hospital pins remain visible. The presentation keeps the map controls and
-  Distance/ETA/Status strip, exits with Escape, and adds a scrollable left overlay at exactly 30% of
-  the width at every supported landscape size. Its columns wrap, it scrolls internally, and it creates
-  no page-level or horizontal scrollbar.
+  Distance/ETA/Status strip. Only the bottom-right Minimize control exits fullscreen; native-fullscreen
+  loss through Escape, an iPad swipe, or another browser action retains the edge-to-edge in-page
+  fullscreen fallback. The hospital toggle is disabled while fullscreen keeps the directory open.
+  A scrollable left overlay occupies 30% of the width at every supported landscape size, contains
+  overscroll, and shows at most ten fixed-height hospital rows before internal scrolling reveals the
+  rest. Its columns wrap with three-line clamping, it creates no page-level or horizontal scrollbar,
+  and its complete authored cell text remains available to assistive technology.
   The overlay contains separate Adult Hospitals and Pediatric Hospitals tables with exactly Hospital,
   Designation, and Key Notes columns. Selecting a table row is identical to selecting its map pin.
   Exiting returns to the compact map focused on the Selected receiving hospital's route, or the
@@ -751,7 +784,8 @@ button is inert until a drill gate is satisfied.
 - Testing for the Receiving-hospital map workflow: pure unit coverage for directory normalization,
   participant/Room/Attempt persistence keys, route-state transitions, reroute clocks, status labels,
   ranking fallback, and latest-request wins; component coverage for controls, permanent labels,
-  selection/failure/loading states, the 30% table, keyboard operation, fullscreen fallback, focus
+  selection/failure/loading states, the 30% ten-row table, keyboard operation, explicit-only
+  minimization, retained fullscreen fallback, focus
   restoration, and no-scroll layouts; store tests for reset/re-dispatch/Incident-scene clearing and
   trainee isolation; projection tests for semantic Spectator parity without browser fullscreen;
   rendered QA at 1024×768, 1280×720, and 1920×1080, including native fullscreen where available and
@@ -2368,6 +2402,54 @@ hospital destination and preserve each send in the Evaluation record.
 - Test server event validation, report formatting, and migration coverage for `twelve_lead_send`.
 - Run focused Vitest coverage, the complete Vitest suite, TypeScript, ESLint, and the production
   build; perform rendered monitor QA if the local app can be exercised without unavailable services.
+
+---
+
+### Phase 19 — Compact Instructor Caller Info Editor
+
+**Goal:** Reduce the expanded Caller Info editor's desktop height without reducing the usability or
+behavior of its fields.
+
+**Status: COMPLETE (2026-09-10).**
+
+**Scope:**
+- Recompose the approved fields and summaries into responsive two-column rows while preserving the
+  existing Call / Priority / MPDS row and full-width Auto-sort scenario box.
+- Align the Scenario Title and countdown inputs and omit the first-Send countdown helper sentence.
+- Halve the initial height of the three caller-detail textareas while preserving vertical resizing.
+- Keep narrow layouts full-width and preserve data, autocomplete, extra-field, Save, and Send behavior.
+
+**Testing:**
+- Add component coverage for the desktop grid groupings, half-height multiline fields, unchanged
+  full-width sections, responsive stacking, and custom Title/Input pairing.
+- Run focused Caller Info and Instructor-page tests, TypeScript, ESLint, and the production build.
+- Perform rendered desktop and narrow-viewport QA for field geometry, overflow, and interaction.
+
+---
+
+### Phase 20 — Fullscreen Hospital Directory Retention and Readability
+
+**Goal:** Keep the hospital map fullscreen through browser and iPad fullscreen-loss gestures while
+making the directory easier to read without showing more than ten hospitals at once.
+
+**Status: COMPLETE (2026-09-10).**
+
+**Scope:**
+- Make the dedicated Minimize control the only fullscreen exit path and retain the fixed in-page
+  fullscreen fallback after unsolicited native-fullscreen loss.
+- Contain directory overscroll and disable the hospital-directory toggle while fullscreen is active.
+- Keep the directory at 30%, apply the approved typography scale, clamp long cells to three lines,
+  and cap the internal viewport at ten fixed-height hospital rows.
+- Preserve Adult/Pediatric sections, all hospital data and routing behavior, map-label sizing, and
+  the matching contained Spectator composition.
+
+**Testing:**
+- Add component coverage for explicit-only minimization, unsolicited `fullscreenchange`, the disabled
+  hospital toggle, overscroll containment, directory width, typography, clamping, and ten-row sizing.
+- Run focused hospital routing, map, monitor, and Spectator tests, TypeScript, ESLint, and production
+  build verification.
+- Perform rendered QA at iPad-landscape and desktop viewports, including native-fullscreen loss and
+  the in-page fallback where supported by the browser host.
 
 ---
 
