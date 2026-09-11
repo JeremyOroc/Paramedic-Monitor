@@ -5,6 +5,15 @@
 
 ---
 
+## [2026-09-11] [merge] — Reconcile console and hospital UI refinements
+
+- Combined the Instructor Console discoverability history with the compact Caller Info and fullscreen
+  hospital-directory work while preserving the newer Scenario Library ownership of scenario titles.
+- Retained the compact two-column Caller Info geometry without restoring its superseded title input,
+  and updated the focused layout regression to describe the countdown-only row.
+- Verified 28 focused Caller Info, route-map, and hospital-directory tests, TypeScript, and ESLint with
+  zero errors and the 12 existing warnings.
+
 ## [2026-09-10] [instructor/ui] — Surface existing Rooms and simplify console presentation
 
 - Resolved the signed-in Account's live Room during server rendering and supplied it to the launcher,
@@ -31,6 +40,55 @@
   removed the invitation-only sign-in paragraph without replacement.
 - Added the server, component, integration, and regression test gate. Application code remained
   unchanged pending the now-received implementation approval.
+
+## [2026-09-10] [monitor/ui] — Enlarge every hospital directory row
+
+- Increased hospital names, designations, key notes, and routing statuses from 12px to 14px in both
+  Adult and Pediatric sections; increased driving distances from 11px to 12px.
+- Preserved the 30% directory width, three-line clamps, ten-row maximum, complete accessible text,
+  selection/routing behavior, and contained Spectator parity.
+- Expanded the directory regression to cover both sections and every enlarged row text category. All
+  16 focused map, directory, and routing tests, TypeScript, ESLint with the 12 existing warnings, and
+  the production build pass. Rendered 1080×810 and 1440×900 browser QA confirms the new computed font
+  sizes, exact 30% width, nine complete rows, and no horizontal overflow.
+
+## [2026-09-10] [monitor/ui] — Reduce the readable hospital directory to 30%
+
+- Returned the fullscreen trainee and contained Spectator hospital directory to 30% width while
+  retaining the larger approved typography, three-line clamping, and ten-row maximum.
+- Removed the redundant `Ordered by driving distance from current scene origin` ready-state sentence;
+  loading, failure, and reference-order status messages remain available when relevant.
+- Updated directory and contained-projection regressions. All 16 focused map, directory, and routing
+  tests, TypeScript, ESLint with the 12 existing warnings, and the production build pass. Rendered
+  1080×810 browser QA confirms the exact 30% width, ten complete rows, no horizontal overflow, and
+  absence of the removed ready-state sentence.
+
+## [2026-09-10] [monitor/ui] — Retain the fullscreen hospital map and enlarge its directory
+
+- Made the bottom-right Minimize control the only fullscreen exit: unsolicited native-fullscreen
+  loss now preserves the edge-to-edge in-page map, the directory contains touch overscroll, and its
+  fullscreen hospital toggle is disabled.
+- Widened trainee and contained Spectator directories from 30% to 40%, applied the approved larger
+  typography scale, and limited the scroll viewport to at most ten fixed-height hospital rows.
+- Clamped long hospital names, designations, and notes to three lines while preserving their exact
+  authored text for assistive technology; Adult/Pediatric sections, all 18 hospitals, routing,
+  ordering, three columns, and map-label sizing remain unchanged.
+- Added explicit-minimize, native-fullscreen-loss, contained-projection, typography, clamping, and
+  ten-row regressions. All 75 focused tests, TypeScript, ESLint with the 12 existing warnings, the
+  production build, and rendered 1080×810 plus 1440×900 browser QA pass.
+
+## [2026-09-10] [instructor/ui] — Compact the Caller Info editor
+
+- Reorganized the expanded desktop editor into the confirmed two-column pairings while keeping
+  Auto-sort full width and Call/Priority/MPDS in its existing three-column row.
+- Reduced the initial height of Probleme, Information, and Mise a jour from two rows to one while
+  retaining vertical resizing, and paired each custom field's Title and Input on desktop.
+- Removed the first-Send countdown helper sentence and aligned the minute/second inputs with the
+  Scenario Title input.
+- Preserved narrow full-width stacking, field source/focus order, autocomplete, route calculation,
+  draft state, Save/Send behavior, and the three-field custom limit.
+- Added component geometry regressions. All 68 focused Caller Info and Instructor tests, TypeScript,
+  ESLint with the 12 existing warnings, the production build, and rendered desktop/narrow QA pass.
 
 ## [2026-09-10] [instructor/ui] — Make non-Live Spectator states unmistakable
 

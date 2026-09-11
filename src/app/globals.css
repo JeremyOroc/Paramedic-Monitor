@@ -111,6 +111,25 @@ body {
 .bg-wagami-z-knob { background-color: var(--wagami-z-knob); }
 .bg-wagami-z-readiness { background-color: var(--wagami-z-readiness); }
 
+.hospital-directory-scroll {
+  container-type: size;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hospital-directory-row {
+  height: max(3.75rem, calc((100cqh - 5rem) / 10));
+  max-height: max(3.75rem, calc((100cqh - 5rem) / 10));
+}
+
+.hospital-directory-clamp {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .wagami-z-stage {
   container-type: size;
   padding-top: max(20px, env(safe-area-inset-top));

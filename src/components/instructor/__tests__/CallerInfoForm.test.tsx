@@ -108,6 +108,43 @@ describe('CallerInfoForm', () => {
     )
   })
 
+  it('uses the confirmed compact responsive field geometry', async () => {
+    const user = userEvent.setup()
+    renderCallerInfoForm()
+
+    expect(screen.getByTestId('caller-info-countdown-row')).toHaveClass(
+      'grid',
+      'gap-3',
+      'md:grid-cols-2',
+    )
+    expect(
+      screen.queryByText('The first Send arms the dispatch and starts this countdown on the monitor.'),
+    ).not.toBeInTheDocument()
+    expect(screen.getByTestId('caller-info-route-row')).toHaveClass(
+      'grid',
+      'gap-3',
+      'md:grid-cols-2',
+    )
+    expect(screen.getByTestId('caller-info-primary-grid')).toHaveClass(
+      'grid',
+      'gap-3',
+      'md:grid-cols-2',
+    )
+
+    expect(screen.getByLabelText('Auto-sort scenario')).toHaveAttribute('rows', '5')
+    for (const label of ['Probleme', 'Information', 'Mise a jour']) {
+      expect(screen.getByLabelText(label)).toHaveAttribute('rows', '1')
+      expect(screen.getByLabelText(label)).toHaveClass('h-10', 'min-h-10', 'resize-y')
+    }
+
+    await user.click(screen.getByRole('button', { name: 'Add extra' }))
+    expect(screen.getByTestId('caller-info-extra-row')).toHaveClass(
+      'grid',
+      'gap-3',
+      'md:grid-cols-2',
+    )
+  })
+
   it('bases the route ETA preview on the dispatch countdown', () => {
     useMonitorStore.getState().setDispatchMinutes(2)
     useMonitorStore.getState().setDispatchSeconds(15)

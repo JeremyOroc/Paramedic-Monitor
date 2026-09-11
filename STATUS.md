@@ -6,6 +6,13 @@
 ---
 
 ## Current Phase
+**Console/hospital UI merge reconciliation — COMPLETE (2026-09-11).**
+The compact Caller Info and fullscreen hospital-directory refinements are combined with the newer
+Instructor Console discoverability work. Scenario title editing remains solely in the always-visible
+Scenarios library, while Caller Info retains its compact responsive geometry with a countdown-only
+half row. All 28 focused Caller Info, route-map, and hospital-directory tests and TypeScript pass;
+ESLint reports zero errors and the same 12 existing warnings.
+
 **Instructor Console discoverability polish — COMPLETE (2026-09-10).**
 The authenticated Console now resolves the Account's waiting or active Room during server rendering,
 so the launcher immediately shows its code/status with Reopen Room and confirmation-protected Close
@@ -19,6 +26,32 @@ build passes. Rendered sign-in QA confirms the tighter form, removed copy, worki
 console, and no framework overlay. The full suite has 1,350 passing tests and one skipped test; its
 three unrelated failures remain two date-expired Room fixtures and one stale Patient Info color-class
 assertion.
+
+**Fullscreen Hospital Directory retention and readability — COMPLETE (2026-09-10).**
+The route map now leaves fullscreen only through its bottom-right Minimize control. Native-fullscreen
+loss from Escape or an iPad/browser gesture retains the fixed edge-to-edge map in the available
+viewport, directory overscroll is contained, and the hospital toggle is disabled until minimization.
+The trainee and contained Spectator directory occupy 30% width. Hospital names, designations, key
+notes, and routing statuses now use 14px text in both sections, while distances use 12px text. The
+directory shows at most ten fixed-height hospital rows and clamps long authored cells to three lines
+while preserving their complete accessible text. The ready-state distance-ordering sentence is omitted.
+Adult/Pediatric sections, all 18 hospitals, routing,
+ordering, and map-pin label sizing remain unchanged. All 75 focused map, routing, monitor-projection,
+and Spectator tests pass, along with the 16 focused follow-up regressions, TypeScript, ESLint with the
+12 existing warnings, and the production build. Rendered 1080×810 and 1440×900 browser QA confirms
+the new font sizes, exact 30% width, nine complete rows, no horizontal overflow, and removal of the
+ready-state sentence.
+
+**Compact Instructor Caller Info editor — COMPLETE (2026-09-10).**
+The expanded editor now uses the confirmed responsive two-column desktop layout for Title/countdown,
+route origin/summary, primary caller fields, and custom Title/Input pairs. Auto-sort remains full
+width, Call/Priority/MPDS remains a three-column row, and Heure occupies the final half row. Probleme,
+Information, and Mise a jour now open at half their former height and remain vertically resizable;
+narrow layouts continue stacking at full width. The first-Send helper sentence has been removed and
+the Scenario Title and minute/second inputs now share an aligned baseline. Existing autocomplete,
+state, Save/Send, ordering, and extra-field behavior are unchanged. All 68 focused Caller Info and Instructor tests, TypeScript,
+ESLint with the 12 existing warnings, the production build, and rendered desktop/narrow browser QA
+pass.
 
 **Spectator availability presentation — COMPLETE (2026-09-10).**
 Standalone and Embedded Spectator views now share one typed availability resolver and one large,
