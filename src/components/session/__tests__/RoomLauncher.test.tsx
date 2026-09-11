@@ -44,52 +44,62 @@ describe('RoomLauncher', () => {
     expect(useMonitorStore.getState().draft.hr).toBe(0)
   })
 
-  it('offers to reopen the one live Room and claims this browser as controller', async () => {
+  it('shows the existing Room immediately and claims this browser when reopening it', async () => {
     const user = userEvent.setup()
     const fetchMock = vi.spyOn(window, 'fetch')
-      .mockResolvedValueOnce(jsonResponse({
-        error: 'You already have an active room',
-        existingRoom: { code: 'LIVE12', status: 'active' },
-      }, 409))
       .mockResolvedValueOnce(jsonResponse({ controllerToken: 'reopened-secret' }))
 
-    render(<RoomLauncher />)
-    await user.click(screen.getByRole('button', { name: 'Create Room' }))
-    expect(await screen.findByText(/LIVE12/)).toBeInTheDocument()
+    render(<RoomLauncher initialExistingRoom={{ code: 'LIVE12', status: 'active' }} />)
+    expect(screen.getByText('Room LIVE12 is active.')).toBeInTheDocument()
+    expect(screen.getByText(/You already own Room/)).toHaveTextContent('LIVE12')
+    expect(screen.queryByRole('button', { name: 'Create Room' })).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Reopen Room' }))
 
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/session/LIVE12/control', { method: 'POST' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/session/LIVE12/control', { method: 'POST' })
     expect(localStorage.getItem('paramedic-monitor.controller.LIVE12')).toContain('reopened-secret')
     expect(push).toHaveBeenCalledWith('/session/LIVE12/instructor')
   })
 
-  it('confirms before ending the existing Room and creating a replacement', async () => {
+  it('still reveals a raced existing Room when Create Room reports a conflict', async () => {
     const user = userEvent.setup()
-    const fetchMock = vi.spyOn(window, 'fetch')
-      .mockResolvedValueOnce(jsonResponse({
-        existingRoom: { code: 'LIVE12', status: 'waiting' },
-      }, 409))
-      .mockResolvedValueOnce(jsonResponse({ controllerToken: 'claimed-secret' }))
-      .mockResolvedValueOnce(jsonResponse({ session: { status: 'ended' } }))
-      .mockResolvedValueOnce(jsonResponse({
-        session: { code: 'NEW123' },
-        controllerToken: 'new-secret',
-        instructorUrl: '/session/NEW123/instructor',
-      }))
+    vi.spyOn(window, 'fetch').mockResolvedValue(jsonResponse({
+      error: 'You already have an active room',
+      existingRoom: { code: 'RACE12', status: 'waiting' },
+    }, 409))
 
     render(<RoomLauncher />)
     await user.click(screen.getByRole('button', { name: 'Create Room' }))
-    await user.click(await screen.findByRole('button', { name: 'End and create new' }))
-    expect(screen.getByRole('alertdialog')).toHaveTextContent('End the existing Room?')
+
+    expect(await screen.findByText('Room RACE12 is waiting.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Create Room' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Close Room' })).toBeInTheDocument()
+  })
+
+  it('confirms before closing the existing Room and restores room creation', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ controllerToken: 'claimed-secret' }))
+      .mockResolvedValueOnce(jsonResponse({ session: { status: 'ended' } }))
+    localStorage.setItem(
+      'paramedic-monitor.controller.LIVE12',
+      JSON.stringify({ controllerToken: 'old-secret' }),
+    )
+
+    render(<RoomLauncher initialExistingRoom={{ code: 'LIVE12', status: 'waiting' }} />)
+    await user.click(screen.getByRole('button', { name: 'Close Room' }))
+    expect(screen.getByRole('alertdialog')).toHaveTextContent('Close the existing Room?')
 
     await user.click(screen.getByRole('alertdialog').querySelectorAll('button')[1])
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/session/NEW123/instructor'))
-    expect(fetchMock).toHaveBeenNthCalledWith(3, '/api/session/LIVE12/end', {
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create Room' })).toBeInTheDocument())
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/session/LIVE12/control', { method: 'POST' })
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/session/LIVE12/end', {
       method: 'POST',
       headers: { 'x-room-controller-token': 'claimed-secret' },
     })
-    expect(fetchMock).toHaveBeenNthCalledWith(4, '/api/session/create', { method: 'POST' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(localStorage.getItem('paramedic-monitor.controller.LIVE12')).toBeNull()
+    expect(push).not.toHaveBeenCalled()
   })
 })

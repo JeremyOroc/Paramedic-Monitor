@@ -175,6 +175,7 @@ type HarnessProps = {
   onDeleteDraft?: () => void
   scenarioDraftActive?: boolean
   scenarioDraftTitle?: string
+  onScenarioTitleChange?: (value: string) => void
   scenarioIsDirty?: boolean
   scenarioSelectionDisabled?: boolean
 }
@@ -189,19 +190,25 @@ function Harness({
   onDeleteDraft = vi.fn(),
   scenarioDraftActive = false,
   scenarioDraftTitle = '',
+  onScenarioTitleChange = vi.fn(),
   scenarioIsDirty = false,
   scenarioSelectionDisabled = false,
 }: HarnessProps) {
   const [selectedFolderId, setSelectedFolderId] = useState('general')
   const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(() => new Set())
   const [loadedScenarioId, setLoadedScenarioId] = useState<string | null>(null)
+  const [title, setTitle] = useState(scenarioDraftTitle)
   return (
     <ScenarioLibraryPanel
       selectedFolderId={selectedFolderId}
       expandedFolderIds={expandedFolderIds}
       loadedScenarioId={loadedScenarioId}
       scenarioDraftActive={scenarioDraftActive}
-      scenarioDraftTitle={scenarioDraftTitle}
+      scenarioDraftTitle={title}
+      onScenarioTitleChange={(value) => {
+        setTitle(value)
+        onScenarioTitleChange(value)
+      }}
       scenarioIsDirty={scenarioIsDirty}
       scenarioAction="idle"
       scenarioError=""
@@ -237,6 +244,24 @@ function Harness({
 describe('ScenarioLibraryPanel', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it('keeps scenario naming visible in the Scenarios library', async () => {
+    createFetchMock()
+    const onScenarioTitleChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Harness
+        scenarioDraftTitle="Chest Pain"
+        onScenarioTitleChange={onScenarioTitleChange}
+      />,
+    )
+
+    const title = screen.getByLabelText('Scenario title')
+    expect(title).toHaveValue('Chest Pain')
+    expect(title.closest('section')).toHaveAccessibleName('Scenarios library')
+    await user.type(title, ' Updated')
+    expect(onScenarioTitleChange).toHaveBeenLastCalledWith('Chest Pain Updated')
   })
 
   it('blocks scenario and library actions while selection is disabled', async () => {
@@ -527,6 +552,7 @@ describe('ScenarioLibraryPanel', () => {
 
     rerender(
       <Harness
+        key="title-only"
         scenarioDraftActive
         scenarioDraftTitle="Title Only"
         scenarioIsDirty
@@ -534,7 +560,7 @@ describe('ScenarioLibraryPanel', () => {
         onDeleteDraft={onDeleteDraft}
       />,
     )
-    await user.click(screen.getByRole('button', { name: 'Save Title Only' }))
+    await user.click(await screen.findByRole('button', { name: 'Save Title Only' }))
     expect(onSaveScenario).toHaveBeenCalledOnce()
     await user.click(screen.getByRole('button', { name: 'Delete Title Only' }))
     expect(onDeleteDraft).toHaveBeenCalledOnce()

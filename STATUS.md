@@ -6,6 +6,27 @@
 ---
 
 ## Current Phase
+**Console/hospital UI merge reconciliation — COMPLETE (2026-09-11).**
+The compact Caller Info and fullscreen hospital-directory refinements are combined with the newer
+Instructor Console discoverability work. Scenario title editing remains solely in the always-visible
+Scenarios library, while Caller Info retains its compact responsive geometry with a countdown-only
+half row. All 28 focused Caller Info, route-map, and hospital-directory tests and TypeScript pass;
+ESLint reports zero errors and the same 12 existing warnings.
+
+**Instructor Console discoverability polish — COMPLETE (2026-09-10).**
+The authenticated Console now resolves the Account's waiting or active Room during server rendering,
+so the launcher immediately shows its code/status with Reopen Room and confirmation-protected Close
+Room actions while suppressing Create Room. Closing ends the Room without creating a replacement,
+clears the local controller token, and restores the empty launcher. Scenario title editing is always
+visible in the Scenarios library and no longer hidden in Caller Info. Student roster rows retain
+presence, nickname, and Spectate while omitting Ack/Arr/Txp/Shk/Med summaries; event capture and
+reports are unchanged. The sign-in invitation paragraph is removed. All 99 focused tests and
+TypeScript pass; full ESLint has zero errors and the same 12 existing warnings; the webpack production
+build passes. Rendered sign-in QA confirms the tighter form, removed copy, working input, clean
+console, and no framework overlay. The full suite has 1,350 passing tests and one skipped test; its
+three unrelated failures remain two date-expired Room fixtures and one stale Patient Info color-class
+assertion.
+
 **Fullscreen Hospital Directory retention and readability — COMPLETE (2026-09-10).**
 The route map now leaves fullscreen only through its bottom-right Minimize control. Native-fullscreen
 loss from Escape or an iPad/browser gesture retains the fixed edge-to-edge map in the available

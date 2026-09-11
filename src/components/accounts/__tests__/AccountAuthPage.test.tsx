@@ -24,7 +24,8 @@ describe('AccountAuthPage', () => {
     }))
     render(<AccountAuthPage mode="login" />)
 
-    expect(screen.getByText(/Accounts are invitation-only/)).toBeInTheDocument()
+    expect(screen.queryByText(/Accounts are invitation-only/)).toBeNull()
+    expect(screen.queryByText(/invitation setup/)).toBeNull()
     expect(screen.queryByRole('link', { name: /create/i })).not.toBeInTheDocument()
     await user.type(screen.getByLabelText('Username'), 'Medic')
     await user.type(screen.getByLabelText('Password'), 'password')

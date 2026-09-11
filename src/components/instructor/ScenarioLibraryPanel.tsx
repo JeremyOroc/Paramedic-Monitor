@@ -25,6 +25,7 @@ type ScenarioLibraryPanelProps = {
   loadedScenarioId: string | null
   scenarioDraftActive: boolean
   scenarioDraftTitle: string
+  onScenarioTitleChange: (value: string) => void
   scenarioIsDirty: boolean
   scenarioAction: 'idle' | 'saving' | 'deleting'
   scenarioError: string
@@ -223,6 +224,7 @@ export function ScenarioLibraryPanel({
   loadedScenarioId,
   scenarioDraftActive,
   scenarioDraftTitle,
+  onScenarioTitleChange,
   scenarioIsDirty,
   scenarioAction,
   scenarioError,
@@ -744,6 +746,17 @@ export function ScenarioLibraryPanel({
           ) : null}
         </div>
       </div>
+
+      <label className="mt-3 grid gap-1">
+        <span className="text-xs uppercase tracking-wider text-neutral-400">Scenario title</span>
+        <input
+          value={scenarioDraftTitle}
+          onChange={(event) => onScenarioTitleChange(event.target.value)}
+          aria-label="Scenario title"
+          placeholder="Scenario title"
+          className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+        />
+      </label>
 
       {creatingFolder ? (
         <div className="mt-3 text-xs uppercase tracking-wider text-neutral-500">

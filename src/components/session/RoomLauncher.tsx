@@ -4,12 +4,16 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
-import { writeRoomControllerToken } from '@/lib/roomController'
+import { roomControllerStorageKey, writeRoomControllerToken } from '@/lib/roomController'
 import { useMonitorStore } from '@/store/monitorStore'
 
-type ExistingRoom = {
+export type ExistingRoom = {
   code: string
   status: 'waiting' | 'active'
+}
+
+type RoomLauncherProps = {
+  initialExistingRoom?: ExistingRoom | null
 }
 
 type CreateRoomResponse = {
@@ -20,12 +24,12 @@ type CreateRoomResponse = {
   error?: string
 }
 
-export function RoomLauncher() {
+export function RoomLauncher({ initialExistingRoom = null }: RoomLauncherProps) {
   const router = useRouter()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [existingRoom, setExistingRoom] = useState<ExistingRoom | null>(null)
-  const [confirmEnd, setConfirmEnd] = useState(false)
+  const [existingRoom, setExistingRoom] = useState<ExistingRoom | null>(initialExistingRoom)
+  const [confirmClose, setConfirmClose] = useState(false)
 
   const enterRoom = (result: CreateRoomResponse) => {
     if (!result.controllerToken || !result.session?.code || !result.instructorUrl) {
@@ -80,7 +84,7 @@ export function RoomLauncher() {
     }
   }
 
-  const endAndCreate = async () => {
+  const closeRoom = async () => {
     if (!existingRoom) return
     setBusy(true)
     setError('')
@@ -93,15 +97,12 @@ export function RoomLauncher() {
       const ended = await endResponse.json() as { error?: string }
       if (!endResponse.ok) throw new Error(ended.error ?? 'Unable to end existing Room')
 
-      const createResponse = await fetch('/api/session/create', { method: 'POST' })
-      const created = await createResponse.json() as CreateRoomResponse
-      if (!createResponse.ok) throw new Error(created.error ?? 'Unable to create Room')
-      setConfirmEnd(false)
+      localStorage.removeItem(roomControllerStorageKey(existingRoom.code))
+      setConfirmClose(false)
       setExistingRoom(null)
-      enterRoom(created)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Unable to replace Room')
-      setConfirmEnd(false)
+      setError(caught instanceof Error ? caught.message : 'Unable to close Room')
+      setConfirmClose(false)
     } finally {
       setBusy(false)
     }
@@ -116,17 +117,21 @@ export function RoomLauncher() {
               Room
             </h2>
             <p className="mt-1 text-sm text-neutral-400">
-              Create a trainee Room owned by your Account.
+              {existingRoom
+                ? `Room ${existingRoom.code} is ${existingRoom.status}.`
+                : 'Create a trainee Room owned by your Account.'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void createRoom()}
-            disabled={busy}
-            className="border border-cyan-bp bg-cyan-bp px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-black disabled:opacity-50"
-          >
-            {busy ? 'Working…' : 'Create Room'}
-          </button>
+          {!existingRoom ? (
+            <button
+              type="button"
+              onClick={() => void createRoom()}
+              disabled={busy}
+              className="border border-cyan-bp bg-cyan-bp px-4 py-2 font-mono text-xs font-black uppercase tracking-wider text-black disabled:opacity-50"
+            >
+              {busy ? 'Working…' : 'Create Room'}
+            </button>
+          ) : null}
         </div>
         {existingRoom ? (
           <div className="mt-4 border border-pending-amber/70 bg-pending-amber/10 p-3">
@@ -137,8 +142,8 @@ export function RoomLauncher() {
               <button type="button" onClick={() => void reopenRoom()} disabled={busy} className="border border-cyan-bp px-3 py-2 font-mono text-xs font-bold uppercase text-cyan-bp disabled:opacity-50">
                 Reopen Room
               </button>
-              <button type="button" onClick={() => setConfirmEnd(true)} disabled={busy} className="border border-alarm-red px-3 py-2 font-mono text-xs font-bold uppercase text-alarm-red disabled:opacity-50">
-                End and create new
+              <button type="button" onClick={() => setConfirmClose(true)} disabled={busy} className="border border-alarm-red px-3 py-2 font-mono text-xs font-bold uppercase text-alarm-red disabled:opacity-50">
+                Close Room
               </button>
             </div>
           </div>
@@ -146,12 +151,12 @@ export function RoomLauncher() {
         {error ? <p role="alert" className="mt-3 text-sm font-semibold text-pending-amber">{error}</p> : null}
       </section>
       <ConfirmationDialog
-        open={confirmEnd}
-        title="End the existing Room?"
-        description={`Room ${existingRoom?.code ?? ''} will end immediately and trainees will be disconnected. A new Room will then be created.`}
-        confirmLabel="End and create new"
-        onConfirm={() => void endAndCreate()}
-        onCancel={() => setConfirmEnd(false)}
+        open={confirmClose}
+        title="Close the existing Room?"
+        description={`Room ${existingRoom?.code ?? ''} will end immediately and trainees will be disconnected.`}
+        confirmLabel="Close Room"
+        onConfirm={() => void closeRoom()}
+        onCancel={() => setConfirmClose(false)}
       />
     </>
   )
