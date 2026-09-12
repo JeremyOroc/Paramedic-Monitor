@@ -247,6 +247,18 @@ describe('MonitorPage', () => {
     vi.useRealTimers()
   })
 
+  it('anchors Wagami X to a stable large viewport surface', () => {
+    render(<MonitorPage />)
+
+    expect(screen.getByTestId('monitor-viewport')).toHaveClass(
+      'fixed',
+      'inset-0',
+      'h-[100lvh]',
+      'w-[100lvw]',
+      'overflow-hidden',
+    )
+  })
+
   it('does not open caller info modal when ANALYZE is clicked', async () => {
     const user = userEvent.setup()
     act(() => {
