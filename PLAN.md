@@ -56,6 +56,12 @@
   resizes ignore harmless one-pixel measurement jitter, coalesce transient measurements, and preserve
   the current trace and waveform phase through a committed size change. The approved one-time move from
   the Resting vital layout to the Defib vital layout after Analyze or Charge remains unchanged.
+- 2026-09-12 requirement update — stable iPad Wagami X shell geometry: the full physical monitor
+  shell, screen, controls, labels, and spacing must retain one size while iPad Control Center or
+  Safari chrome opens and closes. Non-embedded Wagami X sizing inherits the Phase 23 stable parent
+  viewport instead of claiming a second dynamic viewport, and its viewport-relative dimensions use
+  stable large-viewport units. The approved aspect ratio, centered 96% presentation, minimum desktop
+  width, embedded Spectator presentation, ECG continuity, and all clinical behavior remain unchanged.
 - 2026-09-10 requirement update — fullscreen Receiving Hospital Directory retention and readability
   (native-fullscreen-loss behavior superseded 2026-09-12): the hospital-directory toggle is
   disabled while fullscreen keeps the directory open. In every trainee and contained Spectator
@@ -2592,6 +2598,42 @@ tests pass, including one persistent ECG surface across Analyze and no-shock CPR
 Webpack production build pass. Full ESLint has zero errors and the same 12 existing warnings; the
 complete suite has 1,359 passing tests and one skip with the same three documented unrelated failures.
 Physical-iPad replay of the supplied gesture remains follow-up device QA.
+
+---
+
+### Phase 24 — Stable iPad Wagami X Shell Geometry
+
+**Goal:** Stop the remaining slight Wagami X size changes when iPad system or Safari UI changes the
+visual viewport.
+
+**Status: COMPLETE (2026-09-12).**
+
+**Scope:**
+- Make the non-embedded `DeviceShell` fill the stable Phase 23 monitor viewport rather than claiming
+  its own `h-screen` / `w-screen` surface.
+- Replace dynamic `vh` / `vw` shell, control, label, and spacing measurements with their stable
+  large-viewport equivalents so browser-chrome transitions cannot rescale individual pieces.
+- Preserve the existing 1.36 shell aspect ratio, 96% fit, 1024px desktop minimum, embedded Spectator
+  sizing, power and defibrillator controls, monitor layout, and ECG resize hardening.
+
+**Testing:**
+- Extend `DeviceShell` coverage to require stable-parent sizing for the non-embedded root and stable
+  large-viewport sizing for the shell and representative height-, width-, typography-, and spacing-
+  dependent controls.
+- Retain embedded containment coverage and run focused DeviceShell, Monitor, viewport-lock, renderer,
+  waveform, and defibrillator tests.
+- Run TypeScript, ESLint, the full test suite, and the Webpack production build; repeat the supplied
+  Control Center/Safari gesture on a physical iPad as follow-up validation.
+
+**Completed 2026-09-12.** The standalone shell now fills the stable large-viewport surface owned by
+`MonitorPage`; its outer geometry, buttons, labels, spacing, and typography use large viewport units
+instead of measurements that change with Safari chrome. The aspect ratio, 96% fit, desktop minimum,
+embedded presentation, monitor behavior, and Phase 23 ECG continuity remain intact. All 134 focused
+tests, TypeScript, ESLint with zero errors and the same 12 existing warnings, and the Webpack
+production build pass. The production CSS bundle contains every new `lvh`/`lvw` utility. The full
+suite records 1,361 passing tests and one skip with the same three documented unrelated failures.
+Automated rendered QA could not navigate to localhost under the browser safety boundary; physical
+iPad replay of the supplied gesture remains the authoritative follow-up device check.
 
 ---
 

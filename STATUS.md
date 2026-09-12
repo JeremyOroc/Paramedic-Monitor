@@ -6,6 +6,17 @@
 ---
 
 ## Current Phase
+**Stable iPad Wagami X shell sizing — COMPLETE (2026-09-12).**
+The standalone `DeviceShell` now inherits the fixed large-viewport surface already owned by
+`MonitorPage` instead of independently claiming `h-screen`/`w-screen`. Its shell dimensions, physical
+controls, labels, spacing, and typography use stable `lvh`/`lvw` measurements, preventing Safari or
+Control Center chrome changes from making the monitor subtly grow and shrink. The 1.36 aspect ratio,
+96% fit, desktop minimum width, embedded Spectator path, controls, clinical state, and continuous ECG
+behavior remain unchanged. All 134 focused shell, Monitor, viewport, waveform, and defibrillator tests
+pass. TypeScript, the Webpack production build, and production CSS generation pass; ESLint has zero
+errors and the same 12 existing warnings. The complete suite records 1,361 passing tests and one skip
+with the same three documented unrelated failures. Physical iPad gesture replay remains pending.
+
 **Stable iPad Monitor viewport and ECG continuity — COMPLETE (2026-09-12).**
 Wagami X now owns a fixed large-viewport surface while `MonitorPage` locks the document at its origin,
 contains scroll and overscroll, corrects window/Visual Viewport movement, and restores prior document

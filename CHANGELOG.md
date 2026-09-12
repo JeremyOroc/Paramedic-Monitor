@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-09-12] [monitor/ui] — Stabilize iPad Wagami X shell sizing
+
+- Made the standalone `DeviceShell` inherit the fixed large-viewport Monitor surface instead of
+  independently sizing itself with `h-screen` and `w-screen`.
+- Replaced dynamic viewport measurements across shell geometry, physical buttons, labels, spacing,
+  and typography with stable `lvh`/`lvw` units while preserving the established aspect ratio, scale,
+  embedded Spectator path, controls, and ECG behavior.
+- Added shell and Monitor integration regressions. All 134 focused tests, TypeScript, the production
+  CSS bundle, and the Webpack build pass. ESLint has zero errors and the same 12 existing warnings;
+  the full suite records 1,361 passing tests, one skip, and the same three unrelated failures.
+  Physical iPad gesture validation remains pending.
+
 ## [2026-09-12] [monitor/ecg] — Stabilize iPad viewport and ECG continuity
 
 - Locked the monitor document at the viewport origin, contained scroll/overscroll, corrected window
