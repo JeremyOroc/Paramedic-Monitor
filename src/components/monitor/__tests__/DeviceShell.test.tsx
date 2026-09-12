@@ -120,6 +120,24 @@ describe('DeviceShell', () => {
     expect(document.querySelector('video[src="/videos/golden_freddy.mp4"]')).not.toBeInTheDocument()
   }
 
+  it('inherits the stable monitor viewport and uses large viewport units', () => {
+    const { container } = render(<DeviceShell {...makeProps()} />)
+    const stage = container.firstElementChild
+    const shell = stage?.firstElementChild
+
+    expect(stage).toHaveClass('h-full', 'w-full', 'min-w-[1024px]')
+    expect(stage).not.toHaveClass('h-screen', 'w-screen')
+    expect(shell).toHaveClass('h-[96%]', 'max-h-[calc(98lvw/1.36)]')
+    expect(screen.getByRole('button', { name: 'Analyze rhythm' })).toHaveClass(
+      'h-[clamp(44px,6.5lvh,70px)]',
+      'w-[clamp(72px,6.8lvw,102px)]',
+    )
+    expect(screen.getByRole('button', { name: 'Power' })).toHaveClass(
+      'h-[clamp(34px,4.2lvw,62px)]',
+      'w-[clamp(66px,7.2lvw,108px)]',
+    )
+  })
+
   it('drops the desktop minimum width when embedded in a spectator canvas', () => {
     const { container } = render(<DeviceShell {...makeProps()} embedded />)
 
