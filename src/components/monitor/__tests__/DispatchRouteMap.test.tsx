@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -40,6 +41,49 @@ vi.mock('leaflet', () => {
   }
 })
 
+const originalRequestFullscreen = Object.getOwnPropertyDescriptor(
+  Element.prototype,
+  'requestFullscreen',
+)
+const originalFullscreenElement = Object.getOwnPropertyDescriptor(
+  document,
+  'fullscreenElement',
+)
+const originalExitFullscreen = Object.getOwnPropertyDescriptor(document, 'exitFullscreen')
+
+function installFullscreenMock({ rejectRequest = false } = {}) {
+  let fullscreenElement: Element | null = null
+  const requestFullscreen = vi.fn(() => {
+    if (rejectRequest) return Promise.reject(new Error('fullscreen denied'))
+    fullscreenElement = document.querySelector('[data-testid="dispatch-route-map-shell"]')
+    document.dispatchEvent(new Event('fullscreenchange'))
+    return Promise.resolve()
+  })
+  Object.defineProperty(document, 'fullscreenElement', {
+    configurable: true,
+    get: () => fullscreenElement,
+  })
+  Object.defineProperty(Element.prototype, 'requestFullscreen', {
+    configurable: true,
+    value: requestFullscreen,
+  })
+  Object.defineProperty(document, 'exitFullscreen', {
+    configurable: true,
+    value: vi.fn(() => {
+      fullscreenElement = null
+      document.dispatchEvent(new Event('fullscreenchange'))
+      return Promise.resolve()
+    }),
+  })
+
+  return {
+    requestFullscreen,
+    simulateNativeExit: () => {
+      fullscreenElement = null
+    },
+  }
+}
+
 function readyRoute(): DispatchRoute {
   return {
     ...DEFAULT_DISPATCH_ROUTE,
@@ -56,11 +100,41 @@ function readyRoute(): DispatchRoute {
   }
 }
 
+function FullscreenMapHarness() {
+  const [fullscreen, setFullscreen] = useState(false)
+  return (
+    <DispatchRouteMap
+      route={readyRoute()}
+      hospitalMap={{
+        routeKind: 'dispatch',
+        selectedHospitalId: 'chum',
+        pendingHospitalId: null,
+        failedHospitalId: null,
+        failureMessage: '',
+        directoryOpen: fullscreen,
+        fullscreen,
+        distances: {},
+        distanceStatus: 'ready',
+        rankingOrigin: { lat: 45.4, lng: -73.95 },
+      }}
+      onFullscreenChange={setFullscreen}
+    />
+  )
+}
+
 describe('DispatchRouteMap track toggle', () => {
   beforeEach(() => vi.clearAllMocks())
   afterEach(() => {
     vi.useRealTimers()
     cleanup()
+    for (const [target, property, descriptor] of [
+      [Element.prototype, 'requestFullscreen', originalRequestFullscreen],
+      [document, 'fullscreenElement', originalFullscreenElement],
+      [document, 'exitFullscreen', originalExitFullscreen],
+    ] as const) {
+      if (descriptor) Object.defineProperty(target, property, descriptor)
+      else Reflect.deleteProperty(target, property)
+    }
   })
 
   it('defaults to overview and toggles unit tracking on and off', async () => {
@@ -151,50 +225,52 @@ describe('DispatchRouteMap track toggle', () => {
     expect(onFullscreenChange).toHaveBeenCalledWith(true)
   })
 
-  it('retains app fullscreen after native fullscreen loss and exits only from Minimize', async () => {
-    const onCloseDirectory = vi.fn()
-    const onFullscreenChange = vi.fn()
-    render(
-      <DispatchRouteMap
-        route={readyRoute()}
-        hospitalMap={{
-          routeKind: 'dispatch',
-          selectedHospitalId: null,
-          pendingHospitalId: null,
-          failedHospitalId: null,
-          failureMessage: '',
-          directoryOpen: true,
-          fullscreen: true,
-          distances: {},
-          distanceStatus: 'ready',
-          rankingOrigin: { lat: 45.4, lng: -73.95 },
-        }}
-        onCloseDirectory={onCloseDirectory}
-        onFullscreenChange={onFullscreenChange}
-      />,
+  it('returns to the embedded map after native fullscreen loss', async () => {
+    const fullscreen = installFullscreenMock()
+    render(<FullscreenMapHarness />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Open full screen map' }))
+    await waitFor(() => expect(fullscreen.requestFullscreen).toHaveBeenCalledOnce())
+    expect(screen.getByTestId('dispatch-route-map-shell')).toHaveClass(
+      'fixed',
+      'h-[100dvh]',
+      'w-[100dvw]',
     )
+    expect(screen.getByRole('button', { name: 'Toggle hospital directory' })).toBeDisabled()
 
-    const shell = screen.getByTestId('dispatch-route-map-shell')
-    expect(shell).toHaveClass('fixed', 'inset-0', 'overscroll-none')
-
-    const hospitalToggle = await screen.findByRole('button', {
-      name: 'Toggle hospital directory',
-    })
-    expect(hospitalToggle).toBeDisabled()
-    expect(hospitalToggle).toHaveAttribute(
-      'title',
-      'Use Minimize to leave the full screen hospital directory',
-    )
-    fireEvent.click(hospitalToggle)
-    expect(onCloseDirectory).not.toHaveBeenCalled()
-
+    fullscreen.simulateNativeExit()
     fireEvent(document, new Event('fullscreenchange'))
-    expect(onFullscreenChange).not.toHaveBeenCalled()
-    expect(shell).toHaveClass('fixed', 'inset-0')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Exit full screen map' }))
-    expect(onFullscreenChange).toHaveBeenCalledOnce()
-    expect(onFullscreenChange).toHaveBeenCalledWith(false)
+    await waitFor(() => expect(screen.getByTestId('dispatch-route-map-shell')).toHaveClass('h-full'))
+    expect(screen.queryByRole('complementary', { name: 'Receiving Hospital Directory' }))
+      .not.toBeInTheDocument()
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'Open full screen map' }),
+    ).toHaveFocus())
+  })
+
+  it('uses a safe labelled fallback when native fullscreen entry is rejected', async () => {
+    installFullscreenMock({ rejectRequest: true })
+    render(<FullscreenMapHarness />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Open full screen map' }))
+
+    const minimize = await screen.findByRole('button', { name: 'Exit full screen map' })
+    expect(minimize).toHaveTextContent('Minimize')
+    expect(minimize).toHaveClass(
+      'fixed',
+      'min-h-12',
+      'min-w-12',
+      'bottom-[max(0.75rem,env(safe-area-inset-bottom))]',
+      'right-[max(0.75rem,env(safe-area-inset-right))]',
+    )
+    expect(screen.getByTestId('dispatch-route-map-shell')).toHaveClass(
+      'h-[100dvh]',
+      'w-[100dvw]',
+    )
+
+    fireEvent.click(minimize)
+    await waitFor(() => expect(screen.getByTestId('dispatch-route-map-shell')).toHaveClass('h-full'))
   })
 
   it('uses the same fullscreen directory composition in a contained read-only projection', () => {

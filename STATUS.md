@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**iPad Full-screen hospital directory exit recovery — COMPLETE (2026-09-12).**
+The trainee Assignment dashboard now synchronizes app state when an iPad gesture, desktop Escape, or
+another browser action ends native fullscreen, returning to the embedded route map and closing the
+Receiving Hospital Directory without clearing the Selected receiving hospital or active route. A
+rejected or unavailable fullscreen request still receives the fixed in-page fallback. Its fullscreen
+surface uses dynamic viewport dimensions and an icon-and-label Minimize control measuring at least
+48px high, inset by the device safe area. The contained read-only Spectator remains unchanged. All 43
+focused map, directory, Caller Info, routing, and projection tests pass, along with TypeScript, a
+production build, and full ESLint with zero errors and the same 12 existing warnings. Browser QA from
+a 1024x768 viewport confirmed a 121x48 Minimize control and successful native Escape recovery. The
+full suite recorded 1,352 passing tests and one skip; two load-sensitive failures passed immediately
+when rerun alone, leaving the same three documented unrelated failures. Real iPad Safari confirmation
+remains pending on the physical device.
+
 **Console/hospital UI merge reconciliation — COMPLETE (2026-09-11).**
 The compact Caller Info and fullscreen hospital-directory refinements are combined with the newer
 Instructor Console discoverability work. Scenario title editing remains solely in the always-visible
@@ -27,10 +41,10 @@ console, and no framework overlay. The full suite has 1,350 passing tests and on
 three unrelated failures remain two date-expired Room fixtures and one stale Patient Info color-class
 assertion.
 
-**Fullscreen Hospital Directory retention and readability — COMPLETE (2026-09-10).**
-The route map now leaves fullscreen only through its bottom-right Minimize control. Native-fullscreen
-loss from Escape or an iPad/browser gesture retains the fixed edge-to-edge map in the available
-viewport, directory overscroll is contained, and the hospital toggle is disabled until minimization.
+**Fullscreen Hospital Directory retention and readability — SUPERSEDED IN PART (2026-09-12).**
+The 2026-09-10 native-fullscreen retention behavior was replaced by the iPad exit-recovery phase
+above. Directory overscroll remains contained, and the hospital toggle remains disabled until the
+Full-screen hospital directory is left.
 The trainee and contained Spectator directory occupy 30% width. Hospital names, designations, key
 notes, and routing statuses now use 14px text in both sections, while distances use 12px text. The
 directory shows at most ten fixed-height hospital rows and clamps long authored cells to three lines

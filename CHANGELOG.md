@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-09-12] [monitor/ui] — Recover from iPad hospital-map fullscreen exit
+
+- Synchronized the Full-screen hospital directory with native fullscreen loss so an iPad swipe,
+  desktop Escape, or browser exit returns to the embedded Assignment dashboard map and closes the
+  directory while preserving the Selected receiving hospital and active route.
+- Preserved the fixed in-page fallback for unavailable or rejected fullscreen requests, sized it with
+  dynamic viewport units, and replaced its small icon-only exit with a safe-area-aware icon-and-label
+  Minimize control at least 48px high.
+- Added native-exit, rejected-request fallback, accessible-control, focus recovery, and route-retention
+  regressions. All 43 focused tests, TypeScript, the production build, and full ESLint pass with zero
+  errors and 12 existing warnings. Browser QA confirmed the 121x48 control and native Escape recovery.
+
+## [2026-09-12] [planning/ui] — Revise iPad hospital-map fullscreen exit
+
+- Replaced the prior native-fullscreen retention requirement: an iPad swipe, desktop Escape, or other
+  unsolicited native exit will now return the trainee to the embedded Assignment dashboard map and
+  close the directory while preserving the Selected receiving hospital and active route.
+- Retained the in-page fallback for unavailable or rejected native-fullscreen entry, with a confirmed
+  icon-and-label Minimize control of at least 48px positioned within the iPad visual viewport and safe
+  area.
+- Added the Full-screen hospital directory glossary term and the Phase 21 implementation/test gate.
+  Application code remains unchanged pending implementation.
+
 ## [2026-09-11] [merge] — Reconcile console and hospital UI refinements
 
 - Combined the Instructor Console discoverability history with the compact Caller Info and fullscreen

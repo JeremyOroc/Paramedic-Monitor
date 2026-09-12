@@ -35,11 +35,15 @@
   sections, hospital names, designations, key notes, and routing statuses use 14px text, while driving
   distances use 12px text. The 30% directory width, three-line clamps, ten-row maximum, authored text,
   routing behavior, and all other directory presentation remain unchanged.
-- 2026-09-10 requirement update — fullscreen Receiving Hospital Directory retention and readability:
-  the fullscreen route map exits only when its bottom-right Minimize button is activated. If native
-  element fullscreen ends through an iPad swipe, desktop Escape, or another browser action, the map
-  retains its edge-to-edge in-page fullscreen presentation within the available browser viewport;
-  ordinary directory scrolling contains vertical overscroll. The hospital-directory toggle is
+- 2026-09-12 requirement update — recoverable full-screen hospital directory exit: when native
+  fullscreen ends through an iPad swipe, desktop Escape, or another browser action, the trainee leaves
+  the Full-screen hospital directory and returns to the embedded Assignment dashboard route map with
+  the directory closed. The Selected receiving hospital and active route remain intact. A rejected or
+  unavailable native-fullscreen request may still use the edge-to-edge in-page fallback, whose
+  icon-and-label Minimize control is at least 48px high and remains inside the iPad visual viewport and
+  safe area.
+- 2026-09-10 requirement update — fullscreen Receiving Hospital Directory retention and readability
+  (native-fullscreen-loss behavior superseded 2026-09-12): the hospital-directory toggle is
   disabled while fullscreen keeps the directory open. In every trainee and contained Spectator
   fullscreen presentation, the directory occupies 30% of the width and shows at most ten fixed-height
   hospital rows before internal scrolling reveals the remainder. Adult and Pediatric sections and
@@ -777,11 +781,13 @@ button is inert until a drill gate is satisfied.
   unavailable, and may be retried by selecting it again. Rapid selections stay interactive and use
   strict latest-choice-wins response handling.
 - A bottom-right map control enters browser-native fullscreen with an edge-to-edge in-page fallback
-  where element fullscreen is unavailable. Entering fullscreen always opens the hospital-directory
-  workspace; all hospital pins remain visible. The presentation keeps the map controls and
-  Distance/ETA/Status strip. Only the bottom-right Minimize control exits fullscreen; native-fullscreen
-  loss through Escape, an iPad swipe, or another browser action retains the edge-to-edge in-page
-  fullscreen fallback. The hospital toggle is disabled while fullscreen keeps the directory open.
+  where element fullscreen is unavailable or rejected. Entering fullscreen always opens the
+  hospital-directory workspace; all hospital pins remain visible. The presentation keeps the map
+  controls and Distance/ETA/Status strip. Native-fullscreen loss through Escape, an iPad swipe, or
+  another browser action exits the Full-screen hospital directory, closes the directory, and returns
+  to the embedded route map without clearing the Selected receiving hospital or active route. The
+  fallback exits through a safe-area- and visual-viewport-aware icon-and-label Minimize control at
+  least 48px high. The hospital toggle is disabled while fullscreen keeps the directory open.
   A scrollable left overlay occupies 30% of the width at every supported landscape size, contains
   overscroll, and shows at most ten fixed-height hospital rows before internal scrolling reveals the
   rest. Its columns wrap with three-line clamping, it creates no page-level or horizontal scrollbar,
@@ -2435,6 +2441,9 @@ behavior of its fields.
 
 **Status: COMPLETE (2026-09-10).**
 
+Native-fullscreen-loss behavior is superseded by Phase 21 (2026-09-12); the directory readability,
+geometry, and contained Spectator requirements remain current.
+
 **Scope:**
 - Recompose the approved fields and summaries into responsive two-column rows while preserving the
   existing Call / Priority / MPDS row and full-width Auto-sort scenario box.
@@ -2473,6 +2482,33 @@ making the directory easier to read without showing more than ten hospitals at o
   build verification.
 - Perform rendered QA at iPad-landscape and desktop viewports, including native-fullscreen loss and
   the in-page fallback where supported by the browser host.
+
+---
+
+### Phase 21 — Recoverable iPad Full-screen Hospital Directory Exit
+
+**Goal:** Make every trainee Full-screen hospital directory exit recoverable while preserving a useful
+in-page fallback when native fullscreen cannot start.
+
+**Status: COMPLETE (2026-09-12).**
+
+**Scope:**
+- Treat loss of native fullscreen through iPad swipe, desktop Escape, or another browser action as an
+  exit from the Full-screen hospital directory and return to the embedded Assignment dashboard map.
+- Close the Receiving Hospital Directory on exit while preserving the Selected receiving hospital and
+  active Dispatch or Transport route.
+- Retain the fixed in-page fallback only when native fullscreen is unavailable or its request fails.
+- Give native and fallback fullscreen presentations an icon-and-label Minimize control with a minimum
+  48px touch target positioned within the current visual viewport and iPad safe area.
+- Keep the contained read-only Spectator presentation noninteractive and otherwise unchanged.
+
+**Testing:**
+- Cover native `fullscreenchange` loss, explicit Minimize without duplicate state regressions, rejected
+  fullscreen fallback entry and recovery, and preserved Selected receiving hospital/route state.
+- Cover the visible Minimize label, minimum touch-target geometry, safe-area positioning, and unchanged
+  contained Spectator behavior.
+- Run focused map, hospital-routing, Caller Info, and Spectator tests, TypeScript, ESLint, and the
+  production build; perform rendered iPad-landscape and desktop viewport QA where supported.
 
 ---
 

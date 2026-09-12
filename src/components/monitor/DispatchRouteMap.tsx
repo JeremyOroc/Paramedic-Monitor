@@ -62,6 +62,7 @@ export function DispatchRouteMap({
 }: DispatchRouteMapProps) {
   const rootRef = useRef<HTMLDivElement | null>(null)
   const fullscreenButtonRef = useRef<HTMLButtonElement | null>(null)
+  const nativeFullscreenActiveRef = useRef(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Leaflet.Map | null>(null)
   const leafletRef = useRef<typeof Leaflet | null>(null)
@@ -102,19 +103,48 @@ export function DispatchRouteMap({
   const toggleFullscreen = async () => {
     const next = !fullscreen
     if (!readOnly && !contained) {
-      try {
-        if (next && rootRef.current?.requestFullscreen) {
-          await rootRef.current.requestFullscreen()
-        } else if (!next && document.fullscreenElement) {
-          await document.exitFullscreen()
+      if (next) {
+        let enteredNativeFullscreen = false
+        try {
+          if (rootRef.current?.requestFullscreen) {
+            await rootRef.current.requestFullscreen()
+            enteredNativeFullscreen = true
+          }
+        } catch {
+          // Fixed positioning below is the fallback when native fullscreen fails.
         }
-      } catch {
-        // Fixed positioning below is the fallback when native fullscreen fails.
+        nativeFullscreenActiveRef.current = enteredNativeFullscreen
+      } else {
+        nativeFullscreenActiveRef.current = false
+        try {
+          if (document.fullscreenElement) await document.exitFullscreen()
+        } catch {
+          // App state still exits if the browser has already left native fullscreen.
+        }
       }
     }
     onFullscreenChange?.(next)
     if (!next) window.setTimeout(() => fullscreenButtonRef.current?.focus(), 0)
   }
+
+  useEffect(() => {
+    if (readOnly || contained) return
+
+    const handleFullscreenChange = () => {
+      if (document.fullscreenElement === rootRef.current) {
+        nativeFullscreenActiveRef.current = true
+        return
+      }
+      if (!nativeFullscreenActiveRef.current) return
+
+      nativeFullscreenActiveRef.current = false
+      onFullscreenChange?.(false)
+      window.setTimeout(() => fullscreenButtonRef.current?.focus(), 0)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [contained, onFullscreenChange, readOnly])
 
   useEffect(() => {
     let disposed = false
@@ -308,7 +338,7 @@ export function DispatchRouteMap({
         fullscreen
           ? contained
             ? 'absolute inset-0 z-[1200] overscroll-none rounded-none'
-            : 'fixed inset-0 z-[1200] overscroll-none rounded-none'
+            : 'fixed left-0 top-0 z-[1200] h-[100dvh] w-[100dvw] overscroll-none rounded-none'
           : 'h-full min-h-0 flex-col rounded-md',
       )}
     >
@@ -380,9 +410,15 @@ export function DispatchRouteMap({
               aria-label={fullscreen ? 'Exit full screen map' : 'Open full screen map'}
               aria-pressed={fullscreen}
               data-testid="map-fullscreen-toggle"
-              className="absolute bottom-2 right-2 z-[1000] grid h-8 w-8 place-items-center rounded border border-neutral-600 bg-black/80 text-white disabled:cursor-default"
+              className={cn(
+                'z-[1000] grid place-items-center rounded border border-neutral-600 bg-black/80 text-white disabled:cursor-default',
+                fullscreen && !contained
+                  ? 'fixed bottom-[max(0.75rem,env(safe-area-inset-bottom))] right-[max(0.75rem,env(safe-area-inset-right))] min-h-12 min-w-12 grid-flow-col gap-2 px-3 font-mono text-xs font-black uppercase tracking-[0.1em]'
+                  : 'absolute bottom-2 right-2 h-8 w-8',
+              )}
             >
               <FullscreenIcon collapse={fullscreen} />
+              {fullscreen && !contained && <span>Minimize</span>}
             </button>
           )}
           {route.status !== 'ready' && (

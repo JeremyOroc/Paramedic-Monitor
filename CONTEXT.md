@@ -78,6 +78,11 @@ The trainee-facing dispatch surface that presents New Assignment at the beginnin
 when CALL INFO is reopened later. It is distinct from the legacy classic caller-information view.
 _Avoid_: Ambulance monitor alert, map page
 
+**Full-screen hospital directory**:
+The temporary expanded Assignment dashboard map and Receiving Hospital Directory. Leaving it restores
+the embedded route map while preserving the Selected receiving hospital and active route.
+_Avoid_: Maps page, second map screen, fallback map
+
 **Incident scene**:
 The caller address to which the unit responds during the Dispatch leg and from which the patient
 departs during the Transport leg.

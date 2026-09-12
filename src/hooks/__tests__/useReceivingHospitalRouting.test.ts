@@ -115,8 +115,16 @@ describe('receiving hospital route persistence', () => {
     expect(result.current.effectiveRoute.startedAt).toBe(123_456)
   })
 
-  it('opens the directory with fullscreen and closes it again on exit', async () => {
+  it('closes fullscreen without clearing the selected hospital or active route', async () => {
     routeMocks.fetchDrivingDistances.mockResolvedValue(Array.from({ length: 18 }, () => 1000))
+    routeMocks.fetchDrivingRoute.mockResolvedValue({
+      distanceMeters: 1500,
+      durationSeconds: 300,
+      geometry: [
+        { lat: 45.45, lng: -73.75 },
+        { lat: 45.511355, lng: -73.556923 },
+      ],
+    })
     const { result } = renderHook(() => useReceivingHospitalRouting({
       dispatchRoute: {
         ...DEFAULT_DISPATCH_ROUTE,
@@ -130,10 +138,19 @@ describe('receiving hospital route persistence', () => {
       transported: false,
     }))
 
+    act(() => result.current.selectHospital('chum'))
+    await waitFor(() => expect(result.current.mapState.selectedHospitalId).toBe('chum'))
+    const selectedRoute = result.current.effectiveRoute
+
     act(() => result.current.setFullscreen(true))
     expect(result.current.mapState).toMatchObject({ fullscreen: true, directoryOpen: true })
     act(() => result.current.setFullscreen(false))
-    expect(result.current.mapState).toMatchObject({ fullscreen: false, directoryOpen: false })
+    expect(result.current.mapState).toMatchObject({
+      fullscreen: false,
+      directoryOpen: false,
+      selectedHospitalId: 'chum',
+    })
+    expect(result.current.effectiveRoute).toBe(selectedRoute)
   })
 
   it('timestamps an active reroute from the current-position selection snapshot', async () => {
