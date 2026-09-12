@@ -6,6 +6,17 @@
 ---
 
 ## Current Phase
+**Stable CPR interval timer footprint — COMPLETE (2026-09-12).**
+The Wagami X CPR timer now keeps one mounted, overflow-contained flex slot across Analyze and CPR.
+Its current typeface uses tabular numerals inside a centered fixed four-character value box, while the
+fixed left and right status cells cannot shrink into it. The same value element persists at `2:00`,
+`1:59`, and `0:00`; countdown timing, banners, sounds, ECG continuity, the 110px bottom track, shell
+geometry, and Spectator behavior remain unchanged. All 142 focused tests, TypeScript, and the Webpack
+production build pass. ESLint has zero errors and the same 12 existing warnings. The complete suite
+records 1,363 passing tests and one skip; one unrelated load-sensitive Admin timeout passed alone,
+leaving the same three documented unrelated baseline failures. Physical iPad CPR replay remains
+pending.
+
 **Stable iPad Wagami X shell sizing — COMPLETE (2026-09-12).**
 The standalone `DeviceShell` now inherits the fixed large-viewport surface already owned by
 `MonitorPage` instead of independently claiming `h-screen`/`w-screen`. Its shell dimensions, physical

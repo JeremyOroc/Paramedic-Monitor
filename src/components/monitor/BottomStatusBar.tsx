@@ -191,29 +191,37 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
       <div className="flex flex-1 gap-1 mt-1">
         {/* Bottom-left box */}
         {isShockAdvised ? (
-          <div className="w-64 border border-white flex items-center justify-center bg-[#cc0000]">
+          <div className="w-64 shrink-0 border border-white flex items-center justify-center bg-[#cc0000]">
             <span className="text-2xl font-bold text-white">{joules} J READY</span>
           </div>
         ) : showDelivered ? (
-          <div className="w-64 border border-white flex items-center justify-center bg-[#67FEC8]">
+          <div className="w-64 shrink-0 border border-white flex items-center justify-center bg-[#67FEC8]">
             <span className="text-2xl font-bold text-black">{lastDeliveredJoules} J DELIVERED</span>
           </div>
         ) : (
-          <div className="w-64 border border-white flex items-center justify-center bg-black">
+          <div className="w-64 shrink-0 border border-white flex items-center justify-center bg-black">
             {showJoulesSelected && !inEval && <span className="text-2xl font-bold text-white">{joules} J SELECTED</span>}
           </div>
         )}
         
-        <div className={cn("flex-1 border border-white flex flex-col items-center justify-center", showCprTime && !inEval && !isShockAdvised ? "bg-white" : "bg-black")}>
+        <div
+          className={cn("min-w-0 flex-1 overflow-hidden border border-white flex flex-col items-center justify-center", showCprTime && !inEval && !isShockAdvised ? "bg-white" : "bg-black")}
+          data-testid="cpr-timer-slot"
+        >
           {showCprTime && !inEval && !isShockAdvised && (
             <>
               <span className="text-black text-xs font-bold leading-none">CPR Time</span>
-              <span className="text-black text-2xl font-bold leading-none">{cprTime}</span>
+              <span
+                className="inline-block w-[4ch] whitespace-nowrap text-center text-black text-2xl font-bold leading-none tabular-nums"
+                data-testid="cpr-timer-value"
+              >
+                {cprTime}
+              </span>
             </>
           )}
         </div>
         
-        <div className="w-32 border border-white flex items-center justify-center space-x-2 bg-black">
+        <div className="w-32 shrink-0 border border-white flex items-center justify-center space-x-2 bg-black">
           <span className="text-yellow-400 text-3xl">⚡</span>
           <span className="text-white text-3xl font-bold">{shockCount}</span>
         </div>
