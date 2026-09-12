@@ -30,6 +30,16 @@ type DispatchRouteMapProps = {
 
 const FOLLOW_ZOOM = 16
 
+function isIPadDevice() {
+  const userAgent = navigator.userAgent
+  const explicitIPad = /\biPad\b/i.test(userAgent)
+  const desktopStyleIPad =
+    navigator.maxTouchPoints > 1 &&
+    (/Macintosh/i.test(userAgent) || navigator.platform === 'MacIntel')
+
+  return explicitIPad || desktopStyleIPad
+}
+
 function markerIcon(
   L: typeof Leaflet,
   kind: 'origin' | 'destination' | 'unit' | 'hospital' | 'hospital-selected' | 'hospital-pending',
@@ -104,20 +114,23 @@ export function DispatchRouteMap({
     const next = !fullscreen
     if (!readOnly && !contained) {
       if (next) {
+        nativeFullscreenActiveRef.current = false
         let enteredNativeFullscreen = false
-        try {
-          if (rootRef.current?.requestFullscreen) {
-            await rootRef.current.requestFullscreen()
-            enteredNativeFullscreen = true
+        if (!isIPadDevice()) {
+          try {
+            if (rootRef.current?.requestFullscreen) {
+              await rootRef.current.requestFullscreen()
+              enteredNativeFullscreen = true
+            }
+          } catch {
+            // Fixed positioning below is the fallback when native fullscreen fails.
           }
-        } catch {
-          // Fixed positioning below is the fallback when native fullscreen fails.
         }
         nativeFullscreenActiveRef.current = enteredNativeFullscreen
       } else {
         nativeFullscreenActiveRef.current = false
         try {
-          if (document.fullscreenElement) await document.exitFullscreen()
+          if (document.fullscreenElement === rootRef.current) await document.exitFullscreen()
         } catch {
           // App state still exits if the browser has already left native fullscreen.
         }

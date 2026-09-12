@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**Persistent iPad in-app Full-screen hospital directory — COMPLETE (2026-09-12).**
+The trainee Assignment dashboard now detects both mobile-style and desktop-style iPad identities and
+uses the fixed edge-to-edge in-app map presentation without requesting Safari native fullscreen. A
+downward Safari/iPadOS fullscreen-loss gesture therefore cannot dismiss or duplicate the map; the
+safe-area-aware labelled Minimize control is its only in-app exit. Desktop browsers retain native
+fullscreen, Escape/native-loss recovery, and the rejected-request fallback. Selected hospital,
+active route, directory composition, and contained read-only Spectator behavior remain unchanged.
+All 17 focused map and hospital-routing tests pass, including the two iPad identity paths, persistent
+fullscreen across unrelated `fullscreenchange`, explicit minimization, desktop native loss, and
+rejected native entry. TypeScript and ESLint pass with zero errors and the same 12 existing warnings;
+the Webpack production build passes. The complete suite records 1,356 passing tests and one skip with
+only the same three documented unrelated failures. Physical iPad Safari and standalone/PWA
+confirmation remains pending on the device.
+
 **iPad Full-screen hospital directory exit recovery — COMPLETE (2026-09-12).**
 The trainee Assignment dashboard now synchronizes app state when an iPad gesture, desktop Escape, or
 another browser action ends native fullscreen, returning to the embedded route map and closing the

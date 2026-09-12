@@ -5,6 +5,19 @@
 
 ---
 
+## [2026-09-12] [monitor/ui] — Keep the hospital map fullscreen on iPad
+
+- Added mobile-style and desktop-style iPad detection at fullscreen entry and routed those devices
+  directly into the fixed `100dvh` × `100dvw` in-app presentation instead of Safari native
+  fullscreen, preventing fullscreen-loss gestures from dismissing or duplicating the map.
+- Kept the labelled safe-area-aware Minimize control as the iPad presentation's explicit exit while
+  preserving desktop native fullscreen, Escape/native-loss recovery, rejected-entry fallback,
+  selected hospital and route state, and contained Spectator behavior.
+- Added iPad identity, unrelated-`fullscreenchange`, and explicit-minimization regressions. All 17
+  focused map and routing tests, TypeScript, full ESLint with zero errors and 12 existing warnings,
+  and the Webpack production build pass. The complete suite records 1,356 passing tests and one skip;
+  its same three documented unrelated failures remain. Physical-iPad validation is pending.
+
 ## [2026-09-12] [monitor/ui] — Recover from iPad hospital-map fullscreen exit
 
 - Synchronized the Full-screen hospital directory with native fullscreen loss so an iPad swipe,

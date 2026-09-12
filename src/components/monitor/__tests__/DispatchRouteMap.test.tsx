@@ -50,6 +50,10 @@ const originalFullscreenElement = Object.getOwnPropertyDescriptor(
   'fullscreenElement',
 )
 const originalExitFullscreen = Object.getOwnPropertyDescriptor(document, 'exitFullscreen')
+const originalMaxTouchPoints = Object.getOwnPropertyDescriptor(
+  window.navigator,
+  'maxTouchPoints',
+)
 
 function installFullscreenMock({ rejectRequest = false } = {}) {
   let fullscreenElement: Element | null = null
@@ -82,6 +86,21 @@ function installFullscreenMock({ rejectRequest = false } = {}) {
       fullscreenElement = null
     },
   }
+}
+
+function mockIPadIdentity({ desktopStyle = false } = {}) {
+  vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(
+    desktopStyle
+      ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15'
+      : 'Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1',
+  )
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue(
+    desktopStyle ? 'MacIntel' : 'iPad',
+  )
+  Object.defineProperty(window.navigator, 'maxTouchPoints', {
+    configurable: true,
+    value: 5,
+  })
 }
 
 function readyRoute(): DispatchRoute {
@@ -127,6 +146,7 @@ describe('DispatchRouteMap track toggle', () => {
   afterEach(() => {
     vi.useRealTimers()
     cleanup()
+    vi.restoreAllMocks()
     for (const [target, property, descriptor] of [
       [Element.prototype, 'requestFullscreen', originalRequestFullscreen],
       [document, 'fullscreenElement', originalFullscreenElement],
@@ -134,6 +154,11 @@ describe('DispatchRouteMap track toggle', () => {
     ] as const) {
       if (descriptor) Object.defineProperty(target, property, descriptor)
       else Reflect.deleteProperty(target, property)
+    }
+    if (originalMaxTouchPoints) {
+      Object.defineProperty(window.navigator, 'maxTouchPoints', originalMaxTouchPoints)
+    } else {
+      Reflect.deleteProperty(window.navigator, 'maxTouchPoints')
     }
   })
 
@@ -248,6 +273,40 @@ describe('DispatchRouteMap track toggle', () => {
       screen.getByRole('button', { name: 'Open full screen map' }),
     ).toHaveFocus())
   })
+
+  it.each([
+    ['mobile-style', false],
+    ['desktop-style', true],
+  ])(
+    'keeps the %s iPad map in app fullscreen until Minimize is used',
+    async (_identity, desktopStyle) => {
+      mockIPadIdentity({ desktopStyle })
+      const nativeFullscreen = installFullscreenMock()
+      render(<FullscreenMapHarness />)
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Open full screen map' }))
+
+      const mapShell = screen.getByTestId('dispatch-route-map-shell')
+      const minimize = await screen.findByRole('button', { name: 'Exit full screen map' })
+      expect(nativeFullscreen.requestFullscreen).not.toHaveBeenCalled()
+      expect(mapShell).toHaveClass('fixed', 'h-[100dvh]', 'w-[100dvw]')
+      expect(
+        screen.getByRole('complementary', { name: 'Receiving Hospital Directory' }),
+      ).toBeInTheDocument()
+
+      fireEvent(document, new Event('fullscreenchange'))
+
+      expect(mapShell).toHaveClass('fixed', 'h-[100dvh]', 'w-[100dvw]')
+      expect(screen.getByRole('button', { name: 'Exit full screen map' })).toBe(minimize)
+
+      fireEvent.click(minimize)
+
+      await waitFor(() => expect(mapShell).toHaveClass('h-full'))
+      expect(
+        screen.queryByRole('complementary', { name: 'Receiving Hospital Directory' }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   it('uses a safe labelled fallback when native fullscreen entry is rejected', async () => {
     installFullscreenMock({ rejectRequest: true })

@@ -42,6 +42,13 @@
   unavailable native-fullscreen request may still use the edge-to-edge in-page fallback, whose
   icon-and-label Minimize control is at least 48px high and remains inside the iPad visual viewport and
   safe area.
+- 2026-09-12 requirement update — persistent iPad in-app fullscreen (supersedes the iPad portion of
+  the recoverable-exit requirement above): supported iPads use the fixed edge-to-edge in-app map
+  presentation without requesting browser-native fullscreen. A downward Safari/iPadOS fullscreen-loss
+  gesture therefore cannot dismiss or duplicate the in-app map; only its labelled Minimize control
+  returns the trainee to the embedded Assignment dashboard map. Desktop browsers retain native
+  fullscreen and their existing Escape/native-loss exit behavior. Normal Safari chrome may still
+  appear outside standalone/PWA mode.
 - 2026-09-10 requirement update — fullscreen Receiving Hospital Directory retention and readability
   (native-fullscreen-loss behavior superseded 2026-09-12): the hospital-directory toggle is
   disabled while fullscreen keeps the directory open. In every trainee and contained Spectator
@@ -2509,6 +2516,33 @@ in-page fallback when native fullscreen cannot start.
   contained Spectator behavior.
 - Run focused map, hospital-routing, Caller Info, and Spectator tests, TypeScript, ESLint, and the
   production build; perform rendered iPad-landscape and desktop viewport QA where supported.
+
+---
+
+### Phase 22 — Persistent iPad In-app Full-screen Hospital Directory
+
+**Goal:** Keep the hospital map visually fullscreen on iPad until the trainee uses its dedicated
+Minimize control, without fighting Safari/iPadOS native-fullscreen gestures.
+
+**Status: COMPLETE (2026-09-12).**
+
+**Scope:**
+- Detect iPad, including iPadOS desktop-style user agents, at the user-triggered fullscreen entry.
+- On iPad, skip browser-native `requestFullscreen()` and use the existing fixed `100dvh` × `100dvw`
+  safe-area-aware in-app fullscreen presentation from entry through explicit minimization.
+- Keep the directory open and prevent unrelated `fullscreenchange` events from dismissing or
+  duplicating the iPad map.
+- Preserve desktop native-fullscreen entry, Escape/native-loss recovery, rejected-request fallback,
+  selected hospital and route state, and contained read-only Spectator behavior.
+
+**Testing:**
+- Add component coverage proving iPad and iPadOS desktop-style identities skip native fullscreen,
+  remain in the fixed in-app presentation across unrelated `fullscreenchange`, and exit through the
+  labelled Minimize control.
+- Retain desktop native-fullscreen, native-loss recovery, rejected-request fallback, safe-area control,
+  and contained Spectator coverage.
+- Run focused map and hospital-routing tests, TypeScript, ESLint, and the production build; complete
+  physical-iPad Safari and standalone/PWA validation as follow-up device QA.
 
 ---
 
