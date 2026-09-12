@@ -49,6 +49,13 @@
   returns the trainee to the embedded Assignment dashboard map. Desktop browsers retain native
   fullscreen and their existing Escape/native-loss exit behavior. Normal Safari chrome may still
   appear outside standalone/PWA mode.
+- 2026-09-12 requirement update — stable iPad monitor viewport and ECG continuity: while Wagami X is
+  displayed, opening or dismissing iPad Control Center or Safari chrome must not pan the document,
+  displace individual monitor layers, or repeatedly clear the ECG trace. The monitor owns a locked,
+  origin-anchored viewport and restores the prior document state when it unmounts. Canvas backing-store
+  resizes ignore harmless one-pixel measurement jitter, coalesce transient measurements, and preserve
+  the current trace and waveform phase through a committed size change. The approved one-time move from
+  the Resting vital layout to the Defib vital layout after Analyze or Charge remains unchanged.
 - 2026-09-10 requirement update — fullscreen Receiving Hospital Directory retention and readability
   (native-fullscreen-loss behavior superseded 2026-09-12): the hospital-directory toggle is
   disabled while fullscreen keeps the directory open. In every trainee and contained Spectator
@@ -2543,6 +2550,48 @@ Minimize control, without fighting Safari/iPadOS native-fullscreen gestures.
   and contained Spectator coverage.
 - Run focused map and hospital-routing tests, TypeScript, ESLint, and the production build; complete
   physical-iPad Safari and standalone/PWA validation as follow-up device QA.
+
+---
+
+### Phase 23 — Stable iPad Monitor Viewport and ECG Continuity
+
+**Goal:** Keep Wagami X spatially anchored and its ECG trace continuous when iPad system or Safari UI
+temporarily changes the visual viewport during Analyze and CPR.
+
+**Status: COMPLETE (2026-09-12).**
+
+**Scope:**
+- Lock the document viewport at the origin while `MonitorPage` is mounted, containing page-level
+  scrolling and overscroll without preventing interaction inside the monitor or Assignment map.
+- Reassert the origin when the window or Visual Viewport reports scrolling, and restore every
+  pre-existing document class and listener on unmount.
+- Keep the non-embedded Wagami X surface fixed to stable viewport dimensions so Control Center and
+  Safari toolbar transitions cannot horizontally pan or independently displace its layers.
+- Harden the shared waveform renderer against transient iPad measurements: ignore one-pixel jitter,
+  wait for a changed size to remain stable before committing it, preserve the existing backing-store
+  image, and retain signal phase across real resizes.
+- Preserve the approved Resting-to-Defib vital-layout transition, clinical state, Analyze/CPR timing,
+  all monitor controls, embedded Spectator sizing, and non-ECG waveform behavior.
+
+**Testing:**
+- Add hook coverage for document locking, origin correction on window and Visual Viewport events,
+  pre-existing-class preservation, and complete cleanup.
+- Extend renderer coverage for one-pixel oscillation, transient measurements, one committed stable
+  resize, backing-store preservation, unchanged phase, and cleanup.
+- Add Monitor integration coverage proving Analyze-to-CPR retains the same ECG canvas while the
+  approved vital-layout transition occurs.
+- Run focused viewport, renderer, waveform, defibrillator, and Monitor tests, TypeScript, ESLint, and
+  the production build; repeat the supplied Control Center/Safari gesture on a physical iPad as
+  follow-up validation.
+
+**Completed 2026-09-12.** The monitor now locks both document surfaces at the viewport origin and
+uses a fixed large-viewport Wagami X surface. The waveform renderer filters one-pixel noise, rejects
+transient measurements, waits 120ms before committing a stable size, copies the existing backing
+store, and scales its previous drawing coordinates without restarting signal phase. All 95 focused
+tests pass, including one persistent ECG surface across Analyze and no-shock CPR. TypeScript and the
+Webpack production build pass. Full ESLint has zero errors and the same 12 existing warnings; the
+complete suite has 1,359 passing tests and one skip with the same three documented unrelated failures.
+Physical-iPad replay of the supplied gesture remains follow-up device QA.
 
 ---
 

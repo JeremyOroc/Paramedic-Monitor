@@ -89,6 +89,19 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+html.monitor-viewport-lock,
+body.monitor-viewport-lock {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body.monitor-viewport-lock {
+  position: fixed;
+  inset: 0;
+}
+
 /* Keep the monitor's shared modal colors stable under Turbopack's incremental
    Tailwind scan. These utilities use the centralized palette above. */
 .bg-modal-surface { background-color: var(--color-modal-surface); }

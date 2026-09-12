@@ -43,6 +43,7 @@ import { useElapsedTimer } from '@/hooks/useElapsedTimer'
 import { useNibpReading } from '@/hooks/useNibpReading'
 import { useNibpAutoMode } from '@/hooks/useNibpAutoMode'
 import { useReceivingHospitalRouting } from '@/hooks/useReceivingHospitalRouting'
+import { useMonitorViewportLock } from '@/hooks/useMonitorViewportLock'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -76,6 +77,7 @@ export function MonitorPage({
   onProjectionChange?: (projection: MonitorProjection) => void
   transportStorageScope?: string
 } = {}) {
+  useMonitorViewportLock()
   const { date, time } = useMonitorClock()
 
   useStoreHydration()
@@ -845,7 +847,10 @@ export function MonitorPage({
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div
+      data-testid="monitor-viewport"
+      className="fixed inset-0 h-[100lvh] w-[100lvw] overflow-hidden overscroll-none"
+    >
       <DeviceShell
         screen={screen}
         initialPowerState={devBypass ? 'on' : 'off'}

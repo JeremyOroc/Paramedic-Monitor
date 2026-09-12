@@ -21,6 +21,23 @@ export type RendererOptions = {
   cycleJitter?: number
 }
 
+type CanvasSize = {
+  width: number
+  height: number
+  dpr: number
+}
+
+const RESIZE_JITTER_PX = 1
+const RESIZE_SETTLE_MS = 120
+
+function sizesMatch(a: CanvasSize, b: CanvasSize, tolerance = 0): boolean {
+  return (
+    Math.abs(a.width - b.width) <= tolerance &&
+    Math.abs(a.height - b.height) <= tolerance &&
+    a.dpr === b.dpr
+  )
+}
+
 export function startRenderer(opts: RendererOptions): () => void {
   const {
     canvas,
@@ -46,40 +63,102 @@ export function startRenderer(opts: RendererOptions): () => void {
   let cssWidth = 0
   let cssHeight = 0
   let dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
+  let phase = 0
+  let prevX = 0
+  let prevY = 0
+  let lastT = performance.now()
+  let rafId = 0
+  let ampMul = 1
+  let cycleMul = 1
+  let pendingSize: CanvasSize | null = null
+  let pendingSince = 0
 
-  // Re-sync the backing store to the element's CSS size. Idempotent: when size
-  // and DPR are unchanged it does nothing (and never wipes the drawn trace), so
-  // it is safe to call freely — from the ResizeObserver and as a per-frame
-  // self-heal. Uses round() to match the element's reported client size, so a
-  // sub-pixel layout doesn't leave the cache permanently 1px off.
-  const resize = () => {
+  const readCanvasSize = (): CanvasSize => {
     const rect = canvas.getBoundingClientRect()
-    const nextDpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
-    const nextWidth = Math.max(1, Math.round(rect.width))
-    const nextHeight = Math.max(1, Math.round(rect.height))
-    if (nextWidth === cssWidth && nextHeight === cssHeight && nextDpr === dpr) return
-    dpr = nextDpr
-    cssWidth = nextWidth
-    cssHeight = nextHeight
+    return {
+      width: Math.max(1, Math.round(rect.width)),
+      height: Math.max(1, Math.round(rect.height)),
+      dpr: typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1,
+    }
+  }
+
+  const commitSize = (next: CanvasSize) => {
+    let traceSnapshot: ImageData | null = null
+    if (cssWidth > 0 && cssHeight > 0) {
+      try {
+        traceSnapshot = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      } catch {
+        // A resize must still succeed if the backing store cannot be copied.
+      }
+    }
+
+    const previousWidth = cssWidth
+    const previousHeight = cssHeight
+    const previousXRatio = previousWidth > 0 ? prevX / previousWidth : 0
+    const previousYRatio = previousHeight > 0 ? prevY / previousHeight : 0.5
+
+    dpr = next.dpr
+    cssWidth = next.width
+    cssHeight = next.height
     canvas.width = cssWidth * dpr
     canvas.height = cssHeight * dpr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.fillStyle = COLORS.bg
     ctx.fillRect(0, 0, cssWidth, cssHeight)
+
+    if (traceSnapshot) {
+      try {
+        ctx.putImageData(traceSnapshot, 0, 0)
+      } catch {
+        // Keep the freshly cleared backing store if the snapshot no longer fits.
+      }
+    }
+
+    prevX = previousXRatio * cssWidth
+    prevY = previousYRatio * cssHeight
   }
-  resize()
+
+  // iPad browser chrome and Control Center can report short-lived viewport
+  // sizes while the system gesture is settling. Reallocating the backing store
+  // for each one clears the ECG, so ignore 1px rounding noise and commit only a
+  // real size that remains stable for a short window. The first size is applied
+  // immediately so the initial trace starts at full resolution.
+  const resize = (now: number, force = false) => {
+    const next = readCanvasSize()
+    const current = { width: cssWidth, height: cssHeight, dpr }
+
+    if (force) {
+      pendingSize = null
+      commitSize(next)
+      return
+    }
+
+    if (sizesMatch(next, current, RESIZE_JITTER_PX)) {
+      pendingSize = null
+      return
+    }
+
+    if (!pendingSize || !sizesMatch(next, pendingSize, RESIZE_JITTER_PX)) {
+      pendingSize = next
+      pendingSince = now
+      return
+    }
+
+    pendingSize = next
+    if (now - pendingSince < RESIZE_SETTLE_MS) return
+
+    commitSize(next)
+    pendingSize = null
+  }
+  resize(performance.now(), true)
 
   const ro =
-    typeof ResizeObserver !== 'undefined' ? new ResizeObserver(resize) : null
+    typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => resize(performance.now()))
+      : null
   ro?.observe(canvas)
 
-  let phase = 0
-  let prevX = 0
-  let prevY = cssHeight / 2
-  let lastT = performance.now()
-  let rafId = 0
-  let ampMul = 1
-  let cycleMul = 1
+  prevY = cssHeight / 2
 
   const rollJitter = () => {
     ampMul = 1 + (Math.random() - 0.5) * 2 * ampJitter
@@ -140,7 +219,8 @@ export function startRenderer(opts: RendererOptions): () => void {
     // reflows), leaving the cached size out of sync with the canvas — which then
     // corrupts the erase band / sweep math until a manual window resize. Re-sync
     // a few times per second; resize() is a no-op when nothing changed.
-    if ((healFrame++ & 15) === 0) resize()
+    const shouldSelfHeal = (healFrame++ & 15) === 0
+    if (pendingSize || shouldSelfHeal) resize(now)
     const dt = Math.min(64, now - lastT)
     lastT = now
 

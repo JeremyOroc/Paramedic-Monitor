@@ -5,6 +5,20 @@
 
 ---
 
+## [2026-09-12] [monitor/ecg] — Stabilize iPad viewport and ECG continuity
+
+- Locked the monitor document at the viewport origin, contained scroll/overscroll, corrected window
+  and Visual Viewport movement, and anchored Wagami X to stable large-viewport dimensions while
+  restoring pre-existing document state on unmount.
+- Debounced real canvas backing-store resizes for 120ms, ignored one-pixel iPad measurement jitter,
+  cancelled transient browser-chrome measurements, and preserved the trace, drawing coordinates, and
+  waveform phase through a committed resize.
+- Preserved the intentional Resting-to-Defib vital relocation after Analyze/Charge and added coverage
+  proving the same ECG surface survives Analyze into no-shock CPR. All 95 focused tests, TypeScript,
+  and the Webpack production build pass. ESLint has zero errors and the same 12 existing warnings; the
+  full suite records 1,359 passing tests, one skip, and the same three unrelated failures. Physical
+  iPad gesture validation remains pending.
+
 ## [2026-09-12] [monitor/ui] — Keep the hospital map fullscreen on iPad
 
 - Added mobile-style and desktop-style iPad detection at fullscreen entry and routed those devices

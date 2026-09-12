@@ -6,6 +6,13 @@ function fakeCtx() {
   return {
     setTransform: vi.fn(),
     fillRect: vi.fn(),
+    getImageData: vi.fn(() => ({
+      data: new Uint8ClampedArray(),
+      width: 400,
+      height: 200,
+      colorSpace: 'srgb',
+    })),
+    putImageData: vi.fn(),
     beginPath: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
@@ -137,7 +144,7 @@ describe('startRenderer', () => {
     stop()
   })
 
-  it('does not re-clear while size is unchanged, and self-heals a real size change', () => {
+  it('ignores resize jitter, rejects transients, and preserves a stable resize', () => {
     const ctx = fakeCtx()
     const canvas = document.createElement('canvas')
     let rectW = 400
@@ -149,12 +156,17 @@ describe('startRenderer', () => {
       }),
     })
     vi.spyOn(canvas, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D)
+    const waveform = {
+      data: new Float32Array([0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]),
+      cycleMs: 10_000,
+    }
+    const getWaveform = vi.fn(() => waveform)
 
     const stop = startRenderer({
       canvas,
       color: '#00ff41',
-      getWaveform: () => ECG_RHYTHMS.nsr,
-      getCycleMs: () => 800,
+      getWaveform,
+      getCycleMs: () => waveform.cycleMs,
       cycleJitter: 0,
       ampJitter: 0,
     })
@@ -164,19 +176,41 @@ describe('startRenderer', () => {
     const afterInit = setTransform.mock.calls.length
     expect(afterInit).toBe(1)
 
-    const advance = (n: number, base: number) => {
-      for (let i = 0; i < n; i++) rafCalls.shift()?.((base + i) * 16)
+    let now = 0
+    const advance = (n: number) => {
+      for (let i = 0; i < n; i++) {
+        now += 16
+        rafCalls.shift()?.(now)
+      }
     }
 
     // Many frames at the same size: the per-frame self-heal stays a no-op,
     // so the trace is never wiped (no extra resize/clear).
-    advance(64, 1)
+    advance(64)
     expect(setTransform.mock.calls.length).toBe(afterInit)
 
-    // A real size change is picked up by the self-heal without a manual resize.
+    // A 1px iPad layout rounding wobble is ignored indefinitely.
+    rectW = 401
+    advance(32)
+    expect(setTransform.mock.calls.length).toBe(afterInit)
+
+    // A short-lived browser-chrome size is cancelled when the original size
+    // returns before the settle window ends.
     rectW = 520
-    advance(16, 100)
+    advance(4)
+    rectW = 400
+    advance(4)
+    expect(setTransform.mock.calls.length).toBe(afterInit)
+
+    // A real, stable size change is picked up without a manual resize and the
+    // existing trace is copied into the new backing store.
+    rectW = 520
+    advance(24)
     expect(setTransform.mock.calls.length).toBe(afterInit + 1)
+    expect(ctx.getImageData).toHaveBeenCalledTimes(1)
+    expect(ctx.putImageData).toHaveBeenCalledTimes(1)
+    expect(getWaveform).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(ctx.lineTo).mock.calls.at(-1)?.[1]).toBeLessThan(90)
 
     stop()
   })

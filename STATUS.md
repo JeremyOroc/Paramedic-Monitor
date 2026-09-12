@@ -6,6 +6,19 @@
 ---
 
 ## Current Phase
+**Stable iPad Monitor viewport and ECG continuity — COMPLETE (2026-09-12).**
+Wagami X now owns a fixed large-viewport surface while `MonitorPage` locks the document at its origin,
+contains scroll and overscroll, corrects window/Visual Viewport movement, and restores prior document
+state on unmount. The shared waveform renderer ignores one-pixel measurement noise, cancels transient
+iPad browser-chrome sizes, commits only a size stable for 120ms, and carries both the existing trace
+and waveform phase into the resized backing store. The approved one-time Resting-to-Defib vital move
+after Analyze or Charge remains unchanged, and the same ECG surface stays mounted through Analyze and
+no-shock CPR. All 95 focused viewport, renderer, waveform, defibrillator, and Monitor tests pass.
+TypeScript and the Webpack production build pass; ESLint has zero errors and the same 12 existing
+warnings. The complete suite records 1,359 passing tests and one skip with the same three documented
+unrelated failures. Replaying the supplied Control Center/Safari gesture remains pending on a physical
+iPad.
+
 **Persistent iPad in-app Full-screen hospital directory — COMPLETE (2026-09-12).**
 The trainee Assignment dashboard now detects both mobile-style and desktop-style iPad identities and
 uses the fixed edge-to-edge in-app map presentation without requesting Safari native fullscreen. A

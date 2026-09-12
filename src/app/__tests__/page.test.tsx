@@ -6,6 +6,11 @@ import type { ReactNode } from 'react'
 import { pauseAlarm, playAlarm, playCallerInfoAlert, stopAllAudio } from '@/lib/audio'
 import { useMonitorStore } from '@/store/monitorStore'
 import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
+import {
+  ANALYZE_CLEAR_MS,
+  ANALYZE_ECG_MS,
+  ANALYZE_RESULT_MS,
+} from '@/lib/defib/defibMachine'
 
 import MonitorPage from '../page'
 // The default export is the route wrapper and renders MonitorPage without
@@ -194,7 +199,7 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     return (
       <div>
         Waveform panel
-        <span>
+        <span data-testid="mock-ecg-canvas">
           {cprOverride ? 'cpr-ecg-canvas' : rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}
         </span>
         {selected === 'etco2' && <span>showing-etco2</span>}
@@ -1614,6 +1619,30 @@ describe('MonitorPage', () => {
       'right',
     )
     expect(screen.getByText('ANALYZING ECG')).toBeInTheDocument()
+  })
+
+  it('keeps one ECG surface mounted from Analyze into CPR', () => {
+    vi.useFakeTimers()
+    render(<MonitorPage />)
+    const ecgSurface = screen.getByTestId('mock-ecg-canvas')
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: 'Analyze rhythm' }))
+    })
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
+    expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
+      'data-placement',
+      'right',
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(
+        ANALYZE_ECG_MS + ANALYZE_CLEAR_MS + ANALYZE_RESULT_MS + 1,
+      )
+    })
+
+    expect(screen.getByText('Perform CPR')).toBeInTheDocument()
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
   })
 
   it('keeps specialized 12-lead vitals on the right and restores resting placement on Back', async () => {
