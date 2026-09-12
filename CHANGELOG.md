@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-09-12] [monitor/ui] — Stabilize the CPR interval timer footprint
+
+- Kept the central CPR timer slot mounted and isolated from intrinsic text width across Analyze and
+  CPR, while preventing its fixed left and right status siblings from shrinking.
+- Preserved the current timer typeface and placed its tabular numerals in a centered fixed
+  four-character box, preventing `2:00`, `1:59`, and `0:00` from changing the monitor layout.
+- Added direct `BottomStatusBar` regression coverage for lifecycle and countdown sizing invariants.
+  All 142 focused tests, TypeScript, the production CSS utilities, and the Webpack build pass. ESLint
+  has zero errors and the same 12 existing warnings. The complete suite records 1,363 passing tests
+  and one skip; one unrelated Admin timeout passed immediately alone, leaving the same three existing
+  baseline failures. Physical iPad CPR validation remains pending.
+
 ## [2026-09-12] [monitor/ui] — Stabilize iPad Wagami X shell sizing
 
 - Made the standalone `DeviceShell` inherit the fixed large-viewport Monitor surface instead of

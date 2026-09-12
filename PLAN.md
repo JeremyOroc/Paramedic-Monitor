@@ -62,6 +62,13 @@
   viewport instead of claiming a second dynamic viewport, and its viewport-relative dimensions use
   stable large-viewport units. The approved aspect ratio, centered 96% presentation, minimum desktop
   width, embedded Spectator presentation, ECG continuity, and all clinical behavior remain unchanged.
+- 2026-09-12 requirement update — stable Wagami X CPR interval timer footprint: the CPR interval
+  timer reserves one unchanged width and height before CPR, during Analyze, throughout CPR, while
+  paused, and at completion. Its current typeface is preserved, while tabular numerals occupy a
+  centered fixed four-character value box and the immediate timer cell contains intrinsic text width
+  without changing the surrounding monitor layout. The 110px bottom bar, countdown timing, initial
+  `2:00` hold, `0:00` state, banners, sounds, ECG continuity, device shell, and Spectator behavior
+  remain unchanged.
 - 2026-09-10 requirement update — fullscreen Receiving Hospital Directory retention and readability
   (native-fullscreen-loss behavior superseded 2026-09-12): the hospital-directory toggle is
   disabled while fullscreen keeps the directory open. In every trainee and contained Spectator
@@ -2634,6 +2641,42 @@ production build pass. The production CSS bundle contains every new `lvh`/`lvw` 
 suite records 1,361 passing tests and one skip with the same three documented unrelated failures.
 Automated rendered QA could not navigate to localhost under the browser safety boundary; physical
 iPad replay of the supplied gesture remains the authoritative follow-up device check.
+
+---
+
+### Phase 25 — Stable CPR Interval Timer Footprint
+
+**Goal:** Prevent CPR countdown glyph changes from resizing or shifting the Wagami X monitor on iPad.
+
+**Status: COMPLETE (2026-09-12).**
+
+**Scope:**
+- Keep the CPR timer's existing central slot mounted and reserve the same footprint across Analyze,
+  CPR, paused, and completed states, including blank/inactive content.
+- Preserve the current timer typeface while applying tabular numerals in a centered, fixed
+  four-character value box.
+- Isolate the immediate timer flex cell from intrinsic text width and prevent the fixed left and right
+  sibling cells from shrinking.
+- Preserve the existing 110px bottom track, state timing, initial `2:00` hold, `0:00` state, banners,
+  sounds, ECG, stable viewport and shell geometry, and Spectator projection behavior.
+
+**Testing:**
+- Add direct `BottomStatusBar` regression coverage for the invariant timer slot and value classes.
+- Exercise `2:00`, `1:59`, and `0:00` with fake time and verify that the same fixed timer value box is
+  retained through the complete countdown boundary.
+- Run focused timer, status-bar, Monitor, viewport, shell, waveform, and defibrillator tests, followed
+  by TypeScript, ESLint, the complete test suite, and the Webpack production build.
+
+**Completed 2026-09-12.** The CPR interval timer now retains the same mounted, overflow-contained
+flex slot across Analyze and CPR, with non-shrinking side cells and a centered fixed four-character
+value box using the existing typeface and tabular numerals. Its value element remains unchanged from
+`2:00` through `1:59` and `0:00`; the countdown, banners, sounds, ECG, 110px bottom track, shell, and
+Spectator behavior are unchanged. All 142 focused timer, status-bar, Monitor, viewport, shell,
+waveform, renderer, and defibrillator tests pass. TypeScript, the Webpack production build, and
+production generation of the fixed-width/tabular utilities pass; ESLint has zero errors and the same
+12 existing warnings. The complete suite records 1,363 passing tests and one skip. One unrelated
+Admin test timed out under full-suite load and passed immediately alone; the same three documented
+unrelated baseline failures remain.
 
 ---
 
