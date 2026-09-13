@@ -191,9 +191,9 @@ export function EvaluationReportPanel({
     [attempts, attemptVersion, baselineAt, events, participants, stateHistory],
   )
 
-  // One trainee per session is the operating assumption, so the name column
-  // stays out of the way -- but if a second person is in the room the stream
-  // has to say who did what rather than silently merging two runs.
+  // One device per Room is the operating assumption, so the nickname column
+  // stays out of the way. Multiple devices retain distinct action streams;
+  // none claims which Trainee operated a shared device.
   const showNames = timeline.participantNames.length > 1
 
   const labelFor = useCallback(
@@ -204,7 +204,7 @@ export function EvaluationReportPanel({
   const currentLabel = labelFor(attemptVersion)
   const heading = [
     `Attempt ${attemptTitle(attemptVersion, currentLabel)}`,
-    timeline.participantNames.join(', ') || 'No trainee',
+    timeline.participantNames.join(', ') || 'No device',
     formatOffset(timeline.durationMs).replace('t+', ''),
   ].join(' · ')
 
@@ -298,7 +298,7 @@ export function EvaluationReportPanel({
             />
           ) : null}
           <span className="font-mono text-xs uppercase tracking-wider text-neutral-500">
-            {timeline.participantNames.join(', ') || 'No trainee'}
+            {timeline.participantNames.join(', ') || 'No device'}
           </span>
           <span className="font-mono text-xs uppercase tracking-wider text-neutral-500">
             {formatOffset(timeline.durationMs).replace('t+', '')}

@@ -21,23 +21,23 @@ export default function SpectatePage() {
   })
 
   const envelope = data?.projection ?? null
-  const traineeConnected = data
+  const deviceConnected = data
     ? isConnected(data.participant.last_seen_at, now)
     : false
   const availability = resolveSpectatorAvailability({
     sessionStatus: data?.session.status ?? null,
     connecting,
     connectionLost,
-    traineeConnected,
+    deviceConnected,
     hasProjection: envelope !== null,
-    traineeName: data?.participant.nickname ?? 'trainee',
+    deviceName: data?.participant.nickname ?? 'device',
   })
   const showUpdatedAt = Boolean(envelope && !availability.isLive)
 
   return (
     <main className="flex h-screen min-w-[1024px] flex-col overflow-hidden bg-black text-white">
       <header className="flex h-12 shrink-0 items-center gap-5 border-b border-neutral-800 bg-neutral-950 px-4 font-mono text-xs uppercase tracking-wider">
-        <strong className="text-white">{data?.participant.nickname ?? 'Student'}</strong>
+        <strong className="text-white">{data?.participant.nickname ?? 'Device'}</strong>
         <span className="text-neutral-400">
           {envelope?.projection.model === 'wagamiZ' ? 'Wagami Z' : envelope ? 'Wagami X' : 'Monitor pending'}
         </span>
@@ -63,7 +63,7 @@ export default function SpectatePage() {
       </p>
       <div className="spectator-availability-surface relative min-h-0 flex-1 overflow-hidden">
         {envelope ? (
-          <div inert className="h-full w-full select-none pointer-events-none" aria-label="Read-only student monitor">
+          <div inert className="h-full w-full select-none pointer-events-none" aria-label="Read-only device monitor">
             <SpectatorMonitor projection={envelope.projection} />
           </div>
         ) : (

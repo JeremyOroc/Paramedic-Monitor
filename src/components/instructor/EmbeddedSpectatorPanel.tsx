@@ -457,7 +457,7 @@ export function EmbeddedSpectatorPanel({
         className="grid h-[480px] min-w-0 place-items-center overflow-hidden bg-black"
       >
         <p className="font-mono text-xs uppercase tracking-[0.22em] text-neutral-700">
-          Select a student to spectate
+          Select a device to spectate
         </p>
       </section>
     )
@@ -465,14 +465,14 @@ export function EmbeddedSpectatorPanel({
 
   const envelope = data?.projection ?? null
   const lastSeenAt = data?.participant.last_seen_at ?? participant.last_seen_at
-  const traineeConnected = isConnected(lastSeenAt, now)
+  const deviceConnected = isConnected(lastSeenAt, now)
   const availability = resolveSpectatorAvailability({
     sessionStatus: data?.session.status ?? null,
     connecting,
     connectionLost,
-    traineeConnected,
+    deviceConnected,
     hasProjection: envelope !== null,
-    traineeName: participant.nickname,
+    deviceName: participant.nickname,
   })
   const showUpdatedAt = Boolean(envelope && !availability.isLive)
   const updatedLabel = envelope
@@ -635,7 +635,7 @@ export function EmbeddedSpectatorPanel({
           {envelope ? (
             <div
               inert
-              aria-label="Read-only student monitor"
+              aria-label="Read-only device monitor"
               className="embedded-spectator-viewport pointer-events-none relative h-full w-full select-none overflow-hidden"
             >
               <div className="embedded-spectator-canvas h-[753px] w-[1024px] overflow-hidden bg-black">

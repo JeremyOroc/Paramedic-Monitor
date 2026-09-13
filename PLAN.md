@@ -1,7 +1,7 @@
 # Paramedic Monitor — Development Plan
 
 > Desktop-first cardiac monitor simulator for paramedic training.
-> Instructor controls vitals/rhythm in real time; students observe on a live monitor screen.
+> Instructor controls vitals/rhythm in real time; Trainees operate one or more joined Scenario devices.
 > Based on: Zoll X Series UI. Stack: Next.js (App Router), React, Tailwind CSS, Supabase Realtime.
 
 ---
@@ -40,6 +40,64 @@ confirmed the live ECG remains attached at its 1000×240 backing size while 12-l
 returns without console errors. All 130 focused tests, TypeScript, ESLint with zero errors and the
 same 12 warnings, and the Webpack production build pass. The complete suite records 1,391 passing
 tests and one skip with the same three unrelated baseline failures.
+- 2026-09-13 requirement revision — instructor Room QR and optional Device nickname: while an
+  Instructor-owned Room is open, divide the complete fixed-height Room-controls panel into a stable
+  internal 65%/35% grid. The left region owns Room code and Copy, status and Attempt context, Room
+  actions, notices, and the complete internally scrolling Devices list. The right rail is dedicated
+  exclusively to `Generate QR Code for Room` and its expanded QR presentation, uses a subtle neutral
+  left divider, and vertically and horizontally centers one stable 202px control slot. The 35% rail
+  has an approximately 202px minimum and may therefore exceed 35% at narrow supported widths; it
+  never stacks, overlays, stretches, or compresses the left-side controls when the QR changes state.
+  Activating Generate replaces that action within the same slot with a fixed 176px QR card headed
+  `Scan to join Room <ROOM_CODE>` and followed by a `Hide QR code` action; hiding the card restores
+  Generate. Keyboard focus follows the replacing action in both directions, the local disclosure
+  state resets on reload or Room change, and an ended Room removes the rail so the left region returns
+  to full width. Popup/dialog presentation, full-URL display, download, and print controls are out of
+  scope. The QR encodes the fixed production URL
+  `https://paramedic-monitor.vercel.app/?code=<ROOM_CODE>`. Opening that URL normalizes and prefills
+  the six-character Room Code field on both initial load and client-side query navigation but never
+  joins automatically. The existing `?dev=1|2` routes remain unchanged.
+- The joining entity is a Scenario device, not necessarily one Trainee. One or many Trainees may
+  share the same Scenario device during a scenario. Most Rooms will therefore have one joined device,
+  although multiple-device Rooms remain supported. The Device nickname field stays visible as
+  `Device nickname (optional)` without explanatory helper text, and Join becomes available with a
+  valid Room code alone.
+- A blank nickname with a valid stored participant token preserves that Scenario device's existing
+  nickname and identity. Otherwise the server assigns the lowest case-insensitively unused positive
+  `Device N` nickname for the Room, across all Attempts. Explicitly entered `Device N` names occupy
+  the same namespace, while other explicit nicknames retain the existing case-insensitive reclaim
+  behavior. Allocation must remain collision-safe when several devices join concurrently. The
+  resolved server nickname remains the value stored locally and shown in waiting, roster, Spectator,
+  and evaluation surfaces.
+- Instructor-facing Room-membership language uses `Devices`, `Select a device to spectate`, and
+  `Device offline`; the join field is `Device nickname (optional)`. Student or Trainee remains valid
+  only when copy refers to a person rather than a Room member. Evaluation actions remain one timeline
+  per Scenario device, and a shared device does not imply individual action attribution; the existing
+  independent Student names may identify the people involved. Existing internal identifiers such as
+  `participants`, `participant_id`, and `student_events` are deliberately retained to avoid an
+  unrelated schema migration.
+- QR creation is local to the authorized instructor browser and never sends the Room credential to an
+  external QR service. Like the existing Copy action, it is available to any signed-in observer of
+  their Account-owned Room and does not require that browser to be the active Room controller.
+
+### Testing — Instructor Room QR and optional Device nickname
+
+- Cover the stable 65%/35% Room-controls partition, isolated left-side geometry and Devices scrolling,
+  approximately 202px minimum dedicated QR rail, centered same-width closed and expanded states,
+  accessible focus transfer and restoration, Room-change reset, ended-Room full-width recovery,
+  normalized QR payload, and the absence of popup/download/print controls and trainee QR controls.
+- Cover a valid `code` query parameter prefilling the Room Code input without submitting on initial
+  load and client-side query navigation, while preserving existing developer routes and normalizing
+  or rejecting untrusted query input.
+- Cover Join enabled from a valid Room code alone, optional-nickname copy without helper text,
+  blank-nickname submission, storage of the resolved server nickname, and unchanged explicit-nickname
+  joining.
+- Cover stored-token blank rejoin, lowest-unused Room-scoped `Device N` allocation, manually occupied
+  Device labels, case-insensitive collisions, continuity across Attempts, and concurrent allocation
+  without identity takeover.
+- Cover corrected instructor-facing device terminology, unchanged person-specific Student-name copy,
+  device-level evaluation attribution, observer access to the QR action, and proof that QR generation
+  makes no external service request.
 
 - 2026-09-13 requirement update — invariant Wagami X device geometry: supersede the Phase 25
   requirement that the `256px` energy/status and `128px` shock-count cells never shrink. The outer

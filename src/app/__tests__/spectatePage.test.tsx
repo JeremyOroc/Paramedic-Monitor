@@ -18,7 +18,7 @@ describe('SpectatePage', () => {
 
   afterEach(() => vi.restoreAllMocks())
 
-  it('shows a waiting state before the trainee publishes a monitor', async () => {
+  it('shows a waiting state before the device publishes a monitor', async () => {
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       session: { status: 'active', active_attempt_version: 1 },
       participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
@@ -28,7 +28,7 @@ describe('SpectatePage', () => {
     render(<SpectatePage />)
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'WAITING FOR TRAINEE MONITOR. The view appears when the trainee opens the monitor',
+      'WAITING FOR DEVICE MONITOR. The view appears when the device opens the monitor',
     )
     expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
     expect(screen.getByText('Alice')).toBeInTheDocument()
@@ -77,7 +77,7 @@ describe('SpectatePage', () => {
     expect(screen.queryByTestId('spectator-availability-overlay')).toBeNull()
   })
 
-  it('distinguishes a stale trainee heartbeat from a spectator connection failure', async () => {
+  it('distinguishes a stale device heartbeat from a spectator connection failure', async () => {
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       session: { status: 'active', active_attempt_version: 1 },
       participant: { nickname: 'Alice', last_seen_at: new Date(Date.now() - 10_000).toISOString() },
@@ -93,7 +93,7 @@ describe('SpectatePage', () => {
     render(<SpectatePage />)
 
     expect(await screen.findByTestId('projected-monitor')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('TRAINEE OFFLINE')
+    expect(screen.getByRole('status')).toHaveTextContent('DEVICE OFFLINE')
     expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black/85')
     expect(screen.getByText(/Updated/)).toBeInTheDocument()
   })

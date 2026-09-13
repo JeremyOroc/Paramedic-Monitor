@@ -159,6 +159,29 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'End Room' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
 
+    const qrTrigger = screen.getByRole('button', { name: 'Generate QR Code for Room' })
+    expect(qrTrigger).toBeEnabled()
+    const roomControls = screen.getByRole('region', { name: 'Room controls' })
+    const primaryControls = screen.getByTestId('room-controls-primary')
+    expect(roomControls).toHaveClass(
+      'grid-cols-[minmax(0,13fr)_minmax(204px,7fr)]',
+    )
+    expect(primaryControls).toHaveClass('min-h-0', 'min-w-0', 'flex-col')
+    expect(screen.getByRole('complementary', { name: 'Room QR code controls' })).toHaveClass(
+      'min-w-[204px]',
+      'place-items-center',
+      'border-l',
+    )
+    await userEvent.click(qrTrigger)
+    expect(
+      screen.getByRole('region', { name: 'QR code to join Room ABC123' }),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('room-controls-primary')).toBe(primaryControls)
+    expect(roomControls).toHaveClass(
+      'grid-cols-[minmax(0,13fr)_minmax(204px,7fr)]',
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Hide QR code' }))
+
     await userEvent.click(screen.getByRole('button', { name: 'Take control' }))
     expect(takeControl).toHaveBeenCalledOnce()
   })
@@ -179,11 +202,15 @@ describe('AdminPage', () => {
 
     const notice = await screen.findByTestId('room-ended-notice')
     expect(screen.getByRole('button', { name: 'End Room' })).toBeDisabled()
+    expect(screen.getByRole('region', { name: 'Room controls' })).toHaveClass('grid-cols-1')
+    expect(screen.queryByRole('complementary', { name: 'Room QR code controls' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Generate QR Code for Room' })).toBeNull()
+    expect(screen.queryByRole('region', { name: /QR code to join Room/ })).toBeNull()
     await user.click(within(notice).getByRole('button', { name: 'Create a new room' }))
     expect(routerReplace).toHaveBeenCalledWith('/instructor')
   })
 
-  it('shows a live roster with connection dots and per-student progress', async () => {
+  it('shows a live device roster with connection dots and Spectator actions', async () => {
     vi.spyOn(window, 'fetch').mockImplementation(async () => {
       const body = {
         session: { status: 'active', active_attempt_version: 1 },
@@ -232,8 +259,8 @@ describe('AdminPage', () => {
 
     render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
 
-    await waitFor(() => expect(screen.getByText('Students')).toBeInTheDocument())
-    const studentsPanel = screen.getByText('Students').parentElement as HTMLElement
+    await waitFor(() => expect(screen.getByText('Devices')).toBeInTheDocument())
+    const studentsPanel = screen.getByText('Devices').parentElement as HTMLElement
     await waitFor(() =>
       expect(within(studentsPanel).getByText('Alice')).toBeInTheDocument(),
     )
@@ -249,7 +276,7 @@ describe('AdminPage', () => {
     expect(within(aliceRow).getByRole('button', { name: 'Spectate' })).toBeEnabled()
     expect(within(studentsPanel).getAllByRole('button', { name: 'Spectate' })).toHaveLength(2)
     expect(screen.queryByText('Live evaluation')).toBeNull()
-    expect(screen.getByText('Select a student to spectate')).toBeInTheDocument()
+    expect(screen.getByText('Select a device to spectate')).toBeInTheDocument()
   })
 
   it('keeps Spectate available for a 30-trainee room', async () => {
@@ -267,7 +294,7 @@ describe('AdminPage', () => {
 
     render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
 
-    const studentsPanel = (await screen.findByText('Students')).parentElement as HTMLElement
+    const studentsPanel = (await screen.findByText('Devices')).parentElement as HTMLElement
     await waitFor(() => {
       expect(within(studentsPanel).getAllByRole('button', { name: 'Spectate' })).toHaveLength(30)
     })
@@ -351,7 +378,7 @@ describe('AdminPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Stop spectating' }))
     expect(screen.queryByTestId('projected-monitor')).toBeNull()
-    expect(screen.getByText('Select a student to spectate')).toBeInTheDocument()
+    expect(screen.getByText('Select a device to spectate')).toBeInTheDocument()
     expect(
       within(screen.getByTestId('student-row-student-2')).getByRole('button', {
         name: 'Spectate',
@@ -802,7 +829,7 @@ describe('AdminPage', () => {
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
     expect(screen.getByTestId('medication-recorder-unavailable')).toHaveTextContent(
-      'No trainee has joined yet.',
+      'No device has joined yet.',
     )
 
     const sample = screen.getByRole('region', { name: 'Sample' })

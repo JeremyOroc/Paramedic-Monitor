@@ -119,7 +119,7 @@ export function RoomLauncher({ initialExistingRoom = null }: RoomLauncherProps) 
             <p className="mt-1 text-sm text-neutral-400">
               {existingRoom
                 ? `Room ${existingRoom.code} is ${existingRoom.status}.`
-                : 'Create a trainee Room owned by your Account.'}
+                : 'Create a Room for scenario devices, owned by your Account.'}
             </p>
           </div>
           {!existingRoom ? (
@@ -153,7 +153,7 @@ export function RoomLauncher({ initialExistingRoom = null }: RoomLauncherProps) 
       <ConfirmationDialog
         open={confirmClose}
         title="Close the existing Room?"
-        description={`Room ${existingRoom?.code ?? ''} will end immediately and trainees will be disconnected.`}
+        description={`Room ${existingRoom?.code ?? ''} will end immediately and devices will be disconnected.`}
         confirmLabel="Close Room"
         onConfirm={() => void closeRoom()}
         onCancel={() => setConfirmClose(false)}

@@ -71,10 +71,10 @@ describe('MedicationRecorder', () => {
     const { onRecord } = renderRecorder({
       participants: [],
       participantId: null,
-      unavailableReason: 'No trainee has joined yet.',
+      unavailableReason: 'No device has joined yet.',
     })
     expect(screen.getByTestId('medication-recorder-unavailable')).toHaveTextContent(
-      'No trainee has joined yet.',
+      'No device has joined yet.',
     )
     const button = screen.getByRole('button', { name: 'Nitro' })
     expect(button).toBeDisabled()
