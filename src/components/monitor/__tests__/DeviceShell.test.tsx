@@ -128,6 +128,17 @@ describe('DeviceShell', () => {
     expect(stage).toHaveClass('h-full', 'w-full', 'min-w-[1024px]')
     expect(stage).not.toHaveClass('h-screen', 'w-screen')
     expect(shell).toHaveClass('h-[96%]', 'max-h-[calc(98lvw/1.36)]')
+    expect(screen.getByTestId('wagami-x-content-row')).toHaveClass(
+      'grid-cols-[10.5%_minmax(0,1fr)_17.5%]',
+    )
+    expect(screen.getByTestId('wagami-x-screen-frame')).toHaveClass(
+      'min-w-0',
+      'overflow-hidden',
+    )
+    expect(screen.getByTestId('right-control-cluster')).toHaveClass(
+      'min-w-0',
+      'overflow-hidden',
+    )
     expect(screen.getByRole('button', { name: 'Analyze rhythm' })).toHaveClass(
       'h-[clamp(44px,6.5lvh,70px)]',
       'w-[clamp(72px,6.8lvw,102px)]',

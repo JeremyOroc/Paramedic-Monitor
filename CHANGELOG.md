@@ -5,6 +5,40 @@
 
 ---
 
+## [2026-09-13] [monitor/ui] — Enforce invariant Wagami X device geometry
+
+- Traced the newly visible right-control clipping to a 65px intrinsic-width escape: the exact timer
+  reservation, fixed 256px/128px status cells, gaps, and padding require about 468.5px inside an LCD
+  track allocated only about 403.5px.
+- Approved authoritative zero-minimum shell/LCD tracks and a contained lower status row whose side
+  cells retain their 2:1 proportion around the exact timer width. This supersedes the earlier
+  non-shrinking side-cell requirement while preserving the Resting-to-Defib vital transition and
+  charge energy scale.
+- Added zero-minimum containment to the device center track and all flexible Monitor tracks, and
+  replaced the overflowing fixed status widths with `2fr / max-content / 1fr` tracks. At the measured
+  viewport the three status cells fit at 212.66px, 68.52px, and 106.33px inside the unchanged 403.52px
+  region.
+- Rendered replay keeps the shell, LCD, right-control cluster, Home, Patient Event, and Monitor surface
+  at identical rectangles from idle through Analyze, CPR, and the charge prompt; all right controls
+  remain fully visible. All 142 focused tests, TypeScript, ESLint with zero errors and the same 12
+  warnings, and the Webpack production build pass. The full suite has 1,387 passing tests, one skip,
+  and the same three unrelated baseline failures.
+
+## [2026-09-13] [monitor/ui] — Reserve exact CPR interval content before display
+
+- Clarified the stable CPR interval footprint requirement after deployed geometry inspection showed
+  the empty Analyze timer cell still growing from about 3.5px to 68.5px when its conditional content
+  appeared, expanding the measured bottom monitor region from about 403.5px to 468.5px.
+- Approved retaining the real timer label and fixed value element invisibly and outside accessibility
+  output throughout analysis, then revealing those same elements for CPR across trainee and Spectator
+  presentations.
+- Added direct lifecycle, visibility, accessibility, and element-identity regressions. Browser replay
+  now holds the bottom bar, timer slot, and content at 468.52px, 68.52px, and 66.52px respectively
+  from analysis through CPR. All 124 focused tests, TypeScript, ESLint with zero errors and the same
+  12 warnings, and the Webpack production build pass. The complete suite has 1,386 passing tests and
+  one skip; three established unrelated failures remain, and one load-sensitive fullscreen-map test
+  passes all 10 tests alone.
+
 ## [2026-09-13] [instructor/monitor] — Set 3rd Degree Automatic FC to 60
 
 - Changed the canonical 3rd Degree FC lock from 40 to 60 across Instructor controls, direct and batch
