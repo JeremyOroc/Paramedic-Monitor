@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { VfDisplaySync } from '@/lib/automaticHeartRate'
+import type { HeartRateDisplaySync } from '@/lib/automaticHeartRate'
 import { useMonitorStore, type SharedMonitorState } from '@/store/monitorStore'
 
 export const SESSION_SYNC_INTERVAL_MS = 1500
@@ -52,7 +52,8 @@ export function useSessionMonitorSync({
   onNewAttempt,
 }: UseSessionMonitorSyncOptions) {
   const applySharedState = useMonitorStore((s) => s.applySharedState)
-  const [vfDisplaySync, setVfDisplaySync] = useState<VfDisplaySync | null>(null)
+  const [heartRateDisplaySync, setHeartRateDisplaySync] =
+    useState<HeartRateDisplaySync | null>(null)
   const lastVersionRef = useRef<number | null>(null)
   const lastAttemptRef = useRef<number | null>(null)
   const clockOffsetRef = useRef<number | null>(null)
@@ -127,13 +128,13 @@ export function useSessionMonitorSync({
         applySharedState(shared)
         const epochMs = Date.parse(data.state?.updated_at ?? '')
         if (Number.isFinite(epochMs) && clockOffsetRef.current !== null) {
-          setVfDisplaySync({
+          setHeartRateDisplaySync({
             seed: version,
             epochMs,
             serverOffsetMs: clockOffsetRef.current,
           })
         } else {
-          setVfDisplaySync(null)
+          setHeartRateDisplaySync(null)
         }
       } catch {
         // Network blip — keep polling; the next tick retries.
@@ -156,5 +157,5 @@ export function useSessionMonitorSync({
     [],
   )
 
-  return { vfDisplaySync, getClock }
+  return { heartRateDisplaySync, getClock }
 }

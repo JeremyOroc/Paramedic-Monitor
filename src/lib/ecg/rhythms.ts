@@ -1,3 +1,4 @@
+import { TORSADES_COMPLEXES_PER_PACKET } from '@/lib/automaticHeartRate'
 import type { Etco2Waveform, Rhythm, Spo2Waveform } from '@/types/vitals'
 
 export type WaveformDef = {
@@ -30,7 +31,7 @@ export const ASYSTOLE_TUNING = {
 
 export const TORSADES_TUNING = {
   cycleMs: 3900,
-  beatCount: 15,
+  beatCount: TORSADES_COMPLEXES_PER_PACKET,
   patternCount: 4,
   peak: 0.95,
   trough: -0.84,
@@ -48,14 +49,14 @@ export const SECOND_DEGREE_TYPE_1_TUNING = {
 } as const
 
 export const SECOND_DEGREE_TYPE_2_TUNING = {
-  cycleMs: 3600,
+  cycleMs: 2250,
   conductedBeats: 3,
   droppedPPhase: 0.825,
 } as const
 
 export const THIRD_DEGREE_TUNING = {
-  cycleMs: 4200,
-  pWaves: 6,
+  cycleMs: 2000,
+  pWaves: 4,
   escapeBeats: 2,
 } as const
 
@@ -408,7 +409,7 @@ function synthThirdDegreeBlock(g: NsrGains = {}): Float32Array {
   const sGain = g.sGain ?? 1
   const tGain = g.tGain ?? 1
   const out = new Float32Array(SAMPLES)
-  const pWaves = [0.085, 0.245, 0.405, 0.565, 0.725, 0.885] as const
+  const pWaves = [0.085, 0.325, 0.565, 0.805] as const
   const escapeBeats = [
     { qrs: 0.165, t: 0.285 },
     { qrs: 0.650, t: 0.770 },

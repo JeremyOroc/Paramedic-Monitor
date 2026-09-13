@@ -203,6 +203,23 @@ describe('monitorStore shared session state', () => {
     expect(after.cprMode).toBe('weak')
   })
 
+  it.each([
+    ['torsades', 150],
+    ['second-degree-type-2', 80],
+    ['third-degree', 60],
+  ] as const)('normalizes shared %s to its active FC lock', (rhythm, hr) => {
+    useMonitorStore.getState().applySharedState(
+      makeShared({
+        confirmed: { ...sharedVitals(), rhythm, hr: 99 },
+        confirmedVitalActive: { ...allActive, hr: false },
+      }),
+    )
+
+    const state = useMonitorStore.getState()
+    expect(state.confirmed.hr).toBe(hr)
+    expect(state.confirmedVitalActive.hr).toBe(true)
+  })
+
   it('applies the confirmed defibrillator model and defaults missing legacy values', () => {
     useMonitorStore.getState().applySharedState(
       makeShared({ defibrillatorModelConfirmed: 'wagamiZ' }),

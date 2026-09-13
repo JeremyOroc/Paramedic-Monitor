@@ -180,6 +180,7 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
   const inEval = defibState === 'analyzing_result'
   const showJoulesSelected = !isShockAdvised && (defibState === 'cpr' || defibState === 'analyzing_ecg' || defibState === 'analyzing_clear')
   const showCprTime = defibState === 'cpr'
+  const cprTimerVisible = showCprTime && !inEval && !isShockAdvised
   const showDelivered = defibState === 'cpr' && lastDeliveredJoules != null && showDeliveredFlash
 
   return (
@@ -188,40 +189,48 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
         <span className="text-4xl font-bold">{bannerText}</span>
       </div>
       
-      <div className="flex flex-1 gap-1 mt-1">
+      <div
+        className="mt-1 grid min-h-0 flex-1 grid-cols-[minmax(0,2fr)_max-content_minmax(0,1fr)] gap-1 overflow-hidden"
+        data-testid="cpr-status-row"
+      >
         {/* Bottom-left box */}
         {isShockAdvised ? (
-          <div className="w-64 shrink-0 border border-white flex items-center justify-center bg-[#cc0000]">
-            <span className="text-2xl font-bold text-white">{joules} J READY</span>
+          <div className="flex min-w-0 items-center justify-center overflow-hidden border border-white bg-[#cc0000]" data-testid="cpr-status-left">
+            <span className="whitespace-nowrap text-2xl font-bold text-white">{joules} J READY</span>
           </div>
         ) : showDelivered ? (
-          <div className="w-64 shrink-0 border border-white flex items-center justify-center bg-[#67FEC8]">
-            <span className="text-2xl font-bold text-black">{lastDeliveredJoules} J DELIVERED</span>
+          <div className="flex min-w-0 items-center justify-center overflow-hidden border border-white bg-[#67FEC8]" data-testid="cpr-status-left">
+            <span className="whitespace-nowrap text-2xl font-bold text-black">{lastDeliveredJoules} J DELIVERED</span>
           </div>
         ) : (
-          <div className="w-64 shrink-0 border border-white flex items-center justify-center bg-black">
-            {showJoulesSelected && !inEval && <span className="text-2xl font-bold text-white">{joules} J SELECTED</span>}
+          <div className="flex min-w-0 items-center justify-center overflow-hidden border border-white bg-black" data-testid="cpr-status-left">
+            {showJoulesSelected && !inEval && <span className="whitespace-nowrap text-2xl font-bold text-white">{joules} J SELECTED</span>}
           </div>
         )}
         
         <div
-          className={cn("min-w-0 flex-1 overflow-hidden border border-white flex flex-col items-center justify-center", showCprTime && !inEval && !isShockAdvised ? "bg-white" : "bg-black")}
+          className={cn("overflow-hidden border border-white flex flex-col items-center justify-center", cprTimerVisible ? "bg-white" : "bg-black")}
           data-testid="cpr-timer-slot"
         >
-          {showCprTime && !inEval && !isShockAdvised && (
-            <>
-              <span className="text-black text-xs font-bold leading-none">CPR Time</span>
-              <span
-                className="inline-block w-[4ch] whitespace-nowrap text-center text-black text-2xl font-bold leading-none tabular-nums"
-                data-testid="cpr-timer-value"
-              >
-                {cprTime}
-              </span>
-            </>
-          )}
+          <div
+            aria-hidden={cprTimerVisible ? undefined : true}
+            className={cn(
+              "flex flex-col items-center justify-center",
+              !cprTimerVisible && "invisible",
+            )}
+            data-testid="cpr-timer-content"
+          >
+            <span className="text-black text-xs font-bold leading-none">CPR Time</span>
+            <span
+              className="inline-block w-[4ch] whitespace-nowrap text-center text-black text-2xl font-bold leading-none tabular-nums"
+              data-testid="cpr-timer-value"
+            >
+              {cprTime}
+            </span>
+          </div>
         </div>
         
-        <div className="w-32 shrink-0 border border-white flex items-center justify-center space-x-2 bg-black">
+        <div className="flex min-w-0 items-center justify-center space-x-2 overflow-hidden border border-white bg-black" data-testid="cpr-shock-count">
           <span className="text-yellow-400 text-3xl">⚡</span>
           <span className="text-white text-3xl font-bold">{shockCount}</span>
         </div>

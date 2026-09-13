@@ -11,6 +11,10 @@ import {
   ANALYZE_ECG_MS,
   ANALYZE_RESULT_MS,
 } from '@/lib/defib/defibMachine'
+import {
+  deterministicTorsadesHeartRate,
+  getTorsadesPacketState,
+} from '@/lib/automaticHeartRate'
 
 import MonitorPage from '../page'
 // The default export is the route wrapper and renders MonitorPage without
@@ -178,6 +182,7 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     etco2Calibrated,
     etco2Loading,
     cprOverride,
+    hr,
   }: {
     secondaryChannel?: 'spo2' | 'etco2'
     showAllSecondaryChannels?: boolean
@@ -187,6 +192,7 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     etco2Calibrated?: boolean
     etco2Loading?: boolean
     cprOverride?: boolean
+    hr?: number
   }) => {
     const selected = secondaryChannel ?? 'spo2'
     const selectedWaveform = selected === 'etco2' ? etco2Waveform : spo2Waveform
@@ -199,7 +205,7 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     return (
       <div>
         Waveform panel
-        <span data-testid="mock-ecg-canvas">
+        <span data-testid="mock-ecg-canvas" data-heart-rate={hr}>
           {cprOverride ? 'cpr-ecg-canvas' : rhythm !== 'off' ? 'live-ecg' : 'disconnected-ecg'}
         </span>
         {selected === 'etco2' && <span>showing-etco2</span>}
@@ -791,6 +797,90 @@ describe('MonitorPage', () => {
     expect(screen.getByTestId('spo2-pulse-bar')).toHaveAttribute('data-heart-rate', '120')
     expect(screen.queryByText('220')).toBeNull()
     randomSpy.mockRestore()
+  })
+
+  it.each([
+    ['2nd Degree Type 2', 'second-degree-type-2', 80],
+    ['3rd Degree', 'third-degree', 60],
+  ] as const)('drives the %s display and ECG at its locked FC', (_label, rhythm, heartRate) => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('spo2', 98)
+      store.setDraftVitalActive('spo2', true)
+      store.setDraft('rhythm', rhythm)
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText(String(heartRate))).toBeInTheDocument()
+    expect(screen.getByTestId('mock-ecg-canvas')).toHaveAttribute(
+      'data-heart-rate',
+      String(heartRate),
+    )
+    expect(screen.getByTestId('spo2-pulse-bar')).toHaveAttribute(
+      'data-heart-rate',
+      String(heartRate),
+    )
+    expect(useMonitorStore.getState().confirmed).toMatchObject({ rhythm, hr: heartRate })
+  })
+
+  it('drives every live Torsades rate surface from one synchronized packet value', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(10_000)
+    const sync = { seed: 42, epochMs: 10_000, serverOffsetMs: 0 }
+    const onProjectionChange = vi.fn()
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('spo2', 98)
+      store.setDraftVitalActive('spo2', true)
+      store.setDraft('rhythm', 'torsades')
+      store.save()
+      store.send()
+    })
+
+    render(
+      <MonitorPageWithProps
+        heartRateDisplaySync={sync}
+        onProjectionChange={onProjectionChange}
+      />,
+    )
+    act(() => vi.advanceTimersByTime(0))
+
+    const firstRate = deterministicTorsadesHeartRate(sync.seed, 0)
+    expect(screen.getByText(String(firstRate))).toBeInTheDocument()
+    expect(screen.getByTestId('mock-ecg-canvas')).toHaveAttribute(
+      'data-heart-rate',
+      String(firstRate),
+    )
+    expect(screen.getByTestId('spo2-pulse-bar')).toHaveAttribute(
+      'data-heart-rate',
+      String(firstRate),
+    )
+    expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute(
+      'data-alarming',
+      'true',
+    )
+    expect(onProjectionChange.mock.lastCall?.[0]).toMatchObject({
+      displayedHr: firstRate,
+      vfDisplayedHr: firstRate,
+    })
+
+    act(() => useMonitorStore.getState().setCprMode('regular'))
+    expect(screen.getByText('120')).toBeInTheDocument()
+    expect(screen.getByTestId('mock-ecg-canvas')).toHaveAttribute('data-heart-rate', '120')
+    expect(screen.getByTestId('spo2-pulse-bar')).toHaveAttribute('data-heart-rate', '120')
+
+    act(() => useMonitorStore.getState().setCprMode('off'))
+    expect(screen.getByText(String(firstRate))).toBeInTheDocument()
+
+    act(() => vi.advanceTimersByTime(300_000))
+    const loggedRate = getTorsadesPacketState(sync, Date.now()).heartRate
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }))
+    const vitalLog = screen.getByRole('region', { name: 'Vital Log' })
+    expect(vitalLog).toHaveTextContent('00:05:00')
+    expect(within(vitalLog).getByText(String(loggedRate))).toBeInTheDocument()
   })
 
   it('shows both BP numbers after a completed partial-active NIBP reading', () => {

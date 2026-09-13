@@ -53,6 +53,77 @@
   the complete suite records 1,375 passing tests, one skip, and the same three documented unrelated
   baseline failures.
 
+
+## [2026-09-13] [monitor/ui] — Enforce invariant Wagami X device geometry
+
+- Traced the newly visible right-control clipping to a 65px intrinsic-width escape: the exact timer
+  reservation, fixed 256px/128px status cells, gaps, and padding require about 468.5px inside an LCD
+  track allocated only about 403.5px.
+- Approved authoritative zero-minimum shell/LCD tracks and a contained lower status row whose side
+  cells retain their 2:1 proportion around the exact timer width. This supersedes the earlier
+  non-shrinking side-cell requirement while preserving the Resting-to-Defib vital transition and
+  charge energy scale.
+- Added zero-minimum containment to the device center track and all flexible Monitor tracks, and
+  replaced the overflowing fixed status widths with `2fr / max-content / 1fr` tracks. At the measured
+  viewport the three status cells fit at 212.66px, 68.52px, and 106.33px inside the unchanged 403.52px
+  region.
+- Rendered replay keeps the shell, LCD, right-control cluster, Home, Patient Event, and Monitor surface
+  at identical rectangles from idle through Analyze, CPR, and the charge prompt; all right controls
+  remain fully visible. All 142 focused tests, TypeScript, ESLint with zero errors and the same 12
+  warnings, and the Webpack production build pass. The full suite has 1,387 passing tests, one skip,
+  and the same three unrelated baseline failures.
+
+## [2026-09-13] [monitor/ui] — Reserve exact CPR interval content before display
+
+- Clarified the stable CPR interval footprint requirement after deployed geometry inspection showed
+  the empty Analyze timer cell still growing from about 3.5px to 68.5px when its conditional content
+  appeared, expanding the measured bottom monitor region from about 403.5px to 468.5px.
+- Approved retaining the real timer label and fixed value element invisibly and outside accessibility
+  output throughout analysis, then revealing those same elements for CPR across trainee and Spectator
+  presentations.
+- Added direct lifecycle, visibility, accessibility, and element-identity regressions. Browser replay
+  now holds the bottom bar, timer slot, and content at 468.52px, 68.52px, and 66.52px respectively
+  from analysis through CPR. All 124 focused tests, TypeScript, ESLint with zero errors and the same
+  12 warnings, and the Webpack production build pass. The complete suite has 1,386 passing tests and
+  one skip; three established unrelated failures remain, and one load-sensitive fullscreen-map test
+  passes all 10 tests alone.
+
+## [2026-09-13] [instructor/monitor] — Set 3rd Degree Automatic FC to 60
+
+- Changed the canonical 3rd Degree FC lock from 40 to 60 across Instructor controls, direct and batch
+  edits, Saved scenarios, persistence hydration, shared Room state, trainee display, and pulse cadence.
+- Retimed the live complete-heart-block waveform to two ventricular escape complexes every two
+  seconds while retaining four independent P waves and the existing 120/min atrial cadence, AV
+  dissociation, QRS morphology, and static 12-lead capture.
+- Updated all affected regressions. All 325 focused tests, TypeScript, the Webpack production build,
+  and ESLint with zero errors and the same 12 warnings pass. The complete suite records 1,387 passing
+  tests and one skip with the same three documented unrelated failures.
+
+## [2026-09-13] [instructor/monitor] — Revise heart-block Automatic FC rates
+
+- Changed 2nd Degree Type 2 from FC 40 to FC 80 and retimed its live three-beat ventricular cycle
+  from 4.5 seconds to 2.25 seconds.
+- Changed 3rd Degree from FC 20 to FC 40 and retimed its live two-beat escape cycle from 6 seconds
+  to 3 seconds.
+- Updated Instructor, store, scenario, hydration, Room synchronization, ECG timing, trainee display,
+  and pulse-cadence regressions. All 283 focused tests, TypeScript, ESLint with zero errors and the
+  same 12 warnings, and the Webpack production build pass.
+
+## [2026-09-13] [instructor/monitor] — Add rhythm-owned Automatic FC locks
+
+- Locked FC On for Torsades, 2nd Degree Type 2, and 3rd Degree across direct edits, timed/batch
+  updates, Saved scenarios, Save/Send, persistence hydration, and Room synchronization, while
+  restoring the prior manual FC value and channel state after leaving the locked rhythm group.
+- Added the Instructor's `AUTO 150–250` Torsades presentation and a deterministic synchronized rate
+  per 15-complex packet. The selected rate now drives the trainee and Spectator display, ECG timing,
+  SpO2 pulse cadence, alarms, Wagami X/Z, and Vital Log; every new Send starts a fresh sequence and
+  CPR retains its 120/90 priority.
+- Fixed 2nd Degree Type 2 at 40 with a 40/min ventricular cadence and 3rd Degree at 20 with a 20/min
+  escape cadence. All 291 focused tests, TypeScript, ESLint with zero errors and 12 warnings, and the
+  Webpack production build pass. The full suite records 1,376 passing tests and one skip; its 11
+  unrelated failures are confined to Windows operations scripts, invite-only config parsing, Room
+  ownership expectations, and a stale Patient Info color-class assertion.
+
 ## [2026-09-12] [planning/domain] — Define device-based Room joining and QR requirements
 
 - Corrected the Room model: Scenario devices join Rooms, while one or many Trainees may operate the

@@ -61,6 +61,130 @@
   device-level evaluation attribution, observer access to the QR action, and proof that QR generation
   makes no external service request.
 
+- 2026-09-13 requirement update — invariant Wagami X device geometry: supersede the Phase 25
+  requirement that the `256px` energy/status and `128px` shock-count cells never shrink. The outer
+  shell, LCD boundary, left keys, right physical controls, and bottom physical controls retain one
+  size and position across idle, every analysis state, CPR, charge, charged, shock, delivered, pause,
+  and completion. The approved Resting vital layout to Defib vital layout transition and the charge
+  energy scale remain unchanged inside the fixed LCD. Nested flexible shell and Monitor tracks use
+  explicit zero-minimum containment so intrinsic clinical content cannot enlarge the LCD or displace
+  hardware. In the analysis/CPR lower status row, the exact-content CPR interval timer keeps its
+  reserved middle track while the energy/status and shock-count tracks share the remaining width in
+  their existing 2:1 proportion. All content stays contained within its assigned region, with the
+  same behavior in trainee and Spectator presentations.
+
+### Testing — invariant Wagami X device geometry
+
+- Verify the shell center track and every flexible Monitor column use zero-minimum containment across
+  ordinary, bottom-vitals, right-vitals, and charge layouts.
+- Verify the analysis/CPR lower row uses proportional 2:1 side tracks around the exact-content timer
+  and no longer asserts the superseded non-shrinking fixed side widths.
+- Measure shell, LCD, right-control, vital-column, status-row, and timer rectangles across analysis,
+  CPR, and charge transitions; require the outer device and hardware geometry to remain unchanged and
+  every screen region to remain within its assigned parent.
+- Run focused status-bar, layout, shell, Monitor, timer, defibrillator, and Spectator tests, followed
+  by TypeScript, ESLint, the complete suite, and the Webpack production build.
+
+**Completed 2026-09-13.** Zero-minimum shell and Monitor tracks now contain all intrinsic screen
+content inside the established LCD boundary. The analysis/CPR lower row uses two proportional shares,
+the exact-content timer track, and one proportional share; at the reproduced viewport those cells are
+212.66px, 68.52px, and 106.33px inside the unchanged 403.52px bottom region. Rendered replay keeps
+the 940.02px shell, 570.88px screen frame, 144.36px right-control cluster, Home button, Patient Event
+button, and 555.52px Monitor surface at identical rectangles from idle through Analyze, CPR, and the
+charge prompt. All right controls remain fully visible. All 142 focused tests, TypeScript, ESLint with
+zero errors and the same 12 warnings, and the Webpack production build pass. The complete suite records
+1,387 passing tests and one skip with the same three unrelated baseline failures.
+
+- 2026-09-13 requirement update — exact CPR interval content reservation: supersede the Phase 25
+  implementation detail that conditionally mounts the `CPR Time` label and countdown value. The
+  shared Wagami X status bar keeps the real label and fixed four-character value element mounted
+  from `ANALYZING ECG` through every analysis outcome and the complete CPR interval. Before CPR,
+  both elements are invisible and excluded from accessibility output while their exact rendered
+  width and height reserve the final white timer box footprint inside the otherwise black, empty
+  analysis cell. CPR reveals those same elements without inserting new intrinsic content or changing
+  the monitor, lower row, timer cell, trainee view, or Spectator geometry. Countdown timing, text,
+  banners, sounds, ECG continuity, and all other defibrillator behavior remain unchanged. This
+  correction is required because deployed measurement showed the nominally mounted empty timer cell
+  still growing from about 3.5px to 68.5px when its conditional content appeared.
+
+### Testing — exact CPR interval content reservation
+
+- Verify the same timer label and value elements persist from Analyze into CPR, remain visually and
+  semantically hidden before CPR, and become visible without replacement when CPR begins.
+- Retain countdown coverage for `2:00`, `1:59`, and `0:00`, the fixed four-character value box,
+  non-shrinking side cells, trainee/Spectator component parity, and the fixed 110px bottom track.
+- Run the focused status-bar, Monitor, Spectator, timer, layout, shell, and defibrillator suites,
+  followed by TypeScript, ESLint, the complete suite, and the production build.
+
+**Completed 2026-09-13.** The real timer label and value now remain mounted inside an invisible,
+`aria-hidden` content wrapper during every analysis state, then become visible in place when CPR
+starts. Browser replay holds the bottom bar at 468.52px, the timer slot at 68.52px, and its content
+at 66.52px through `ANALYZING ECG`, `STAND CLEAR`, `SHOCK NOT ADVISED`, and `Perform CPR`; only
+visibility changes. All 124 focused tests, TypeScript, ESLint with zero errors and the same 12
+warnings, and the Webpack production build pass. The complete suite records 1,386 passing tests and
+one skip; its three established unrelated failures remain, and one load-sensitive fullscreen-map
+test passed all 10 tests immediately when rerun alone.
+
+- 2026-09-13 requirement update — 3rd Degree Automatic FC 60: supersede the 40/min 3rd Degree
+  value below. Selecting 3rd Degree locks FC On at 60, and the live complete-heart-block waveform
+  runs two ventricular escape complexes every two seconds for a matching 60/min cadence. Its
+  independent atrial cadence remains 120/min. Existing AV dissociation, QRS morphology, static
+  12-lead capture, lock behavior, manual FC restoration, CPR priority, scenario/persistence/Room
+  enforcement, and all other rhythms remain unchanged.
+
+### Testing — 3rd Degree Automatic FC 60
+
+- Update automatic-rate, Instructor control, store, scenario, persistence, shared-state, display,
+  and pulse-cadence expectations from 40 to 60 for 3rd Degree.
+- Require the live waveform to produce two ventricular escape complexes per two-second cycle while
+  retaining four independent P waves per cycle and the existing 120/min atrial cadence.
+- Run the focused FC/store/scenario/Instructor/waveform suite, TypeScript, ESLint, and the production
+  build.
+
+**Completed 2026-09-13.** The canonical 3rd Degree Automatic FC lock is now 60, and the live waveform
+runs two ventricular escape complexes per two-second cycle for the same 60/min rate. Four independent
+P waves per cycle preserve the existing 120/min atrial cadence and AV dissociation. The waveform
+morphology and static 12-lead capture remain unchanged. All 325 focused automatic-rate, store,
+scenario, shared-state, Instructor, display, capture, and waveform tests pass. TypeScript, the Webpack
+production build, and ESLint with zero errors and the same 12 existing warnings pass. The complete
+suite records 1,387 passing tests and one skip with the same three documented unrelated failures.
+
+- 2026-09-13 requirement update — heart-block Automatic FC rates: supersede the 2026-09-12 fixed
+  heart-block values. 2nd Degree Type 2 now locks FC On at 80 and its live ventricular cadence runs
+  at 80/min. 3rd Degree now locks FC On at 40 and its live ventricular escape cadence runs at
+  40/min. The existing lock behavior, manual FC restoration, CPR priority, scenario/persistence/Room
+  enforcement, static 12-lead captures, and all other rhythm behavior remain unchanged.
+
+### Testing — revised heart-block Automatic FC rates
+
+- Update automatic-rate, Instructor control, store, scenario, persistence, shared-state, and live ECG
+  timing expectations to 80 for 2nd Degree Type 2 and 40 for 3rd Degree.
+- Run the focused FC/store/scenario/Instructor/waveform suite, TypeScript, ESLint, and the production
+  build.
+
+- 2026-09-12 requirement update — rhythm-owned Automatic FC locks: in the shared Instructor Console,
+  selecting Torsades, 2nd Degree Type 2, or 3rd Degree forces FC On and disables both its number editor
+  and On/Off control. Torsades shows `AUTO 150–250` to the Instructor and, for each complete 15-complex
+  packet, deterministically selects an inclusive whole-number FC from 150 through 250. That synchronized
+  packet value controls the trainee and Spectator FC display, ECG timing, SpO2 pulse cadence, alarms,
+  Wagami X and Wagami Z, and Vital Log snapshots; a new Send starts a new sequence. 2nd Degree Type 2
+  locks FC at 40 and retimes its live ventricular cadence to 40/min; 3rd Degree locks FC at 20 and
+  retimes its live ventricular cadence to 20/min. Regular and Weak CPR retain priority at 120 and 90,
+  then resume the locked rhythm. Direct, batch, timed, Saved scenario, Save/Send, synchronization, and
+  hydration paths enforce the same values. Switching among the new locked rhythms preserves the prior
+  manual FC value and On/Off state, restoring both only after leaving that locked group. 2nd Degree
+  Type 1, existing VF/VT/Asystole behavior, and static 12-lead captures remain unchanged.
+
+### Testing — rhythm-owned Automatic FC locks
+
+- Cover automatic-rate classification, exact fixed values, inclusive deterministic Torsades values,
+  packet boundaries, synchronized sequence restarts, and derived Torsades/heart-block waveform timing.
+- Cover Instructor FC presentation and lock state, manual value/channel restoration, direct and batch
+  edits, Saved scenario normalization/loading, persistence hydration, Save/Send, CPR precedence, alarm
+  inputs, pulse cadence, Vital Log snapshots, Wagami X/Z, and Spectator projection parity.
+- Run focused automatic-rate, store, scenario, Instructor, waveform, Monitor, Wagami Z, synchronization,
+  and Spectator tests, followed by TypeScript, ESLint, and the production build.
+
 - 2026-09-10 requirement update — Instructor Console discoverability polish: when the authenticated
   Instructor Account already owns a waiting or active Room, the Console launcher presents that Room
   immediately instead of revealing it only after Create Room fails. The existing-Room state shows

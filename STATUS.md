@@ -18,6 +18,59 @@ with the same three documented unrelated baseline failures. The production site 
 older lobby; this host has no authenticated direct Vercel path, so the branch must be integrated into
 `main` for the configured GitHub deploy-hook workflow to attempt deployment.
 
+**Invariant Wagami X device geometry — COMPLETE (2026-09-13).**
+Zero-minimum shell and Monitor tracks now contain intrinsic clinical content within the established
+LCD, so it cannot resize the screen or push the physical right controls under the shell boundary. The
+analysis/CPR lower row shares its remaining width in a 2:1 ratio around the exact timer track; at the
+reproduced viewport its cells measure 212.66px, 68.52px, and 106.33px inside the unchanged 403.52px
+bottom region. Rendered replay keeps the 940.02px shell, 570.88px screen frame, 144.36px right-control
+cluster, Home button, Patient Event button, and 555.52px Monitor surface at identical rectangles from
+idle through Analyze, CPR, and the charge prompt. Every right control remains fully visible. The
+Resting-to-Defib vital transition and charge energy scale remain unchanged. All 142 focused tests,
+TypeScript, ESLint with zero errors and the same 12 warnings, and the Webpack production build pass.
+The complete suite records 1,387 passing tests and one skip with the same three unrelated failures.
+
+**Exact CPR interval content reservation — COMPLETE (2026-09-13).**
+The shared Wagami X status bar now keeps its real `CPR Time` label and fixed four-character value
+mounted but invisible and excluded from accessibility output throughout every analysis state. CPR
+reveals those same elements without introducing new intrinsic content, so trainee and Spectator
+geometry no longer expands when the countdown appears. Browser replay holds the bottom bar at
+468.52px, the timer slot at 68.52px, and its content at 66.52px across `ANALYZING ECG`, `STAND CLEAR`,
+`SHOCK NOT ADVISED`, and `Perform CPR`; only visibility changes. All 124 focused tests, TypeScript,
+ESLint with zero errors and the same 12 warnings, and the Webpack production build pass. The complete
+suite records 1,386 passing tests and one skip; its three established unrelated failures remain, and
+one load-sensitive fullscreen-map failure passed all 10 tests immediately alone.
+
+**3rd Degree Automatic FC 60 — COMPLETE (2026-09-13).**
+3rd Degree now locks FC On at 60 and runs two ventricular escape complexes every two seconds for a
+matching 60/min live cadence. Four independent P waves per cycle retain the existing 120/min atrial
+cadence and complete AV dissociation. QRS morphology, static 12-lead capture, lock restoration, CPR
+priority, persistence, shared Room behavior, and all other rhythms remain unchanged. All 325 focused
+automatic-rate, store, scenario, Instructor, display, capture, and waveform tests pass. TypeScript,
+the Webpack production build, and ESLint with zero errors and the same 12 warnings pass. The complete
+suite records 1,387 passing tests and one skip with the same three documented unrelated failures.
+
+**Revised heart-block Automatic FC rates — COMPLETE (2026-09-13).**
+2nd Degree Type 2 now locks FC On at 80 and runs its three conducted ventricular complexes at
+80/min. 3rd Degree now locks FC On at 40 and runs its two ventricular escape complexes at 40/min.
+Instructor display, direct/batch edits, Saved scenarios, persistence hydration, shared Room state,
+trainee display, ECG timing, and SpO2 pulse cadence use the revised values. Existing lock restoration,
+CPR priority, static 12-lead images, and other rhythms remain unchanged. All 283 focused tests,
+TypeScript, ESLint with zero errors and the same 12 warnings, and the Webpack production build pass.
+
+**Rhythm-owned Automatic FC locks — COMPLETE (2026-09-13).**
+The shared Instructor Console now forces FC On and locks its editor for Torsades, 2nd Degree Type 2,
+and 3rd Degree. Torsades presents `AUTO 150–250` to the Instructor and runs a deterministic,
+Room-synchronized whole-number rate for each 15-complex packet; that value drives the trainee and
+Spectator FC, ECG timing, SpO2 pulse cadence, alarms, Wagami X/Z, and Vital Log. 2nd Degree Type 2 is
+fixed at 40 with a 40/min ventricular cadence, while 3rd Degree is fixed at 20 with a 20/min escape
+cadence. CPR retains priority at 120 or 90 and the locked rhythm resumes afterward. Leaving the
+locked group restores the prior manual FC value and On/Off state. All 291 focused tests, TypeScript,
+ESLint with zero errors and the same 12 warnings, and the Webpack production build pass. The full
+suite records 1,376 passing tests and one skip; 11 unrelated failures remain in Windows operations
+script execution, invite-only config parsing, Room ownership expectations, and a stale Patient Info
+color-class assertion.
+
 **Stable CPR interval timer footprint — COMPLETE (2026-09-12).**
 The Wagami X CPR timer now keeps one mounted, overflow-contained flex slot across Analyze and CPR.
 Its current typeface uses tabular numerals inside a centered fixed four-character value box, while the

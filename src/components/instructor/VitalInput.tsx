@@ -65,8 +65,11 @@ export function VitalInput({
   const automaticDisplay = automaticHeartRate
     ? rhythm === 'vf'
       ? 'AUTO 190–220'
+      : rhythm === 'torsades'
+        ? 'AUTO 150–250'
       : String(value)
     : null
+  const automaticRangeDisplay = automaticDisplay?.startsWith('AUTO ') ?? false
 
   // Local text mirrors what's typed so the field can sit empty mid-edit instead of
   // snapping back to a leading "0" (which made entries read like "020"). The store
@@ -91,7 +94,7 @@ export function VitalInput({
         className={cn(
           'group relative flex shrink-0 items-center border border-b',
           compact ? 'w-20 xl:[@media(min-height:800px)]:w-24' : 'w-24',
-          automaticDisplay === 'AUTO 190–220' && (compact ? 'w-28 xl:[@media(min-height:800px)]:w-32' : 'w-32'),
+          automaticRangeDisplay && (compact ? 'w-28 xl:[@media(min-height:800px)]:w-32' : 'w-32'),
           'transition-[border-color,box-shadow,background-color] duration-150',
           'focus-within:border-transparent focus-within:border-b-cyan-bp focus-within:bg-cyan-bp/5',
           'focus-within:shadow-[0_8px_18px_-18px_rgba(0,255,255,0.9)]',
@@ -123,11 +126,11 @@ export function VitalInput({
             compact ? 'h-7 pr-6 text-sm xl:[@media(min-height:800px)]:h-9 xl:[@media(min-height:800px)]:pr-8 xl:[@media(min-height:800px)]:text-base' : 'h-8 pr-8 text-base',
             'placeholder:text-neutral-700 [appearance:textfield]',
             'disabled:cursor-not-allowed disabled:text-neutral-400 disabled:opacity-100',
-            automaticDisplay === 'AUTO 190–220' && 'pr-1 text-center text-xs',
+            automaticRangeDisplay && 'pr-1 text-center text-xs',
             '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
           )}
         />
-        {unit && automaticDisplay !== 'AUTO 190–220' && (
+        {unit && !automaticRangeDisplay && (
           <span className={cn(
             'pointer-events-none absolute text-[9px] font-bold uppercase tracking-wider',
             'text-neutral-500 group-focus-within:text-cyan-bp',

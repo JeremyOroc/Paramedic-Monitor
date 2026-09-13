@@ -51,15 +51,17 @@ describe('useSessionMonitorSync', () => {
     unmount()
   })
 
-  it('returns server-aligned VF display metadata for the applied state version', async () => {
+  it('returns server-aligned automatic-rate metadata for the applied state version', async () => {
     fetchMock.mockImplementation(() => okJson(statePayload(7)))
     const { result, unmount } = renderHook(() =>
       useSessionMonitorSync({ code: 'ABC123', intervalMs: 10 }),
     )
 
-    await vi.waitFor(() => expect(result.current.vfDisplaySync?.seed).toBe(7))
-    expect(result.current.vfDisplaySync?.epochMs).toBe(Date.parse('2026-08-25T12:00:00.000Z'))
-    expect(result.current.vfDisplaySync?.serverOffsetMs).toEqual(expect.any(Number))
+    await vi.waitFor(() => expect(result.current.heartRateDisplaySync?.seed).toBe(7))
+    expect(result.current.heartRateDisplaySync?.epochMs).toBe(
+      Date.parse('2026-08-25T12:00:00.000Z'),
+    )
+    expect(result.current.heartRateDisplaySync?.serverOffsetMs).toEqual(expect.any(Number))
     unmount()
   })
 

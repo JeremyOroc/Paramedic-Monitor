@@ -81,7 +81,7 @@ describe('VitalInput', () => {
     )
   })
 
-  it('shows locked automatic FC values and disables the FC toggle for Asystole', () => {
+  it('shows automatic FC values and locks each rhythm-owned FC toggle', () => {
     render(<VitalInput field="hr" label="FC" unit="bpm" />)
 
     act(() => useMonitorStore.getState().setDraft('rhythm', 'vf'))
@@ -100,6 +100,21 @@ describe('VitalInput', () => {
     expect(screen.getByLabelText('FC')).toHaveValue('0')
     expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
     expect(screen.getByText('bpm')).toBeInTheDocument()
+
+    act(() => useMonitorStore.getState().setDraft('rhythm', 'torsades'))
+    expect(screen.getByLabelText('FC')).toBeDisabled()
+    expect(screen.getByLabelText('FC')).toHaveValue('AUTO 150–250')
+    expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
+    expect(screen.queryByText('bpm')).toBeNull()
+
+    act(() => useMonitorStore.getState().setDraft('rhythm', 'second-degree-type-2'))
+    expect(screen.getByLabelText('FC')).toHaveValue('80')
+    expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
+    expect(screen.getByText('bpm')).toBeInTheDocument()
+
+    act(() => useMonitorStore.getState().setDraft('rhythm', 'third-degree'))
+    expect(screen.getByLabelText('FC')).toHaveValue('60')
+    expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
 
     act(() => useMonitorStore.getState().setDraft('rhythm', 'nsr'))
     expect(screen.getByLabelText('FC')).toBeEnabled()

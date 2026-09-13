@@ -418,7 +418,7 @@ export function DeviceShell({
         embedded
           ? 'h-[96%] max-h-[calc(98cqw/1.36)]'
           : 'h-[96%] max-h-[calc(98lvw/1.36)]',
-      )}>
+      )} data-testid="wagami-x-shell">
         <div className="absolute inset-0 overflow-hidden rounded-[72px] bg-[#06317f] shadow-[0_26px_55px_rgba(0,0,0,0.55),inset_0_0_0_12px_rgba(0,67,154,0.92),inset_0_0_30px_rgba(0,0,0,0.36)]">
           <div className="absolute left-[10%] top-[-2.6%] h-[7.5%] w-[22%] rounded-b-[18px] bg-[#f2f2f2] shadow-[inset_0_-8px_12px_rgba(0,0,0,0.18),0_4px_6px_rgba(0,0,0,0.22)]" />
           <PowerButton
@@ -428,9 +428,9 @@ export function DeviceShell({
           />
           <div className="absolute inset-[3.2%] grid grid-rows-[13%_1fr_21%] overflow-hidden rounded-[58px] border-[3px] border-[#0a2362] bg-[#c7c8c7] shadow-[inset_0_0_32px_rgba(255,255,255,0.54),inset_0_0_0_2px_rgba(78,78,78,0.2)]">
             <DeviceHeader />
-            <div className="grid min-h-0 grid-cols-[10.5%_1fr_17.5%] gap-[1.4%] px-[2.8%]">
+            <div className="grid min-h-0 grid-cols-[10.5%_minmax(0,1fr)_17.5%] gap-[1.4%] px-[2.8%]" data-testid="wagami-x-content-row">
               <LeftSoftKeys keys={leftSoftKeys} disabled={!controlsEnabled} />
-              <div className="min-h-0 rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6lvw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]">
+              <div className="min-h-0 min-w-0 overflow-hidden rounded-[17px] bg-[#2b2b2b] p-[clamp(5px,0.6lvw,9px)] shadow-[0_6px_7px_rgba(0,0,0,0.28),inset_0_0_0_2px_rgba(255,255,255,0.2)]" data-testid="wagami-x-screen-frame">
                 <div className="relative h-full min-h-0 overflow-hidden rounded-[6px] bg-black">
                   {powerState === 'on' && screen}
                   {powerState === 'booting' && <BootScreen />}
@@ -712,7 +712,7 @@ function RightControlCluster({
   // }
 
   return (
-    <div className="relative min-h-0">
+    <div className="relative min-h-0 min-w-0 overflow-hidden" data-testid="right-control-cluster">
       <PhysicalButton
         ariaLabel="Alarm acknowledge"
         disabled={disabled}

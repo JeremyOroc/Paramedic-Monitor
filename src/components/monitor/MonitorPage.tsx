@@ -50,8 +50,8 @@ import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { playCallerInfoAlert, setAudioMuted, stopAllAudio } from '@/lib/audio'
 import { SessionLandingPage } from '@/components/session/SessionLandingPage'
 import { getCprHeartRate } from '@/types/vitals'
-import { useVfDisplayHeartRate } from '@/hooks/useVfDisplayHeartRate'
-import type { VfDisplaySync } from '@/lib/automaticHeartRate'
+import { useAutomaticDisplayHeartRate } from '@/hooks/useAutomaticDisplayHeartRate'
+import type { HeartRateDisplaySync } from '@/lib/automaticHeartRate'
 import {
   MONITOR_PROJECTION_VERSION,
   type MonitorProjection,
@@ -68,12 +68,12 @@ export type StudentEventRecord = {
 
 export function MonitorPage({
   onStudentEvent,
-  vfDisplaySync,
+  heartRateDisplaySync,
   onProjectionChange,
   transportStorageScope,
 }: {
   onStudentEvent?: (event: StudentEventRecord) => void
-  vfDisplaySync?: VfDisplaySync | null
+  heartRateDisplaySync?: HeartRateDisplaySync | null
   onProjectionChange?: (projection: MonitorProjection) => void
   transportStorageScope?: string
 } = {}) {
@@ -336,9 +336,29 @@ export function MonitorPage({
     if (!isWagamiZ) resetDefib()
   }, [isWagamiZ, monitorResetVersion, resetDefib])
 
+  const displayedHr = cprHeartRate ?? confirmed.hr
+  const displayedHrActive = cprOverrideActive || confirmedVitalActive.hr
+  const automaticDisplayedHr = useAutomaticDisplayHeartRate({
+    enabled:
+      controller.isPoweredOn &&
+      confirmedVitalActive.hr &&
+      !cprOverrideActive,
+    rhythm: confirmed.rhythm,
+    underlyingHeartRate: displayedHr,
+    sync: heartRateDisplaySync,
+  })
+  const effectiveClinicalHr =
+    displayedHrActive && confirmed.rhythm === 'torsades'
+      ? automaticDisplayedHr
+      : displayedHr
+  const visibleFcHr =
+    displayedHrActive && confirmed.rhythm === 'vf'
+      ? automaticDisplayedHr
+      : effectiveClinicalHr
+
   const alarmVitals = {
     ...confirmed,
-    hr: cprHeartRate ?? confirmed.hr,
+    hr: effectiveClinicalHr,
     bp_sys: acceptedBp.bp_sys,
     bp_dia: acceptedBp.bp_dia,
   }
@@ -433,21 +453,9 @@ export function MonitorPage({
       ? confirmed.etco2
       : 0
     : null
-  const displayedHr = cprHeartRate ?? confirmed.hr
-  const displayedHrActive = cprOverrideActive || confirmedVitalActive.hr
-  const vfDisplayedHr = useVfDisplayHeartRate({
-    enabled:
-      controller.isPoweredOn &&
-      confirmed.rhythm === 'vf' &&
-      confirmedVitalActive.hr &&
-      !cprOverrideActive,
-    underlyingHeartRate: displayedHr,
-    sync: vfDisplaySync,
-  })
-
   const vitalLogSnapshot = useMemo(
     () => ({
-      fc: displayedHrActive ? displayedHr : null,
+      fc: displayedHrActive ? effectiveClinicalHr : null,
       pniSys: acceptedBpActive.bp_sys ? acceptedBp.bp_sys : null,
       pniDia: acceptedBpActive.bp_dia ? acceptedBp.bp_dia : null,
       etco2: displayedEtco2,
@@ -460,8 +468,8 @@ export function MonitorPage({
       acceptedBpActive.bp_sys,
       confirmed.spo2,
       confirmedVitalActive.spo2,
-      displayedHr,
       displayedHrActive,
+      effectiveClinicalHr,
       displayedEtco2,
     ],
   )
@@ -517,9 +525,9 @@ export function MonitorPage({
       activeSelectedControl: controller.activeSelectedControl,
       displayAge: controller.displayAge,
       displaySex: controller.displaySex,
-      displayedHr,
+      displayedHr: effectiveClinicalHr,
       displayedHrActive,
-      vfDisplayedHr,
+      vfDisplayedHr: visibleFcHr,
       displayedEtco2,
       cprOverrideActive,
       etco2Loading,
@@ -569,8 +577,8 @@ export function MonitorPage({
       hospitalRouting.mapState,
       dispatchState,
       displayedEtco2,
-      displayedHr,
       displayedHrActive,
+      effectiveClinicalHr,
       etco2Loaded,
       etco2Loading,
       gateSatisfied,
@@ -582,7 +590,7 @@ export function MonitorPage({
       sessionTimer,
       showDispatchCallerPage,
       time,
-      vfDisplayedHr,
+      visibleFcHr,
       visibleAlarms,
       vitalLog,
       defib.canAdjustEnergy,
@@ -680,7 +688,7 @@ export function MonitorPage({
             <WaveformPanel
               secondaryChannel={controller.secondary}
               rhythm={confirmed.rhythm}
-              hr={displayedHr}
+              hr={effectiveClinicalHr}
               spo2={confirmed.spo2}
               etco2={confirmed.etco2}
               spo2Waveform={confirmed.spo2_waveform}
@@ -696,8 +704,8 @@ export function MonitorPage({
         vitalsPlacement={useRestingVitalLayout ? 'bottom' : 'right'}
         vitals={
           <VitalsStrip
-            hr={displayedHrActive ? vfDisplayedHr : ''}
-            pulseHeartRate={displayedHr}
+            hr={displayedHrActive ? visibleFcHr : ''}
+            pulseHeartRate={effectiveClinicalHr}
             bpSys={acceptedBpDisplayActive ? acceptedBp.bp_sys : ''}
             bpDia={acceptedBpDisplayActive ? acceptedBp.bp_dia : ''}
             etco2={displayedEtco2 ?? ''}
@@ -826,7 +834,7 @@ export function MonitorPage({
         sessionTimer={sessionTimer}
         patientMode={controller.patientMode}
         rhythm={confirmed.rhythm}
-        heartRate={displayedHrActive ? vfDisplayedHr : displayedHr}
+        heartRate={visibleFcHr}
         spo2={confirmed.spo2}
         etco2={confirmed.etco2}
         bpSys={confirmed.bp_sys}

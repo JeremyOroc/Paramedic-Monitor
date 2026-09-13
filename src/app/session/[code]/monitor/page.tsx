@@ -45,7 +45,7 @@ export default function SessionMonitorPage() {
   // and remount the monitor so controller state (power, capture, etc.) resets.
   const [attemptVersion, setAttemptVersion] = useState(1)
   const resetStore = useMonitorStore((s) => s.reset)
-  const { vfDisplaySync, getClock } = useSessionMonitorSync({
+  const { heartRateDisplaySync, getClock } = useSessionMonitorSync({
     code,
     participantToken,
     onSessionInactive: () => router.replace(`/session/${code}/waiting`),
@@ -66,7 +66,7 @@ export default function SessionMonitorPage() {
       key={attemptVersion}
       onStudentEvent={recordStudentEvent}
       onProjectionChange={publishProjection}
-      vfDisplaySync={vfDisplaySync}
+      heartRateDisplaySync={heartRateDisplaySync}
       transportStorageScope={`${code}.${participantId}.${attemptVersion}`}
     />
   )
