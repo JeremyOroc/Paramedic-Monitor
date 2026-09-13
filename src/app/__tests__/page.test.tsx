@@ -799,6 +799,33 @@ describe('MonitorPage', () => {
     randomSpy.mockRestore()
   })
 
+  it.each([
+    ['2nd Degree Type 2', 'second-degree-type-2', 80],
+    ['3rd Degree', 'third-degree', 40],
+  ] as const)('drives the %s display and ECG at its locked FC', (_label, rhythm, heartRate) => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('spo2', 98)
+      store.setDraftVitalActive('spo2', true)
+      store.setDraft('rhythm', rhythm)
+      store.save()
+      store.send()
+    })
+
+    render(<MonitorPage />)
+
+    expect(screen.getByText(String(heartRate))).toBeInTheDocument()
+    expect(screen.getByTestId('mock-ecg-canvas')).toHaveAttribute(
+      'data-heart-rate',
+      String(heartRate),
+    )
+    expect(screen.getByTestId('spo2-pulse-bar')).toHaveAttribute(
+      'data-heart-rate',
+      String(heartRate),
+    )
+    expect(useMonitorStore.getState().confirmed).toMatchObject({ rhythm, hr: heartRate })
+  })
+
   it('drives every live Torsades rate surface from one synchronized packet value', () => {
     vi.useFakeTimers()
     vi.setSystemTime(10_000)

@@ -286,7 +286,7 @@ describe('ECG_RHYTHMS', () => {
     const def = ECG_RHYTHMS['second-degree-type-2']
     assertNormalized(def, 'second-degree-type-2')
     expect(def.cycleMs).toBe(SECOND_DEGREE_TYPE_2_TUNING.cycleMs)
-    expect((SECOND_DEGREE_TYPE_2_TUNING.conductedBeats * 60000) / def.cycleMs!).toBe(40)
+    expect((SECOND_DEGREE_TYPE_2_TUNING.conductedBeats * 60000) / def.cycleMs!).toBe(80)
     expect(segmentPeak(def.data, 0.06, 0.09)).toBeGreaterThan(0.040)
     expect(segmentPeak(def.data, 0.12, 0.16)).toBeGreaterThan(0.45)
     expect(segmentPeak(def.data, 0.27, 0.30)).toBeGreaterThan(0.040)
@@ -314,7 +314,7 @@ describe('ECG_RHYTHMS', () => {
     const def = ECG_RHYTHMS['third-degree']
     assertNormalized(def, 'third-degree')
     expect(def.cycleMs).toBe(THIRD_DEGREE_TUNING.cycleMs)
-    expect((THIRD_DEGREE_TUNING.escapeBeats * 60000) / def.cycleMs!).toBe(20)
+    expect((THIRD_DEGREE_TUNING.escapeBeats * 60000) / def.cycleMs!).toBe(40)
     expect(segmentPeak(def.data, 0.075, 0.095)).toBeGreaterThan(0.030)
     expect(segmentPeak(def.data, 0.235, 0.255)).toBeGreaterThan(0.018)
     expect(segmentPeak(def.data, 0.395, 0.415)).toBeGreaterThan(0.030)

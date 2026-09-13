@@ -64,8 +64,8 @@ describe('monitorStore scenario drafts', () => {
 
   it.each([
     ['torsades', 150],
-    ['second-degree-type-2', 40],
-    ['third-degree', 20],
+    ['second-degree-type-2', 80],
+    ['third-degree', 40],
   ] as const)(
     'applies %s with its FC lock and restores the previous manual FC state',
     (rhythm, hr) => {

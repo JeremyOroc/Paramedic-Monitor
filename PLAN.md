@@ -8,6 +8,19 @@
 
 ## Current Requirement Updates
 
+- 2026-09-13 requirement update — heart-block Automatic FC rates: supersede the 2026-09-12 fixed
+  heart-block values. 2nd Degree Type 2 now locks FC On at 80 and its live ventricular cadence runs
+  at 80/min. 3rd Degree now locks FC On at 40 and its live ventricular escape cadence runs at
+  40/min. The existing lock behavior, manual FC restoration, CPR priority, scenario/persistence/Room
+  enforcement, static 12-lead captures, and all other rhythm behavior remain unchanged.
+
+### Testing — revised heart-block Automatic FC rates
+
+- Update automatic-rate, Instructor control, store, scenario, persistence, shared-state, and live ECG
+  timing expectations to 80 for 2nd Degree Type 2 and 40 for 3rd Degree.
+- Run the focused FC/store/scenario/Instructor/waveform suite, TypeScript, ESLint, and the production
+  build.
+
 - 2026-09-12 requirement update — rhythm-owned Automatic FC locks: in the shared Instructor Console,
   selecting Torsades, 2nd Degree Type 2, or 3rd Degree forces FC On and disables both its number editor
   and On/Off control. Torsades shows `AUTO 150–250` to the Instructor and, for each complete 15-complex

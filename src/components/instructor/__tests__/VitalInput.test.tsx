@@ -108,12 +108,12 @@ describe('VitalInput', () => {
     expect(screen.queryByText('bpm')).toBeNull()
 
     act(() => useMonitorStore.getState().setDraft('rhythm', 'second-degree-type-2'))
-    expect(screen.getByLabelText('FC')).toHaveValue('40')
+    expect(screen.getByLabelText('FC')).toHaveValue('80')
     expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
     expect(screen.getByText('bpm')).toBeInTheDocument()
 
     act(() => useMonitorStore.getState().setDraft('rhythm', 'third-degree'))
-    expect(screen.getByLabelText('FC')).toHaveValue('20')
+    expect(screen.getByLabelText('FC')).toHaveValue('40')
     expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
 
     act(() => useMonitorStore.getState().setDraft('rhythm', 'nsr'))

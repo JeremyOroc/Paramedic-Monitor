@@ -49,13 +49,13 @@ export const SECOND_DEGREE_TYPE_1_TUNING = {
 } as const
 
 export const SECOND_DEGREE_TYPE_2_TUNING = {
-  cycleMs: 4500,
+  cycleMs: 2250,
   conductedBeats: 3,
   droppedPPhase: 0.825,
 } as const
 
 export const THIRD_DEGREE_TUNING = {
-  cycleMs: 6000,
+  cycleMs: 3000,
   pWaves: 6,
   escapeBeats: 2,
 } as const

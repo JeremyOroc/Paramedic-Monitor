@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-09-13] [instructor/monitor] — Revise heart-block Automatic FC rates
+
+- Changed 2nd Degree Type 2 from FC 40 to FC 80 and retimed its live three-beat ventricular cycle
+  from 4.5 seconds to 2.25 seconds.
+- Changed 3rd Degree from FC 20 to FC 40 and retimed its live two-beat escape cycle from 6 seconds
+  to 3 seconds.
+- Updated Instructor, store, scenario, hydration, Room synchronization, ECG timing, trainee display,
+  and pulse-cadence regressions. All 283 focused tests, TypeScript, ESLint with zero errors and the
+  same 12 warnings, and the Webpack production build pass.
+
 ## [2026-09-13] [instructor/monitor] — Add rhythm-owned Automatic FC locks
 
 - Locked FC On for Torsades, 2nd Degree Type 2, and 3rd Degree across direct edits, timed/batch

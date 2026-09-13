@@ -108,14 +108,14 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().draft.hr).toBe(150)
 
     store.setDraft('rhythm', 'second-degree-type-2')
-    expect(useMonitorStore.getState().draft.hr).toBe(40)
+    expect(useMonitorStore.getState().draft.hr).toBe(80)
     store.setDraftVitalValues({ hr: 72 })
-    expect(useMonitorStore.getState().draft.hr).toBe(40)
+    expect(useMonitorStore.getState().draft.hr).toBe(80)
 
     store.setDraft('rhythm', 'third-degree')
-    expect(useMonitorStore.getState().draft.hr).toBe(20)
+    expect(useMonitorStore.getState().draft.hr).toBe(40)
     store.setDraft('hr', 72)
-    expect(useMonitorStore.getState().draft.hr).toBe(20)
+    expect(useMonitorStore.getState().draft.hr).toBe(40)
   })
 
   it('restores the current interaction manual FC after leaving an automatic rhythm', () => {
@@ -157,7 +157,7 @@ describe('monitorStore', () => {
     store.setDraft('rhythm', 'second-degree-type-2')
     store.setDraft('rhythm', 'third-degree')
 
-    expect(useMonitorStore.getState().draft).toMatchObject({ rhythm: 'third-degree', hr: 20 })
+    expect(useMonitorStore.getState().draft).toMatchObject({ rhythm: 'third-degree', hr: 40 })
     expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
 
     store.setDraft('rhythm', 'nsr')
@@ -1219,8 +1219,8 @@ describe('persist migration', () => {
 
   it.each([
     ['torsades', 150],
-    ['second-degree-type-2', 40],
-    ['third-degree', 20],
+    ['second-degree-type-2', 80],
+    ['third-degree', 40],
   ] as const)('hydrates %s with its locked FC value and active channel', async (rhythm, hr) => {
     const def = defaultsAsVitals()
     localStorage.setItem(

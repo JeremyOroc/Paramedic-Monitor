@@ -6,6 +6,14 @@
 ---
 
 ## Current Phase
+**Revised heart-block Automatic FC rates — COMPLETE (2026-09-13).**
+2nd Degree Type 2 now locks FC On at 80 and runs its three conducted ventricular complexes at
+80/min. 3rd Degree now locks FC On at 40 and runs its two ventricular escape complexes at 40/min.
+Instructor display, direct/batch edits, Saved scenarios, persistence hydration, shared Room state,
+trainee display, ECG timing, and SpO2 pulse cadence use the revised values. Existing lock restoration,
+CPR priority, static 12-lead images, and other rhythms remain unchanged. All 283 focused tests,
+TypeScript, ESLint with zero errors and the same 12 warnings, and the Webpack production build pass.
+
 **Rhythm-owned Automatic FC locks — COMPLETE (2026-09-13).**
 The shared Instructor Console now forces FC On and locks its editor for Torsades, 2nd Degree Type 2,
 and 3rd Degree. Torsades presents `AUTO 150–250` to the Instructor and runs a deterministic,
