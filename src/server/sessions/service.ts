@@ -66,6 +66,8 @@ export type StudentEventInput = {
 }
 
 const MAX_MONITOR_PROJECTION_BYTES = 256 * 1024
+const DEFAULT_DEVICE_NICKNAME_LIMIT = 10_000
+const UNIQUE_VIOLATION_CODE = '23505'
 
 export function isMonitorProjection(value: unknown): value is MonitorProjection {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
@@ -295,6 +297,43 @@ async function ensureAttempt(
   if (error) throw new SessionError(error.message, 500)
 }
 
+async function createDefaultDeviceParticipant(
+  session: SessionRecord,
+  participantToken: string,
+) {
+  const supabase = createServiceClient()
+
+  // The room-scoped case-insensitive nickname index is the concurrency guard.
+  // Two devices may both try Device 1, but only one insert can win; the other
+  // advances to Device 2 without reclaiming the winner's identity.
+  for (let number = 1; number <= DEFAULT_DEVICE_NICKNAME_LIMIT; number += 1) {
+    const nickname = `Device ${number}`
+    const { data: participant, error } = await supabase
+      .from('participants')
+      .insert({
+        session_id: session.id,
+        nickname,
+        token_hash: hashSessionToken(participantToken),
+      })
+      .select('id, session_id, nickname, joined_at, last_seen_at')
+      .single()
+
+    if (error?.code === UNIQUE_VIOLATION_CODE) continue
+    if (error || !participant) {
+      throw new SessionError(error?.message ?? 'Unable to join session', 500)
+    }
+
+    await ensureAttempt(session.id, participant.id, session.active_attempt_version)
+    return {
+      session,
+      participant: participant as ParticipantRecord,
+      participantToken,
+    }
+  }
+
+  throw new SessionError('Unable to allocate a Device nickname', 409)
+}
+
 export async function createSession(origin: string, account: RoomAccount) {
   const supabase = createServiceClient()
 
@@ -392,9 +431,6 @@ export async function joinSession(
   if (session.status === 'ended') throw new SessionError('Session has ended', 410)
 
   const normalizedNickname = normalizeNickname(nickname)
-  if (normalizedNickname.length < 1) {
-    throw new SessionError('Nickname is required', 400)
-  }
 
   const supabase = createServiceClient()
   if (participantToken) {
@@ -402,7 +438,10 @@ export async function joinSession(
     if (match) {
       const { data: updated, error: updateError } = await supabase
         .from('participants')
-        .update({ nickname: normalizedNickname, last_seen_at: new Date().toISOString() })
+        .update({
+          ...(normalizedNickname ? { nickname: normalizedNickname } : {}),
+          last_seen_at: new Date().toISOString(),
+        })
         .eq('id', match.id)
         .select('id, session_id, nickname, joined_at, last_seen_at')
         .single()
@@ -415,6 +454,10 @@ export async function joinSession(
   }
 
   const nextParticipantToken = createSessionToken('participant')
+
+  if (!normalizedNickname) {
+    return createDefaultDeviceParticipant(session, nextParticipantToken)
+  }
 
   // Identity is a localStorage token, so a cleared store or a second device
   // used to create a SECOND participants row under the same nickname -- which

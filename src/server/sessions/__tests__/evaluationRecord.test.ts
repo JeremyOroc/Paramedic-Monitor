@@ -522,6 +522,81 @@ describe('getSessionStatus — ?since= (PLAN 14a)', () => {
 })
 
 describe('joinSession — participant identity (PLAN 12e)', () => {
+  it('preserves the existing nickname when a returning device leaves it blank', async () => {
+    const stub = withResolver()
+
+    const result = await joinSession(CODE, '', PARTICIPANT_TOKEN)
+
+    const update = stub.opsFor('participants').find((op) => op.method === 'update')
+    expect(update?.payload).not.toHaveProperty('nickname')
+    expect(update?.payload?.last_seen_at).toEqual(expect.any(String))
+    expect(result.participant.nickname).toBe(PARTICIPANT.nickname)
+    expect(result.participantToken).toBe(PARTICIPANT_TOKEN)
+  })
+
+  it('assigns Device 1 when a new device leaves its nickname blank', async () => {
+    const stub = withResolver({
+      participants: (op) =>
+        op.method === 'insert'
+          ? { data: { ...PARTICIPANT, nickname: op.payload?.nickname } }
+          : undefined,
+    })
+
+    const result = await joinSession(CODE, '')
+
+    const insert = stub.opsFor('participants').find((op) => op.method === 'insert')
+    expect(insert?.payload).toMatchObject({ session_id: SESSION.id, nickname: 'Device 1' })
+    expect(result.participant.nickname).toBe('Device 1')
+  })
+
+  it('uses the lowest available Device number when existing names collide', async () => {
+    const stub = withResolver({
+      participants: (op) => {
+        if (op.method !== 'insert') return undefined
+        if (op.payload?.nickname === 'Device 1') {
+          return { error: { code: '23505', message: 'duplicate nickname' } }
+        }
+        return { data: { ...PARTICIPANT, nickname: op.payload?.nickname } }
+      },
+    })
+
+    const result = await joinSession(CODE, '')
+
+    expect(
+      stub.opsFor('participants').filter((op) => op.method === 'insert').map((op) => op.payload?.nickname),
+    ).toEqual(['Device 1', 'Device 2'])
+    expect(result.participant.nickname).toBe('Device 2')
+  })
+
+  it('allocates distinct names when blank devices join concurrently', async () => {
+    const allocated = new Set<string>()
+    withResolver({
+      participants: (op) => {
+        if (op.method !== 'insert') return undefined
+        const nickname = String(op.payload?.nickname)
+        const normalized = nickname.toLowerCase()
+        if (allocated.has(normalized)) {
+          return { error: { code: '23505', message: 'duplicate nickname' } }
+        }
+        allocated.add(normalized)
+        return {
+          data: {
+            ...PARTICIPANT,
+            id: `participant-${nickname}`,
+            nickname,
+          },
+        }
+      },
+    })
+
+    const joined = await Promise.all([joinSession(CODE, ''), joinSession(CODE, '')])
+
+    expect(joined.map((result) => result.participant.nickname).sort()).toEqual([
+      'Device 1',
+      'Device 2',
+    ])
+  })
+
   it('reclaims the existing row when a nickname rejoins without a token', async () => {
     const stub = withResolver({
       participants: (op) => {

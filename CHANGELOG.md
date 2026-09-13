@@ -5,6 +5,55 @@
 
 ---
 
+## [2026-09-13] [session/ui] — Replace the Room QR popup with an inline disclosure
+
+- Replaced the modal QR presentation with a 176px inline card in the Generate action's location,
+  including `Scan to join Room`, a `Hide QR code` action, two-way keyboard focus continuity,
+  responsive wrapping, Room-change reset, and suppression after a Room ends.
+- Made valid `code` query changes populate the controlled Room Code field after client-side navigation
+  as well as initial load, without auto-joining or overwriting later manual input.
+- Removed `Leave blank to receive a Device number.` and its accessibility reference while preserving
+  the optional Device nickname label and automatic server-side `Device N` behavior.
+- Added and updated disclosure, focus, Room lifecycle, client-navigation, and helper-removal tests. All
+  170 focused tests, TypeScript, the Webpack production build, and rendered production-built lobby QA
+  pass. ESLint has zero errors and the same 12 existing warnings; the complete suite records 1,376
+  passing tests, one skip, and the same three documented unrelated baseline failures.
+- Confirmed that production still serves the older lobby. This host has no authenticated direct Vercel
+  path, so the completed branch must reach `main` before the configured deploy-hook workflow can
+  attempt production deployment.
+
+## [2026-09-13] [planning/ui] — Revise Room QR presentation and join-page copy
+
+- Replaced the accepted popup design with an in-place 176px QR disclosure that offers Hide/Generate
+  focus continuity, responsive wrapping, local reset behavior, and automatic removal when a Room ends.
+- Required Room-code query prefill to synchronize on both initial loads and client-side query changes,
+  while retaining the fixed production `?code=` URL and no-auto-join behavior.
+- Removed the Device-nickname helper-text requirement without changing optional nickname joining or
+  automatic `Device N` allocation. No domain term or architectural decision changed.
+- Recorded that production currently serves the older lobby and that this host has no authenticated
+  direct Vercel path; verified work must reach `main` before the configured deploy-hook workflow can
+  attempt a production deployment.
+
+## [2026-09-13] [session/ui] — Add Room QR joining and optional Device nicknames
+
+- Added an accessible Instructor Room QR modal beside the active Room code. It renders the fixed
+  production `?code=` join URL locally, remains available to authorized Room observers, and provides
+  keyboard focus containment, Escape/backdrop closing, and trigger-focus restoration.
+- Prefilled valid Room codes from QR links without auto-joining, made Device nickname optional, and
+  enabled joining with a Room code alone. Blank new joins now receive the lowest unused
+  case-insensitive `Device N` name with database-backed collision retry, while blank returning joins
+  preserve the existing device identity.
+- Updated Instructor Room, launcher, waiting, and Spectator language to describe Scenario devices.
+  Preserved Student names for people on Evaluation records and retained the legacy internal
+  participant and student-event identifiers, with the distinction documented in the domain model and
+  ADR.
+- Added QR URL/modal, lobby, allocation/concurrency, Admin observer, waiting-room identity, and Device
+  terminology regressions. All 169 focused tests, TypeScript, the Webpack production build, and
+  rendered desktop/mobile lobby QA pass. ESLint has zero errors and the same 12 existing warnings;
+  the complete suite records 1,375 passing tests, one skip, and the same three documented unrelated
+  baseline failures.
+
+
 ## [2026-09-13] [monitor/ui] — Enforce invariant Wagami X device geometry
 
 - Traced the newly visible right-control clipping to a 65px intrinsic-width escape: the exact timer
@@ -74,6 +123,24 @@
   Webpack production build pass. The full suite records 1,376 passing tests and one skip; its 11
   unrelated failures are confined to Windows operations scripts, invite-only config parsing, Room
   ownership expectations, and a stale Patient Info color-class assertion.
+
+## [2026-09-12] [planning/domain] — Define device-based Room joining and QR requirements
+
+- Corrected the Room model: Scenario devices join Rooms, while one or many Trainees may operate the
+  same device and most Rooms ordinarily contain only one joined device. Distinguished Device nickname
+  from the independent Student names recorded on an Evaluation record.
+- Recorded the accepted instructor-only QR modal and fixed production `?code=` join-link contract,
+  including Room Code prefill without automatic joining.
+- Recorded optional Device nicknames, returning-device identity preservation, lowest-unused
+  Room-scoped `Device N` allocation, manually occupied names, concurrency safety, UI copy, and the
+  complete implementation test boundary. Application code is unchanged pending explicit
+  implementation approval.
+- Settled Device terminology for instructor-facing Room membership and Spectator states while
+  preserving person-specific Student names. Confirmed that shared-device actions remain one
+  device-level timeline without individual attribution, and that legacy internal participant and
+  student-event identifiers remain unchanged.
+- Required local QR generation with no external credential disclosure and made the read-only QR
+  action available to any authorized observer of the Account-owned Room.
 
 ## [2026-09-12] [monitor/ui] — Stabilize the CPR interval timer footprint
 

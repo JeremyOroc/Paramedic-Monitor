@@ -1,6 +1,6 @@
 import type { StudentEvent } from '@/types/session'
 
-// Students heartbeat every poll (~1.5-2s); the window tolerates a couple of
+// Scenario devices heartbeat every poll (~1.5-2s); the window tolerates a couple of
 // missed polls before a student reads as offline.
 export const CONNECTED_WINDOW_MS = 8000
 

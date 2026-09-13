@@ -9,9 +9,9 @@ function availability(overrides: Partial<Parameters<typeof resolveSpectatorAvail
     sessionStatus: 'active',
     connecting: false,
     connectionLost: true,
-    traineeConnected: true,
+    deviceConnected: true,
     hasProjection: true,
-    traineeName: 'Alice',
+    deviceName: 'Alice',
     ...overrides,
   })
 }
@@ -37,7 +37,7 @@ describe('SpectatorAvailabilityOverlay', () => {
       <SpectatorAvailabilityOverlay
         availability={availability({
           connectionLost: false,
-          traineeConnected: false,
+          deviceConnected: false,
           hasProjection: false,
         })}
         hasProjection={false}

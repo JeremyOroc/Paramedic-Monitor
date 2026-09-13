@@ -3,7 +3,7 @@ export type SpectatorAvailabilityKind =
   | 'room-ended'
   | 'connection-lost'
   | 'attempt-not-started'
-  | 'trainee-offline'
+  | 'device-offline'
   | 'waiting-for-monitor'
   | 'live'
 
@@ -19,24 +19,24 @@ type ResolveSpectatorAvailabilityOptions = {
   sessionStatus: 'waiting' | 'active' | 'ended' | null
   connecting: boolean
   connectionLost: boolean
-  traineeConnected: boolean
+  deviceConnected: boolean
   hasProjection: boolean
-  traineeName: string
+  deviceName: string
 }
 
 export function resolveSpectatorAvailability({
   sessionStatus,
   connecting,
   connectionLost,
-  traineeConnected,
+  deviceConnected,
   hasProjection,
-  traineeName,
+  deviceName,
 }: ResolveSpectatorAvailabilityOptions): SpectatorAvailability {
   if (connecting) {
     return {
       kind: 'connecting',
       headline: 'CONNECTING',
-      detail: `Connecting to ${traineeName}…`,
+      detail: `Connecting to ${deviceName}…`,
       tone: 'neutral',
       isLive: false,
     }
@@ -72,10 +72,10 @@ export function resolveSpectatorAvailability({
     }
   }
 
-  if (!traineeConnected) {
+  if (!deviceConnected) {
     return {
-      kind: 'trainee-offline',
-      headline: 'TRAINEE OFFLINE',
+      kind: 'device-offline',
+      headline: 'DEVICE OFFLINE',
       detail: hasProjection ? null : 'No monitor received',
       tone: 'degraded',
       isLive: false,
@@ -85,8 +85,8 @@ export function resolveSpectatorAvailability({
   if (!hasProjection) {
     return {
       kind: 'waiting-for-monitor',
-      headline: 'WAITING FOR TRAINEE MONITOR',
-      detail: 'The view appears when the trainee opens the monitor',
+      headline: 'WAITING FOR DEVICE MONITOR',
+      detail: 'The view appears when the device opens the monitor',
       tone: 'neutral',
       isLive: false,
     }

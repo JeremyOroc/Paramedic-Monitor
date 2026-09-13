@@ -6,6 +6,18 @@
 ---
 
 ## Current Phase
+**Inline Instructor Room QR and robust Room-code prefill — COMPLETE (2026-09-13).**
+The QR popup is replaced by a 176px inline disclosure in the Generate action's location, with explicit
+Hide/Generate focus continuity, responsive wrapping, Room-change reset, and automatic removal when a
+Room ends. Valid Room-code query values now populate on initial load and client-side query navigation
+without overwriting later manual input or auto-joining. The Device-nickname helper is removed while
+optional joining and automatic `Device N` allocation remain unchanged. All 170 focused tests,
+TypeScript, the Webpack production build, and rendered production-built lobby QA pass; ESLint has zero
+errors and the same 12 existing warnings. The complete suite records 1,376 passing tests and one skip,
+with the same three documented unrelated baseline failures. The production site still serves the
+older lobby; this host has no authenticated direct Vercel path, so the branch must be integrated into
+`main` for the configured GitHub deploy-hook workflow to attempt deployment.
+
 **Invariant Wagami X device geometry — COMPLETE (2026-09-13).**
 Zero-minimum shell and Monitor tracks now contain intrinsic clinical content within the established
 LCD, so it cannot resize the screen or push the physical right controls under the shell boundary. The

@@ -26,6 +26,7 @@ import {
 import { SaveButton } from '@/components/instructor/SaveButton'
 import { SendButton } from '@/components/instructor/SendButton'
 import { RoomCodeCopy } from '@/components/session/RoomCodeCopy'
+import { RoomQrCode } from '@/components/session/RoomQrCode'
 import { RoomLauncher, type ExistingRoom } from '@/components/session/RoomLauncher'
 import {
   CALLER_INFO_AUTO_SORT_FIELDS,
@@ -636,7 +637,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
       : sessionStatus === 'ended'
         ? 'This room has ended.'
         : participants.length === 0
-          ? 'No trainee has joined yet.'
+          ? 'No device has joined yet.'
           : null
 
     // CPR override and full instructor resets bypass Save → Send, so in a
@@ -1081,7 +1082,12 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
               <p className="font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp">
                 Room code
               </p>
-              <RoomCodeCopy code={session.code} className="mt-2" />
+              <div className="mt-2 flex flex-wrap items-stretch justify-between gap-2">
+                <RoomCodeCopy code={session.code} />
+                {sessionStatus !== 'ended' ? (
+                  <RoomQrCode key={session.code} code={session.code} />
+                ) : null}
+              </div>
               <p className="mt-2 text-sm text-neutral-300">
                 Status: <span className="font-bold uppercase">{sessionStatus}</span>
                 {' · '}Attempt{' '}
@@ -1153,7 +1159,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
                 className="flex flex-wrap items-center justify-between gap-3 border border-alarm-red/50 bg-alarm-red/10 px-3 py-2"
               >
                 <p className="font-mono text-xs uppercase tracking-wider text-alarm-red">
-                  Room ended — no longer accepting trainees
+                  Room ended — no longer accepting devices
                 </p>
                 <button
                   type="button"
@@ -1166,11 +1172,11 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
             )}
             <div className="mt-3 flex min-h-0 flex-1 flex-col border border-neutral-800 bg-black/40 p-3">
               <h2 className="font-mono text-xs font-black uppercase tracking-wider text-neutral-400">
-                Students
+                Devices
               </h2>
               <div className="mt-2 grid min-h-0 flex-1 content-start gap-2 overflow-y-auto pr-1">
                 {participants.length === 0 ? (
-                  <p className="text-sm text-neutral-500">No students joined yet.</p>
+                  <p className="text-sm text-neutral-500">No devices joined yet.</p>
                 ) : (
                   participants.map((participant) => {
                     const connected = isConnected(participant.last_seen_at)
