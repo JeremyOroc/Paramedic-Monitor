@@ -66,8 +66,20 @@ The Account-defined sequence of folders in My Scenarios or Administrator-defined
 _Avoid_: Alphabetical folder order, scenario order
 
 **Room**:
-The join-coded space owned by one Instructor Account and opened for trainees who join by nickname. It holds every Attempt run in it and the Evaluation record of each.
+The join-coded space owned by one Instructor Account and opened to Scenario devices. It holds every Attempt run in it and the Evaluation record of each.
 _Avoid_: Session, lobby, class
+
+**Scenario device**:
+A training-device presentation that joins a Room and may be operated by one or more Trainees during a scenario. A Room ordinarily has one Scenario device, although it may contain several.
+_Avoid_: Student, trainee, participant
+
+**Trainee**:
+A person participating in a scenario. One or more Trainees may share a Scenario device, so a Trainee is not inherently a Room member.
+_Avoid_: Device, participant, Account
+
+**Device nickname**:
+The optional Room-scoped label identifying a Scenario device.
+_Avoid_: Student name, trainee nickname, participant identity
 
 **Attempt**:
 A single instructor-led dispatch simulation run whose confirmed scenario and defibrillator model remain fixed until the attempt ends.
@@ -120,12 +132,12 @@ It is independent of the Selected receiving hospital and does not change the Tra
 _Avoid_: Receiving hospital, transport destination
 
 **Spectator view**:
-A host-authorized, read-only reproduction of one trainee's current simulator presentation, shown either inside the Instructor Console or as a standalone page. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
+A host-authorized, read-only reproduction of one Scenario device's current simulator presentation, shown either inside the Instructor Console or as a standalone page. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
 _Avoid_: Remote monitor, screen share, instructor monitor
 
 **Embedded Spectator**:
-The single selected trainee's Spectator view inside the Instructor Console. It can be Docked,
-Floating, or Fullscreen without changing the selected trainee or starting another projection poll.
+The single selected Scenario device's Spectator view inside the Instructor Console. It can be Docked,
+Floating, or Fullscreen without changing the selected device or starting another projection poll.
 _Avoid_: Preview, mini monitor, Live Evaluation
 
 **Docked Spectator**:
@@ -143,32 +155,32 @@ The same Embedded Spectator occupying browser-native fullscreen and returning to
 Floating mode when fullscreen ends.
 _Avoid_: Expanded preview, CSS fullscreen
 
-**Trainee monitor projection**:
-A point-in-time description of the trainee-specific simulator state needed to reproduce a Spectator view, including local interaction and timed-progress state.
+**Scenario device projection**:
+A point-in-time description of one Scenario device's simulator state needed to reproduce a Spectator view, including local interaction and timed-progress state.
 _Avoid_: Event replay, screen capture, shared monitor state
 
 **Projection freshness**:
-How current a trainee monitor projection is relative to the trainee's latest accepted simulator state. It is distinct from trainee presence and the Spectator presentation's own connection to the server.
+How current a Scenario device projection is relative to that device's latest accepted simulator state. It is distinct from device presence and the Spectator presentation's own connection to the server.
 _Avoid_: Connection status, participant presence
 
 **Spectator availability state**:
-The instructor-facing assessment of whether a selected trainee's Spectator view can be trusted as live. Its precise states distinguish Room lifecycle, Spectator connectivity, trainee presence, and whether a Trainee monitor projection exists.
-_Avoid_: Student status, connection status, live badge
+The instructor-facing assessment of whether a selected Scenario device's Spectator view can be trusted as live. Its precise states distinguish Room lifecycle, Spectator connectivity, device presence, and whether a Scenario device projection exists.
+_Avoid_: Student status, trainee status, connection status, live badge
 
 **Evaluation record**:
-The persistent Account-owned report of one Attempt across all participating trainees. It is created
-when the Attempt starts, autosaves each trainee action, confirmed clinical state, and Instructor
-change, and remains Incomplete until New Attempt or End Room completes it. It presents; it does not
-grade.
+The persistent Account-owned report of one Attempt across all participating Scenario devices. It is
+created when the Attempt starts, autosaves each Scenario device action, confirmed clinical state,
+and Instructor change, and remains Incomplete until New Attempt or End Room completes it. Actions
+from a shared device are not attributed to an individual Trainee. It presents; it does not grade.
 _Avoid_: Report data, session log, history
 
 **Student name**:
 An optional Instructor-entered name attached to an Evaluation record for identifying a learner. It
-is independent of the nickname a trainee used to join the Room and is not an Account. A record may
+is independent of the Device nickname used to join the Room and is not an Account. A record may
 hold up to 100 Student names of up to 100 characters each; blank entries are discarded and duplicate
 names are allowed. Entries are otherwise free-form and the application gives no inline privacy or
 institution-approved-identifier guidance.
-_Avoid_: Trainee nickname, student Account, participant identity
+_Avoid_: Device nickname, student Account, participant identity
 
 **Room controller**:
 The single signed-in browser authorized to mutate an Account-owned Room. Other devices for the same
@@ -197,9 +209,9 @@ _Avoid_: Linked scenario, current scenario
 One Send by the instructor as the evaluation record shows it: the difference from the previous Send in that attempt. Every Send is its own instructor change, including a correction seconds after the last one; the opening Send is the one instructor change with nothing before it.
 _Avoid_: Instructor row, state diff, send row, version
 
-**Trainee action**:
-A single thing the trainee did on the monitor that the evaluation record captures, such as a shock, a medication, or a blood-pressure reading.
-_Avoid_: Student event, user action, click
+**Scenario device action**:
+A single action captured from a Scenario device, such as a shock, a medication, or a blood-pressure reading. It does not identify which Trainee operated a shared device.
+_Avoid_: Student event, trainee attribution, user action, click
 
 **Confirmed defibrillator model**:
 The Wagami device model locked to the current attempt after the instructor completes Save, Send, and Start / Dispatch.
@@ -254,7 +266,7 @@ The newer touchscreen-oriented Wagami defibrillator model. It displays the same 
 _Avoid_: ZOLL, Zenix, Wagami-Z
 
 **Inert control**:
-A non-power Wagami Z control that visibly acknowledges pointing, focus, and pressing without changing monitor state, producing audio, or recording a trainee action.
+A non-power Wagami Z control that visibly acknowledges pointing, focus, and pressing without changing monitor state, producing audio, or recording a Scenario device action.
 _Avoid_: Disabled control, non-clickable control
 
 **Development display**:

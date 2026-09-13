@@ -9,13 +9,13 @@ const baseOptions = {
   sessionStatus: 'active' as const,
   connecting: false,
   connectionLost: false,
-  traineeConnected: true,
+  deviceConnected: true,
   hasProjection: true,
-  traineeName: 'Alice',
+  deviceName: 'Alice',
 }
 
 describe('resolveSpectatorAvailability', () => {
-  it('requires an active Room, healthy connection, current trainee, and projection for Live', () => {
+  it('requires an active Room, healthy connection, current device, and projection for Live', () => {
     expect(resolveSpectatorAvailability(baseOptions)).toMatchObject({
       kind: 'live',
       headline: 'LIVE',
@@ -27,8 +27,8 @@ describe('resolveSpectatorAvailability', () => {
   it.each([
     [{ connecting: true }, 'connecting', 'CONNECTING', 'Connecting to Alice…'],
     [{ sessionStatus: 'waiting' }, 'attempt-not-started', 'ATTEMPT NOT STARTED', 'Start / Dispatch to begin the attempt'],
-    [{ traineeConnected: false }, 'trainee-offline', 'TRAINEE OFFLINE', null],
-    [{ hasProjection: false }, 'waiting-for-monitor', 'WAITING FOR TRAINEE MONITOR', 'The view appears when the trainee opens the monitor'],
+    [{ deviceConnected: false }, 'device-offline', 'DEVICE OFFLINE', null],
+    [{ hasProjection: false }, 'waiting-for-monitor', 'WAITING FOR DEVICE MONITOR', 'The view appears when the device opens the monitor'],
   ] as const)('maps %o to %s', (overrides, kind, headline, detail) => {
     expect(resolveSpectatorAvailability({ ...baseOptions, ...overrides })).toMatchObject({
       kind,
@@ -41,10 +41,10 @@ describe('resolveSpectatorAvailability', () => {
   it('distinguishes offline with no monitor from a retained offline frame', () => {
     expect(resolveSpectatorAvailability({
       ...baseOptions,
-      traineeConnected: false,
+      deviceConnected: false,
       hasProjection: false,
     })).toMatchObject({
-      kind: 'trainee-offline',
+      kind: 'device-offline',
       detail: 'No monitor received',
       tone: 'degraded',
     })
@@ -62,7 +62,7 @@ describe('resolveSpectatorAvailability', () => {
       ...baseOptions,
       connectionLost: true,
       sessionStatus: 'ended',
-      traineeConnected: false,
+      deviceConnected: false,
     })).toMatchObject({
       kind: 'room-ended',
       detail: 'Final monitor state',
@@ -73,7 +73,7 @@ describe('resolveSpectatorAvailability', () => {
       ...baseOptions,
       connectionLost: true,
       sessionStatus: 'waiting',
-      traineeConnected: false,
+      deviceConnected: false,
     })).toMatchObject({
       kind: 'connection-lost',
       detail: 'Trying to reconnect…',
@@ -83,7 +83,7 @@ describe('resolveSpectatorAvailability', () => {
     expect(resolveSpectatorAvailability({
       ...baseOptions,
       sessionStatus: 'waiting',
-      traineeConnected: false,
+      deviceConnected: false,
       hasProjection: false,
     }).kind).toBe('attempt-not-started')
   })

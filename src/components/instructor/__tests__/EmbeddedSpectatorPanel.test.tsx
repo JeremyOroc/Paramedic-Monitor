@@ -404,7 +404,7 @@ describe('EmbeddedSpectatorPanel', () => {
     const panel = screen.getByLabelText('Embedded spectator')
     expect(panel).toHaveClass('h-[480px]', 'bg-black')
     expect(panel).not.toHaveClass('border-cyan-bp/60')
-    expect(screen.getByText('Select a student to spectate')).toBeInTheDocument()
+    expect(screen.getByText('Select a device to spectate')).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -420,7 +420,7 @@ describe('EmbeddedSpectatorPanel', () => {
       <EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />,
     )
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'WAITING FOR TRAINEE MONITOR. The view appears when the trainee opens the monitor',
+      'WAITING FOR DEVICE MONITOR. The view appears when the device opens the monitor',
     )
     expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
     unmount()
@@ -438,11 +438,11 @@ describe('EmbeddedSpectatorPanel', () => {
     )
     await waitFor(() => {
       expect(screen.getByRole('status')).toHaveTextContent(
-        'TRAINEE OFFLINE. No monitor received',
+        'DEVICE OFFLINE. No monitor received',
       )
     })
     expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black')
-    expect(screen.getByText('TRAINEE OFFLINE')).toHaveClass('text-pending-amber')
+    expect(screen.getByText('DEVICE OFFLINE')).toHaveClass('text-pending-amber')
   })
 
   it('contains the full frame in one inert uniformly-scaled canvas', async () => {
@@ -510,7 +510,7 @@ describe('EmbeddedSpectatorPanel', () => {
     render(<SpectatorHarness />)
 
     await waitFor(() => {
-      expect(screen.getByRole('status')).toHaveTextContent('TRAINEE OFFLINE')
+      expect(screen.getByRole('status')).toHaveTextContent('DEVICE OFFLINE')
     })
     expect(screen.getByTestId('spectator-availability-overlay')).toHaveClass('bg-black/85')
     expect(screen.getByRole('button', { name: 'Pin spectator mini-player' })).toBeEnabled()
@@ -565,7 +565,7 @@ describe('EmbeddedSpectatorPanel', () => {
     }), { status: 200 }))
 
     render(<SpectatorHarness />)
-    await screen.findByText('WAITING FOR TRAINEE MONITOR', { selector: 'p' })
+    await screen.findByText('WAITING FOR DEVICE MONITOR', { selector: 'p' })
     expect(fetchMock).toHaveBeenCalledTimes(1)
 
     await user.click(screen.getByRole('button', { name: 'Pin spectator mini-player' }))
@@ -701,7 +701,7 @@ describe('EmbeddedSpectatorPanel', () => {
     const errorTimer = timeoutSpy.mock.calls.find(([, delay]) => delay === 3000)?.[0]
     expect(errorTimer).toBeTypeOf('function')
     if (typeof errorTimer === 'function') act(() => errorTimer())
-    expect(screen.getByRole('status')).toHaveTextContent('WAITING FOR TRAINEE MONITOR')
+    expect(screen.getByRole('status')).toHaveTextContent('WAITING FOR DEVICE MONITOR')
   })
 
   it('disables fullscreen with an explanatory tooltip when the API is unavailable', () => {
@@ -744,7 +744,7 @@ describe('EmbeddedSpectatorPanel', () => {
     render(<SpectatorHarness initialMode="floating" />)
     await user.click(screen.getByRole('button', { name: 'Stop spectating' }))
 
-    expect(screen.getByText('Select a student to spectate')).toBeInTheDocument()
+    expect(screen.getByText('Select a device to spectate')).toBeInTheDocument()
     expect(screen.queryByText('Spectator pinned')).toBeNull()
   })
 

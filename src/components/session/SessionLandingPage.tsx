@@ -2,7 +2,9 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+
+import { isValidSessionCode } from '@/lib/session'
 
 function participantStorageKey(code: string) {
   return `paramedic-monitor.participant.${code.toUpperCase()}`
@@ -10,10 +12,22 @@ function participantStorageKey(code: string) {
 
 export function SessionLandingPage() {
   const router = useRouter()
-  const [code, setCode] = useState('')
+  const searchParams = useSearchParams()
+  const requestedCode = searchParams.get('code')?.trim().toUpperCase() ?? ''
+  const [codeDraft, setCodeDraft] = useState(() => ({
+    queryCode: requestedCode,
+    value: isValidSessionCode(requestedCode) ? requestedCode : '',
+  }))
+  const code =
+    codeDraft.queryCode === requestedCode
+      ? codeDraft.value
+      : isValidSessionCode(requestedCode)
+        ? requestedCode
+        : codeDraft.value
   const [nickname, setNickname] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const canJoin = isValidSessionCode(code.trim().toUpperCase())
 
   const joinRoom = async () => {
     const normalizedCode = code.trim().toUpperCase()
@@ -69,7 +83,12 @@ export function SessionLandingPage() {
               </span>
               <input
                 value={code}
-                onChange={(event) => setCode(event.target.value.toUpperCase())}
+                onChange={(event) => {
+                  setCodeDraft({
+                    queryCode: requestedCode,
+                    value: event.target.value.toUpperCase(),
+                  })
+                }}
                 maxLength={6}
                 autoCapitalize="characters"
                 className="border border-neutral-700 bg-black px-3 py-3 font-mono text-lg font-black uppercase tracking-[0.2em] text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
@@ -77,7 +96,7 @@ export function SessionLandingPage() {
             </label>
             <label className="grid gap-1">
               <span className="font-mono text-xs uppercase tracking-wider text-neutral-500">
-                Nickname
+                Device nickname (optional)
               </span>
               <input
                 value={nickname}
@@ -89,7 +108,7 @@ export function SessionLandingPage() {
             <button
               type="button"
               onClick={joinRoom}
-              disabled={busy || code.trim().length !== 6 || nickname.trim().length === 0}
+              disabled={busy || !canJoin}
               className="border border-cyan-bp bg-cyan-bp px-5 py-3 font-mono text-sm font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Join

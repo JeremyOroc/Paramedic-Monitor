@@ -1,12 +1,65 @@
 # Paramedic Monitor — Development Plan
 
 > Desktop-first cardiac monitor simulator for paramedic training.
-> Instructor controls vitals/rhythm in real time; students observe on a live monitor screen.
+> Instructor controls vitals/rhythm in real time; Trainees operate one or more joined Scenario devices.
 > Based on: Zoll X Series UI. Stack: Next.js (App Router), React, Tailwind CSS, Supabase Realtime.
 
 ---
 
 ## Current Requirement Updates
+
+- 2026-09-13 requirement revision — instructor Room QR and optional Device nickname: while an
+  Instructor-owned Room is open, place a `Generate QR Code for Room` action to the right of the
+  existing Room-code-and-Copy presentation. Activating it replaces that action in place with a
+  176px inline QR card headed `Scan to join Room <ROOM_CODE>` and followed by a `Hide QR code`
+  action; hiding the card restores the Generate action. Keyboard focus follows the replacing action
+  in both directions, the local disclosure state resets on reload or Room change, and the action/card
+  disappears when the Room ends. The card may wrap below the Room code when space is insufficient,
+  but it does not overlay or shrink the QR. Popup/dialog presentation, full-URL display, download,
+  and print controls are out of scope. The QR encodes the fixed production URL
+  `https://paramedic-monitor.vercel.app/?code=<ROOM_CODE>`. Opening that URL normalizes and prefills
+  the six-character Room Code field on both initial load and client-side query navigation but never
+  joins automatically. The existing `?dev=1|2` routes remain unchanged.
+- The joining entity is a Scenario device, not necessarily one Trainee. One or many Trainees may
+  share the same Scenario device during a scenario. Most Rooms will therefore have one joined device,
+  although multiple-device Rooms remain supported. The Device nickname field stays visible as
+  `Device nickname (optional)` without explanatory helper text, and Join becomes available with a
+  valid Room code alone.
+- A blank nickname with a valid stored participant token preserves that Scenario device's existing
+  nickname and identity. Otherwise the server assigns the lowest case-insensitively unused positive
+  `Device N` nickname for the Room, across all Attempts. Explicitly entered `Device N` names occupy
+  the same namespace, while other explicit nicknames retain the existing case-insensitive reclaim
+  behavior. Allocation must remain collision-safe when several devices join concurrently. The
+  resolved server nickname remains the value stored locally and shown in waiting, roster, Spectator,
+  and evaluation surfaces.
+- Instructor-facing Room-membership language uses `Devices`, `Select a device to spectate`, and
+  `Device offline`; the join field is `Device nickname (optional)`. Student or Trainee remains valid
+  only when copy refers to a person rather than a Room member. Evaluation actions remain one timeline
+  per Scenario device, and a shared device does not imply individual action attribution; the existing
+  independent Student names may identify the people involved. Existing internal identifiers such as
+  `participants`, `participant_id`, and `student_events` are deliberately retained to avoid an
+  unrelated schema migration.
+- QR creation is local to the authorized instructor browser and never sends the Room credential to an
+  external QR service. Like the existing Copy action, it is available to any signed-in observer of
+  their Account-owned Room and does not require that browser to be the active Room controller.
+
+### Testing — Instructor Room QR and optional Device nickname
+
+- Cover instructor-only inline QR replacement, accessible focus transfer and restoration, responsive
+  wrapping, Room-change/reset and ended-Room behavior, normalized QR payload, and the absence of
+  popup/download/print controls and trainee waiting-room QR controls.
+- Cover a valid `code` query parameter prefilling the Room Code input without submitting on initial
+  load and client-side query navigation, while preserving existing developer routes and normalizing
+  or rejecting untrusted query input.
+- Cover Join enabled from a valid Room code alone, optional-nickname copy without helper text,
+  blank-nickname submission, storage of the resolved server nickname, and unchanged explicit-nickname
+  joining.
+- Cover stored-token blank rejoin, lowest-unused Room-scoped `Device N` allocation, manually occupied
+  Device labels, case-insensitive collisions, continuity across Attempts, and concurrent allocation
+  without identity takeover.
+- Cover corrected instructor-facing device terminology, unchanged person-specific Student-name copy,
+  device-level evaluation attribution, observer access to the QR action, and proof that QR generation
+  makes no external service request.
 
 - 2026-09-10 requirement update — Instructor Console discoverability polish: when the authenticated
   Instructor Account already owns a waiting or active Room, the Console launcher presents that Room

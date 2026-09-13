@@ -80,7 +80,7 @@ export default function WaitingRoomPage() {
         </h1>
         <p className="mt-3 text-sm text-neutral-400">
           {status === 'ended'
-            ? 'This session is no longer accepting students.'
+            ? 'This Room is no longer accepting devices.'
             : nickname
               ? `${nickname}, you are in the room.`
               : 'You are in the room.'}
