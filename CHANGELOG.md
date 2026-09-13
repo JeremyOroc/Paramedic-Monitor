@@ -5,6 +5,17 @@
 
 ---
 
+## [2026-09-13] [instructor/monitor] — Set 3rd Degree Automatic FC to 60
+
+- Changed the canonical 3rd Degree FC lock from 40 to 60 across Instructor controls, direct and batch
+  edits, Saved scenarios, persistence hydration, shared Room state, trainee display, and pulse cadence.
+- Retimed the live complete-heart-block waveform to two ventricular escape complexes every two
+  seconds while retaining four independent P waves and the existing 120/min atrial cadence, AV
+  dissociation, QRS morphology, and static 12-lead capture.
+- Updated all affected regressions. All 325 focused tests, TypeScript, the Webpack production build,
+  and ESLint with zero errors and the same 12 warnings pass. The complete suite records 1,387 passing
+  tests and one skip with the same three documented unrelated failures.
+
 ## [2026-09-13] [instructor/monitor] — Revise heart-block Automatic FC rates
 
 - Changed 2nd Degree Type 2 from FC 40 to FC 80 and retimed its live three-beat ventricular cycle

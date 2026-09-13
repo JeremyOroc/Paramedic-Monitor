@@ -6,6 +6,15 @@
 ---
 
 ## Current Phase
+**3rd Degree Automatic FC 60 — COMPLETE (2026-09-13).**
+3rd Degree now locks FC On at 60 and runs two ventricular escape complexes every two seconds for a
+matching 60/min live cadence. Four independent P waves per cycle retain the existing 120/min atrial
+cadence and complete AV dissociation. QRS morphology, static 12-lead capture, lock restoration, CPR
+priority, persistence, shared Room behavior, and all other rhythms remain unchanged. All 325 focused
+automatic-rate, store, scenario, Instructor, display, capture, and waveform tests pass. TypeScript,
+the Webpack production build, and ESLint with zero errors and the same 12 warnings pass. The complete
+suite records 1,387 passing tests and one skip with the same three documented unrelated failures.
+
 **Revised heart-block Automatic FC rates — COMPLETE (2026-09-13).**
 2nd Degree Type 2 now locks FC On at 80 and runs its three conducted ventricular complexes at
 80/min. 3rd Degree now locks FC On at 40 and runs its two ventricular escape complexes at 40/min.

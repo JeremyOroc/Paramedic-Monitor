@@ -8,6 +8,30 @@
 
 ## Current Requirement Updates
 
+- 2026-09-13 requirement update — 3rd Degree Automatic FC 60: supersede the 40/min 3rd Degree
+  value below. Selecting 3rd Degree locks FC On at 60, and the live complete-heart-block waveform
+  runs two ventricular escape complexes every two seconds for a matching 60/min cadence. Its
+  independent atrial cadence remains 120/min. Existing AV dissociation, QRS morphology, static
+  12-lead capture, lock behavior, manual FC restoration, CPR priority, scenario/persistence/Room
+  enforcement, and all other rhythms remain unchanged.
+
+### Testing — 3rd Degree Automatic FC 60
+
+- Update automatic-rate, Instructor control, store, scenario, persistence, shared-state, display,
+  and pulse-cadence expectations from 40 to 60 for 3rd Degree.
+- Require the live waveform to produce two ventricular escape complexes per two-second cycle while
+  retaining four independent P waves per cycle and the existing 120/min atrial cadence.
+- Run the focused FC/store/scenario/Instructor/waveform suite, TypeScript, ESLint, and the production
+  build.
+
+**Completed 2026-09-13.** The canonical 3rd Degree Automatic FC lock is now 60, and the live waveform
+runs two ventricular escape complexes per two-second cycle for the same 60/min rate. Four independent
+P waves per cycle preserve the existing 120/min atrial cadence and AV dissociation. The waveform
+morphology and static 12-lead capture remain unchanged. All 325 focused automatic-rate, store,
+scenario, shared-state, Instructor, display, capture, and waveform tests pass. TypeScript, the Webpack
+production build, and ESLint with zero errors and the same 12 existing warnings pass. The complete
+suite records 1,387 passing tests and one skip with the same three documented unrelated failures.
+
 - 2026-09-13 requirement update — heart-block Automatic FC rates: supersede the 2026-09-12 fixed
   heart-block values. 2nd Degree Type 2 now locks FC On at 80 and its live ventricular cadence runs
   at 80/min. 3rd Degree now locks FC On at 40 and its live ventricular escape cadence runs at
