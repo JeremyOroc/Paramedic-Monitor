@@ -22,7 +22,7 @@ describe('automatic heart rate', () => {
     expect(getAutomaticHeartRate('torsades')).toBe(150)
     expect(getAutomaticHeartRate('asystole')).toBe(0)
     expect(getAutomaticHeartRate('second-degree-type-2')).toBe(80)
-    expect(getAutomaticHeartRate('third-degree')).toBe(40)
+    expect(getAutomaticHeartRate('third-degree')).toBe(60)
     expect(getAutomaticHeartRate('nsr')).toBeNull()
     expect(getAutomaticHeartRate('second-degree-type-1')).toBeNull()
   })

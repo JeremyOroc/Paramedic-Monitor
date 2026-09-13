@@ -801,7 +801,7 @@ describe('MonitorPage', () => {
 
   it.each([
     ['2nd Degree Type 2', 'second-degree-type-2', 80],
-    ['3rd Degree', 'third-degree', 40],
+    ['3rd Degree', 'third-degree', 60],
   ] as const)('drives the %s display and ECG at its locked FC', (_label, rhythm, heartRate) => {
     act(() => {
       const store = useMonitorStore.getState()

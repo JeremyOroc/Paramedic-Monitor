@@ -55,8 +55,8 @@ export const SECOND_DEGREE_TYPE_2_TUNING = {
 } as const
 
 export const THIRD_DEGREE_TUNING = {
-  cycleMs: 3000,
-  pWaves: 6,
+  cycleMs: 2000,
+  pWaves: 4,
   escapeBeats: 2,
 } as const
 
@@ -409,7 +409,7 @@ function synthThirdDegreeBlock(g: NsrGains = {}): Float32Array {
   const sGain = g.sGain ?? 1
   const tGain = g.tGain ?? 1
   const out = new Float32Array(SAMPLES)
-  const pWaves = [0.085, 0.245, 0.405, 0.565, 0.725, 0.885] as const
+  const pWaves = [0.085, 0.325, 0.565, 0.805] as const
   const escapeBeats = [
     { qrs: 0.165, t: 0.285 },
     { qrs: 0.650, t: 0.770 },

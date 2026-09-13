@@ -206,7 +206,7 @@ describe('monitorStore shared session state', () => {
   it.each([
     ['torsades', 150],
     ['second-degree-type-2', 80],
-    ['third-degree', 40],
+    ['third-degree', 60],
   ] as const)('normalizes shared %s to its active FC lock', (rhythm, hr) => {
     useMonitorStore.getState().applySharedState(
       makeShared({

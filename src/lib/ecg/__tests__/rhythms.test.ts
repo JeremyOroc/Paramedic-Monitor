@@ -314,13 +314,12 @@ describe('ECG_RHYTHMS', () => {
     const def = ECG_RHYTHMS['third-degree']
     assertNormalized(def, 'third-degree')
     expect(def.cycleMs).toBe(THIRD_DEGREE_TUNING.cycleMs)
-    expect((THIRD_DEGREE_TUNING.escapeBeats * 60000) / def.cycleMs!).toBe(40)
+    expect((THIRD_DEGREE_TUNING.escapeBeats * 60000) / def.cycleMs!).toBe(60)
+    expect((THIRD_DEGREE_TUNING.pWaves * 60000) / def.cycleMs!).toBe(120)
     expect(segmentPeak(def.data, 0.075, 0.095)).toBeGreaterThan(0.030)
-    expect(segmentPeak(def.data, 0.235, 0.255)).toBeGreaterThan(0.018)
-    expect(segmentPeak(def.data, 0.395, 0.415)).toBeGreaterThan(0.030)
+    expect(segmentPeak(def.data, 0.315, 0.335)).toBeGreaterThan(0.030)
     expect(segmentPeak(def.data, 0.555, 0.575)).toBeGreaterThan(0.030)
-    expect(segmentPeak(def.data, 0.715, 0.735)).toBeGreaterThan(-0.020)
-    expect(segmentPeak(def.data, 0.875, 0.895)).toBeGreaterThan(0.030)
+    expect(segmentPeak(def.data, 0.795, 0.815)).toBeGreaterThan(0.030)
     expect(segmentPeak(def.data, 0.15, 0.19)).toBeGreaterThan(0.38)
     expect(segmentTrough(def.data, 0.20, 0.28)).toBeLessThan(-0.08)
     expect(segmentPeak(def.data, 0.63, 0.67)).toBeGreaterThan(0.38)
@@ -333,7 +332,7 @@ describe('ECG_RHYTHMS', () => {
     const leadV1 = getLeadWaveform('third-degree', 'V1').data
 
     expect(segmentPeak(leadII, 0.075, 0.095)).toBeGreaterThan(0.030)
-    expect(segmentPeak(leadII, 0.235, 0.255)).toBeGreaterThan(0.018)
+    expect(segmentPeak(leadII, 0.315, 0.335)).toBeGreaterThan(0.018)
     expect(segmentPeak(leadII, 0.15, 0.19)).toBeGreaterThan(0.38)
     expect(segmentPeak(leadII, 0.63, 0.67)).toBeGreaterThan(0.38)
     expect(segmentPeak(leadV1, 0.075, 0.095)).toBeGreaterThan(0.010)

@@ -10,7 +10,7 @@ export const TORSADES_UNDERLYING_HEART_RATE = TORSADES_HEART_RATE_MIN
 export const TORSADES_COMPLEXES_PER_PACKET = 15
 export const ASYSTOLE_HEART_RATE = 0
 export const SECOND_DEGREE_TYPE_2_HEART_RATE = 80
-export const THIRD_DEGREE_HEART_RATE = 40
+export const THIRD_DEGREE_HEART_RATE = 60
 export const VITAL_ALARM_FLASH_MS = 1900
 
 export type AutomaticHeartRateRhythm = Extract<

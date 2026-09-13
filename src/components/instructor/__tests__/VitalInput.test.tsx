@@ -113,7 +113,7 @@ describe('VitalInput', () => {
     expect(screen.getByText('bpm')).toBeInTheDocument()
 
     act(() => useMonitorStore.getState().setDraft('rhythm', 'third-degree'))
-    expect(screen.getByLabelText('FC')).toHaveValue('40')
+    expect(screen.getByLabelText('FC')).toHaveValue('60')
     expect(screen.getByRole('button', { name: 'FC on' })).toBeDisabled()
 
     act(() => useMonitorStore.getState().setDraft('rhythm', 'nsr'))
