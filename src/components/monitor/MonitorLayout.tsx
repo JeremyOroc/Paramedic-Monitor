@@ -37,8 +37,8 @@ export function MonitorLayout({
     : 'grid-rows-[32px_24px_1fr]'
 
   const colsClass = showEnergy
-    ? (showRightVitals ? 'grid-cols-[56px_1fr_80px_96px]' : 'grid-cols-[56px_1fr_80px]')
-    : (showRightVitals ? 'grid-cols-[56px_1fr_96px]' : 'grid-cols-[56px_1fr]')
+    ? (showRightVitals ? 'grid-cols-[56px_minmax(0,1fr)_80px_96px]' : 'grid-cols-[56px_minmax(0,1fr)_80px]')
+    : (showRightVitals ? 'grid-cols-[56px_minmax(0,1fr)_96px]' : 'grid-cols-[56px_minmax(0,1fr)]')
 
   const topColSpanClass =
     showEnergy && showRightVitals
@@ -49,6 +49,7 @@ export function MonitorLayout({
 
   return (
     <div
+      data-testid="monitor-layout"
       className={cn(
         'w-full h-full overflow-hidden bg-black text-white',
         'grid',
@@ -56,16 +57,16 @@ export function MonitorLayout({
         rowsClass,
       )}
     >
-      <div className={cn('row-start-1', topColSpanClass)}>{topBar}</div>
-      <div className={cn('row-start-2', topColSpanClass)}>{subBar}</div>
+      <div className={cn('min-w-0 overflow-hidden row-start-1', topColSpanClass)}>{topBar}</div>
+      <div className={cn('min-w-0 overflow-hidden row-start-2', topColSpanClass)}>{subBar}</div>
 
       <div className={cn('row-start-3 col-start-1 border-r border-neutral-800 min-h-0 flex flex-col', showBottomRow && 'row-span-2')}>{sidebar}</div>
-      <div className="row-start-3 col-start-2 overflow-hidden min-h-0 flex flex-col">{main}</div>
+      <div data-testid="monitor-main-region" className="row-start-3 col-start-2 overflow-hidden min-h-0 min-w-0 flex flex-col">{main}</div>
 
       {showEnergy && (
         <div
           data-testid="monitor-energy-region"
-          className={cn('row-start-3 col-start-3 border-l border-neutral-800 min-h-0', showBottomRow && 'row-span-2')}
+          className={cn('row-start-3 col-start-3 border-l border-neutral-800 min-h-0 min-w-0 overflow-hidden', showBottomRow && 'row-span-2')}
         >
           {energyColumn}
         </div>
@@ -76,7 +77,7 @@ export function MonitorLayout({
           data-testid="monitor-vitals-region"
           data-placement={vitalsPlacement}
           className={cn(
-            'min-h-0',
+            'min-h-0 min-w-0 overflow-hidden',
             showBottomVitals
               ? 'row-start-4 col-start-2 border-t border-neutral-800'
               : cn(
@@ -90,7 +91,7 @@ export function MonitorLayout({
         </div>
       )}
 
-      {showBottomBar && <div className="row-start-4 col-start-2">{bottomBar}</div>}
+      {showBottomBar && <div data-testid="monitor-bottom-region" className="row-start-4 col-start-2 min-w-0 overflow-hidden">{bottomBar}</div>}
     </div>
   )
 }

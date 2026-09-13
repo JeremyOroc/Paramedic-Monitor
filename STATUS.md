@@ -6,6 +6,29 @@
 ---
 
 ## Current Phase
+**Invariant Wagami X device geometry — COMPLETE (2026-09-13).**
+Zero-minimum shell and Monitor tracks now contain intrinsic clinical content within the established
+LCD, so it cannot resize the screen or push the physical right controls under the shell boundary. The
+analysis/CPR lower row shares its remaining width in a 2:1 ratio around the exact timer track; at the
+reproduced viewport its cells measure 212.66px, 68.52px, and 106.33px inside the unchanged 403.52px
+bottom region. Rendered replay keeps the 940.02px shell, 570.88px screen frame, 144.36px right-control
+cluster, Home button, Patient Event button, and 555.52px Monitor surface at identical rectangles from
+idle through Analyze, CPR, and the charge prompt. Every right control remains fully visible. The
+Resting-to-Defib vital transition and charge energy scale remain unchanged. All 142 focused tests,
+TypeScript, ESLint with zero errors and the same 12 warnings, and the Webpack production build pass.
+The complete suite records 1,387 passing tests and one skip with the same three unrelated failures.
+
+**Exact CPR interval content reservation — COMPLETE (2026-09-13).**
+The shared Wagami X status bar now keeps its real `CPR Time` label and fixed four-character value
+mounted but invisible and excluded from accessibility output throughout every analysis state. CPR
+reveals those same elements without introducing new intrinsic content, so trainee and Spectator
+geometry no longer expands when the countdown appears. Browser replay holds the bottom bar at
+468.52px, the timer slot at 68.52px, and its content at 66.52px across `ANALYZING ECG`, `STAND CLEAR`,
+`SHOCK NOT ADVISED`, and `Perform CPR`; only visibility changes. All 124 focused tests, TypeScript,
+ESLint with zero errors and the same 12 warnings, and the Webpack production build pass. The complete
+suite records 1,386 passing tests and one skip; its three established unrelated failures remain, and
+one load-sensitive fullscreen-map failure passed all 10 tests immediately alone.
+
 **3rd Degree Automatic FC 60 — COMPLETE (2026-09-13).**
 3rd Degree now locks FC On at 60 and runs two ventricular escape complexes every two seconds for a
 matching 60/min live cadence. Four independent P waves per cycle retain the existing 120/min atrial

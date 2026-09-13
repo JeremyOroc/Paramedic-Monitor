@@ -19,7 +19,7 @@ describe('BottomStatusBar CPR timer sizing', () => {
     vi.clearAllMocks()
   })
 
-  it('reserves one contained timer slot across Analyze and CPR', () => {
+  it('reserves the exact hidden timer content across every Analyze state and CPR', () => {
     const { rerender } = render(
       <BottomStatusBar
         defibState="analyzing_ecg"
@@ -31,11 +31,35 @@ describe('BottomStatusBar CPR timer sizing', () => {
 
     const timerSlot = screen.getByTestId('cpr-timer-slot')
     expect(timerSlot).toHaveClass(
-      'min-w-0',
-      'flex-1',
       'overflow-hidden',
+      'bg-black',
     )
-    expect(screen.queryByTestId('cpr-timer-value')).toBeNull()
+    const timerContent = screen.getByTestId('cpr-timer-content')
+    const timerValue = screen.getByTestId('cpr-timer-value')
+    expect(timerContent).toHaveClass('invisible')
+    expect(timerContent).toHaveAttribute('aria-hidden', 'true')
+    expect(timerValue).toHaveTextContent('2:00')
+
+    for (const defibState of [
+      'analyzing_clear',
+      'analyzing_result',
+      'shock_advised',
+    ] as const) {
+      rerender(
+        <BottomStatusBar
+          defibState={defibState}
+          joules={120}
+          shockCount={0}
+          cprStartTime={null}
+        />,
+      )
+
+      expect(screen.getByTestId('cpr-timer-slot')).toBe(timerSlot)
+      expect(screen.getByTestId('cpr-timer-content')).toBe(timerContent)
+      expect(screen.getByTestId('cpr-timer-value')).toBe(timerValue)
+      expect(timerContent).toHaveClass('invisible')
+      expect(timerContent).toHaveAttribute('aria-hidden', 'true')
+    }
 
     rerender(
       <BottomStatusBar
@@ -47,7 +71,12 @@ describe('BottomStatusBar CPR timer sizing', () => {
     )
 
     expect(screen.getByTestId('cpr-timer-slot')).toBe(timerSlot)
-    expect(screen.getByTestId('cpr-timer-value')).toHaveTextContent('2:00')
+    expect(screen.getByTestId('cpr-timer-content')).toBe(timerContent)
+    expect(screen.getByTestId('cpr-timer-value')).toBe(timerValue)
+    expect(timerSlot).toHaveClass('bg-white')
+    expect(timerContent).not.toHaveClass('invisible')
+    expect(timerContent).not.toHaveAttribute('aria-hidden')
+    expect(timerValue).toHaveTextContent('2:00')
   })
 
   it('keeps the same fixed value box from 2:00 through 1:59 and 0:00', () => {
@@ -84,8 +113,8 @@ describe('BottomStatusBar CPR timer sizing', () => {
     expect(timerValue).toHaveTextContent('0:00')
   })
 
-  it('prevents the fixed side cells from shrinking into the timer slot', () => {
-    const { container } = render(
+  it('shares the remaining status-row width between contained 2:1 side tracks', () => {
+    render(
       <BottomStatusBar
         defibState="cpr"
         joules={120}
@@ -94,8 +123,20 @@ describe('BottomStatusBar CPR timer sizing', () => {
       />,
     )
 
-    const lowerRow = container.querySelector('.mt-1')
-    expect(lowerRow?.firstElementChild).toHaveClass('w-64', 'shrink-0')
-    expect(lowerRow?.lastElementChild).toHaveClass('w-32', 'shrink-0')
+    expect(screen.getByTestId('cpr-status-row')).toHaveClass(
+      'grid',
+      'grid-cols-[minmax(0,2fr)_max-content_minmax(0,1fr)]',
+      'overflow-hidden',
+    )
+    expect(screen.getByTestId('cpr-status-left')).toHaveClass(
+      'min-w-0',
+      'overflow-hidden',
+    )
+    expect(screen.getByTestId('cpr-shock-count')).toHaveClass(
+      'min-w-0',
+      'overflow-hidden',
+    )
+    expect(screen.getByTestId('cpr-status-left')).not.toHaveClass('w-64', 'shrink-0')
+    expect(screen.getByTestId('cpr-shock-count')).not.toHaveClass('w-32', 'shrink-0')
   })
 })

@@ -20,6 +20,17 @@ describe('MonitorLayout', () => {
     expect(screen.getByText('main-content')).toBeInTheDocument()
     expect(screen.getByText('vitals-strip')).toBeInTheDocument()
     expect(screen.getByText('bottom-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('monitor-layout')).toHaveClass(
+      'grid-cols-[56px_minmax(0,1fr)_96px]',
+    )
+    expect(screen.getByTestId('monitor-main-region')).toHaveClass(
+      'min-w-0',
+      'overflow-hidden',
+    )
+    expect(screen.getByTestId('monitor-bottom-region')).toHaveClass(
+      'min-w-0',
+      'overflow-hidden',
+    )
     expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
       'data-placement',
       'right',
@@ -61,7 +72,7 @@ describe('MonitorLayout', () => {
       'col-start-2',
     )
     expect(container.firstChild).toHaveClass(
-      'grid-cols-[56px_1fr]',
+      'grid-cols-[56px_minmax(0,1fr)]',
       'grid-rows-[32px_24px_1fr_110px]',
     )
   })
@@ -80,7 +91,11 @@ describe('MonitorLayout', () => {
     )
 
     expect(container.firstChild).toHaveClass(
-      'grid-cols-[56px_1fr_80px_96px]',
+      'grid-cols-[56px_minmax(0,1fr)_80px_96px]',
+    )
+    expect(screen.getByTestId('monitor-energy-region')).toHaveClass(
+      'min-w-0',
+      'overflow-hidden',
     )
     expect(screen.getByTestId('monitor-energy-region')).toBeInTheDocument()
     expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
