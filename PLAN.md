@@ -9,14 +9,19 @@
 ## Current Requirement Updates
 
 - 2026-09-13 requirement revision — instructor Room QR and optional Device nickname: while an
-  Instructor-owned Room is open, place a `Generate QR Code for Room` action to the right of the
-  existing Room-code-and-Copy presentation. Activating it replaces that action in place with a
-  176px inline QR card headed `Scan to join Room <ROOM_CODE>` and followed by a `Hide QR code`
-  action; hiding the card restores the Generate action. Keyboard focus follows the replacing action
-  in both directions, the local disclosure state resets on reload or Room change, and the action/card
-  disappears when the Room ends. The card may wrap below the Room code when space is insufficient,
-  but it does not overlay or shrink the QR. Popup/dialog presentation, full-URL display, download,
-  and print controls are out of scope. The QR encodes the fixed production URL
+  Instructor-owned Room is open, divide the complete fixed-height Room-controls panel into a stable
+  internal 65%/35% grid. The left region owns Room code and Copy, status and Attempt context, Room
+  actions, notices, and the complete internally scrolling Devices list. The right rail is dedicated
+  exclusively to `Generate QR Code for Room` and its expanded QR presentation, uses a subtle neutral
+  left divider, and vertically and horizontally centers one stable 202px control slot. The 35% rail
+  has an approximately 202px minimum and may therefore exceed 35% at narrow supported widths; it
+  never stacks, overlays, stretches, or compresses the left-side controls when the QR changes state.
+  Activating Generate replaces that action within the same slot with a fixed 176px QR card headed
+  `Scan to join Room <ROOM_CODE>` and followed by a `Hide QR code` action; hiding the card restores
+  Generate. Keyboard focus follows the replacing action in both directions, the local disclosure
+  state resets on reload or Room change, and an ended Room removes the rail so the left region returns
+  to full width. Popup/dialog presentation, full-URL display, download, and print controls are out of
+  scope. The QR encodes the fixed production URL
   `https://paramedic-monitor.vercel.app/?code=<ROOM_CODE>`. Opening that URL normalizes and prefills
   the six-character Room Code field on both initial load and client-side query navigation but never
   joins automatically. The existing `?dev=1|2` routes remain unchanged.
@@ -45,9 +50,10 @@
 
 ### Testing — Instructor Room QR and optional Device nickname
 
-- Cover instructor-only inline QR replacement, accessible focus transfer and restoration, responsive
-  wrapping, Room-change/reset and ended-Room behavior, normalized QR payload, and the absence of
-  popup/download/print controls and trainee waiting-room QR controls.
+- Cover the stable 65%/35% Room-controls partition, isolated left-side geometry and Devices scrolling,
+  approximately 202px minimum dedicated QR rail, centered same-width closed and expanded states,
+  accessible focus transfer and restoration, Room-change reset, ended-Room full-width recovery,
+  normalized QR payload, and the absence of popup/download/print controls and trainee QR controls.
 - Cover a valid `code` query parameter prefilling the Room Code input without submitting on initial
   load and client-side query navigation, while preserving existing developer routes and normalizing
   or rejecting untrusted query input.

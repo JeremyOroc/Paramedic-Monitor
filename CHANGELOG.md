@@ -5,6 +5,32 @@
 
 ---
 
+## [2026-09-13] [instructor/ui] — Isolate Room operations from the QR rail
+
+- Rebuilt the fixed-height Room-controls panel as a 65%/35% internal grid: Room code, status, actions,
+  notices, and the scrolling Devices list stay in the left operational column, while QR controls own a
+  dedicated right rail with an approximately 202px minimum and subtle neutral divider.
+- Centered a stable 202px Generate/expanded slot in the rail and retained the fixed 176px QR, so opening
+  and hiding it cannot stretch Room code/Copy, move the operational controls, or compress Devices.
+- Preserved Generate/Hide focus transfer, Room-change reset, observer access, and ended-Room behavior;
+  ended Rooms remove the rail and restore a single full-width operational column.
+- Added structural, minimum-width, state-isolation, fixed-size, and ended-Room regressions. All 46
+  focused component/Admin tests, TypeScript, ESLint with zero errors and the same 12 warnings, and the
+  Webpack production build pass. The complete suite records 1,399 passing tests and one skip with the
+  same three documented unrelated failures. Authenticated rendered Instructor QA remains blocked by
+  the local sign-in redirect.
+
+## [2026-09-13] [planning/ui] — Define a dedicated Room QR rail
+
+- Replaced the shared Room-code/QR header-row layout with an accepted full-height internal partition:
+  65% for Room operations and the Devices list, and 35% exclusively for QR controls.
+- Set an approximately 202px minimum for the right rail, retained the fixed 176px QR, centered a
+  same-width Generate/expanded control slot, and prohibited stacking or left-side geometry changes.
+- Required a subtle neutral divider, preserved the fixed 480px panel and internal Devices scrolling,
+  and restored full-width left content when an ended Room removes the QR rail.
+- No domain language or architectural decision changed, so `CONTEXT.md` and the existing ADR remain
+  unchanged. Application implementation and verification are pending.
+
 ## [2026-09-13] [session/ui] — Replace the Room QR popup with an inline disclosure
 
 - Replaced the modal QR presentation with a 176px inline card in the Generate action's location,

@@ -11,14 +11,17 @@ describe('RoomQrCode', () => {
     render(<RoomQrCode code="abc234" />)
 
     const trigger = screen.getByRole('button', { name: 'Generate QR Code for Room' })
+    expect(trigger).toHaveClass('w-[202px]')
     await user.click(trigger)
 
     expect(screen.queryByRole('dialog')).toBeNull()
-    expect(
-      screen.getByRole('region', { name: 'QR code to join Room ABC234' }),
-    ).toBeInTheDocument()
+    const qrCard = screen.getByRole('region', { name: 'QR code to join Room ABC234' })
+    expect(qrCard).toHaveClass('w-[202px]')
     expect(screen.getByText('Scan to join Room ABC234')).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'QR code for Room ABC234' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'QR code for Room ABC234' })).toHaveAttribute(
+      'width',
+      '176',
+    )
     expect(screen.queryByRole('button', { name: /download|print/i })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Generate QR Code for Room' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Hide QR code' })).toHaveFocus()
