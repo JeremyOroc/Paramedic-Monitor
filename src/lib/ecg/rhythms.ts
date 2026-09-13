@@ -1,3 +1,4 @@
+import { TORSADES_COMPLEXES_PER_PACKET } from '@/lib/automaticHeartRate'
 import type { Etco2Waveform, Rhythm, Spo2Waveform } from '@/types/vitals'
 
 export type WaveformDef = {
@@ -30,7 +31,7 @@ export const ASYSTOLE_TUNING = {
 
 export const TORSADES_TUNING = {
   cycleMs: 3900,
-  beatCount: 15,
+  beatCount: TORSADES_COMPLEXES_PER_PACKET,
   patternCount: 4,
   peak: 0.95,
   trough: -0.84,
@@ -48,13 +49,13 @@ export const SECOND_DEGREE_TYPE_1_TUNING = {
 } as const
 
 export const SECOND_DEGREE_TYPE_2_TUNING = {
-  cycleMs: 3600,
+  cycleMs: 4500,
   conductedBeats: 3,
   droppedPPhase: 0.825,
 } as const
 
 export const THIRD_DEGREE_TUNING = {
-  cycleMs: 4200,
+  cycleMs: 6000,
   pWaves: 6,
   escapeBeats: 2,
 } as const

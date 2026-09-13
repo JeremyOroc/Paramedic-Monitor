@@ -6,6 +6,19 @@
 ---
 
 ## Current Phase
+**Rhythm-owned Automatic FC locks — COMPLETE (2026-09-13).**
+The shared Instructor Console now forces FC On and locks its editor for Torsades, 2nd Degree Type 2,
+and 3rd Degree. Torsades presents `AUTO 150–250` to the Instructor and runs a deterministic,
+Room-synchronized whole-number rate for each 15-complex packet; that value drives the trainee and
+Spectator FC, ECG timing, SpO2 pulse cadence, alarms, Wagami X/Z, and Vital Log. 2nd Degree Type 2 is
+fixed at 40 with a 40/min ventricular cadence, while 3rd Degree is fixed at 20 with a 20/min escape
+cadence. CPR retains priority at 120 or 90 and the locked rhythm resumes afterward. Leaving the
+locked group restores the prior manual FC value and On/Off state. All 291 focused tests, TypeScript,
+ESLint with zero errors and the same 12 warnings, and the Webpack production build pass. The full
+suite records 1,376 passing tests and one skip; 11 unrelated failures remain in Windows operations
+script execution, invite-only config parsing, Room ownership expectations, and a stale Patient Info
+color-class assertion.
+
 **Stable CPR interval timer footprint — COMPLETE (2026-09-12).**
 The Wagami X CPR timer now keeps one mounted, overflow-contained flex slot across Analyze and CPR.
 Its current typeface uses tabular numerals inside a centered fixed four-character value box, while the

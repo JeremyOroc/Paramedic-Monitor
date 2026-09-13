@@ -292,8 +292,10 @@ export type MonitorState = {
   confirmedVitalActive: VitalActiveState
   /** Last rhythm chosen while ECG was on; restored when it is switched back on. */
   lastRhythm: ActiveRhythm
-  /** Runtime-only FC restored after leaving an automatic rhythm; hydration/scenario loading clears it. */
+  /** FC value restored after leaving an automatic rhythm group. */
   manualHrBeforeAuto: number | null
+  /** FC channel state restored after leaving a rhythm-owned Automatic FC lock. */
+  manualHrActiveBeforeLock: boolean | null
   callerInfoDraft: CallerInfo
   callerInfoSaved: CallerInfo
   callerInfoConfirmed: CallerInfo
@@ -361,6 +363,7 @@ export const useMonitorStore = create<MonitorState>()(
       confirmedVitalActive: inactiveVitals,
       lastRhythm: DEFAULT_ACTIVE_RHYTHM,
       manualHrBeforeAuto: null,
+      manualHrActiveBeforeLock: null,
       callerInfoDraft: DEFAULT_CALLER_INFO,
       callerInfoSaved: DEFAULT_CALLER_INFO,
       callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -388,7 +391,10 @@ export const useMonitorStore = create<MonitorState>()(
           const nextRhythm = field === 'rhythm' ? (value as Rhythm) : previousRhythm
           const wasAutomatic = isAutomaticHeartRateRhythm(previousRhythm)
           const isAutomatic = isAutomaticHeartRateRhythm(nextRhythm)
+          const wasToggleLocked = isHeartRateToggleLockedRhythm(previousRhythm)
+          const isToggleLocked = isHeartRateToggleLockedRhythm(nextRhythm)
           let manualHrBeforeAuto = s.manualHrBeforeAuto
+          let manualHrActiveBeforeLock = s.manualHrActiveBeforeLock
           let draftVitalActive = s.draftVitalActive
           const draft: Vitals = { ...s.draft, [field]: value }
 
@@ -400,6 +406,17 @@ export const useMonitorStore = create<MonitorState>()(
             } else if (wasAutomatic) {
               draft.hr = manualHrBeforeAuto ?? DEFAULT_VITALS.hr
               manualHrBeforeAuto = null
+            }
+
+            if (isToggleLocked) {
+              if (!wasToggleLocked) manualHrActiveBeforeLock = s.draftVitalActive.hr
+              draftVitalActive = { ...draftVitalActive, hr: true }
+            } else if (wasToggleLocked) {
+              draftVitalActive = {
+                ...draftVitalActive,
+                hr: manualHrActiveBeforeLock ?? s.draftVitalActive.hr,
+              }
+              manualHrActiveBeforeLock = null
             }
           }
           if (field === 'spo2') {
@@ -420,6 +437,7 @@ export const useMonitorStore = create<MonitorState>()(
             draftVitalsActive: anyVitalActive(draftVitalActive),
             lastRhythm,
             manualHrBeforeAuto,
+            manualHrActiveBeforeLock,
           }
         }),
       setTimedDraftVitals: (vitals) =>
@@ -481,13 +499,17 @@ export const useMonitorStore = create<MonitorState>()(
       setDispatchSeconds: (seconds) =>
         set({ dispatchSeconds: Math.min(59, Math.max(0, Math.floor(seconds) || 0)) }),
       applyScenarioDraft: (snapshot) =>
-        set(() => {
+        set((s) => {
           const draft = normalizeVitals(snapshot.monitor.draft)
           const draftVitalActive = normalizeVitalActive(
             snapshot.monitor.draftVitalActive,
             undefined,
           )
-          if (isAutomaticHeartRateRhythm(draft.rhythm)) draftVitalActive.hr = true
+          const isAutomatic = isAutomaticHeartRateRhythm(draft.rhythm)
+          const isToggleLocked = isHeartRateToggleLockedRhythm(draft.rhythm)
+          const wasAutomatic = isAutomaticHeartRateRhythm(s.draft.rhythm)
+          const wasToggleLocked = isHeartRateToggleLockedRhythm(s.draft.rhythm)
+          if (isAutomatic) draftVitalActive.hr = true
           const originAddress = snapshot.dispatch.originAddress.trim() || JOHN_ABBOTT_ADDRESS
 
           return {
@@ -498,7 +520,16 @@ export const useMonitorStore = create<MonitorState>()(
             draftVitalActive,
             draftVitalsActive: anyVitalActive(draftVitalActive),
             lastRhythm: normalizeActiveRhythm(snapshot.monitor.lastRhythm),
-            manualHrBeforeAuto: null,
+            manualHrBeforeAuto: isAutomatic
+              ? wasAutomatic
+                ? (s.manualHrBeforeAuto ?? s.draft.hr)
+                : s.draft.hr
+              : null,
+            manualHrActiveBeforeLock: isToggleLocked
+              ? wasToggleLocked
+                ? (s.manualHrActiveBeforeLock ?? s.draftVitalActive.hr)
+                : s.draftVitalActive.hr
+              : null,
             callerInfoDraft: normalizeCallerInfo(snapshot.callerInfo),
             dispatchMinutes: Math.max(0, Math.floor(snapshot.dispatch.minutes) || 0),
             dispatchSeconds: Math.min(
@@ -598,6 +629,7 @@ export const useMonitorStore = create<MonitorState>()(
           savedVitalActive: inactiveVitals,
           confirmedVitalActive: inactiveVitals,
           manualHrBeforeAuto: null,
+          manualHrActiveBeforeLock: null,
           monitorResetVersion: s.monitorResetVersion + 1,
           etco2CalibrationStatus: 'idle',
           cprMode: 'off',
@@ -742,6 +774,7 @@ export const useMonitorStore = create<MonitorState>()(
             shared.confirmedVitalActive,
             undefined,
           )
+          if (isHeartRateToggleLockedRhythm(confirmed.rhythm)) confirmedVitalActive.hr = true
 
           // Dispatch timing/content is instructor-authoritative, but the gate
           // progress belongs to this trainee. Same run keeps their progress; a
@@ -831,6 +864,7 @@ export const useMonitorStore = create<MonitorState>()(
             confirmedVitalActive: inactiveVitals,
             lastRhythm: DEFAULT_ACTIVE_RHYTHM,
             manualHrBeforeAuto: null,
+            manualHrActiveBeforeLock: null,
             callerInfoDraft: DEFAULT_CALLER_INFO,
             callerInfoSaved: DEFAULT_CALLER_INFO,
             callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -866,6 +900,7 @@ export const useMonitorStore = create<MonitorState>()(
           confirmedVitalActive: inactiveVitals,
           lastRhythm: DEFAULT_ACTIVE_RHYTHM,
           manualHrBeforeAuto: null,
+          manualHrActiveBeforeLock: null,
           callerInfoDraft: DEFAULT_CALLER_INFO,
           callerInfoSaved: DEFAULT_CALLER_INFO,
           callerInfoConfirmed: DEFAULT_CALLER_INFO,
@@ -887,7 +922,7 @@ export const useMonitorStore = create<MonitorState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 10,
+      version: 11,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist
@@ -959,7 +994,16 @@ export const useMonitorStore = create<MonitorState>()(
           savedVitalsActive: anyVitalActive(savedVitalActive),
           confirmedVitalsActive: anyVitalActive(confirmedVitalActive),
           lastRhythm: normalizeActiveRhythm(persistedState?.lastRhythm),
-          manualHrBeforeAuto: null,
+          manualHrBeforeAuto:
+            isAutomaticHeartRateRhythm(draft.rhythm) &&
+            typeof persistedState?.manualHrBeforeAuto === 'number'
+              ? persistedState.manualHrBeforeAuto
+              : null,
+          manualHrActiveBeforeLock:
+            isHeartRateToggleLockedRhythm(draft.rhythm) &&
+            typeof persistedState?.manualHrActiveBeforeLock === 'boolean'
+              ? persistedState.manualHrActiveBeforeLock
+              : null,
           callerInfoDraft: normalizeCallerInfo(persistedState?.callerInfoDraft),
           callerInfoSaved: normalizeCallerInfo(persistedState?.callerInfoSaved),
           callerInfoConfirmed: normalizeCallerInfo(persistedState?.callerInfoConfirmed),

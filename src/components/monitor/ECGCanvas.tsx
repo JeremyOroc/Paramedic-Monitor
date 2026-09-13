@@ -8,6 +8,7 @@ import {
   getEcgRhythm,
 } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
+import { getTorsadesPacketDurationMs } from '@/lib/automaticHeartRate'
 import { COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
@@ -40,6 +41,7 @@ function LiveECGCanvas({
       getSignalKey: () => (get().cprOverride ? 'cpr-compression' : get().rhythm),
       getCycleMs: () => {
         if (get().cprOverride) return getCprCompressionCycleMs(get().hr)
+        if (get().rhythm === 'torsades') return getTorsadesPacketDurationMs(get().hr)
         return ECG_RHYTHMS[get().rhythm].cycleMs ?? 60000 / Math.max(20, get().hr)
       },
     }),

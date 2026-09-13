@@ -77,7 +77,7 @@ describe('monitorStore', () => {
     expect(s.confirmedVitalActive.hr).toBe(false)
   })
 
-  it('locks VF, VT, and Asystole FC across direct and batch entry paths', () => {
+  it('locks every automatic FC value across direct and batch entry paths', () => {
     const store = useMonitorStore.getState()
     store.setDraft('hr', 88)
     store.setDraft('rhythm', 'vf')
@@ -101,6 +101,21 @@ describe('monitorStore', () => {
     store.setTimedDraftVitals({ hr: 74 })
     store.setDraftVitalValues({ hr: 76 })
     expect(useMonitorStore.getState().draft.hr).toBe(0)
+
+    store.setDraft('rhythm', 'torsades')
+    expect(useMonitorStore.getState().draft.hr).toBe(150)
+    store.setTimedDraftVitals({ hr: 180 })
+    expect(useMonitorStore.getState().draft.hr).toBe(150)
+
+    store.setDraft('rhythm', 'second-degree-type-2')
+    expect(useMonitorStore.getState().draft.hr).toBe(40)
+    store.setDraftVitalValues({ hr: 72 })
+    expect(useMonitorStore.getState().draft.hr).toBe(40)
+
+    store.setDraft('rhythm', 'third-degree')
+    expect(useMonitorStore.getState().draft.hr).toBe(20)
+    store.setDraft('hr', 72)
+    expect(useMonitorStore.getState().draft.hr).toBe(20)
   })
 
   it('restores the current interaction manual FC after leaving an automatic rhythm', () => {
@@ -123,13 +138,33 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().draft.hr).toBe(190)
   })
 
-  it('keeps FC On while Asystole is active', () => {
-    const store = useMonitorStore.getState()
-    store.setDraft('rhythm', 'asystole')
-    store.setDraftVitalActive('hr', false)
+  it.each(['torsades', 'asystole', 'second-degree-type-2', 'third-degree'] as const)(
+    'keeps FC On while %s owns the FC lock',
+    (rhythm) => {
+      const store = useMonitorStore.getState()
+      store.setDraft('rhythm', rhythm)
+      store.setDraftVitalActive('hr', false)
 
+      expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+    },
+  )
+
+  it('restores the manual FC value and channel state after the locked rhythm group', () => {
+    const store = useMonitorStore.getState()
+    store.setDraft('hr', 88)
+    store.setDraftVitalActive('hr', false)
+    store.setDraft('rhythm', 'torsades')
+    store.setDraft('rhythm', 'second-degree-type-2')
+    store.setDraft('rhythm', 'third-degree')
+
+    expect(useMonitorStore.getState().draft).toMatchObject({ rhythm: 'third-degree', hr: 20 })
     expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
-    expect(useMonitorStore.getState().draft.hr).toBe(0)
+
+    store.setDraft('rhythm', 'nsr')
+    expect(useMonitorStore.getState().draft).toMatchObject({ rhythm: 'nsr', hr: 88 })
+    expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
+    expect(useMonitorStore.getState().manualHrBeforeAuto).toBeNull()
+    expect(useMonitorStore.getState().manualHrActiveBeforeLock).toBeNull()
   })
 
   it('save copies draft to saved without touching confirmed', () => {
@@ -1128,7 +1163,7 @@ describe('persist migration', () => {
     expect(state.defibrillatorModelConfirmed).toBe('wagamiX')
   })
 
-  it('coerces hydrated automatic rhythms and clears the runtime FC backup', async () => {
+  it('coerces hydrated automatic rhythms and preserves the manual FC backup', async () => {
     const def = defaultsAsVitals()
     localStorage.setItem(
       STORAGE_KEY,
@@ -1149,9 +1184,9 @@ describe('persist migration', () => {
     expect(state.draft.hr).toBe(190)
     expect(state.saved.hr).toBe(190)
     expect(state.confirmed.hr).toBe(190)
-    expect(state.manualHrBeforeAuto).toBeNull()
+    expect(state.manualHrBeforeAuto).toBe(70)
     state.setDraft('rhythm', 'nsr')
-    expect(useMonitorStore.getState().draft.hr).toBe(80)
+    expect(useMonitorStore.getState().draft.hr).toBe(70)
   })
 
   it('hydrates Asystole with FC fixed at zero and active', async () => {
@@ -1180,6 +1215,42 @@ describe('persist migration', () => {
     expect(state.draftVitalActive.hr).toBe(true)
     expect(state.savedVitalActive.hr).toBe(true)
     expect(state.confirmedVitalActive.hr).toBe(true)
+  })
+
+  it.each([
+    ['torsades', 150],
+    ['second-degree-type-2', 40],
+    ['third-degree', 20],
+  ] as const)('hydrates %s with its locked FC value and active channel', async (rhythm, hr) => {
+    const def = defaultsAsVitals()
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 10,
+        state: {
+          draft: { ...def, hr: 70, rhythm },
+          saved: { ...def, hr: 70, rhythm },
+          confirmed: { ...def, hr: 70, rhythm },
+          draftVitalActive: inactiveVitalState,
+          savedVitalActive: inactiveVitalState,
+          confirmedVitalActive: inactiveVitalState,
+          manualHrBeforeAuto: 70,
+          manualHrActiveBeforeLock: false,
+        },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const state = useMonitorStore.getState()
+    expect(state.draft.hr).toBe(hr)
+    expect(state.saved.hr).toBe(hr)
+    expect(state.confirmed.hr).toBe(hr)
+    expect(state.draftVitalActive.hr).toBe(true)
+    expect(state.savedVitalActive.hr).toBe(true)
+    expect(state.confirmedVitalActive.hr).toBe(true)
+    expect(state.manualHrBeforeAuto).toBe(70)
+    expect(state.manualHrActiveBeforeLock).toBe(false)
   })
 
   it('normalizes removed PEA rhythms in persisted vitals', async () => {

@@ -5,6 +5,21 @@
 
 ---
 
+## [2026-09-13] [instructor/monitor] — Add rhythm-owned Automatic FC locks
+
+- Locked FC On for Torsades, 2nd Degree Type 2, and 3rd Degree across direct edits, timed/batch
+  updates, Saved scenarios, Save/Send, persistence hydration, and Room synchronization, while
+  restoring the prior manual FC value and channel state after leaving the locked rhythm group.
+- Added the Instructor's `AUTO 150–250` Torsades presentation and a deterministic synchronized rate
+  per 15-complex packet. The selected rate now drives the trainee and Spectator display, ECG timing,
+  SpO2 pulse cadence, alarms, Wagami X/Z, and Vital Log; every new Send starts a fresh sequence and
+  CPR retains its 120/90 priority.
+- Fixed 2nd Degree Type 2 at 40 with a 40/min ventricular cadence and 3rd Degree at 20 with a 20/min
+  escape cadence. All 291 focused tests, TypeScript, ESLint with zero errors and 12 warnings, and the
+  Webpack production build pass. The full suite records 1,376 passing tests and one skip; its 11
+  unrelated failures are confined to Windows operations scripts, invite-only config parsing, Room
+  ownership expectations, and a stale Patient Info color-class assertion.
+
 ## [2026-09-12] [monitor/ui] — Stabilize the CPR interval timer footprint
 
 - Kept the central CPR timer slot mounted and isolated from intrinsic text width across Analyze and

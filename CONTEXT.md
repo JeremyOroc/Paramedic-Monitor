@@ -209,6 +209,12 @@ _Avoid_: Active model, selected monitor
 The instructor-approved vital values, channel states, rhythm, patient category, and energy setting available to the trainee during an attempt.
 _Avoid_: Draft vitals, admin inputs
 
+**Automatic FC lock**:
+A rhythm-controlled clinical state in which FC is forced On and its rate is determined by the selected
+ECG rhythm. The Instructor cannot edit the FC number or turn FC Off while the lock applies; leaving
+the locked rhythm restores the prior manual FC value and channel state.
+_Avoid_: Disabled FC, fixed alarm, monitor-only rate
+
 **CPR interval**:
 The two-minute compression period shown by Wagami X after its Perform CPR prompt phase following a no-shock analysis result or an advised shock. It is distinct from the Instructor CPR override and from the prompt/metronome cues that surround it.
 _Avoid_: CPR override, SNS measurement countdown, dispatch countdown

@@ -61,4 +61,50 @@ describe('monitorStore scenario drafts', () => {
     expect(state.draft.hr).toBe(0)
     expect(state.draftVitalActive.hr).toBe(true)
   })
+
+  it.each([
+    ['torsades', 150],
+    ['second-degree-type-2', 40],
+    ['third-degree', 20],
+  ] as const)(
+    'applies %s with its FC lock and restores the previous manual FC state',
+    (rhythm, hr) => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 88)
+      store.setDraftVitalActive('hr', false)
+
+      const snapshot = createEmptyScenarioSnapshot()
+      snapshot.monitor.draft.hr = 155
+      snapshot.monitor.draft.rhythm = rhythm
+      snapshot.monitor.draftVitalActive.hr = false
+
+      useMonitorStore.getState().applyScenarioDraft(snapshot)
+
+      expect(useMonitorStore.getState().draft.hr).toBe(hr)
+      expect(useMonitorStore.getState().draftVitalActive.hr).toBe(true)
+
+      useMonitorStore.getState().setDraft('rhythm', 'nsr')
+      expect(useMonitorStore.getState().draft.hr).toBe(88)
+      expect(useMonitorStore.getState().draftVitalActive.hr).toBe(false)
+    },
+  )
+
+  it('preserves the original manual FC backup when a scenario switches locked rhythms', () => {
+    const store = useMonitorStore.getState()
+    store.setDraft('hr', 88)
+    store.setDraftVitalActive('hr', false)
+    store.setDraft('rhythm', 'torsades')
+
+    const snapshot = createEmptyScenarioSnapshot()
+    snapshot.monitor.draft.hr = 155
+    snapshot.monitor.draft.rhythm = 'second-degree-type-2'
+    snapshot.monitor.draftVitalActive.hr = false
+    useMonitorStore.getState().applyScenarioDraft(snapshot)
+    useMonitorStore.getState().setDraft('rhythm', 'third-degree')
+    useMonitorStore.getState().setDraft('rhythm', 'nsr')
+
+    const state = useMonitorStore.getState()
+    expect(state.draft.hr).toBe(88)
+    expect(state.draftVitalActive.hr).toBe(false)
+  })
 })

@@ -8,6 +8,29 @@
 
 ## Current Requirement Updates
 
+- 2026-09-12 requirement update — rhythm-owned Automatic FC locks: in the shared Instructor Console,
+  selecting Torsades, 2nd Degree Type 2, or 3rd Degree forces FC On and disables both its number editor
+  and On/Off control. Torsades shows `AUTO 150–250` to the Instructor and, for each complete 15-complex
+  packet, deterministically selects an inclusive whole-number FC from 150 through 250. That synchronized
+  packet value controls the trainee and Spectator FC display, ECG timing, SpO2 pulse cadence, alarms,
+  Wagami X and Wagami Z, and Vital Log snapshots; a new Send starts a new sequence. 2nd Degree Type 2
+  locks FC at 40 and retimes its live ventricular cadence to 40/min; 3rd Degree locks FC at 20 and
+  retimes its live ventricular cadence to 20/min. Regular and Weak CPR retain priority at 120 and 90,
+  then resume the locked rhythm. Direct, batch, timed, Saved scenario, Save/Send, synchronization, and
+  hydration paths enforce the same values. Switching among the new locked rhythms preserves the prior
+  manual FC value and On/Off state, restoring both only after leaving that locked group. 2nd Degree
+  Type 1, existing VF/VT/Asystole behavior, and static 12-lead captures remain unchanged.
+
+### Testing — rhythm-owned Automatic FC locks
+
+- Cover automatic-rate classification, exact fixed values, inclusive deterministic Torsades values,
+  packet boundaries, synchronized sequence restarts, and derived Torsades/heart-block waveform timing.
+- Cover Instructor FC presentation and lock state, manual value/channel restoration, direct and batch
+  edits, Saved scenario normalization/loading, persistence hydration, Save/Send, CPR precedence, alarm
+  inputs, pulse cadence, Vital Log snapshots, Wagami X/Z, and Spectator projection parity.
+- Run focused automatic-rate, store, scenario, Instructor, waveform, Monitor, Wagami Z, synchronization,
+  and Spectator tests, followed by TypeScript, ESLint, and the production build.
+
 - 2026-09-10 requirement update — Instructor Console discoverability polish: when the authenticated
   Instructor Account already owns a waiting or active Room, the Console launcher presents that Room
   immediately instead of revealing it only after Create Room fails. The existing-Room state shows
