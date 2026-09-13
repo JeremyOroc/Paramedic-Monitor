@@ -5,6 +5,60 @@
 
 ---
 
+## [2026-09-13] [monitor/ecg] — Preserve the live 12-lead timeline across Back
+
+- Kept the complete 12-lead surface and its twelve canvas elements mounted after first use so Back
+  and reopen no longer restart their waveform timelines.
+- Generalized the persistent waveform surface into a bidirectional readiness handoff: the requested
+  target rebuilds while the currently displayed layer remains visible, and only a ready target is
+  revealed.
+- Suspended hidden 12-lead canvas drawing while continuing logical patient and sweep time, then
+  forced final geometry and reconstructed all current traces behind a twelve-renderer readiness
+  barrier on reopen.
+- Synchronized all twelve lead sweep clocks and cycle durations, applied the same contract to trainee
+  and Spectator monitors, and retained hidden DOM as `aria-hidden` and non-interactive.
+- Added persistent identity, hidden activity, twelve-renderer barrier, Lead-cell timing, Back-flow,
+  and reopen integration coverage. At 1180×820 browser replay, all twelve canvases remained mounted
+  and reopened with their original 380×102 backing stores and a clean console. All 136 focused tests,
+  TypeScript, ESLint with zero errors and the same 12 warnings, and the Webpack production build pass.
+  The complete serialized suite records 1,411 passing tests, one skip, and the same three unrelated
+  baseline failures.
+
+## [2026-09-13] [monitor/ecg] — Break Safari background connector strokes
+
+- Made Safari/browser-tab backgrounding an explicit waveform stroke boundary while preserving the
+  current patient-time phase and reconstructed visible sweep.
+- Retained the normal erase gap and suppressed the first incremental canvas stroke after every
+  recovery, preventing a pre-background cursor from joining the resumed trace.
+- Added idempotent `pagehide`/`pageshow` handling alongside `visibilitychange` and the existing
+  long-animation-gap fallback so delayed, reordered, or omitted Safari events recover safely.
+- Added direct page-lifecycle and first-frame regressions and updated repeated visibility coverage.
+  At 1180×820 browser replay, the ECG retained its 1000×240 backing store with a clean console. All
+  142 focused tests, TypeScript, ESLint with zero errors and the same 12 warnings, and the Webpack
+  production build pass. The complete suite's worker-constrained files pass serially, yielding 1,409
+  passing tests, one skip, and the same three unrelated baseline failures.
+
+## [2026-09-13] [monitor/ecg] — Reconstruct seamless waveform re-entry
+
+- Traced the 12-lead return artifact to two covered-canvas geometry changes and unscaled stale pixels,
+  and the background-tab line to Safari resuming an animation frame before or without the expected
+  visibility event.
+- Added absolute-time suspension recovery and a long-frame-gap guard directly to the renderer. Every
+  recovery clears and reconstructs the current visible sweep around its erase band, so no stale
+  cursor can connect to current patient time.
+- Suspended canvas drawing while the live monitor is covered by 12-lead while continuing to advance
+  waveform and sweep time, reducing the active iPad workload from the covered monitor plus twelve lead
+  canvases to the twelve visible lead canvases.
+- Added a readiness-gated return shared by trainee and Spectator monitors. Back keeps the 12-lead
+  surface visible until every connected live renderer has forced its final geometry, rebuilt its
+  sweep, and reported ready; canvas identity and true reset boundaries remain unchanged.
+- Added missing/reordered visibility-event, absolute-time catch-up, occluded drawing, forced geometry,
+  multi-renderer readiness, retained-cover, and Monitor navigation regressions. At an 1180×820 browser
+  viewport, the covered ECG retained its 581×150 backing store through the temporary 12-lead geometry
+  and returned to the original region and backing dimensions with a clean console. All 144 focused
+  tests, TypeScript, ESLint with zero errors and the same 12 warnings, and the Webpack build pass. The
+  full suite has 1,408 passing tests, one skip, and the same three unrelated baseline failures.
+
 ## [2026-09-13] [monitor/ecg] — Preserve waveform continuity across hidden surfaces
 
 - Defined one live patient-time sequence for ECG, SpO₂, EtCO₂, and CPR compression traces across

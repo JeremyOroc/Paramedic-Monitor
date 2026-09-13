@@ -685,10 +685,15 @@ export function MonitorPage({
         main={
           <ContinuousWaveformSurface
             temporarySurfaceActive={controller.isTwelveLead}
-            temporarySurface={
-              <TwelveLeadPage rhythm={confirmed.rhythm} hr={confirmed.hr} />
-            }
-            waveform={
+            temporarySurface={({ occluded, onReady }) => (
+              <TwelveLeadPage
+                rhythm={confirmed.rhythm}
+                hr={confirmed.hr}
+                occluded={occluded}
+                onReady={onReady}
+              />
+            )}
+            waveform={({ occluded, onReady }) => (
               <WaveformPanel
                 secondaryChannel={controller.secondary}
                 rhythm={confirmed.rhythm}
@@ -702,8 +707,10 @@ export function MonitorPage({
                 etco2Calibrated={etco2Loaded}
                 etco2Loading={etco2Loading}
                 cprOverride={cprOverrideActive}
+                occluded={occluded}
+                onReady={onReady}
               />
-            }
+            )}
           />
         }
         vitalsPlacement={useRestingVitalLayout ? 'bottom' : 'right'}

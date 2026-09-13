@@ -16,6 +16,11 @@ function fakeCtx() {
     beginPath: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
+    closePath: vi.fn(),
+    fill: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    globalAlpha: 1,
     stroke: vi.fn(),
     fillStyle: '',
     strokeStyle: '',
@@ -96,12 +101,17 @@ describe('startRenderer', () => {
   it('no-ops when 2d context is unavailable', () => {
     const canvas = document.createElement('canvas')
     vi.spyOn(canvas, 'getContext').mockReturnValue(null)
+    const onReady = vi.fn()
     const stop = startRenderer({
       canvas,
       color: '#fff',
       getWaveform: () => ECG_RHYTHMS.nsr,
       getCycleMs: () => 1000,
+      onReady,
     })
+    stop.setOccluded(true)
+    stop.setOccluded(false)
+    expect(onReady).toHaveBeenCalledTimes(1)
     expect(() => stop()).not.toThrow()
   })
 
@@ -269,9 +279,11 @@ describe('startRenderer', () => {
     stopB()
   })
 
-  it('advances hidden elapsed time and rebases the sweep without joining stale points', () => {
+  it('reconstructs hidden elapsed time without joining stale and current points', () => {
     let now = 1000
+    let wallNow = 10_000
     vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
     const ctx = fakeCtx()
     const canvas = makeCanvas()
     vi.mocked(canvas.getContext).mockReturnValue(ctx)
@@ -279,6 +291,7 @@ describe('startRenderer', () => {
       data: new Float32Array([0, 0.25, 0.5, 0.75]),
       cycleMs: 1000,
     }
+    const onReady = vi.fn()
     const stop = startRenderer({
       canvas,
       color: '#00ff41',
@@ -288,33 +301,97 @@ describe('startRenderer', () => {
       synchronizeSweep: true,
       cycleJitter: 0,
       ampJitter: 0,
+      onReady,
     })
 
     rafCalls.shift()?.(now)
     rafCalls.shift()
     const lineTo = ctx.lineTo as unknown as ReturnType<typeof vi.fn>
-    const fillRect = ctx.fillRect as unknown as ReturnType<typeof vi.fn>
     const drawsBeforeSuspension = lineTo.mock.calls.length
-    const fillsBeforeSuspension = fillRect.mock.calls.length
 
     setDocumentVisibility('hidden')
     now = 3500
+    wallNow = 12_500
     setDocumentVisibility('visible')
 
-    expect(lineTo).toHaveBeenCalledTimes(drawsBeforeSuspension)
-    expect(fillRect).toHaveBeenCalledTimes(fillsBeforeSuspension)
+    expect(lineTo.mock.calls.length).toBeGreaterThan(drawsBeforeSuspension)
+    expect(onReady).toHaveBeenCalledTimes(1)
 
+    const reconstructedMoves = vi.mocked(ctx.moveTo).mock.calls.slice(drawsBeforeSuspension)
+    const reconstructedLines = lineTo.mock.calls.slice(drawsBeforeSuspension)
+    reconstructedLines.forEach((line, index) => {
+      expect(Math.abs(Number(line[0]) - Number(reconstructedMoves[index]?.[0]))).toBeLessThanOrEqual(2)
+    })
+
+    const drawsAfterReconstruction = lineTo.mock.calls.length
+    wallNow = 12_516
     rafCalls.shift()?.(3516)
-    const resumedFrom = vi.mocked(ctx.moveTo).mock.calls.at(-1)
-    expect(resumedFrom?.[0]).toBeCloseTo(350)
-    expect(resumedFrom?.[1]).toBeCloseTo(57.5)
+    expect(lineTo).toHaveBeenCalledTimes(drawsAfterReconstruction)
 
+    wallNow = 12_532
+    rafCalls.shift()?.(3532)
+    const resumedFrom = vi.mocked(ctx.moveTo).mock.calls.at(-1)
+    expect(resumedFrom?.[0]).toBeCloseTo(351.6)
+
+    stop()
+  })
+
+  it('uses Safari page lifecycle events as one hard stroke boundary', () => {
+    let now = 1000
+    let wallNow = 10_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    const onReady = vi.fn()
+    const stop = startRenderer({
+      canvas,
+      color: '#00ff41',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 1000,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+      onReady,
+    })
+
+    rafCalls.shift()?.(now)
+    rafCalls.shift()
+    window.dispatchEvent(new Event('pagehide'))
+    now = 5000
+    wallNow = 14_000
+    window.dispatchEvent(new Event('pageshow'))
+
+    const lineTo = vi.mocked(ctx.lineTo)
+    const moves = vi.mocked(ctx.moveTo)
+    expect(onReady).toHaveBeenCalledTimes(1)
+    expect(lineTo.mock.calls.length).toBeGreaterThan(0)
+    lineTo.mock.calls.forEach((line, index) => {
+      expect(Math.abs(Number(line[0]) - Number(moves.mock.calls[index]?.[0]))).toBeLessThanOrEqual(2)
+    })
+
+    const drawsAfterReconstruction = lineTo.mock.calls.length
+    wallNow = 14_016
+    rafCalls.shift()?.(5016)
+    expect(lineTo).toHaveBeenCalledTimes(drawsAfterReconstruction)
+
+    wallNow = 14_032
+    rafCalls.shift()?.(5032)
+    expect(lineTo.mock.calls.length).toBeGreaterThan(drawsAfterReconstruction)
+
+    // A delayed visibility event observes the already-consumed boundary.
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(onReady).toHaveBeenCalledTimes(1)
     stop()
   })
 
   it('rebases an unsynchronized sweep through repeated visibility changes', () => {
     let now = 1000
+    let wallNow = 10_000
     vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
     const ctx = fakeCtx()
     const canvas = makeCanvas()
     vi.mocked(canvas.getContext).mockReturnValue(ctx)
@@ -333,25 +410,41 @@ describe('startRenderer', () => {
     rafCalls.shift()
     setDocumentVisibility('hidden')
     now = 3500
+    wallNow = 12_500
     setDocumentVisibility('visible')
+    const lineTo = vi.mocked(ctx.lineTo)
+    const firstRecoveryDraws = lineTo.mock.calls.length
+    wallNow = 12_516
     rafCalls.shift()?.(3516)
-    expect(vi.mocked(ctx.moveTo).mock.calls.at(-1)?.[0]).toBeCloseTo(250)
+    expect(lineTo).toHaveBeenCalledTimes(firstRecoveryDraws)
+    wallNow = 12_532
+    rafCalls.shift()?.(3532)
+    expect(vi.mocked(ctx.moveTo).mock.calls.at(-1)?.[0]).toBeCloseTo(251.6)
 
     rafCalls.shift()
-    now = 3516
+    now = 3532
     setDocumentVisibility('hidden')
-    now = 6016
+    now = 6032
+    wallNow = 15_032
     setDocumentVisibility('visible')
-    rafCalls.shift()?.(6032)
-    expect(vi.mocked(ctx.moveTo).mock.calls.at(-1)?.[0]).toBeCloseTo(101.6)
+    const secondRecoveryDraws = lineTo.mock.calls.length
+    wallNow = 15_048
+    rafCalls.shift()?.(6048)
+    expect(lineTo).toHaveBeenCalledTimes(secondRecoveryDraws)
+    wallNow = 15_064
+    rafCalls.shift()?.(6064)
+    expect(vi.mocked(ctx.moveTo).mock.calls.at(-1)?.[0]).toBeCloseTo(104.8)
 
     stop()
   })
 
   it('adopts the latest signal while hidden and removes its visibility listener on cleanup', () => {
     let now = 1000
+    let wallNow = 10_000
     vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
     const removeListener = vi.spyOn(document, 'removeEventListener')
+    const removeWindowListener = vi.spyOn(window, 'removeEventListener')
     let key = 'nsr'
     const nsr = { data: new Float32Array([0]), cycleMs: 1000 }
     const vf = { data: new Float32Array([0.6]), cycleMs: 500 }
@@ -371,6 +464,7 @@ describe('startRenderer', () => {
     setDocumentVisibility('hidden')
     key = 'vf'
     now = 2600
+    wallNow = 11_600
     setDocumentVisibility('visible')
 
     expect(getWaveform.mock.results.at(-1)?.value).toBe(vf)
@@ -379,5 +473,137 @@ describe('startRenderer', () => {
       'visibilitychange',
       expect.any(Function),
     )
+    expect(removeWindowListener).toHaveBeenCalledWith('pagehide', expect.any(Function))
+    expect(removeWindowListener).toHaveBeenCalledWith('pageshow', expect.any(Function))
+  })
+
+  it('recovers a long animation gap when Safari omits visibility events', () => {
+    let now = 1000
+    let wallNow = 10_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    const onReady = vi.fn()
+    const stop = startRenderer({
+      canvas,
+      color: '#00ff41',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 1000,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+      onReady,
+    })
+
+    rafCalls.shift()?.(now)
+    const resumedFrame = rafCalls.shift()
+    const drawsBeforeGap = vi.mocked(ctx.lineTo).mock.calls.length
+    now = 5000
+    wallNow = 14_000
+    resumedFrame?.(now)
+
+    const moves = vi.mocked(ctx.moveTo).mock.calls.slice(drawsBeforeGap)
+    const lines = vi.mocked(ctx.lineTo).mock.calls.slice(drawsBeforeGap)
+    expect(lines.length).toBeGreaterThan(0)
+    lines.forEach((line, index) => {
+      expect(Math.abs(Number(line[0]) - Number(moves[index]?.[0]))).toBeLessThanOrEqual(2)
+    })
+    expect(onReady).toHaveBeenCalledTimes(1)
+    stop()
+  })
+
+  it('consumes a reordered visibility gap once when rAF resumes before the event', () => {
+    let now = 1000
+    let wallNow = 10_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const onReady = vi.fn()
+    const stop = startRenderer({
+      canvas: makeCanvas(),
+      color: '#00ff41',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 1000,
+      cycleJitter: 0,
+      ampJitter: 0,
+      onReady,
+    })
+
+    rafCalls.shift()?.(now)
+    const queuedFrame = rafCalls.shift()
+    setDocumentVisibility('hidden')
+
+    now = 3500
+    wallNow = 12_500
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: 'visible',
+    })
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      value: false,
+    })
+    queuedFrame?.(now)
+    expect(onReady).toHaveBeenCalledTimes(1)
+
+    document.dispatchEvent(new Event('visibilitychange'))
+    expect(onReady).toHaveBeenCalledTimes(1)
+    stop()
+  })
+
+  it('stops covered draws and rebuilds final geometry before reporting ready', () => {
+    let now = 1000
+    let wallNow = 10_000
+    let rectWidth = 400
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const ctx = fakeCtx()
+    const canvas = document.createElement('canvas')
+    Object.defineProperty(canvas, 'getBoundingClientRect', {
+      value: () => ({
+        width: rectWidth,
+        height: 200,
+        top: 0,
+        left: 0,
+        right: rectWidth,
+        bottom: 200,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }),
+    })
+    vi.spyOn(canvas, 'getContext').mockReturnValue(ctx)
+    const onReady = vi.fn()
+    const stop = startRenderer({
+      canvas,
+      color: '#00ff41',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 1000,
+      cycleJitter: 0,
+      ampJitter: 0,
+      onReady,
+    })
+
+    rafCalls.shift()?.(now)
+    stop.setOccluded(true)
+    const drawsBeforeCover = vi.mocked(ctx.lineTo).mock.calls.length
+
+    now = 1016
+    wallNow = 10_016
+    rafCalls.shift()?.(now)
+    now = 1032
+    wallNow = 10_032
+    rafCalls.shift()?.(now)
+    expect(ctx.lineTo).toHaveBeenCalledTimes(drawsBeforeCover)
+
+    rectWidth = 520
+    stop.setOccluded(false)
+
+    expect(canvas.width).toBe(520)
+    expect(vi.mocked(ctx.lineTo).mock.calls.length).toBeGreaterThan(drawsBeforeCover)
+    expect(onReady).toHaveBeenCalledTimes(1)
+    stop()
   })
 })

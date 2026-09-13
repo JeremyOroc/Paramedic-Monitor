@@ -22,6 +22,13 @@ describe('MonitorPage — 12-lead back flow', () => {
     expect(screen.getByText('aVR')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Back' }))
-    expect(screen.queryByText('aVR')).not.toBeInTheDocument()
+    expect(screen.getByText('aVR')).toBeInTheDocument()
+    expect(screen.getByTestId('temporary-monitor-surface')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
+    expect(screen.getByTestId('continuous-waveform-layer')).not.toHaveAttribute(
+      'aria-hidden',
+    )
   })
 })

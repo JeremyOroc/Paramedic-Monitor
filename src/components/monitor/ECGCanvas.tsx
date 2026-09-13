@@ -20,6 +20,8 @@ type ECGCanvasProps = {
   connected?: boolean
   cprOverride?: boolean
   className?: string
+  occluded?: boolean
+  onReady?: () => void
 }
 
 function LiveECGCanvas({
@@ -27,6 +29,8 @@ function LiveECGCanvas({
   hr,
   cprOverride = false,
   className,
+  occluded = false,
+  onReady,
 }: Omit<ECGCanvasProps, 'connected'>) {
   const canvasRef = useWaveformRenderer(
     { rhythm, hr, cprOverride },
@@ -46,6 +50,7 @@ function LiveECGCanvas({
       },
     }),
     [],
+    { occluded, onReady },
   )
 
   return (
@@ -66,6 +71,8 @@ export function ECGCanvas({
   connected = true,
   cprOverride = false,
   className,
+  occluded = false,
+  onReady,
 }: ECGCanvasProps) {
   if (!connected && !cprOverride) {
     return (
@@ -83,6 +90,8 @@ export function ECGCanvas({
       hr={hr}
       cprOverride={cprOverride}
       className={className}
+      occluded={occluded}
+      onReady={onReady}
     />
   )
 }
