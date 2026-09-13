@@ -72,6 +72,12 @@ export function startRenderer(opts: RendererOptions): () => void {
   let cycleMul = 1
   let pendingSize: CanvasSize | null = null
   let pendingSince = 0
+  // Browsers suspend requestAnimationFrame in background tabs. Keep that gap
+  // separate from the ordinary per-frame clamp so patient time can advance on
+  // return without drawing one long segment across the stale sweep position.
+  let hiddenAt =
+    typeof document !== 'undefined' && document.hidden ? performance.now() : null
+  let stopped = false
 
   const readCanvasSize = (): CanvasSize => {
     const rect = canvas.getBoundingClientRect()
@@ -181,6 +187,47 @@ export function startRenderer(opts: RendererOptions): () => void {
   const synchronizedX = (now: number): number =>
     ((now % sweepDuration()) / sweepDuration()) * cssWidth
 
+  const refreshSignal = (): boolean => {
+    const nextSignalKey = getSignalKey?.() ?? 'default'
+    if (nextSignalKey === activeSignalKey) return false
+
+    activeSignalKey = nextSignalKey
+    activeWaveform = getWaveform()
+    phase = 0
+    rollJitter()
+    prevY = yFromValue(sampleAt(0))
+    return true
+  }
+
+  const advancePhase = (elapsedMs: number) => {
+    const cycleMs = Math.max(60, getCycleMs() * cycleMul)
+    const nextPhase = phase + Math.max(0, elapsedMs) / cycleMs
+    phase = nextPhase % 1
+
+    if (nextPhase >= 1) {
+      activeWaveform = getWaveform()
+      rollJitter()
+    }
+  }
+
+  const rebaseAfterSuspension = (now: number, elapsedMs: number) => {
+    resize(now)
+    refreshSignal()
+    advancePhase(elapsedMs)
+
+    // Move both drawing anchors to the current patient/sweep time without
+    // touching the backing store. The next visible frame begins a fresh local
+    // segment while the existing trace remains behind it.
+    if (synchronizeSweep) {
+      prevX = synchronizedX(now)
+    } else {
+      const elapsedX = (Math.max(0, elapsedMs) / sweepDuration()) * cssWidth
+      prevX = (prevX + elapsedX) % cssWidth
+    }
+    prevY = yFromValue(sampleAt(phase))
+    lastT = now
+  }
+
   const drawSegment = (
     fromX: number,
     fromY: number,
@@ -213,6 +260,12 @@ export function startRenderer(opts: RendererOptions): () => void {
 
   let healFrame = 0
   const tick = (now: number) => {
+    if (typeof document !== 'undefined' && document.hidden) {
+      hiddenAt ??= now
+      rafId = 0
+      return
+    }
+
     rafId = requestAnimationFrame(tick)
     // Self-heal: ResizeObserver can miss or coalesce a layout change (e.g. when
     // the defib state toggles the vitals/energy columns and the ECG column
@@ -224,14 +277,7 @@ export function startRenderer(opts: RendererOptions): () => void {
     const dt = Math.min(64, now - lastT)
     lastT = now
 
-    const nextSignalKey = getSignalKey?.() ?? 'default'
-    if (nextSignalKey !== activeSignalKey) {
-      activeSignalKey = nextSignalKey
-      activeWaveform = getWaveform()
-      phase = 0
-      rollJitter()
-      prevY = yFromValue(sampleAt(0))
-    }
+    refreshSignal()
 
     const cycleMs = Math.max(60, getCycleMs() * cycleMul)
     const dPhase = dt / cycleMs
@@ -282,14 +328,38 @@ export function startRenderer(opts: RendererOptions): () => void {
     }
   }
 
-  rafId = requestAnimationFrame((t) => {
-    lastT = t
-    if (synchronizeSweep) prevX = synchronizedX(t)
-    tick(t)
-  })
+  const handleVisibilityChange = () => {
+    if (typeof document === 'undefined' || stopped) return
+    const now = performance.now()
+
+    if (document.hidden) {
+      hiddenAt ??= now
+      if (rafId !== 0) cancelAnimationFrame(rafId)
+      rafId = 0
+      return
+    }
+
+    if (hiddenAt === null) return
+    const elapsedMs = now - hiddenAt
+    hiddenAt = null
+    rebaseAfterSuspension(now, elapsedMs)
+    rafId = requestAnimationFrame(tick)
+  }
+
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
+  if (hiddenAt === null) {
+    rafId = requestAnimationFrame((t) => {
+      lastT = t
+      if (synchronizeSweep) prevX = synchronizedX(t)
+      tick(t)
+    })
+  }
 
   return () => {
-    cancelAnimationFrame(rafId)
+    stopped = true
+    if (rafId !== 0) cancelAnimationFrame(rafId)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
     ro?.disconnect()
   }
 }
