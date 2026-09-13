@@ -161,10 +161,25 @@ describe('AdminPage', () => {
 
     const qrTrigger = screen.getByRole('button', { name: 'Generate QR Code for Room' })
     expect(qrTrigger).toBeEnabled()
+    const roomControls = screen.getByRole('region', { name: 'Room controls' })
+    const primaryControls = screen.getByTestId('room-controls-primary')
+    expect(roomControls).toHaveClass(
+      'grid-cols-[minmax(0,13fr)_minmax(204px,7fr)]',
+    )
+    expect(primaryControls).toHaveClass('min-h-0', 'min-w-0', 'flex-col')
+    expect(screen.getByRole('complementary', { name: 'Room QR code controls' })).toHaveClass(
+      'min-w-[204px]',
+      'place-items-center',
+      'border-l',
+    )
     await userEvent.click(qrTrigger)
     expect(
       screen.getByRole('region', { name: 'QR code to join Room ABC123' }),
     ).toBeInTheDocument()
+    expect(screen.getByTestId('room-controls-primary')).toBe(primaryControls)
+    expect(roomControls).toHaveClass(
+      'grid-cols-[minmax(0,13fr)_minmax(204px,7fr)]',
+    )
     await userEvent.click(screen.getByRole('button', { name: 'Hide QR code' }))
 
     await userEvent.click(screen.getByRole('button', { name: 'Take control' }))
@@ -187,6 +202,8 @@ describe('AdminPage', () => {
 
     const notice = await screen.findByTestId('room-ended-notice')
     expect(screen.getByRole('button', { name: 'End Room' })).toBeDisabled()
+    expect(screen.getByRole('region', { name: 'Room controls' })).toHaveClass('grid-cols-1')
+    expect(screen.queryByRole('complementary', { name: 'Room QR code controls' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Generate QR Code for Room' })).toBeNull()
     expect(screen.queryByRole('region', { name: /QR code to join Room/ })).toBeNull()
     await user.click(within(notice).getByRole('button', { name: 'Create a new room' }))

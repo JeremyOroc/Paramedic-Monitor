@@ -1076,18 +1076,22 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
         <div className="grid gap-4 lg:grid-cols-2" data-testid="session-overview-grid">
           <section
             aria-label="Room controls"
-            className="flex h-[480px] min-w-0 flex-col border border-cyan-bp/60 bg-cyan-bp/10 p-4"
+            className={cn(
+              'grid h-[480px] min-w-0 border border-cyan-bp/60 bg-cyan-bp/10',
+              sessionStatus === 'ended'
+                ? 'grid-cols-1'
+                : 'grid-cols-[minmax(0,13fr)_minmax(204px,7fr)]',
+            )}
           >
+            <div
+              data-testid="room-controls-primary"
+              className="flex min-h-0 min-w-0 flex-col p-4"
+            >
             <div className="shrink-0">
               <p className="font-mono text-xs font-bold uppercase tracking-wider text-cyan-bp">
                 Room code
               </p>
-              <div className="mt-2 flex flex-wrap items-stretch justify-between gap-2">
-                <RoomCodeCopy code={session.code} />
-                {sessionStatus !== 'ended' ? (
-                  <RoomQrCode key={session.code} code={session.code} />
-                ) : null}
-              </div>
+              <RoomCodeCopy code={session.code} className="mt-2" />
               <p className="mt-2 text-sm text-neutral-300">
                 Status: <span className="font-bold uppercase">{sessionStatus}</span>
                 {' · '}Attempt{' '}
@@ -1234,6 +1238,16 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
                 )}
               </div>
             </div>
+            </div>
+            {sessionStatus !== 'ended' ? (
+              <aside
+                aria-label="Room QR code controls"
+                data-testid="room-qr-rail"
+                className="grid min-h-0 min-w-[204px] place-items-center border-l border-neutral-800"
+              >
+                <RoomQrCode key={session.code} code={session.code} />
+              </aside>
+            ) : null}
           </section>
           <EmbeddedSpectatorPanel
             code={session.code}

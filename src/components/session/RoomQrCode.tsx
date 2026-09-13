@@ -34,7 +34,7 @@ export function RoomQrCode({ code }: RoomQrCodeProps) {
           focusTargetRef.current = 'hide'
           setOpen(true)
         }}
-        className="self-start border border-cyan-bp px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp hover:text-black focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+        className="w-[202px] border border-cyan-bp px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp hover:text-black focus:outline-none focus:ring-2 focus:ring-cyan-bp"
       >
         Generate QR Code for Room
       </button>
@@ -44,7 +44,7 @@ export function RoomQrCode({ code }: RoomQrCodeProps) {
   return (
     <section
       aria-label={`QR code to join Room ${normalizedCode}`}
-      className="grid w-fit justify-items-center border border-cyan-bp/60 bg-black/60 p-3 text-center"
+      className="grid w-[202px] justify-items-center border border-cyan-bp/60 bg-black/60 p-3 text-center"
     >
       <h2 className="max-w-[176px] font-mono text-xs font-black uppercase tracking-wider text-cyan-bp">
         Scan to join Room {normalizedCode}
