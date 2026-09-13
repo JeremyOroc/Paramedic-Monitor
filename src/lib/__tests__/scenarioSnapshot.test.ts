@@ -121,7 +121,7 @@ describe('scenario snapshots', () => {
     const automaticCases = [
       ['torsades', 150],
       ['second-degree-type-2', 80],
-      ['third-degree', 40],
+      ['third-degree', 60],
     ] as const
     for (const [rhythm, heartRate] of automaticCases) {
       const snapshot = createEmptyScenarioSnapshot()
