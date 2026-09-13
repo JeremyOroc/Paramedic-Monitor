@@ -6,6 +6,42 @@
 ---
 
 ## Current Phase
+**Persistent 12-lead timeline — COMPLETE (2026-09-13).**
+After its first opening, the complete 12-lead layer and all twelve canvas elements now remain mounted
+through Back and later re-entry. Hidden leads continue logical patient/sweep time without drawing;
+reopening forces final geometry, reconstructs every current sweep, and waits for all twelve renderers
+before revealing the grid. The normal and 12-lead layers now use one bidirectional readiness handoff,
+with shared behavior in trainee and Spectator monitors. All leads use synchronized sweep timing and
+cycle duration. At 1180×820 browser replay, twelve hidden canvases remained mounted and
+non-interactive, then reopened with their original 380×102 backing stores and a clean console. All
+136 focused tests, TypeScript, ESLint with zero errors and the same 12 warnings, and the Webpack
+production build pass. The complete serialized suite records 1,411 passing tests and one skip with
+the same three unrelated baseline failures.
+
+**Safari background stroke boundary — COMPLETE (2026-09-13).**
+Switching to another Safari/browser tab now creates a hard waveform stroke boundary. On return, the
+renderer advances patient time, reconstructs the current sweep around its erase gap, skips the first
+incremental stroke, and only then resumes local drawing, eliminating a line across the hidden
+interval. `visibilitychange` and Safari `pagehide`/`pageshow` events share one idempotent recovery;
+the existing long-frame fallback covers omitted events. At 1180×820 browser replay, the ECG retained
+its 1000×240 backing size and produced a clean console. All 142 focused tests, TypeScript, ESLint with
+zero errors and the same 12 warnings, and the Webpack production build pass. The complete suite's
+worker-constrained files pass serially, yielding 1,409 passing tests and one skip with the same three
+unrelated baseline failures.
+
+**Seamless waveform re-entry — COMPLETE (2026-09-13).**
+Browser and 12-lead returns now rebuild the current ECG, SpO₂, EtCO₂, and CPR sweep before it becomes
+visible. The renderer uses absolute elapsed time, detects long animation-frame gaps even when Safari
+misses or reorders visibility events, and never draws between pre-suspension and post-suspension
+cursors. Covered live-monitor canvases stop drawing while their logical timeline advances, leaving
+the iPad frame budget to the twelve 12-lead canvases. Back retains the 12-lead cover until every live
+renderer has forced its final dimensions and reported its reconstructed sweep ready; trainee and
+Spectator share this behavior. At 1180×820 browser replay, the ECG retained a 581×150 backing store
+while covered and returned to its original 580.54×150.09 region with the same backing size and a clean
+console. All 144 focused tests, TypeScript, ESLint with zero errors and the same 12 warnings, and the
+Webpack production build pass. The complete suite records 1,408 passing tests and one skip with the
+same three unrelated baseline failures.
+
 **Continuous live waveform timeline — COMPLETE (2026-09-13).**
 ECG, SpO₂, EtCO₂, and CPR compression traces now advance by real elapsed patient time when a browser
 tab is hidden, then resume from the current signal and sweep position without clearing the canvas,

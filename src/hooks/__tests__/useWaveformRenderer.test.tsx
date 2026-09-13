@@ -4,12 +4,22 @@ import { startRenderer } from '@/lib/ecg/renderer'
 import { useWaveformRenderer } from '../useWaveformRenderer'
 
 vi.mock('@/lib/ecg/renderer', () => ({
-  startRenderer: vi.fn(() => vi.fn()),
+  startRenderer: vi.fn(() => Object.assign(vi.fn(), { setOccluded: vi.fn() })),
 }))
 
 const mockStart = vi.mocked(startRenderer)
 
-function Harness({ value, dep }: { value: number; dep: number }) {
+function Harness({
+  value,
+  dep,
+  occluded = false,
+  onReady,
+}: {
+  value: number
+  dep: number
+  occluded?: boolean
+  onReady?: () => void
+}) {
   const ref = useWaveformRenderer(
     { value },
     (get) => ({
@@ -19,6 +29,7 @@ function Harness({ value, dep }: { value: number; dep: number }) {
       getCycleMs: () => get().value,
     }),
     [dep],
+    { occluded, onReady },
   )
   return <canvas ref={ref} data-testid="c" />
 }
@@ -59,5 +70,21 @@ describe('useWaveformRenderer', () => {
     const cleanup = mockStart.mock.results[0].value
     unmount()
     expect(cleanup).toHaveBeenCalledTimes(1)
+  })
+
+  it('updates occlusion without restarting and forwards readiness', () => {
+    const onReady = vi.fn()
+    const { rerender } = render(
+      <Harness value={5} dep={0} onReady={onReady} />,
+    )
+    const renderer = mockStart.mock.results[0].value
+    const opts = mockStart.mock.calls[0][0]
+
+    rerender(<Harness value={5} dep={0} occluded onReady={onReady} />)
+
+    expect(mockStart).toHaveBeenCalledTimes(1)
+    expect(renderer.setOccluded).toHaveBeenCalledWith(true)
+    opts.onReady?.()
+    expect(onReady).toHaveBeenCalledTimes(1)
   })
 })

@@ -105,10 +105,15 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
         main={
           <ContinuousWaveformSurface
             temporarySurfaceActive={controller.view === '12lead'}
-            temporarySurface={
-              <TwelveLeadPage rhythm={projection.confirmed.rhythm} hr={projection.confirmed.hr} />
-            }
-            waveform={
+            temporarySurface={({ occluded, onReady }) => (
+              <TwelveLeadPage
+                rhythm={projection.confirmed.rhythm}
+                hr={projection.confirmed.hr}
+                occluded={occluded}
+                onReady={onReady}
+              />
+            )}
+            waveform={({ occluded, onReady }) => (
               <WaveformPanel
                 secondaryChannel={controller.secondary}
                 rhythm={projection.confirmed.rhythm}
@@ -122,8 +127,10 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
                 etco2Calibrated={projection.etco2Loaded}
                 etco2Loading={projection.etco2Loading}
                 cprOverride={projection.cprOverrideActive}
+                occluded={occluded}
+                onReady={onReady}
               />
-            }
+            )}
           />
         }
         vitalsPlacement={useRestingVitalLayout ? 'bottom' : 'right'}

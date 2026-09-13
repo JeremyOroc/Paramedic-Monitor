@@ -1,10 +1,11 @@
 'use client'
 
-import { ECGCanvas } from './ECGCanvas'
-import { SecondaryChannel } from './SecondaryChannel'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { Etco2Waveform, Rhythm, Spo2Waveform } from '@/types/vitals'
 import type { MonitorSelection } from '@/types/monitorSelection'
+import { ECGCanvas } from './ECGCanvas'
+import { SecondaryChannel } from './SecondaryChannel'
 
 type WaveformPanelProps = {
   secondaryChannel: 'spo2' | 'etco2'
@@ -19,6 +20,8 @@ type WaveformPanelProps = {
   etco2Calibrated?: boolean
   etco2Loading?: boolean
   cprOverride?: boolean
+  occluded?: boolean
+  onReady?: () => void
 }
 
 export function WaveformPanel({
@@ -34,6 +37,8 @@ export function WaveformPanel({
   etco2Calibrated = false,
   etco2Loading = false,
   cprOverride = false,
+  occluded = false,
+  onReady,
 }: WaveformPanelProps) {
   const ecgConnected = cprOverride || rhythm !== 'off'
   const spo2Connected = spo2Waveform !== 'off'
@@ -48,6 +53,73 @@ export function WaveformPanel({
     selectedEtco2Ready || selectedSecondaryConnected || bothSecondaryOff
       ? secondaryChannel
       : null
+  const expectedRendererKeys = useMemo(() => {
+    const keys: string[] = []
+    if (ecgConnected) keys.push('ecg')
+
+    if (showAllSecondaryChannels) {
+      if (etco2Connected && !etco2Loading) keys.push('etco2')
+      if (spo2Connected) keys.push('spo2')
+      return keys
+    }
+
+    if (
+      normalSecondaryChannel &&
+      selectedSecondaryConnected &&
+      !(normalSecondaryChannel === 'etco2' && etco2Loading)
+    ) {
+      keys.push(normalSecondaryChannel)
+    }
+    return keys
+  }, [
+    ecgConnected,
+    etco2Connected,
+    etco2Loading,
+    normalSecondaryChannel,
+    selectedSecondaryConnected,
+    showAllSecondaryChannels,
+    spo2Connected,
+  ])
+  const [readinessGeneration, setReadinessGeneration] = useState({
+    occluded,
+    value: 0,
+  })
+  if (readinessGeneration.occluded !== occluded) {
+    setReadinessGeneration({
+      occluded,
+      value: readinessGeneration.value + 1,
+    })
+  }
+  const readinessKey = `${readinessGeneration.value}:${expectedRendererKeys.join('|')}`
+  const readyRenderersRef = useRef({
+    key: '',
+    renderers: new Set<string>(),
+  })
+
+  useLayoutEffect(() => {
+    if (!occluded && expectedRendererKeys.length === 0) onReady?.()
+  }, [expectedRendererKeys.length, occluded, onReady, readinessGeneration.value])
+
+  const reportRendererReady = useCallback(
+    (key: string) => {
+      if (occluded) return
+      if (readyRenderersRef.current.key !== readinessKey) {
+        readyRenderersRef.current = {
+          key: readinessKey,
+          renderers: new Set<string>(),
+        }
+      }
+      readyRenderersRef.current.renderers.add(key)
+      if (
+        expectedRendererKeys.every((expected) =>
+          readyRenderersRef.current.renderers.has(expected),
+        )
+      ) {
+        onReady?.()
+      }
+    },
+    [expectedRendererKeys, occluded, onReady, readinessKey],
+  )
   const ecgLabel = (
     <div className="absolute top-1 left-2 z-10 flex items-center gap-16 text-xs font-mono font-bold text-ecg-green">
       <span className={cn('px-1 py-0.5', selected === 'padsLabel' && 'bg-[var(--color-selection-blue)] text-white')}>
@@ -70,6 +142,8 @@ export function WaveformPanel({
             connected={ecgConnected}
             cprOverride={cprOverride}
             className="h-full w-full"
+            occluded={occluded}
+            onReady={() => reportRendererReady('ecg')}
           />
         </div>
         <div className="relative min-h-0 border-b border-neutral-800">
@@ -84,6 +158,8 @@ export function WaveformPanel({
             selectedScale={selected === 'etco2Scale'}
             connected={etco2Connected}
             loading={etco2Loading}
+            occluded={occluded}
+            onReady={() => reportRendererReady('etco2')}
           />
         </div>
         <div className="relative min-h-0">
@@ -97,6 +173,8 @@ export function WaveformPanel({
             selectedLabel={selected === 'spo2Label'}
             selectedScale={selected === 'spo2Scale'}
             connected={spo2Connected}
+            occluded={occluded}
+            onReady={() => reportRendererReady('spo2')}
           />
         </div>
       </div>
@@ -123,6 +201,8 @@ export function WaveformPanel({
           connected={ecgConnected}
           cprOverride={cprOverride}
           className="h-full w-full"
+          occluded={occluded}
+          onReady={() => reportRendererReady('ecg')}
         />
       </div>
       {normalSecondaryChannel && (
@@ -138,6 +218,8 @@ export function WaveformPanel({
             selectedScale={selected === `${normalSecondaryChannel}Scale`}
             connected={selectedSecondaryConnected}
             loading={normalSecondaryChannel === 'etco2' && etco2Loading}
+            occluded={occluded}
+            onReady={() => reportRendererReady(normalSecondaryChannel)}
           />
         </div>
       )}

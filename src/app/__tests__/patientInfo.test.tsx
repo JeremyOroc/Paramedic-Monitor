@@ -118,6 +118,13 @@ describe('MonitorPage — Patient Info menu', () => {
     expect(screen.getByText('aVR')).toBeInTheDocument() // still in 12-lead
 
     await user.click(screen.getByRole('button', { name: 'Back' })) // exit 12-lead
-    expect(screen.queryByText('aVR')).not.toBeInTheDocument()
+    expect(screen.getByText('aVR')).toBeInTheDocument()
+    expect(screen.getByTestId('temporary-monitor-surface')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
+    expect(screen.getByTestId('continuous-waveform-layer')).not.toHaveAttribute(
+      'aria-hidden',
+    )
   })
 })

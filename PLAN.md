@@ -8,6 +8,97 @@
 
 ## Current Requirement Updates
 
+- 2026-09-13 requirement refinement — persistent 12-lead timeline: after its first opening, the
+  complete 12-lead layer remains mounted and retains its patient-time sequence when Back returns to
+  the normal monitor. While hidden it advances logical time without drawing. Reopening 12-lead
+  rebuilds all twelve canvases at their current live phase and final geometry before revealing the
+  layer, using a twelve-renderer readiness barrier rather than a timeout. All leads share the sweep
+  clock and cardiac cycle timing, adopt confirmed rhythm/rate changes made while hidden, and retain
+  the existing New Attempt, Monitor Reset, power-cycle, and confirmed-signal reset boundaries. The
+  trainee and Spectator displays use the same behavior.
+
+### Testing — persistent 12-lead timeline
+
+- Verify the 12-lead layer and each lead canvas retain DOM identity through Back and reopen.
+- Verify hidden lead renderers advance without canvas draws, then rebuild at their current phase and
+  report ready before the persistent layer becomes visible again.
+- Verify all twelve renderers must report ready for each entry generation, and that trainee and
+  Spectator transitions use the same bidirectional readiness contract.
+- Retain normal-monitor re-entry, Safari stroke-boundary, signal/reset, and layout behavior, then run
+  focused tests, TypeScript, ESLint, the complete suite, a production build, and browser replay.
+
+**Completed 2026-09-13.** The 12-lead layer now mounts lazily on first use and remains mounted across
+Back and every later reopen. Its renderers keep patient and sweep time while occluded without canvas
+drawing, then force final geometry and reconstruct their current sweeps before a twelve-lead
+readiness barrier reveals the layer. The normal monitor uses the inverse side of the same
+bidirectional handoff. All twelve leads share synchronized sweep timing and cycle duration, and the
+trainee and Spectator surfaces use the same contract. At 1180×820 browser replay, all twelve canvases
+remained mounted and non-interactive behind the normal monitor, then returned with their original
+380×102 backing stores and a clean console. All 136 focused tests, TypeScript, ESLint with zero errors
+and the same 12 warnings, and the Webpack production build pass. The complete serialized suite
+records 1,411 passing tests and one skip with the same three unrelated baseline failures.
+
+- 2026-09-13 requirement refinement — Safari background stroke boundary: leaving the monitor for a
+  different Safari/browser tab creates a hard drawing boundary. On return, waveform patient time
+  still advances by the complete hidden interval and the current visible sweep is reconstructed,
+  but no stroke may be drawn from the pre-background cursor, through the hidden interval, or on the
+  first resumed frame. The renderer must preserve an explicit erase gap at the resumed cursor and
+  apply this behavior for normal, delayed, reordered, or missing Safari lifecycle events.
+
+### Testing — Safari background stroke boundary
+
+- Verify visibility, page hide/show, and long animation-frame recovery all reconstruct the current
+  sweep and suppress the first incremental stroke after resumption.
+- Verify delayed or reordered lifecycle events cannot recover twice, create competing animation
+  loops, or draw a straight connector.
+- Retain normal uninterrupted drawing and 12-lead readiness behavior, then run the focused waveform
+  tests, TypeScript, ESLint, the complete suite, and a production build.
+
+**Completed 2026-09-13.** Browser backgrounding now creates an explicit renderer stroke boundary.
+Visibility and Safari page lifecycle recovery rebuild the current sweep from short local segments,
+retain the erase gap, and suppress the first incremental frame before normal drawing resumes. The
+same idempotent suspension marker prevents delayed or reordered lifecycle events from recovering a
+second time; the long-frame fallback remains active when events are omitted. All 142 focused
+waveform/monitor tests, TypeScript, ESLint with zero errors and the same 12 warnings, browser layout
+replay, and the Webpack production build pass. The complete suite's worker-constrained files pass
+serially, yielding 1,409 passing tests and one skip with the same three unrelated baseline failures.
+
+- 2026-09-13 requirement refinement — seamless waveform re-entry: returning from the complete
+  12-lead workflow must reveal the live monitor only after its covered waveform canvases have
+  restored their final normal-monitor geometry and reconstructed the current visible sweep. While
+  12-lead is open, the covered monitor waveform retains patient time but does not spend the iPad
+  frame budget drawing behind the twelve active lead canvases. Browser backgrounding advances by
+  absolute elapsed time and reconstructs the current sweep without joining pre-suspension and
+  post-suspension cursor positions. An abnormally long animation-frame gap invokes the same recovery
+  even when Safari delays, reorders, or omits `visibilitychange`. Readiness from the waveform surface,
+  rather than a guessed reveal timeout, controls the 12-lead return. The latest confirmed signal and
+  the existing true reset boundaries remain unchanged.
+
+### Testing — seamless waveform re-entry
+
+- Verify explicit browser hiding and a long resumed animation-frame gap without a visibility event
+  both advance by the full absolute elapsed interval, reconstruct the current sweep, and draw no
+  stale connector.
+- Verify a covered renderer stops issuing canvas draws while logical patient time continues, then
+  restores its final backing dimensions and reports readiness only after rebuilding the live sweep.
+- Verify trainee and Spectator 12-lead Back transitions preserve canvas identity, retain the cover
+  until waveform readiness, and never expose stretched, clipped, blank, or transitional geometry.
+- Retain signal-change and device/Attempt reset semantics, then run focused renderer, hook, waveform,
+  Monitor, 12-lead, and Spectator tests followed by TypeScript, ESLint, the complete suite, a
+  production build, and browser replay.
+
+**Completed 2026-09-13.** The renderer now uses absolute elapsed time for suspension recovery,
+reconstructs the current visible sweep, and treats animation-frame gaps above the continuous-frame
+threshold as suspension even without a visibility event. Covered monitor canvases advance their
+timeline without drawing while 12-lead owns the iPad frame budget. On Back, every live renderer
+forces its final canvas size, rebuilds its sweep, and participates in a readiness barrier before the
+12-lead cover leaves. Trainee and Spectator use the same contract. At 1180×820 browser replay, the ECG
+kept its 581×150 backing store while covered despite a temporary 484.54×205.09 CSS region, then
+returned to the original 580.54×150.09 region and 581×150 backing size with no console warnings or
+errors. All 144 focused tests, TypeScript, ESLint with zero errors and the same 12 warnings, and the
+Webpack production build pass. The complete suite records 1,408 passing tests and one skip with the
+same three unrelated baseline failures.
+
 - 2026-09-13 requirement update — continuous live waveform timeline: ECG, SpO₂, EtCO₂, and CPR
   compression traces remain part of the same patient-time sequence while the browser is backgrounded
   or any temporary monitor surface hides the live display, including Call Info/maps, Treatment,

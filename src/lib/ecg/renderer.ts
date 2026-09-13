@@ -19,6 +19,14 @@ export type RendererOptions = {
   ampJitter?: number
   /** Fraction (0..1) — cycleMs varies by ±cycleJitter each cycle wrap. */
   cycleJitter?: number
+  /** Starts with canvas drawing suspended while patient and sweep time continue. */
+  initiallyOccluded?: boolean
+  /** Runs after an occluded or suspended canvas has rebuilt its current visible sweep. */
+  onReady?: () => void
+}
+
+export type RendererController = (() => void) & {
+  setOccluded: (occluded: boolean) => void
 }
 
 type CanvasSize = {
@@ -29,6 +37,8 @@ type CanvasSize = {
 
 const RESIZE_JITTER_PX = 1
 const RESIZE_SETTLE_MS = 120
+const MAX_CONTIGUOUS_FRAME_MS = 250
+const RECONSTRUCT_STEP_PX = 2
 
 function sizesMatch(a: CanvasSize, b: CanvasSize, tolerance = 0): boolean {
   return (
@@ -38,7 +48,7 @@ function sizesMatch(a: CanvasSize, b: CanvasSize, tolerance = 0): boolean {
   )
 }
 
-export function startRenderer(opts: RendererOptions): () => void {
+export function startRenderer(opts: RendererOptions): RendererController {
   const {
     canvas,
     color,
@@ -53,10 +63,21 @@ export function startRenderer(opts: RendererOptions): () => void {
     fillAlpha = 0.7,
     ampJitter = 0,
     cycleJitter = 0,
+    initiallyOccluded = false,
+    onReady,
   } = opts
 
   const ctx = canvas.getContext('2d')
-  if (!ctx) return () => {}
+  if (!ctx) {
+    let noopOccluded = initiallyOccluded
+    const noop = (() => {}) as RendererController
+    noop.setOccluded = (nextOccluded: boolean) => {
+      const restoring = noopOccluded && !nextOccluded
+      noopOccluded = nextOccluded
+      if (restoring) onReady?.()
+    }
+    return noop
+  }
 
   let activeWaveform = getWaveform()
   let activeSignalKey = getSignalKey?.() ?? 'default'
@@ -75,8 +96,14 @@ export function startRenderer(opts: RendererOptions): () => void {
   // Browsers suspend requestAnimationFrame in background tabs. Keep that gap
   // separate from the ordinary per-frame clamp so patient time can advance on
   // return without drawing one long segment across the stale sweep position.
-  let hiddenAt =
-    typeof document !== 'undefined' && document.hidden ? performance.now() : null
+  let hiddenAtWall =
+    typeof document !== 'undefined' && document.hidden ? Date.now() : null
+  let lastWallT = Date.now()
+  let occluded = initiallyOccluded
+  // Recovery reconstructs the visible history, but the first incremental frame
+  // must still begin a new stroke. This makes the hidden interval a hard path
+  // boundary instead of allowing Safari to join the old and new cursor anchors.
+  let suppressNextIncrementalStroke = false
   let stopped = false
 
   const readCanvasSize = (): CanvasSize => {
@@ -187,6 +214,8 @@ export function startRenderer(opts: RendererOptions): () => void {
   const synchronizedX = (now: number): number =>
     ((now % sweepDuration()) / sweepDuration()) * cssWidth
 
+  const eraseWidth = () => Math.max(6, cssWidth * 0.03)
+
   const refreshSignal = (): boolean => {
     const nextSignalKey = getSignalKey?.() ?? 'default'
     if (nextSignalKey === activeSignalKey) return false
@@ -210,22 +239,63 @@ export function startRenderer(opts: RendererOptions): () => void {
     }
   }
 
-  const rebaseAfterSuspension = (now: number, elapsedMs: number) => {
-    resize(now)
-    refreshSignal()
-    advancePhase(elapsedMs)
-
-    // Move both drawing anchors to the current patient/sweep time without
-    // touching the backing store. The next visible frame begins a fresh local
-    // segment while the existing trace remains behind it.
+  const advanceSweep = (now: number, elapsedMs: number) => {
     if (synchronizeSweep) {
       prevX = synchronizedX(now)
-    } else {
-      const elapsedX = (Math.max(0, elapsedMs) / sweepDuration()) * cssWidth
-      prevX = (prevX + elapsedX) % cssWidth
+      return
     }
+
+    const elapsedX = (Math.max(0, elapsedMs) / sweepDuration()) * cssWidth
+    prevX = (prevX + elapsedX) % cssWidth
+  }
+
+  const reconstructCurrentSweep = () => {
+    ctx.fillStyle = COLORS.bg
+    ctx.fillRect(0, 0, cssWidth, cssHeight)
+
+    const gapWidth = eraseWidth()
+    const cycleMs = Math.max(60, getCycleMs() * cycleMul)
+    let previousPoint: { x: number; y: number } | null = null
+
+    for (let x = 0; x <= cssWidth; x += RECONSTRUCT_STEP_PX) {
+      const distanceAhead = (x - prevX + cssWidth) % cssWidth
+      if (distanceAhead < gapWidth) {
+        previousPoint = null
+        continue
+      }
+
+      const distanceBehind = (prevX - x + cssWidth) % cssWidth
+      const elapsedBehindMs = (distanceBehind / cssWidth) * sweepDuration()
+      const samplePhase = ((phase - elapsedBehindMs / cycleMs) % 1 + 1) % 1
+      const y = yFromValue(sampleAt(samplePhase))
+
+      if (previousPoint) {
+        drawSegment(previousPoint.x, previousPoint.y, x, y)
+      }
+      previousPoint = { x, y }
+    }
+
+    prevY = yFromValue(sampleAt(phase))
+  }
+
+  const rebaseAfterSuspension = (
+    now: number,
+    elapsedMs: number,
+    rebuild: boolean,
+  ) => {
+    if (rebuild) resize(now, true)
+    refreshSignal()
+    advancePhase(elapsedMs)
+    advanceSweep(now, elapsedMs)
     prevY = yFromValue(sampleAt(phase))
     lastT = now
+    lastWallT = Date.now()
+
+    if (rebuild) {
+      reconstructCurrentSweep()
+      suppressNextIncrementalStroke = true
+      onReady?.()
+    }
   }
 
   const drawSegment = (
@@ -261,12 +331,45 @@ export function startRenderer(opts: RendererOptions): () => void {
   let healFrame = 0
   const tick = (now: number) => {
     if (typeof document !== 'undefined' && document.hidden) {
-      hiddenAt ??= now
+      hiddenAtWall ??= Date.now()
       rafId = 0
       return
     }
 
     rafId = requestAnimationFrame(tick)
+    const nowWall = Date.now()
+    const rawDt = Math.max(0, now - lastT)
+    const wallDt = Math.max(0, nowWall - lastWallT)
+    const elapsedMs = Math.max(rawDt, wallDt)
+
+    // Some WebKit resumes run a queued frame after visibilityState has become
+    // visible but before the matching event is delivered. Consume the recorded
+    // suspension here so the later event cannot advance the timeline twice.
+    if (hiddenAtWall !== null) {
+      const hiddenElapsedMs = Math.max(0, nowWall - hiddenAtWall)
+      hiddenAtWall = null
+      rebaseAfterSuspension(now, hiddenElapsedMs, !occluded)
+      return
+    }
+
+    if (occluded) {
+      refreshSignal()
+      advancePhase(elapsedMs)
+      advanceSweep(now, elapsedMs)
+      prevY = yFromValue(sampleAt(phase))
+      lastT = now
+      lastWallT = nowWall
+      return
+    }
+
+    // Safari can resume rAF before (or without) a matching visibility event.
+    // Treat the raw scheduling gap itself as a suspension boundary so stale
+    // and current cursor positions can never be joined by a false trace.
+    if (rawDt > MAX_CONTIGUOUS_FRAME_MS || wallDt > MAX_CONTIGUOUS_FRAME_MS) {
+      rebaseAfterSuspension(now, elapsedMs, true)
+      return
+    }
+
     // Self-heal: ResizeObserver can miss or coalesce a layout change (e.g. when
     // the defib state toggles the vitals/energy columns and the ECG column
     // reflows), leaving the cached size out of sync with the canvas — which then
@@ -274,8 +377,9 @@ export function startRenderer(opts: RendererOptions): () => void {
     // a few times per second; resize() is a no-op when nothing changed.
     const shouldSelfHeal = (healFrame++ & 15) === 0
     if (pendingSize || shouldSelfHeal) resize(now)
-    const dt = Math.min(64, now - lastT)
+    const dt = Math.min(64, rawDt)
     lastT = now
+    lastWallT = nowWall
 
     refreshSignal()
 
@@ -299,23 +403,27 @@ export function startRenderer(opts: RendererOptions): () => void {
       }
     }
 
-    const eraseWidth = Math.max(6, cssWidth * 0.03)
+    const nextEraseWidth = eraseWidth()
     ctx.fillStyle = COLORS.bg
-    if (nextX + eraseWidth <= cssWidth) {
-      ctx.fillRect(nextX, 0, eraseWidth, cssHeight)
+    if (nextX + nextEraseWidth <= cssWidth) {
+      ctx.fillRect(nextX, 0, nextEraseWidth, cssHeight)
     } else {
-      const tail = nextX + eraseWidth - cssWidth
+      const tail = nextX + nextEraseWidth - cssWidth
       ctx.fillRect(nextX, 0, cssWidth - nextX, cssHeight)
       ctx.fillRect(0, 0, tail, cssHeight)
     }
 
     const y = yFromValue(sampleAt(nextPhase % 1))
 
-    if (wrapped) {
-      drawSegment(prevX, prevY, cssWidth, y)
-      drawSegment(0, y, nextX, y)
+    if (suppressNextIncrementalStroke) {
+      suppressNextIncrementalStroke = false
     } else {
-      drawSegment(prevX, prevY, nextX, y)
+      if (wrapped) {
+        drawSegment(prevX, prevY, cssWidth, y)
+        drawSegment(0, y, nextX, y)
+      } else {
+        drawSegment(prevX, prevY, nextX, y)
+      }
     }
 
     prevX = nextX
@@ -328,38 +436,72 @@ export function startRenderer(opts: RendererOptions): () => void {
     }
   }
 
-  const handleVisibilityChange = () => {
-    if (typeof document === 'undefined' || stopped) return
+  const beginBrowserSuspension = () => {
+    if (stopped) return
+    hiddenAtWall ??= Date.now()
+    if (rafId !== 0) cancelAnimationFrame(rafId)
+    rafId = 0
+  }
+
+  const endBrowserSuspension = () => {
+    if (stopped || document.hidden || hiddenAtWall === null) return
     const now = performance.now()
-
-    if (document.hidden) {
-      hiddenAt ??= now
-      if (rafId !== 0) cancelAnimationFrame(rafId)
-      rafId = 0
-      return
-    }
-
-    if (hiddenAt === null) return
-    const elapsedMs = now - hiddenAt
-    hiddenAt = null
-    rebaseAfterSuspension(now, elapsedMs)
+    const elapsedMs = Math.max(0, Date.now() - hiddenAtWall)
+    hiddenAtWall = null
+    rebaseAfterSuspension(now, elapsedMs, !occluded)
     rafId = requestAnimationFrame(tick)
   }
 
-  document.addEventListener('visibilitychange', handleVisibilityChange)
+  const handleVisibilityChange = () => {
+    if (typeof document === 'undefined' || stopped) return
+    if (document.hidden) {
+      beginBrowserSuspension()
+      return
+    }
+    endBrowserSuspension()
+  }
 
-  if (hiddenAt === null) {
+  // iPad Safari may use page lifecycle events when moving between tabs and can
+  // delay or omit the matching visibility event. Treat both event families as
+  // the same idempotent suspension so whichever arrives first owns recovery.
+  const handlePageHide = () => beginBrowserSuspension()
+  const handlePageShow = () => endBrowserSuspension()
+
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('pagehide', handlePageHide)
+  window.addEventListener('pageshow', handlePageShow)
+
+  if (hiddenAtWall === null) {
     rafId = requestAnimationFrame((t) => {
       lastT = t
+      lastWallT = Date.now()
       if (synchronizeSweep) prevX = synchronizedX(t)
       tick(t)
     })
   }
 
-  return () => {
+  const stop = (() => {
     stopped = true
     if (rafId !== 0) cancelAnimationFrame(rafId)
     document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.removeEventListener('pagehide', handlePageHide)
+    window.removeEventListener('pageshow', handlePageShow)
     ro?.disconnect()
+  }) as RendererController
+
+  stop.setOccluded = (nextOccluded: boolean) => {
+    if (stopped || nextOccluded === occluded) return
+    occluded = nextOccluded
+
+    if (occluded || (typeof document !== 'undefined' && document.hidden)) return
+
+    const now = performance.now()
+    const elapsedMs = Math.max(
+      Math.max(0, now - lastT),
+      Math.max(0, Date.now() - lastWallT),
+    )
+    rebaseAfterSuspension(now, elapsedMs, true)
   }
+
+  return stop
 }

@@ -224,11 +224,12 @@ _Avoid_: Draft vitals, admin inputs
 **Waveform continuity**:
 The trainee's live ECG, SpO₂, EtCO₂, and CPR compression traces remain part of the same patient-time
 sequence while the monitor is temporarily not visible, including browser backgrounding and every
-temporary monitor surface. When a live trace returns, it reflects elapsed real time without a blank
-sweep, rewind, or false connecting trace. A new Attempt, monitor reset, power cycle, newly confirmed
-signal, or Off-to-On transition begins a new sequence; navigation does not. Each trainee and Spectator
-display maintains its own continuous sweep phase. A full browser reload is outside this continuity
-guarantee.
+temporary monitor surface. Waveform re-entry is the moment that sequence becomes visible again: the
+current sweep is ready at its final display geometry before the temporary surface leaves, reflects
+elapsed real time, and contains no blank sweep, rewind, or false trace connecting moments that were
+not observed continuously. A new Attempt, monitor reset, power cycle, newly confirmed signal, or
+Off-to-On transition begins a new sequence; navigation does not. Each trainee and Spectator display
+maintains its own continuous sweep phase. A full browser reload is outside this continuity guarantee.
 _Avoid_: Hidden rendering, ECG restart, paused waveform
 
 **Automatic FC lock**:
