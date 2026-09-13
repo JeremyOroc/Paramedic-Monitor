@@ -95,9 +95,9 @@ describe('useAutomaticDisplayHeartRate', () => {
       useAutomaticDisplayHeartRate({
         enabled: true,
         rhythm: 'third-degree',
-        underlyingHeartRate: 40,
+        underlyingHeartRate: 60,
       }),
     )
-    expect(result.current).toBe(40)
+    expect(result.current).toBe(60)
   })
 })
