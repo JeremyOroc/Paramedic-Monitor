@@ -8,6 +8,38 @@
 
 ## Current Requirement Updates
 
+- 2026-09-13 requirement update — continuous live waveform timeline: ECG, SpO₂, EtCO₂, and CPR
+  compression traces remain part of the same patient-time sequence while the browser is backgrounded
+  or any temporary monitor surface hides the live display, including Call Info/maps, Treatment,
+  Patient Info, Event Log, and the complete 12-lead workflow. Returning advances by real elapsed time
+  and resumes at the current phase/sweep position without a blank sweep, rewind, or stale connecting
+  line. The latest confirmed signal is shown immediately. Navigation never starts a new sequence;
+  New Attempt, Monitor Reset, a power cycle, a newly confirmed signal, and Off-to-On do. Each trainee
+  and Spectator display owns its own continuous visual phase; cross-device pixel synchronization and
+  continuity through a genuine browser reload remain outside scope.
+
+### Testing — continuous live waveform timeline
+
+- Verify a suspended renderer advances every live channel by the full hidden elapsed interval,
+  rebases the synchronized sweep without joining stale and current points, preserves the canvas
+  backing store, tolerates repeated hide/show cycles, adopts the latest signal, and removes document
+  listeners on cleanup.
+- Verify the same ECG canvas remains mounted across the normal monitor, complete 12-lead workflow,
+  and other temporary monitor surfaces in both trainee and Spectator presentations.
+- Retain genuine sequence resets for signal-key changes and device/Attempt reset boundaries.
+- Run focused renderer, waveform, Monitor, 12-lead, dispatch, and Spectator tests, followed by
+  TypeScript, ESLint, the complete suite, a production build, and browser replay.
+
+**Completed 2026-09-13.** The shared renderer now pauses its animation request while hidden, records
+the full suspension interval, advances the live signal phase by that elapsed patient time, and
+rebases both synchronized and independent sweep cursors without drawing across stale positions or
+clearing the backing store. A persistent waveform layer keeps the same trainee and Spectator canvas
+mounted beneath the complete 12-lead workflow; existing Call Info/map, Treatment, Patient Info,
+Event Log, capture, print, and transmission overlays already preserve that layer. Browser replay
+confirmed the live ECG remains attached at its 1000×240 backing size while 12-lead covers it and
+returns without console errors. All 130 focused tests, TypeScript, ESLint with zero errors and the
+same 12 warnings, and the Webpack production build pass. The complete suite records 1,391 passing
+tests and one skip with the same three unrelated baseline failures.
 - 2026-09-13 requirement revision — instructor Room QR and optional Device nickname: while an
   Instructor-owned Room is open, divide the complete fixed-height Room-controls panel into a stable
   internal 65%/35% grid. The left region owns Room code and Copy, status and Attempt context, Room

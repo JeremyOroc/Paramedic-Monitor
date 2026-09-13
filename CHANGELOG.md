@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-09-13] [monitor/ecg] — Preserve waveform continuity across hidden surfaces
+
+- Defined one live patient-time sequence for ECG, SpO₂, EtCO₂, and CPR compression traces across
+  browser backgrounding and every temporary monitor surface, including the complete 12-lead and
+  dispatch/map workflows.
+- Approved real-time phase advancement and clean current-position resumption without a blank sweep,
+  rewind, or stale connector. Navigation is not a restart; confirmed signal changes, Off-to-On,
+  power cycles, Monitor Reset, and New Attempt remain genuine sequence boundaries.
+- Kept exact trainee-to-Spectator sweep-pixel synchronization and genuine browser reload persistence
+  outside the continuity contract.
+- Made the shared renderer visibility-aware: hidden time advances the active waveform phase, both
+  synchronized and independent cursors rebase to the current sweep position, stale points are never
+  joined, the canvas is not cleared, repeated suspensions are supported, and listeners are removed
+  on cleanup.
+- Added a persistent main waveform layer for trainee and Spectator displays so 12-lead and all of its
+  acquisition, result, print, and transmission surfaces cover the live canvas without unmounting it.
+  Existing Call Info/map, Treatment, Patient Info, and Event Log overlays retain the same canvas too.
+- Added renderer visibility/signal/cleanup tests, persistent-layer identity coverage, and Monitor
+  navigation regressions. Browser replay kept the ECG attached at 1000×240 through 12-lead and back
+  without console errors. All 130 focused tests, TypeScript, ESLint with zero errors and the same 12
+  warnings, and the Webpack build pass. The full suite has 1,391 passing tests, one skip, and the same
+  three unrelated baseline failures.
 ## [2026-09-13] [instructor/ui] — Isolate Room operations from the QR rail
 
 - Rebuilt the fixed-height Room-controls panel as a 65%/35% internal grid: Room code, status, actions,

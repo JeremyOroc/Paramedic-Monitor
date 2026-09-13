@@ -6,6 +6,17 @@
 ---
 
 ## Current Phase
+**Continuous live waveform timeline — COMPLETE (2026-09-13).**
+ECG, SpO₂, EtCO₂, and CPR compression traces now advance by real elapsed patient time when a browser
+tab is hidden, then resume from the current signal and sweep position without clearing the canvas,
+rewinding, or connecting stale and current points. The trainee and Spectator live waveform layers
+remain mounted beneath the complete 12-lead workflow; the existing temporary Call Info/map,
+Treatment, Patient Info, Event Log, acquisition, print, and transmission surfaces preserve them as
+well. Genuine signal changes and device/Attempt resets retain their restart semantics. Browser replay
+kept the ECG attached at a 1000×240 backing size throughout 12-lead entry and return with no console
+errors. All 130 focused tests, TypeScript, ESLint with zero errors and the same 12 warnings, and the
+Webpack production build pass. The complete suite records 1,391 passing tests and one skip with the
+same three unrelated baseline failures.
 **Dedicated Instructor Room QR rail — COMPLETE (2026-09-13).**
 The complete 480px Room-controls panel now uses a stable 65% operational region and 35% QR rail while
 joining is available. The isolated rail has an approximately 202px minimum, a subtle divider, and

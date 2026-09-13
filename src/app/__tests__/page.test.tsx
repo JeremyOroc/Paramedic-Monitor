@@ -529,13 +529,16 @@ describe('MonitorPage', () => {
     })
 
     render(<MonitorPage />)
+    const ecgSurface = screen.getByTestId('mock-ecg-canvas')
     await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
 
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
     expect(screen.getByLabelText('Caller info')).toHaveClass('fixed', 'inset-0')
     expect(screen.getByRole('button', { name: 'Back to monitor' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Back to monitor' }))
 
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
@@ -1750,8 +1753,14 @@ describe('MonitorPage', () => {
   it('keeps specialized 12-lead vitals on the right and restores resting placement on Back', async () => {
     const user = userEvent.setup()
     render(<MonitorPage />)
+    const ecgSurface = screen.getByTestId('mock-ecg-canvas')
 
     await user.click(screen.getByRole('button', { name: '12-lead view' }))
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
+    expect(screen.getByTestId('continuous-waveform-layer')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
     expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
       'data-placement',
       'right',
@@ -1762,6 +1771,10 @@ describe('MonitorPage', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
+    expect(screen.getByTestId('continuous-waveform-layer')).not.toHaveAttribute(
+      'aria-hidden',
+    )
     expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
       'data-placement',
       'bottom',

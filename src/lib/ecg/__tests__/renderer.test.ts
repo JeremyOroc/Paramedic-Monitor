@@ -50,6 +50,18 @@ describe('startRenderer', () => {
   let rafCalls: FrameRequestCallback[]
   let rafCancelled: number[]
 
+  const setDocumentVisibility = (state: DocumentVisibilityState) => {
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: state,
+    })
+    Object.defineProperty(document, 'hidden', {
+      configurable: true,
+      value: state === 'hidden',
+    })
+    document.dispatchEvent(new Event('visibilitychange'))
+  }
+
   beforeEach(() => {
     rafCalls = []
     rafCancelled = []
@@ -60,6 +72,7 @@ describe('startRenderer', () => {
     vi.stubGlobal('cancelAnimationFrame', (id: number) => {
       rafCancelled.push(id)
     })
+    setDocumentVisibility('visible')
   })
 
   afterEach(() => {
@@ -254,5 +267,117 @@ describe('startRenderer', () => {
 
     stopA()
     stopB()
+  })
+
+  it('advances hidden elapsed time and rebases the sweep without joining stale points', () => {
+    let now = 1000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    const waveform = {
+      data: new Float32Array([0, 0.25, 0.5, 0.75]),
+      cycleMs: 1000,
+    }
+    const stop = startRenderer({
+      canvas,
+      color: '#00ff41',
+      getWaveform: () => waveform,
+      getCycleMs: () => waveform.cycleMs,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+    })
+
+    rafCalls.shift()?.(now)
+    rafCalls.shift()
+    const lineTo = ctx.lineTo as unknown as ReturnType<typeof vi.fn>
+    const fillRect = ctx.fillRect as unknown as ReturnType<typeof vi.fn>
+    const drawsBeforeSuspension = lineTo.mock.calls.length
+    const fillsBeforeSuspension = fillRect.mock.calls.length
+
+    setDocumentVisibility('hidden')
+    now = 3500
+    setDocumentVisibility('visible')
+
+    expect(lineTo).toHaveBeenCalledTimes(drawsBeforeSuspension)
+    expect(fillRect).toHaveBeenCalledTimes(fillsBeforeSuspension)
+
+    rafCalls.shift()?.(3516)
+    const resumedFrom = vi.mocked(ctx.moveTo).mock.calls.at(-1)
+    expect(resumedFrom?.[0]).toBeCloseTo(350)
+    expect(resumedFrom?.[1]).toBeCloseTo(57.5)
+
+    stop()
+  })
+
+  it('rebases an unsynchronized sweep through repeated visibility changes', () => {
+    let now = 1000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    const stop = startRenderer({
+      canvas,
+      color: '#cc44ff',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 1000,
+      sweepMs: 4000,
+      synchronizeSweep: false,
+      cycleJitter: 0,
+      ampJitter: 0,
+    })
+
+    rafCalls.shift()?.(now)
+    rafCalls.shift()
+    setDocumentVisibility('hidden')
+    now = 3500
+    setDocumentVisibility('visible')
+    rafCalls.shift()?.(3516)
+    expect(vi.mocked(ctx.moveTo).mock.calls.at(-1)?.[0]).toBeCloseTo(250)
+
+    rafCalls.shift()
+    now = 3516
+    setDocumentVisibility('hidden')
+    now = 6016
+    setDocumentVisibility('visible')
+    rafCalls.shift()?.(6032)
+    expect(vi.mocked(ctx.moveTo).mock.calls.at(-1)?.[0]).toBeCloseTo(101.6)
+
+    stop()
+  })
+
+  it('adopts the latest signal while hidden and removes its visibility listener on cleanup', () => {
+    let now = 1000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    const removeListener = vi.spyOn(document, 'removeEventListener')
+    let key = 'nsr'
+    const nsr = { data: new Float32Array([0]), cycleMs: 1000 }
+    const vf = { data: new Float32Array([0.6]), cycleMs: 500 }
+    const getWaveform = vi.fn(() => (key === 'nsr' ? nsr : vf))
+    const stop = startRenderer({
+      canvas: makeCanvas(),
+      color: '#00ff41',
+      getWaveform,
+      getSignalKey: () => key,
+      getCycleMs: () => (key === 'nsr' ? nsr.cycleMs : vf.cycleMs),
+      cycleJitter: 0,
+      ampJitter: 0,
+    })
+
+    rafCalls.shift()?.(now)
+    rafCalls.shift()
+    setDocumentVisibility('hidden')
+    key = 'vf'
+    now = 2600
+    setDocumentVisibility('visible')
+
+    expect(getWaveform.mock.results.at(-1)?.value).toBe(vf)
+    stop()
+    expect(removeListener).toHaveBeenCalledWith(
+      'visibilitychange',
+      expect.any(Function),
+    )
   })
 })
