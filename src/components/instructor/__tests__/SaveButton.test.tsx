@@ -68,4 +68,23 @@ describe('SaveButton', () => {
 
     expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled()
   })
+
+  it('does not become dirty for background route enrichment', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '200 Sainte-Anne Street')
+      store.save()
+      store.send()
+      store.applyDispatchRouteResolution({
+        ...DEFAULT_DISPATCH_ROUTE,
+        destinationAddress: '200 Sainte-Anne Street',
+        destination: { lat: 45.4, lng: -73.95 },
+        status: 'ready',
+      })
+    })
+
+    render(<SaveButton />)
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+  })
 })

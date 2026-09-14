@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SendButton } from '../SendButton'
@@ -126,5 +126,38 @@ describe('SendButton', () => {
     await user.click(btn)
     expect(useMonitorStore.getState().dispatchRouteConfirmed.durationSeconds).toBe(420)
     expect(btn).toBeDisabled()
+  })
+
+  it('does not treat background route enrichment as pending instructor work', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '200 Sainte-Anne Street')
+      store.save()
+      store.send()
+      store.applyDispatchRouteResolution({
+        ...DEFAULT_DISPATCH_ROUTE,
+        destinationAddress: '200 Sainte-Anne Street',
+        destination: { lat: 45.4, lng: -73.95 },
+        status: 'ready',
+      })
+    })
+
+    render(<SendButton />)
+
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+  })
+
+  it('does not mutate confirmed state when the send preflight cancels', async () => {
+    const beforeSend = vi.fn(() => false)
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 150)
+      useMonitorStore.getState().save()
+    })
+    render(<SendButton beforeSend={beforeSend} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(beforeSend).toHaveBeenCalledOnce()
+    expect(useMonitorStore.getState().confirmed.hr).toBe(0)
   })
 })

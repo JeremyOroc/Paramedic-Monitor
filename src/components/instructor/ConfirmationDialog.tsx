@@ -7,6 +7,7 @@ type ConfirmationDialogProps = {
   title: string
   description: ReactNode
   confirmLabel: string
+  confirmDisabled?: boolean
   cancelLabel?: string
   onConfirm: () => void
   onCancel: () => void
@@ -26,6 +27,7 @@ export function ConfirmationDialog({
   title,
   description,
   confirmLabel,
+  confirmDisabled = false,
   cancelLabel = 'Cancel',
   onConfirm,
   onCancel,
@@ -129,7 +131,8 @@ export function ConfirmationDialog({
           <button
             type="button"
             onClick={onConfirm}
-            className="border border-cyan-bp bg-cyan-bp/15 px-4 py-2 font-mono text-sm font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/25 focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+            disabled={confirmDisabled}
+            className="border border-cyan-bp bg-cyan-bp/15 px-4 py-2 font-mono text-sm font-black uppercase tracking-wider text-cyan-bp hover:bg-cyan-bp/25 focus:outline-none focus:ring-2 focus:ring-cyan-bp disabled:cursor-not-allowed disabled:opacity-40"
           >
             {confirmLabel}
           </button>

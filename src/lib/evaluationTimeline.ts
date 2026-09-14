@@ -287,6 +287,12 @@ function cprModeOrOff(value: unknown): CprMode {
   return value === 'regular' || value === 'weak' ? value : 'off'
 }
 
+function isRouteEnrichmentState(value: unknown): boolean {
+  if (!isRecord(value)) return false
+  const instructorOnly = isRecord(value.instructorOnly) ? value.instructorOnly : {}
+  return instructorOnly.stateUpdateKind === 'route-enrichment'
+}
+
 export function normalizeHistoryState(state: unknown): NormalizedState {
   const root = isRecord(state) ? state : {}
   const confirmed = isRecord(root.confirmed) ? root.confirmed : {}
@@ -809,8 +815,19 @@ export function buildEvaluationTimeline(
   const baselineMs = explicitBaseline ?? attemptStart ?? firstRecorded ?? null
 
   const states = new Map<number, NormalizedState>()
+  let previousHistoryState: NormalizedState | null = null
   for (const item of history) {
-    states.set(item.entry.version, normalizeHistoryState(item.entry.state))
+    const normalized = normalizeHistoryState(item.entry.state)
+    const withInheritedInstructorOnly: NormalizedState =
+      isRouteEnrichmentState(item.entry.state) && previousHistoryState
+        ? {
+            ...normalized,
+            patientInformation: previousHistoryState.patientInformation,
+            patientSns: previousHistoryState.patientSns,
+          }
+        : normalized
+    states.set(item.entry.version, withInheritedInstructorOnly)
+    previousHistoryState = withInheritedInstructorOnly
   }
 
   // Which channels this run ever used, so the context column can leave out the
@@ -866,20 +883,24 @@ export function buildEvaluationTimeline(
 
   // The version the instructor had sent by a given moment, so an action can
   // be checked against what it should have been looking at.
-  const latestVersionBefore = (at: number): number | null => {
-    let latest: number | null = null
+  const instructorChangesBehind = (stateVersion: number, at: number): number => {
+    let count = 0
     for (const item of history) {
-      if (item.at <= at) latest = item.entry.version
-      else break
+      if (item.at > at) break
+      if (
+        item.entry.version > stateVersion &&
+        !isRouteEnrichmentState(item.entry.state)
+      ) {
+        count += 1
+      }
     }
-    return latest
+    return count
   }
 
   const rows: TimelineRow[] = []
 
   for (const { event, at, clientTimed } of events) {
     const context = contextFor(event.state_version, at)
-    const shouldHaveSeen = latestVersionBefore(at)
     const enteredByInstructor =
       isRecord(event.payload) && event.payload.source === 'instructor'
     const behindBy =
@@ -887,8 +908,8 @@ export function buildEvaluationTimeline(
       // the current version by definition, so the arithmetic that catches a
       // stale monitor would only ever print a zero here, and a `← n behind`
       // on a row no monitor produced would be a lie about a trainee.
-      !enteredByInstructor && event.state_version !== null && shouldHaveSeen !== null
-        ? Math.max(0, shouldHaveSeen - event.state_version)
+      !enteredByInstructor && event.state_version !== null
+        ? instructorChangesBehind(event.state_version, at)
         : 0
     rows.push({
       kind: 'action',
@@ -911,7 +932,7 @@ export function buildEvaluationTimeline(
 
   history.forEach((item, index) => {
     const state = states.get(item.entry.version)
-    if (!state) return
+    if (!state || isRouteEnrichmentState(item.entry.state)) return
     const previousEntry = index > 0 ? history[index - 1] : null
     const previous = previousEntry ? states.get(previousEntry.entry.version) : undefined
     const context = buildContext(state, everActive, bpAt(item.at))

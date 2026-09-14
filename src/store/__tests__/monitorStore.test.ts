@@ -411,11 +411,7 @@ describe('monitorStore', () => {
     useMonitorStore.getState().transportCall('14:10:00')
     const firstRunId = useMonitorStore.getState().dispatch.runId
 
-    useMonitorStore.getState().setDispatchRouteDraft({
-      ...DEFAULT_DISPATCH_ROUTE,
-      destinationAddress: '200 Sainte-Anne Street',
-      destination: { lat: 45.4, lng: -73.95 },
-    })
+    useMonitorStore.getState().setCallerInfoDraft('address', '200 Sainte-Anne Street')
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
 
@@ -424,6 +420,73 @@ describe('monitorStore', () => {
     expect(dispatch.acknowledgedAt).toBeNull()
     expect(dispatch.arrivedAt).toBeNull()
     expect(dispatch.transportedAt).toBeNull()
+  })
+
+  it('keeps the run and milestones when route coordinates enrich the same address', () => {
+    useMonitorStore.getState().setCallerInfoDraft('address', '200 Sainte-Anne Street')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().acknowledgeCall('14:05:11')
+    useMonitorStore.getState().arriveCall('14:06:00')
+    useMonitorStore.getState().transportCall('14:10:00')
+    const firstRunId = useMonitorStore.getState().dispatch.runId
+
+    useMonitorStore.getState().applyDispatchRouteResolution({
+      ...DEFAULT_DISPATCH_ROUTE,
+      destinationAddress: '200 Sainte-Anne Street',
+      destination: { lat: 45.4, lng: -73.95 },
+      status: 'ready',
+    })
+    useMonitorStore.getState().setDraft('hr', 120)
+    useMonitorStore.getState().setDraftVitalActive('hr', true)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    const state = useMonitorStore.getState()
+    expect(state.dispatch.runId).toBe(firstRunId)
+    expect(state.dispatch).toMatchObject({
+      acknowledgedAt: '14:05:11',
+      arrivedAt: '14:06:00',
+      transportedAt: '14:10:00',
+    })
+    expect(state.dispatchRouteConfirmed).toMatchObject({
+      destination: { lat: 45.4, lng: -73.95 },
+      status: 'ready',
+    })
+  })
+
+  it('normalizes whitespace and case when deciding whether an incident changed', () => {
+    useMonitorStore.getState().setCallerInfoDraft('address', '200 Sainte-Anne Street')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    const firstRunId = useMonitorStore.getState().dispatch.runId
+    useMonitorStore.getState().acknowledgeCall('14:05:11')
+
+    useMonitorStore.getState().setCallerInfoDraft('address', '  200  SAINTE-ANNE street  ')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    expect(useMonitorStore.getState().dispatch.runId).toBe(firstRunId)
+    expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBe('14:05:11')
+  })
+
+  it('keeps the run when only the unit origin changes', () => {
+    useMonitorStore.getState().setCallerInfoDraft('address', '200 Sainte-Anne Street')
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    const firstRunId = useMonitorStore.getState().dispatch.runId
+    useMonitorStore.getState().acknowledgeCall('14:05:11')
+
+    useMonitorStore.getState().setDispatchRouteDraft({
+      ...useMonitorStore.getState().dispatchRouteDraft,
+      originAddress: '100 Unit Station Road',
+      origin: { lat: 45.45, lng: -73.9 },
+    })
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+
+    expect(useMonitorStore.getState().dispatch.runId).toBe(firstRunId)
+    expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBe('14:05:11')
   })
 
   it('numeric values save and send without changing their inactive state', () => {

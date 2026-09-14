@@ -116,6 +116,10 @@ export function hasCallerInfoPending(saved: CallerInfo, confirmed: CallerInfo): 
   return CALLER_INFO_FIELDS.some(({ field }) => saved[field] !== confirmed[field])
 }
 
+export function normalizeDispatchAddress(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase()
+}
+
 function sameLatLng(a: LatLng | null, b: LatLng | null): boolean {
   if (a === null || b === null) return a === b
   return a.lat === b.lat && a.lng === b.lng
@@ -136,6 +140,19 @@ export function hasDispatchRouteChanged(a: DispatchRoute, b: DispatchRoute): boo
     a.status !== b.status ||
     a.error !== b.error ||
     !sameGeometry(a.geometry, b.geometry)
+  )
+}
+
+/**
+ * Route addresses are instructor-authored configuration. Coordinates, geometry,
+ * distance, duration, and resolution status are background enrichment and must
+ * not make Save/Send dirty or create a new dispatch run.
+ */
+export function hasDispatchRouteAuthoredChanged(a: DispatchRoute, b: DispatchRoute): boolean {
+  return (
+    normalizeDispatchAddress(a.originAddress) !== normalizeDispatchAddress(b.originAddress) ||
+    normalizeDispatchAddress(a.destinationAddress) !==
+      normalizeDispatchAddress(b.destinationAddress)
   )
 }
 

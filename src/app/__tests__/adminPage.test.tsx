@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
+import { DEFAULT_DISPATCH_ROUTE } from '@/types/dispatchRoute'
 
 import AdminPage from '@/components/instructor/AdminPage'
 
@@ -73,6 +74,7 @@ describe('AdminPage', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllEnvs()
   })
 
   it('lets a session instructor end an active room', async () => {
@@ -514,6 +516,7 @@ describe('AdminPage', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await user.click(screen.getByRole('button', { name: 'Send' }))
     await user.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
+    await user.click(screen.getByRole('button', { name: 'Start Anyway' }))
 
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: 'Defibrillators' })).toBeEnabled()
@@ -560,6 +563,7 @@ describe('AdminPage', () => {
     await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Defibrillators' }))
     await user.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
+    await user.click(screen.getByRole('button', { name: 'Start Anyway' }))
 
     await waitFor(() => expect(screen.getByText('Unable to open room')).toBeInTheDocument())
     expect(screen.getByRole('button', { name: 'Wagami X' })).toBeEnabled()
@@ -603,11 +607,308 @@ describe('AdminPage', () => {
 
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
+    await user.click(screen.getByRole('button', { name: 'Start Anyway' }))
 
     await waitFor(() => {
       expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBeNull()
     })
     expect(useMonitorStore.getState().dispatch.arrivedAt).toBeNull()
+  })
+
+  it('warns before changing clocks or network state when the route is not ready', async () => {
+    const fetchMock = vi.spyOn(window, 'fetch').mockResolvedValue(new Response(
+      JSON.stringify({
+        session: { status: 'waiting', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+        state: { version: 1 },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDispatchMinutes(2)
+      store.save()
+      store.send()
+      store.acknowledgeCall('10:00:00')
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+    fetchMock.mockClear()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
+
+    expect(screen.getByText('No Incident-scene address is configured.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Start Anyway' })).toBeInTheDocument()
+    expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBe('10:00:00')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBe('10:00:00')
+  })
+
+  it('updates an open warning when routing finishes without auto-starting', async () => {
+    vi.stubEnv('NEXT_PUBLIC_GEOAPIFY_API_KEY', 'test-key')
+    let started = false
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      if (String(input).endsWith('/start')) started = true
+      return new Response(JSON.stringify({
+        session: {
+          status: started ? 'active' : 'waiting',
+          active_attempt_version: 1,
+        },
+        participants: [],
+        events: [],
+        state: { version: 1 },
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '200 Sainte-Anne Street')
+      store.save()
+      store.send()
+      store.applyDispatchRouteResolution({
+        ...DEFAULT_DISPATCH_ROUTE,
+        destinationAddress: '200 Sainte-Anne Street',
+        status: 'loading',
+      })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+    await userEvent.click(screen.getByRole('button', { name: 'Start / Dispatch' }))
+    expect(screen.getByText('Route is still calculating.')).toBeInTheDocument()
+    fetchMock.mockClear()
+
+    act(() => {
+      useMonitorStore.getState().applyDispatchRouteResolution({
+        ...DEFAULT_DISPATCH_ROUTE,
+        destinationAddress: '200 Sainte-Anne Street',
+        destination: { lat: 45.4, lng: -73.95 },
+        status: 'ready',
+      })
+    })
+
+    expect(screen.getByText('Route calculation is complete')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: 'Start / Dispatch',
+      }),
+    ).toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([input]) => String(input).endsWith('/start'))).toBe(false)
+  })
+
+  it('shows unsent route changes beside End Room and prevents Start', async () => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(
+      JSON.stringify({
+        session: { status: 'waiting', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '100 First Street')
+      store.save()
+      store.send()
+      store.setCallerInfoDraft('address', '200 Second Street')
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+
+    const status = screen.getByTestId('dispatch-route-status')
+    expect(status).toHaveTextContent('Route changes not sent')
+    expect(status).toHaveClass('text-pending-amber')
+    expect(status.parentElement).toContainElement(screen.getByRole('button', { name: 'End Room' }))
+    expect(screen.getByRole('button', { name: 'Start / Dispatch' })).toBeDisabled()
+  })
+
+  it('warns before an active Send that would create a new unresolved run', async () => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(
+      JSON.stringify({
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+        state: { version: 1 },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '100 First Street')
+      store.save()
+      store.send()
+    })
+    const initialRunId = useMonitorStore.getState().dispatch.runId
+
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '200 Second Street')
+      store.save()
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(screen.getByRole('button', { name: 'Send Anyway' })).toBeInTheDocument()
+    expect(useMonitorStore.getState().dispatch.runId).toBe(initialRunId)
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(useMonitorStore.getState().dispatch.runId).toBe(initialRunId)
+  })
+
+  it('automatically publishes ready route enrichment as a same-run system update', async () => {
+    const fetchMock = vi.spyOn(window, 'fetch').mockResolvedValue(new Response(
+      JSON.stringify({
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+        state: { version: 1 },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '200 Sainte-Anne Street')
+      store.save()
+      store.send()
+    })
+    const runId = useMonitorStore.getState().dispatch.runId
+
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    fetchMock.mockClear()
+    act(() => {
+      useMonitorStore.getState().applyDispatchRouteResolution({
+        ...DEFAULT_DISPATCH_ROUTE,
+        destinationAddress: '200 Sainte-Anne Street',
+        destination: { lat: 45.4, lng: -73.95 },
+        distanceMeters: 3200,
+        durationSeconds: 480,
+        geometry: [{ lat: 45.4, lng: -73.95 }],
+        status: 'ready',
+      })
+    })
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/session/ABC123/state',
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+    const stateCall = fetchMock.mock.calls.find(([input]) =>
+      String(input).endsWith('/state'))
+    expect(stateCall).toBeDefined()
+    const body = JSON.parse(String((stateCall?.[1] as RequestInit).body))
+    expect(body.state.dispatch.runId).toBe(runId)
+    expect(body.state.instructorOnly).toEqual({ stateUpdateKind: 'route-enrichment' })
+    expect(useMonitorStore.getState().dispatch.runId).toBe(runId)
+  })
+
+  it('serializes a manual Send behind an in-flight route enrichment write', async () => {
+    let stateCalls = 0
+    let resolveFirstState: (response: Response) => void = () => {
+      throw new Error('First state request was not started')
+    }
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      if (String(input).endsWith('/state')) {
+        stateCalls += 1
+        if (stateCalls === 1) {
+          return await new Promise<Response>((resolve) => {
+            resolveFirstState = resolve
+          })
+        }
+        return new Response(JSON.stringify({ state: { version: stateCalls } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '200 Sainte-Anne Street')
+      store.save()
+      store.send()
+    })
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    act(() => {
+      useMonitorStore.getState().applyDispatchRouteResolution({
+        ...DEFAULT_DISPATCH_ROUTE,
+        destinationAddress: '200 Sainte-Anne Street',
+        destination: { lat: 45.4, lng: -73.95 },
+        status: 'ready',
+      })
+    })
+    await waitFor(() => expect(stateCalls).toBe(1))
+
+    act(() => {
+      useMonitorStore.getState().setDraft('hr', 120)
+      useMonitorStore.getState().save()
+    })
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(stateCalls).toBe(1)
+
+    resolveFirstState(new Response(JSON.stringify({ state: { version: 2 } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }))
+    await waitFor(() => expect(stateCalls).toBe(2))
+  })
+
+  it('stops automatic route publication after three failures and exposes Retry', async () => {
+    let stateAttempts = 0
+    vi.spyOn(window, 'fetch').mockImplementation(async (input) => {
+      if (String(input).endsWith('/state')) {
+        stateAttempts += 1
+        return new Response(JSON.stringify({ error: 'Temporary route write failure' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify({
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '200 Sainte-Anne Street')
+      store.save()
+      store.send()
+    })
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    act(() => {
+      useMonitorStore.getState().applyDispatchRouteResolution({
+        ...DEFAULT_DISPATCH_ROUTE,
+        destinationAddress: '200 Sainte-Anne Street',
+        destination: { lat: 45.4, lng: -73.95 },
+        status: 'ready',
+      })
+    })
+
+    await waitFor(() => expect(stateAttempts).toBe(3), { timeout: 3000 })
+    expect(screen.getByTestId('dispatch-route-status')).toHaveTextContent('Route unavailable')
+    expect(screen.getByRole('button', { name: 'Retry route' })).toBeInTheDocument()
   })
 
   it('clears the instructor panel when a new attempt starts', async () => {

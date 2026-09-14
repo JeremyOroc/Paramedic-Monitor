@@ -17,3 +17,5 @@ and rerouting for every trainee.
 - Hospital browsing and selection are deliberately absent from Evaluation records.
 - OSRM-derived route and ranking failures cannot mutate the instructor-confirmed Dispatch leg or
   another trainee's Transport state.
+- Unit-origin edits and Dispatch route enrichment remain inside the current Dispatch run and do not
+  clear Transport state; see ADR 0022.

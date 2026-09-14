@@ -53,11 +53,13 @@ import { ALL_MEDICATIONS } from '@/lib/monitor/medications'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { useMonitorStore } from '@/store/monitorStore'
 import { usePatientSnsMeasurements } from '@/hooks/usePatientSnsMeasurements'
+import { useDispatchRouteResolution } from '@/hooks/useDispatchRouteResolution'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
 import {
   hasDefibrillatorModelDirty,
   hasDefibrillatorModelPending,
+  normalizeDispatchAddress,
 } from '@/store/fieldState'
 import type {
   PatientPhysicalIconGroupId,
@@ -77,6 +79,7 @@ import type {
   SavedScenarioSummary,
   ScenarioSnapshotV1,
 } from '@/types/savedScenario'
+import type { DispatchRoute } from '@/types/dispatchRoute'
 
 type AdminTab = 'scenarios' | 'monitor' | 'physical' | 'defibrillators' | 'report'
 
@@ -134,6 +137,28 @@ type ScenarioConfirmation = {
   description: string
   confirmLabel: string
   onConfirm: () => void
+}
+
+type DispatchConfirmationKind = 'start' | 'send'
+type RoutePublishStatus = 'idle' | 'pending' | 'failed'
+
+function getRouteWarning(route: DispatchRoute, incidentAddress: string): string | null {
+  if (incidentAddress.trim() === '') return 'No Incident-scene address is configured.'
+  if (
+    normalizeDispatchAddress(route.destinationAddress) !==
+    normalizeDispatchAddress(incidentAddress)
+  ) {
+    return 'Route is still calculating.'
+  }
+  if (route.status === 'ready') return null
+  if (route.status === 'failed') {
+    return `Route is unavailable.${route.error ? ` ${route.error}` : ''}`
+  }
+  return 'Route is still calculating.'
+}
+
+function getRouteSignature(route: DispatchRoute): string {
+  return JSON.stringify(route)
 }
 
 function getResponseError(data: unknown, fallback: string): string {
@@ -203,12 +228,19 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   const [scenarioError, setScenarioError] = useState('')
   const [scenarioConfirmation, setScenarioConfirmation] =
     useState<ScenarioConfirmation | null>(null)
+  const [dispatchConfirmation, setDispatchConfirmation] =
+    useState<DispatchConfirmationKind | null>(null)
+  const [routePublishStatus, setRoutePublishStatus] =
+    useState<RoutePublishStatus>('idle')
+  const [routePublishError, setRoutePublishError] = useState('')
+  const [dispatchActionBusy, setDispatchActionBusy] = useState(false)
   const resetForNewAttempt = useMonitorStore((s) => s.resetForNewAttempt)
   const setDraftVitalValues = useMonitorStore((s) => s.setDraftVitalValues)
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const applyScenarioDraft = useMonitorStore((s) => s.applyScenarioDraft)
   const getSharedState = useMonitorStore((s) => s.getSharedState)
   const startDispatchClock = useMonitorStore((s) => s.startDispatchClock)
+  const sendMonitorState = useMonitorStore((s) => s.send)
   const scenarioVitalsDraft = useMonitorStore((s) => s.draft)
   const scenarioVitalActive = useMonitorStore((s) => s.draftVitalActive)
   const scenarioLastRhythm = useMonitorStore((s) => s.lastRhythm)
@@ -216,6 +248,11 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   const scenarioDispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
   const scenarioDispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
   const scenarioDispatchOrigin = useMonitorStore((s) => s.dispatchRouteDraft.originAddress)
+  const callerInfoSavedAddress = useMonitorStore((s) => s.callerInfoSaved.address)
+  const callerInfoConfirmedAddress = useMonitorStore((s) => s.callerInfoConfirmed.address)
+  const dispatchRouteDraft = useMonitorStore((s) => s.dispatchRouteDraft)
+  const dispatchRouteSaved = useMonitorStore((s) => s.dispatchRouteSaved)
+  const dispatchRouteConfirmed = useMonitorStore((s) => s.dispatchRouteConfirmed)
   const defibrillatorModelDraft = useMonitorStore((s) => s.defibrillatorModelDraft)
   const defibrillatorModelSaved = useMonitorStore((s) => s.defibrillatorModelSaved)
   const defibrillatorModelConfirmed = useMonitorStore((s) => s.defibrillatorModelConfirmed)
@@ -248,6 +285,12 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   // back is a deliberate, one-off read rather than something polled.
   const [pastReview, setPastReview] = useState<PastReview | null>(null)
   const [sessionError, setSessionError] = useState('')
+  const sessionWriteQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const routePublishSequenceRef = useRef(0)
+  const routePublishTargetRef = useRef('')
+  const lastPublishedRouteRef = useRef('')
+  const lastPublishedScenarioTitleRef = useRef<string | null>(null)
+  const dispatchActionBusyRef = useRef(false)
   // The instructor's explicit pick of who an instructor-recorded action is
   // credited to. Null means "whoever is first", which is every one-trainee
   // room and so most of them.
@@ -309,31 +352,6 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     return () => window.clearInterval(interval)
   }, [refreshReview, session])
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  const startSession = async () => {
-    if (!session || !canControlRoom) return
-    // Re-stamp and push the dispatch clock before opening the room, so trainees
-    // arriving on the very first status poll already have travel time measured
-    // from now rather than from whenever the call was staged.
-    startDispatchClock()
-    try {
-      await sendSessionState()
-    } catch (caught) {
-      setSessionError(caught instanceof Error ? caught.message : 'Unable to send session state')
-      return
-    }
-    const response = await fetch(`/api/session/${session.code}/start`, {
-      method: 'POST',
-      headers: { 'x-room-controller-token': session.controllerToken },
-    })
-    const data = await response.json()
-    if (!response.ok) {
-      setSessionError(data.error ?? 'Unable to start session')
-      return
-    }
-    setSessionStatus(data.session.status)
-    await refreshReview()
-  }
 
   const startNewAttempt = async () => {
     if (!session || !canControlRoom) return
@@ -472,28 +490,19 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   const activeAttemptLabel =
     attemptLabels.find((entry) => entry.attempt_version === attemptVersion)?.label ?? ''
 
-  const sendSessionState = useCallback(async () => {
+  const sendSessionState = useCallback(async (
+    updateKind: 'instructor' | 'route-enrichment' = 'instructor',
+  ) => {
     if (!session || !canControlRoom) return
-    const response = await fetch(`/api/session/${session.code}/state`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-room-controller-token': session.controllerToken,
-      },
-      body: JSON.stringify({
-        state: {
-          ...getSharedState(),
-          // The title is console state, not monitor state, so it joins here
-          // rather than in the store's shared snapshot.
-          scenarioTitleConfirmed: scenarioTitle.trim(),
-          // The report's instructor rows could show vitals and the dispatch
-          // card but not the history the trainee had to elicit or the
-          // Pulse/Respiratory/Skin findings they had to palpate for, because
-          // none of it left the console. It travels here -- and the server
-          // keeps it in session_state_history while stripping it from the
-          // session_state the trainee polls, so the answer key stays on the
-          // instructor's side of the room.
-          instructorOnly: {
+    const write = async () => {
+      const sharedState = getSharedState()
+      const scenarioTitleForWrite = updateKind === 'route-enrichment'
+        ? lastPublishedScenarioTitleRef.current ?? scenarioTitle.trim()
+        : scenarioTitle.trim()
+      const instructorOnly = updateKind === 'route-enrichment'
+        ? { stateUpdateKind: updateKind }
+        : {
+            stateUpdateKind: updateKind,
             patientInformation: {
               selected: {
                 sample: [...patientSelections.sample].sort(),
@@ -505,12 +514,43 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
               },
             },
             patientSns: { ...patientPhysicalFindings },
-          },
+          }
+      const response = await fetch(`/api/session/${session.code}/state`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-room-controller-token': session.controllerToken,
         },
-      }),
-    })
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.error ?? 'Unable to send session state')
+        body: JSON.stringify({
+          state: {
+            ...sharedState,
+            // The title is console state, not monitor state, so it joins here
+            // rather than in the store's shared snapshot.
+            scenarioTitleConfirmed: scenarioTitleForWrite,
+            // The report's instructor rows could show vitals and the dispatch
+            // card but not the history the trainee had to elicit or the
+            // Pulse/Respiratory/Skin findings they had to palpate for, because
+            // none of it left the console. It travels here -- and the server
+            // keeps it in session_state_history while stripping it from the
+            // session_state the trainee polls, so the answer key stays on the
+            // instructor's side of the room.
+            instructorOnly,
+          },
+        }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(getResponseError(data, 'Unable to send session state'))
+      }
+      lastPublishedRouteRef.current = getRouteSignature(sharedState.dispatchRouteConfirmed)
+      if (updateKind === 'instructor') {
+        lastPublishedScenarioTitleRef.current = scenarioTitleForWrite
+      }
+    }
+
+    const queued = sessionWriteQueueRef.current.then(write, write)
+    sessionWriteQueueRef.current = queued.catch(() => undefined)
+    await queued
   }, [
     canControlRoom,
     getSharedState,
@@ -520,6 +560,168 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     scenarioTitle,
     session,
   ])
+
+  const publishRouteEnrichment = useCallback(
+    (route: DispatchRoute) => {
+      if (!session || !canControlRoom || sessionStatus !== 'active') return
+      const targetSignature = getRouteSignature(route)
+      if (
+        lastPublishedRouteRef.current === targetSignature ||
+        routePublishTargetRef.current === targetSignature
+      ) {
+        return
+      }
+
+      const sequence = routePublishSequenceRef.current + 1
+      routePublishSequenceRef.current = sequence
+      routePublishTargetRef.current = targetSignature
+      setRoutePublishStatus('pending')
+      setRoutePublishError('')
+
+      const publish = async () => {
+        const delays = [0, 300, 900]
+        let lastError: unknown = null
+        for (const delay of delays) {
+          if (routePublishSequenceRef.current !== sequence) return
+          if (delay > 0) {
+            await new Promise<void>((resolve) => window.setTimeout(resolve, delay))
+          }
+          if (routePublishSequenceRef.current !== sequence) return
+          await sessionWriteQueueRef.current.catch(() => undefined)
+          if (lastPublishedRouteRef.current === targetSignature) {
+            routePublishTargetRef.current = ''
+            setRoutePublishStatus('idle')
+            setRoutePublishError('')
+            return
+          }
+          const current = useMonitorStore.getState().dispatchRouteConfirmed
+          if (
+            current.status !== 'ready' ||
+            current.originAddress !== route.originAddress ||
+            current.destinationAddress !== route.destinationAddress
+          ) {
+            if (routePublishSequenceRef.current === sequence) {
+              routePublishTargetRef.current = ''
+              setRoutePublishStatus('idle')
+            }
+            return
+          }
+          try {
+            await sendSessionState('route-enrichment')
+            if (routePublishSequenceRef.current === sequence) {
+              routePublishTargetRef.current = ''
+              setRoutePublishStatus('idle')
+              setRoutePublishError('')
+            }
+            return
+          } catch (caught) {
+            lastError = caught
+          }
+        }
+
+        if (routePublishSequenceRef.current === sequence) {
+          routePublishTargetRef.current = ''
+          setRoutePublishStatus('failed')
+          setRoutePublishError(
+            lastError instanceof Error ? lastError.message : 'Route update could not be sent',
+          )
+        }
+      }
+
+      void publish()
+    },
+    [canControlRoom, sendSessionState, session, sessionStatus],
+  )
+
+  const { retryRoute } = useDispatchRouteResolution({
+    onConfirmedRouteReady: publishRouteEnrichment,
+  })
+
+  useEffect(() => {
+    if (sessionStatus === 'active' && dispatchRouteConfirmed.status === 'ready') {
+      publishRouteEnrichment(dispatchRouteConfirmed)
+    }
+  }, [dispatchRouteConfirmed, publishRouteEnrichment, sessionStatus])
+
+  const routeAuthoredUnsaved =
+    normalizeDispatchAddress(dispatchRouteDraft.originAddress) !==
+      normalizeDispatchAddress(dispatchRouteSaved.originAddress) ||
+    normalizeDispatchAddress(scenarioCallerInfo.address) !==
+      normalizeDispatchAddress(callerInfoSavedAddress)
+  const routeAuthoredUnsent =
+    normalizeDispatchAddress(dispatchRouteSaved.originAddress) !==
+      normalizeDispatchAddress(dispatchRouteConfirmed.originAddress) ||
+    normalizeDispatchAddress(callerInfoSavedAddress) !==
+      normalizeDispatchAddress(callerInfoConfirmedAddress)
+  const routeChangesNotSent = routeAuthoredUnsaved || routeAuthoredUnsent
+
+  const runStart = useCallback(async () => {
+    if (!session || !canControlRoom || dispatchActionBusyRef.current) return
+    dispatchActionBusyRef.current = true
+    setDispatchActionBusy(true)
+    // Nothing mutates until the route preflight has either passed or the
+    // instructor explicitly chose Start Anyway.
+    startDispatchClock()
+    try {
+      await sendSessionState()
+      const response = await fetch(`/api/session/${session.code}/start`, {
+        method: 'POST',
+        headers: { 'x-room-controller-token': session.controllerToken },
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setSessionError(getResponseError(data, 'Unable to start session'))
+        return
+      }
+      setSessionError('')
+      setSessionStatus(data.session.status)
+      await refreshReview()
+    } catch (caught) {
+      setSessionError(caught instanceof Error ? caught.message : 'Unable to start session')
+    } finally {
+      dispatchActionBusyRef.current = false
+      setDispatchActionBusy(false)
+    }
+  }, [canControlRoom, refreshReview, sendSessionState, session, startDispatchClock])
+
+  const requestStart = () => {
+    const state = useMonitorStore.getState()
+    if (getRouteWarning(state.dispatchRouteConfirmed, state.callerInfoConfirmed.address)) {
+      setDispatchConfirmation('start')
+      return
+    }
+    void runStart()
+  }
+
+  const beforeSend = (): boolean => {
+    if (sessionStatus !== 'active') return true
+    const state = useMonitorStore.getState()
+    const createsNewRun =
+      !state.dispatch.armed ||
+      state.dispatchSavedSeconds !== state.dispatchConfirmedSeconds ||
+      normalizeDispatchAddress(state.callerInfoSaved.address) !==
+        normalizeDispatchAddress(state.callerInfoConfirmed.address)
+    if (!createsNewRun) return true
+    if (!getRouteWarning(state.dispatchRouteSaved, state.callerInfoSaved.address)) return true
+    setDispatchConfirmation('send')
+    return false
+  }
+
+  const runConfirmedSend = async () => {
+    if (dispatchActionBusyRef.current) return
+    dispatchActionBusyRef.current = true
+    setDispatchActionBusy(true)
+    sendMonitorState()
+    try {
+      await sendSessionState()
+      setSessionError('')
+    } catch (caught) {
+      setSessionError(caught instanceof Error ? caught.message : 'Unable to send session state')
+    } finally {
+      dispatchActionBusyRef.current = false
+      setDispatchActionBusy(false)
+    }
+  }
 
   // Resolved against the live roster on every render rather than stored,
   // because the roster is polled: a trainee who leaves, or a New Attempt that
@@ -1069,6 +1271,36 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     togglePatientSnsMeasurementResult(group, patientPhysicalFindings)
   }
 
+  const displayedRoute = dispatchArmed ? dispatchRouteConfirmed : dispatchRouteDraft
+  const displayedIncidentAddress = dispatchArmed
+    ? callerInfoConfirmedAddress
+    : scenarioCallerInfo.address
+  const displayedRouteMatchesIncident =
+    normalizeDispatchAddress(displayedRoute.destinationAddress) ===
+    normalizeDispatchAddress(displayedIncidentAddress)
+  const routeStatus = routeChangesNotSent
+    ? { label: 'Route changes not sent', tone: 'text-pending-amber', retry: false }
+    : routePublishStatus === 'pending'
+      ? { label: 'Route update pending', tone: 'text-pending-amber', retry: false }
+      : routePublishStatus === 'failed'
+        ? { label: 'Route unavailable', tone: 'text-alarm-red', retry: true }
+        : displayedIncidentAddress.trim() === ''
+          ? { label: 'No route configured', tone: 'text-neutral-500', retry: false }
+          : !displayedRouteMatchesIncident
+            ? { label: 'Route calculating', tone: 'text-pending-amber', retry: false }
+            : displayedRoute.status === 'failed'
+              ? { label: 'Route unavailable', tone: 'text-alarm-red', retry: true }
+              : displayedRoute.status === 'ready'
+                ? { label: 'Route ready', tone: 'text-ecg-green', retry: false }
+                : { label: 'Route calculating', tone: 'text-pending-amber', retry: false }
+
+  const confirmationRoute =
+    dispatchConfirmation === 'send' ? dispatchRouteSaved : dispatchRouteConfirmed
+  const confirmationAddress =
+    dispatchConfirmation === 'send' ? callerInfoSavedAddress : callerInfoConfirmedAddress
+  const dispatchRouteWarning = getRouteWarning(confirmationRoute, confirmationAddress)
+  const dispatchRouteNowReady = dispatchRouteWarning === null
+
   return (
     <InstructorLayout>
       {!session ? <RoomLauncher initialExistingRoom={initialExistingRoom} /> : null}
@@ -1113,10 +1345,12 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
               ) : null}
               <button
                 type="button"
-                onClick={startSession}
+                onClick={requestStart}
                 title={
                   !dispatchArmed
                     ? 'Save and Send the call info before starting'
+                    : routeChangesNotSent
+                      ? 'Save and Send the route changes before starting'
                     : !defibrillatorModelReady
                       ? 'Save and Send the defibrillator model before starting'
                       : undefined
@@ -1126,6 +1360,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
                   sessionStatus === 'ended' ||
                   !canControlRoom ||
                   !dispatchArmed ||
+                  dispatchActionBusy ||
+                  routeChangesNotSent ||
                   !defibrillatorModelReady
                 }
                 className="border border-ecg-green bg-ecg-green px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-black hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
@@ -1140,18 +1376,42 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
               >
                 New Attempt
               </button>
-              <button
-                type="button"
-                onClick={endSession}
-                disabled={sessionStatus === 'ended' || !canControlRoom}
-                className="border border-alarm-red bg-alarm-red/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                End Room
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={endSession}
+                  disabled={sessionStatus === 'ended' || !canControlRoom}
+                  className="border border-alarm-red bg-alarm-red/15 px-3 py-2 font-mono text-[10px] font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  End Room
+                </button>
+                <span
+                  className={cn(
+                    'font-mono text-[10px] font-black uppercase tracking-wider',
+                    routeStatus.tone,
+                  )}
+                  data-testid="dispatch-route-status"
+                >
+                  {routeStatus.label}
+                </span>
+                {routeStatus.retry ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRoutePublishStatus('idle')
+                      setRoutePublishError('')
+                      retryRoute()
+                    }}
+                    className="border border-alarm-red px-2 py-1 font-mono text-[10px] font-black uppercase tracking-wider text-alarm-red hover:bg-alarm-red/15"
+                  >
+                    Retry route
+                  </button>
+                ) : null}
+              </div>
             </div>
-            {sessionError ? (
+            {sessionError || routePublishError ? (
               <p className="mt-2 shrink-0 text-sm font-semibold text-pending-amber">
-                {sessionError}
+                {sessionError || routePublishError}
               </p>
             ) : null}
             {sessionStatus === 'ended' && (
@@ -1265,6 +1525,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
       <div className="flex items-center gap-3" data-testid="admin-save-send-actions">
         <SaveButton />
         <SendButton
+          beforeSend={beforeSend}
           onSent={session ? sendSessionState : undefined}
           forceDisabled={Boolean(session && !canControlRoom)}
         />
@@ -1442,6 +1703,35 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
           const confirmation = scenarioConfirmation
           setScenarioConfirmation(null)
           confirmation?.onConfirm()
+        }}
+      />
+      <ConfirmationDialog
+        open={dispatchConfirmation !== null}
+        title={dispatchRouteNowReady ? 'Route calculation is complete' : 'Route not ready'}
+        description={
+          dispatchRouteNowReady
+            ? 'The route is ready. Review the action below before continuing.'
+            : dispatchRouteWarning ?? 'The route is not ready.'
+        }
+        confirmLabel={
+          dispatchRouteNowReady
+            ? dispatchConfirmation === 'send'
+              ? 'Send'
+              : 'Start / Dispatch'
+            : dispatchConfirmation === 'send'
+              ? 'Send Anyway'
+              : 'Start Anyway'
+        }
+        confirmDisabled={dispatchActionBusy}
+        onCancel={() => setDispatchConfirmation(null)}
+        onConfirm={() => {
+          const confirmation = dispatchConfirmation
+          setDispatchConfirmation(null)
+          if (confirmation === 'send') {
+            void runConfirmedSend()
+          } else if (confirmation === 'start') {
+            void runStart()
+          }
         }}
       />
     </InstructorLayout>

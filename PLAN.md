@@ -1125,6 +1125,73 @@ button is inert until a drill gate is satisfied.
   edits follow the same strict Save -> Send workflow as other admin fields:
   changing the value unlocks Save, Save unlocks Send, and Send locks until a new
   value is saved.
+
+**Requirement change (2026-09-14) — Dispatch-run identity and late route enrichment:**
+Supersedes coordinate-derived re-dispatch behavior and the requirement that a resolved Dispatch leg
+wait for another manual Send when its authored addresses have already been sent.
+- Dispatch-run identity is semantic. The first dispatch, a normalized Incident-scene address change,
+  or a changed saved countdown creates a new run. Address comparison trims, collapses whitespace, and
+  ignores case. Unit-origin edits, coordinates, route status/error, distance, duration, and geometry do
+  not create a new run. The instructor is the sole authority for run creation; a Scenario device
+  preserves Acknowledge, Arrival, Transport, caller history, explicit monitor entry, and Selected
+  receiving hospital whenever the run id is unchanged.
+- Instructor-authored Unit-origin and Incident-scene address changes retain strict Save -> Send.
+  Start / Dispatch is disabled while either address has unsaved or unsent changes, with an orange
+  `Route changes not sent` status. Derived Dispatch route enrichment never makes Save or Send dirty or
+  pending by itself.
+- Route resolution runs from an always-mounted instructor controller rather than the Caller Info tab.
+  Only a result matching the latest saved origin, Incident scene, and Dispatch run may apply; stale
+  results are discarded. A ready result before Start joins the existing pre-activation state write.
+  A result arriving during or after Start publishes automatically and serially, retaining the existing
+  run id, dispatch `startedAt`, countdown clock, trainee milestones, and trainee-local Transport state.
+- Automatic route publication is a marked system enrichment, not an Instructor change. Its internal
+  state-history snapshot remains available for exact Scenario-device-action context, but it produces
+  no visible Instructor-change row and does not contribute to behind-count calculations. Manual Send,
+  Start, and enrichment writes share one serialized queue so concurrent updates cannot overwrite one
+  another. Temporary publication failures retry with bounded backoff, retain only the newest eligible
+  result, and show orange `Route update pending` until acknowledged by the server.
+- Start / Dispatch checks the confirmed route before mutating the dispatch clock or making a network
+  request. `idle`/`loading` with an Incident scene shows `Route is still calculating`; `failed` shows
+  `Route is unavailable` plus its reason; a blank Incident scene shows `No Incident-scene address is
+  configured`. Each warning offers `Start Anyway` and `Cancel`. Cancel has no side effect and duplicate
+  confirmation is guarded. If the route becomes ready while open, the dialog updates to
+  `Route calculation is complete` with `Start / Dispatch` and never starts automatically.
+- A Send during an active Attempt that would create a new Dispatch run applies the same unresolved-route
+  check before publishing, using `Send Anyway` and `Cancel`. Same-run vital, patient, and caller-detail
+  Sends remain warning-free. Starting or sending anyway never suppresses later automatic enrichment.
+- Move Dispatch-route availability out of Caller Info and place it immediately to the right of End Room
+  in a wrapping-together control group. Show `Route calculating` and `Route update pending` in orange,
+  `Route changes not sent` in orange, `Route ready` in green, `Route unavailable` in red with a visible
+  `Retry route` action, and `No route configured` in neutral gray. Caller Info retains distance, ETA,
+  and detailed error output. Manual Retry is used after a calculation or bounded-publication failure;
+  there is no indefinite background retry loop.
+
+**Testing — Dispatch-run identity and late route enrichment:**
+- Store coverage reproduces unresolved first Send followed by address-identical coordinate/status/
+  geometry resolution and a later vital Send, proving the run id, clocks, milestones, caller history,
+  monitor entry, and Selected receiving hospital survive. Genuine normalized Incident-scene and
+  countdown changes still create a new run; Unit-origin changes remain in the current run.
+- Instructor integration covers ready direct Start; idle/loading, failed, and blank-address warnings;
+  side-effect-free Cancel/Escape/backdrop; guarded Start Anyway/Send Anyway; an in-place ready dialog;
+  unsent-address Start blocking; all availability labels/colors; stable End Room adjacency; and Retry.
+- Deferred route tests cover resolution before, during, and after Start; latest-result wins across
+  scenario/address/run changes; automatic same-run publication; bounded/coalesced retry; and serialized
+  overlap with manual Send and Start.
+- Session synchronization and Monitor coverage prove a same-run enrichment updates the Dispatch map
+  without reopening New Assignment or clearing trainee progress. Evaluation coverage retains exact
+  system-version context while suppressing automatic enrichment rows and false behind counts.
+- Run focused store, Caller Info, Admin, session-sync, Monitor, evaluation-timeline, and route tests,
+  then TypeScript, ESLint, the production build, the complete Vitest suite, and a real two-browser
+  instructor/Scenario-device replay of the original race at supported desktop and iPad dimensions.
+
+**Implemented (2026-09-14):** Dispatch identity, always-mounted route resolution, route-only promotion,
+serialized/coalesced automatic publication, Start/Send preflight confirmation, End Room route status/Retry,
+and system-history evaluation behavior are complete. The original same-run coordinate-arrival Monitor race
+is covered directly. All 411 focused tests pass with TypeScript and ESLint (zero errors); the complete suite
+retains the same three unrelated baseline failures. Production build and live browser replay could not run
+in this environment because Turbopack is denied its worker port and the existing port-3000 Next process is
+unresponsive and holds the development lock.
+
 - The assignment dashboard's route map also supports a trainee-local Receiving Hospital Directory.
   It uses the exact supplied set of 16 adult and 2 pediatric Montréal-area Receiving hospitals and
   appears both on initial New Assignment and when the assignment dashboard is reopened through CALL

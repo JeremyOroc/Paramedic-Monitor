@@ -5,6 +5,41 @@
 
 ---
 
+## [2026-09-14] [dispatch/instructor] — Keep late route resolution in the active Dispatch run
+
+- Changed re-dispatch identity to use only first dispatch, normalized Incident-scene changes, and saved
+  countdown changes. Unit-origin changes and derived route coordinates/status/distance/duration/geometry
+  now preserve the run id, dispatch clock, Acknowledge, Arrival, Transport, and monitor entry.
+- Moved route resolution into an always-mounted instructor hook with abortable latest-result validation and
+  route-only promotion across matching draft/saved/confirmed layers, so changing tabs cannot cancel routing
+  and enrichment never makes Save or Send dirty.
+- Added serialized automatic active-run publication with coalescing, three bounded attempts, explicit Retry,
+  and history-only `route-enrichment` markers. Evaluation keeps those versions for action context while
+  suppressing visible Instructor rows, false answer-key promotion, and behind-count inflation.
+- Added side-effect-free unresolved-route confirmation for Start and active new-run Send, live dialog updates
+  when routing completes, Start blocking for unsaved/unsent addresses, and the complete colored route status
+  group immediately beside End Room. Caller Info retains Distance, ETA, and route error detail.
+- Added original-race Monitor regression coverage plus store identity, route hook, instructor warning/status,
+  automatic publication, Save/Send, and evaluation-history tests. All 411 focused tests, TypeScript, diff
+  validation, and ESLint (zero errors; 12 existing warnings) pass. The full suite has the same three unrelated
+  baseline failures. Turbopack build/live-browser checks remain blocked by local port/process restrictions.
+
+## [2026-09-14] [planning/dispatch] — Define same-run route enrichment and unresolved-route safeguards
+
+- Defined Dispatch-run identity as the first dispatch or an intentional normalized Incident-scene/
+  countdown change; Unit-origin edits and address-identical route resolution remain in the same run and
+  preserve all trainee dispatch, monitor-entry, and Transport state.
+- Approved automatic late-route publication with stale-result rejection, serialized/coalesced writes,
+  bounded retry, and system-history snapshots that retain exact action context without appearing as
+  Instructor changes or increasing behind counts.
+- Specified unresolved-route Start Anyway/Cancel and active re-dispatch Send Anyway/Cancel warnings,
+  including blank/failed states, side-effect-free cancellation, live ready-state dialog updates, and
+  unsent route-address blocking.
+- Moved the accepted route-availability presentation beside End Room with calculating/pending/unsent,
+  ready, unavailable/Retry, and unconfigured states while retaining detailed Caller Info output.
+- Added ADR 0022, sharpened the Attempt/Dispatch-run/Unit-origin/route-enrichment glossary, updated ADR
+  0019, and recorded the implementation and verification contract. Implementation remains pending.
+
 ## [2026-09-14] [instructor/reports] — Compact scenarios and add atomic report multi-delete
 
 - Reduced Saved scenario rows to a measured 44px desktop height, moved folder and Up/Down controls
