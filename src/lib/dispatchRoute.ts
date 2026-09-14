@@ -88,6 +88,7 @@ export async function fetchAddressSuggestions(
 export async function geocodeAddress(
   address: string,
   apiKey = getGeoapifyApiKey(),
+  signal?: AbortSignal,
 ): Promise<AddressSuggestion | null> {
   const trimmed = address.trim()
   if (!apiKey || trimmed.length < 3) return null
@@ -100,7 +101,9 @@ export async function geocodeAddress(
     bias: 'proximity:-73.9412,45.4068',
   })
 
-  const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`)
+  const response = await fetch(`https://api.geoapify.com/v1/geocode/search?${params}`, {
+    signal,
+  })
   if (!response.ok) {
     throw new Error('Address lookup unavailable')
   }

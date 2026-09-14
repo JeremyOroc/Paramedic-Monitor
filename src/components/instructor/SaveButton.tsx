@@ -5,7 +5,7 @@ import {
   hasCallerInfoDirty,
   hasDirty,
   hasDispatchCountdownDirty,
-  hasDispatchRouteChanged,
+  hasDispatchRouteAuthoredChanged,
   hasDefibrillatorModelDirty,
   hasVitalActiveDirty,
 } from '@/store/fieldState'
@@ -30,7 +30,7 @@ export function SaveButton() {
     !hasDirty(draft, saved) &&
     !hasVitalActiveDirty(draftVitalActive, savedVitalActive) &&
     !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved) &&
-    !hasDispatchRouteChanged(dispatchRouteDraft, dispatchRouteSaved) &&
+    !hasDispatchRouteAuthoredChanged(dispatchRouteDraft, dispatchRouteSaved) &&
     !hasDispatchCountdownDirty(dispatchMinutes, dispatchSeconds, dispatchSavedSeconds) &&
     !hasDefibrillatorModelDirty(defibrillatorModelDraft, defibrillatorModelSaved)
 

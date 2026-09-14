@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**Dispatch route same-run enrichment — COMPLETE (2026-09-14).**
+Only the first dispatch, a normalized Incident-scene change, or a changed countdown now creates a new
+Dispatch run. Coordinate/status/geometry enrichment and Unit-origin changes retain the run id, clocks,
+trainee milestones, monitor entry, and Transport state. Routing now runs outside the Caller Info tab,
+rejects stale results, promotes matching route-only data without making Save/Send dirty, and automatically
+publishes late active-run results through a serialized, coalesced, three-attempt queue. Start and active
+re-dispatch Send warn before any mutation when routing is unresolved, with live ready-state confirmation;
+unsent address edits block Start. Route availability and Retry now sit beside End Room. System enrichment
+history remains available for exact action context while visible Instructor rows and behind counts ignore
+it. All 411 focused store/hook/Admin/Monitor/evaluation/server/component tests pass, along with TypeScript,
+diff validation, and ESLint with zero errors and the same 12 unrelated warnings. The complete suite retains
+its same three established unrelated failures; production build and live browser QA are environment-blocked
+because Turbopack cannot bind its worker port and an existing unresponsive Next dev lock owns port 3000.
+
 **Compact Scenario library and atomic Reports deletion — COMPLETE (2026-09-14).**
 Saved Scenario rows now measure 44px at the desktop breakpoint and keep drag, title, bounded folder,
 Up/Down, Save/Save Copy, and Delete controls in one ordered line, with compact narrow wrapping and an

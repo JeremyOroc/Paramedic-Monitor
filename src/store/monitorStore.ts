@@ -31,7 +31,7 @@ import {
   normalizeDispatchRoute,
   type DispatchRoute,
 } from '@/types/dispatchRoute'
-import { dispatchCountdownSeconds } from '@/store/fieldState'
+import { dispatchCountdownSeconds, normalizeDispatchAddress } from '@/store/fieldState'
 import { buildEventLogEntry } from '@/lib/eventLog'
 import {
   getAutomaticHeartRate,
@@ -320,6 +320,7 @@ export type MonitorState = {
   setDraftVitalActive: (field: NumericVitalField, active: boolean) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
   setDispatchRouteDraft: (route: DispatchRoute) => void
+  applyDispatchRouteResolution: (route: DispatchRoute) => void
   setPatientAge: (age: number) => void
   setPatientSex: (sex: PatientSex) => void
   setDispatchMinutes: (minutes: number) => void
@@ -490,6 +491,35 @@ export const useMonitorStore = create<MonitorState>()(
         set((s) => ({ callerInfoDraft: { ...s.callerInfoDraft, [field]: value } })),
       setDispatchRouteDraft: (route) =>
         set({ dispatchRouteDraft: normalizeDispatchRoute(route) }),
+      applyDispatchRouteResolution: (route) =>
+        set((s) => {
+          const resolved = normalizeDispatchRoute(route)
+          const originKey = normalizeDispatchAddress(resolved.originAddress)
+          const destinationKey = normalizeDispatchAddress(resolved.destinationAddress)
+          const matches = (candidate: DispatchRoute, destinationAddress: string) =>
+            normalizeDispatchAddress(candidate.originAddress) === originKey &&
+            normalizeDispatchAddress(destinationAddress) === destinationKey
+          const result: Partial<MonitorState> = {}
+
+          if (matches(s.dispatchRouteDraft, s.callerInfoDraft.address)) {
+            result.dispatchRouteDraft = resolved
+          }
+          if (matches(s.dispatchRouteSaved, s.callerInfoSaved.address)) {
+            result.dispatchRouteSaved = resolved
+          }
+          if (matches(s.dispatchRouteConfirmed, s.callerInfoConfirmed.address)) {
+            result.dispatchRouteConfirmed = {
+              ...resolved,
+              startedAt: resolved.status === 'ready' ? s.dispatch.startedAt : null,
+              durationSeconds:
+                resolved.status === 'ready'
+                  ? s.dispatchConfirmedSeconds
+                  : resolved.durationSeconds,
+            }
+          }
+
+          return result
+        }),
       setPatientAge: (age) =>
         set((s) => ({ patientInfo: { ...s.patientInfo, age: clampAge(age) } })),
       setPatientSex: (sex) =>
@@ -697,12 +727,9 @@ export const useMonitorStore = create<MonitorState>()(
           // confirmed) makes this Send a re-dispatch: the timing restarts and the
           // trainee must Acknowledge/Arrive again. The first Send is always one.
           const countdownChanged = s.dispatchSavedSeconds !== s.dispatchConfirmedSeconds
-          const previousDestination = s.dispatchRouteConfirmed.destination
-          const nextDestination = s.dispatchRouteSaved.destination
           const incidentChanged =
-            s.dispatchRouteSaved.destinationAddress !== s.dispatchRouteConfirmed.destinationAddress ||
-            nextDestination?.lat !== previousDestination?.lat ||
-            nextDestination?.lng !== previousDestination?.lng
+            normalizeDispatchAddress(s.callerInfoSaved.address) !==
+            normalizeDispatchAddress(s.callerInfoConfirmed.address)
           const redispatch = !s.dispatch.armed || countdownChanged || incidentChanged
 
           const dispatchDurationSeconds = s.dispatchSavedSeconds
@@ -785,14 +812,8 @@ export const useMonitorStore = create<MonitorState>()(
             s.dispatchConfirmedSeconds * 1000,
           )
           const incomingRoute = normalizeDispatchRoute(shared.dispatchRouteConfirmed)
-          const previousDestination = s.dispatchRouteConfirmed.destination
-          const nextDestination = incomingRoute.destination
-          const incidentChanged =
-            incomingRoute.destinationAddress !== s.dispatchRouteConfirmed.destinationAddress ||
-            nextDestination?.lat !== previousDestination?.lat ||
-            nextDestination?.lng !== previousDestination?.lng
           let dispatch: DispatchState
-          if (incoming.runId === s.dispatch.runId && !incidentChanged) {
+          if (incoming.runId === s.dispatch.runId) {
             dispatch = {
               ...incoming,
               acknowledgedAt: s.dispatch.acknowledgedAt,

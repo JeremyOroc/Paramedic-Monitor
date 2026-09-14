@@ -726,6 +726,34 @@ describe('buildEvaluationTimeline', () => {
     expect(instructorRows(rows)[1].changes).toEqual(['rhythm NSR → VF', 'HR 88 → 112'])
   })
 
+  it('keeps route-enrichment history for context without showing or counting it', () => {
+    const routeEnrichment = sharedState({}, {}, {
+      instructorOnly: { stateUpdateKind: 'route-enrichment' },
+      dispatchRouteConfirmed: {
+        originAddress: 'John Abbott College',
+        destinationAddress: '200 Sainte-Anne Street',
+        status: 'ready',
+      },
+    })
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({})),
+        makeState(2, 10, routeEnrichment),
+        makeState(3, 30, sharedState({ hr: 130 })),
+      ],
+      events: [
+        makeEvent({ id: 'after-route', occurred_at: at(20), state_version: 2 }),
+        makeEvent({ id: 'after-vitals', occurred_at: at(40), state_version: 2 }),
+      ],
+    })
+
+    expect(instructorRows(rows).map((row) => row.version)).toEqual([1, 3])
+    const [afterRoute, afterVitals] = actions(rows)
+    expect((afterRoute.context as TimelineStateContext).rhythm).toBe('NSR 88')
+    expect(afterRoute.behindBy).toBe(0)
+    expect(afterVitals.behindBy).toBe(1)
+  })
+
   it('carries the scenario name onto the opening row', () => {
     const { rows } = build({
       stateHistory: [makeState(1, 0, sharedState({}, {}, { scenarioTitleConfirmed: 'Fall from ladder' }))],

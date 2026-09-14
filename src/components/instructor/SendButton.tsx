@@ -6,7 +6,7 @@ import { useMonitorStore } from '@/store/monitorStore'
 import {
   hasCallerInfoPending,
   hasDispatchRouteDurationPending,
-  hasDispatchRouteChanged,
+  hasDispatchRouteAuthoredChanged,
   hasDefibrillatorModelPending,
   hasPending,
   hasVitalActivePending,
@@ -15,10 +15,11 @@ import { cn } from '@/lib/utils'
 
 type SendButtonProps = {
   onSent?: () => Promise<void> | void
+  beforeSend?: () => Promise<boolean> | boolean
   forceDisabled?: boolean
 }
 
-export function SendButton({ onSent, forceDisabled = false }: SendButtonProps) {
+export function SendButton({ beforeSend, onSent, forceDisabled = false }: SendButtonProps) {
   const saved = useMonitorStore((s) => s.saved)
   const confirmed = useMonitorStore((s) => s.confirmed)
   const savedVitalActive = useMonitorStore((s) => s.savedVitalActive)
@@ -37,7 +38,7 @@ export function SendButton({ onSent, forceDisabled = false }: SendButtonProps) {
     !hasPending(saved, confirmed) &&
     !hasVitalActivePending(savedVitalActive, confirmedVitalActive) &&
     !hasCallerInfoPending(callerInfoSaved, callerInfoConfirmed) &&
-    !hasDispatchRouteChanged(dispatchRouteSaved, dispatchRouteConfirmed) &&
+    !hasDispatchRouteAuthoredChanged(dispatchRouteSaved, dispatchRouteConfirmed) &&
     !hasDispatchRouteDurationPending(dispatchSavedSeconds, dispatchConfirmedSeconds) &&
     !hasDefibrillatorModelPending(defibrillatorModelSaved, defibrillatorModelConfirmed)
 
@@ -45,6 +46,7 @@ export function SendButton({ onSent, forceDisabled = false }: SendButtonProps) {
     <button
       type="button"
       onClick={async () => {
+        if (beforeSend && !(await beforeSend())) return
         setStatus('sending')
         try {
           send()

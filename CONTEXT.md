@@ -82,8 +82,15 @@ The optional Room-scoped label identifying a Scenario device.
 _Avoid_: Student name, trainee nickname, participant identity
 
 **Attempt**:
-A single instructor-led dispatch simulation run whose confirmed scenario and defibrillator model remain fixed until the attempt ends.
+A single instructor-led simulation lifecycle within a Room, beginning with Start / Dispatch and ending
+with New Attempt or End Room. It may contain multiple Dispatch runs and Instructor changes while
+retaining one Confirmed defibrillator model.
 _Avoid_: Drill, run, session
+
+**Dispatch run**:
+One assignment of a Scenario device to an Incident scene under one dispatch countdown. The first
+dispatch or an intentional Incident-scene/countdown change begins one; route calculation does not.
+_Avoid_: Attempt, Send, route calculation
 
 **Assignment dashboard**:
 The trainee-facing dispatch surface that presents New Assignment at the beginning of an Attempt and
@@ -100,9 +107,19 @@ The caller address to which the unit responds during the Dispatch leg and from w
 departs during the Transport leg.
 _Avoid_: Starting address, destination address
 
+**Unit origin**:
+The instructor-configured location from which the Dispatch leg begins. Changing it refines the route
+within the current Dispatch run rather than assigning a new Incident scene.
+_Avoid_: Incident scene, starting address
+
 **Dispatch leg**:
 The response route from the instructor-configured unit origin to the Incident scene.
 _Avoid_: Initial route, first route
+
+**Dispatch route enrichment**:
+Derived coordinates, availability, distance, and geometry for a saved Unit origin and Incident scene.
+It may arrive after dispatch without beginning another Dispatch run.
+_Avoid_: Re-dispatch, incident edit, route change
 
 **Transport leg**:
 The trainee-local route carrying the patient toward the Selected receiving hospital. It begins at the
@@ -116,7 +133,8 @@ _Avoid_: Hospital pin, new destination
 **Selected receiving hospital**:
 The Receiving hospital currently chosen by one trainee for the Transport leg of an Attempt. The
 choice is independent for each trainee, may change while Transport is underway, becomes final at the
-hospital, and is cleared when the Attempt, monitor, dispatch run, or Incident scene changes.
+hospital, and is cleared when the Attempt, monitor, Dispatch run, or Incident scene changes; Unit-origin
+and Dispatch route-enrichment changes do not clear it.
 _Avoid_: Confirmed hospital, shared destination
 
 **Receiving Hospital Directory**:
@@ -206,7 +224,7 @@ Personal scenario or Template is later edited or deleted.
 _Avoid_: Linked scenario, current scenario
 
 **Instructor change**:
-One Send by the instructor as the evaluation record shows it: the difference from the previous Send in that attempt. Every Send is its own instructor change, including a correction seconds after the last one; the opening Send is the one instructor change with nothing before it.
+One Send by the instructor as the evaluation record shows it: the difference from the previous Send in that attempt. Every Send is its own instructor change, including a correction seconds after the last one; automatic Dispatch route enrichment is not an Instructor change.
 _Avoid_: Instructor row, state diff, send row, version
 
 **Scenario device action**:

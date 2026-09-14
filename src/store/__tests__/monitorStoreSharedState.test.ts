@@ -119,7 +119,7 @@ describe('monitorStore shared session state', () => {
     expect(useMonitorStore.getState().dispatch).toEqual(DEFAULT_DISPATCH)
   })
 
-  it('clears all dispatch milestones when the Incident scene changes in the same run', () => {
+  it('keeps dispatch milestones when route data changes within the same run', () => {
     const firstRoute = {
       ...DEFAULT_DISPATCH_ROUTE,
       destinationAddress: '100 First Street',
@@ -143,9 +143,9 @@ describe('monitorStore shared session state', () => {
     }))
 
     expect(useMonitorStore.getState().dispatch).toMatchObject({
-      acknowledgedAt: null,
-      arrivedAt: null,
-      transportedAt: null,
+      acknowledgedAt: '10:00:00',
+      arrivedAt: '10:01:00',
+      transportedAt: '10:05:00',
     })
   })
 

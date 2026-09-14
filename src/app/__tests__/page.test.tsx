@@ -455,6 +455,42 @@ describe('MonitorPage', () => {
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
+  it('does not reopen New Assignment when route coordinates arrive for the same run', async () => {
+    const user = userEvent.setup()
+    window.history.pushState({}, '', '/')
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '456 Avenue Centrale')
+      store.save()
+      store.send()
+      store.acknowledgeCall('14:05:00')
+      store.arriveCall('14:06:00')
+    })
+
+    render(<MonitorPage />)
+    await user.click(screen.getByRole('button', { name: 'Go to monitor' }))
+    const runId = useMonitorStore.getState().dispatch.runId
+    const shared = useMonitorStore.getState().getSharedState()
+
+    act(() => {
+      useMonitorStore.getState().applySharedState({
+        ...shared,
+        dispatchRouteConfirmed: {
+          ...shared.dispatchRouteConfirmed,
+          destinationAddress: '456 Avenue Centrale',
+          destination: { lat: 45.4, lng: -73.95 },
+          distanceMeters: 3200,
+          geometry: [{ lat: 45.4, lng: -73.95 }],
+          status: 'ready',
+        },
+      })
+    })
+
+    expect(useMonitorStore.getState().dispatch.runId).toBe(runId)
+    expect(screen.getByTestId('device-shell')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
+  })
+
   it('keeps the Wagami Z dispatch flow and opens the powered-off Z after entry', async () => {
     const user = userEvent.setup()
     window.history.pushState({}, '', '/')
