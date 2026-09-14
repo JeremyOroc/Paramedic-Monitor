@@ -8,6 +8,7 @@ import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
 import { SubBar } from '@/components/monitor/SubBar'
 import { LeftSidebar } from '@/components/monitor/LeftSidebar'
+import { ContinuousWaveformSurface } from '@/components/monitor/ContinuousWaveformSurface'
 import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { TwelveLeadPrintout } from '@/components/monitor/TwelveLeadPrintout'
@@ -682,24 +683,35 @@ export function MonitorPage({
           />
         }
         main={
-          controller.isTwelveLead ? (
-            <TwelveLeadPage rhythm={confirmed.rhythm} hr={confirmed.hr} />
-          ) : (
-            <WaveformPanel
-              secondaryChannel={controller.secondary}
-              rhythm={confirmed.rhythm}
-              hr={effectiveClinicalHr}
-              spo2={confirmed.spo2}
-              etco2={confirmed.etco2}
-              spo2Waveform={confirmed.spo2_waveform}
-              etco2Waveform={confirmed.etco2_waveform}
-              showAllSecondaryChannels={!controller.bottomStatusVisible}
-              selected={controller.activeSelectedControl}
-              etco2Calibrated={etco2Loaded}
-              etco2Loading={etco2Loading}
-              cprOverride={cprOverrideActive}
-            />
-          )
+          <ContinuousWaveformSurface
+            temporarySurfaceActive={controller.isTwelveLead}
+            temporarySurface={({ occluded, onReady }) => (
+              <TwelveLeadPage
+                rhythm={confirmed.rhythm}
+                hr={confirmed.hr}
+                occluded={occluded}
+                onReady={onReady}
+              />
+            )}
+            waveform={({ occluded, onReady }) => (
+              <WaveformPanel
+                secondaryChannel={controller.secondary}
+                rhythm={confirmed.rhythm}
+                hr={effectiveClinicalHr}
+                spo2={confirmed.spo2}
+                etco2={confirmed.etco2}
+                spo2Waveform={confirmed.spo2_waveform}
+                etco2Waveform={confirmed.etco2_waveform}
+                showAllSecondaryChannels={!controller.bottomStatusVisible}
+                selected={controller.activeSelectedControl}
+                etco2Calibrated={etco2Loaded}
+                etco2Loading={etco2Loading}
+                cprOverride={cprOverrideActive}
+                occluded={occluded}
+                onReady={onReady}
+              />
+            )}
+          />
         }
         vitalsPlacement={useRestingVitalLayout ? 'bottom' : 'right'}
         vitals={

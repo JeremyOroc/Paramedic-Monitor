@@ -11,9 +11,18 @@ type LeadCellProps = {
   rhythm: Rhythm
   hr: number
   className?: string
+  occluded?: boolean
+  onReady?: () => void
 }
 
-export function LeadCell({ label, rhythm, hr, className }: LeadCellProps) {
+export function LeadCell({
+  label,
+  rhythm,
+  hr,
+  className,
+  occluded = false,
+  onReady,
+}: LeadCellProps) {
   const canvasRef = useWaveformRenderer(
     { rhythm, hr },
     (get) => {
@@ -24,13 +33,15 @@ export function LeadCell({ label, rhythm, hr, className }: LeadCellProps) {
         amplitude: 0.55,
         lineWidth: 1.5,
         ampJitter: 0.06,
-        cycleJitter: 0.03,
+        cycleJitter: 0,
+        synchronizeSweep: true,
         getWaveform: pick,
         getSignalKey: () => `${get().rhythm}:${label}`,
         getCycleMs: () => pick().cycleMs ?? 60000 / Math.max(20, get().hr),
       }
     },
     [label],
+    { occluded, onReady },
   )
 
   return (
@@ -45,7 +56,11 @@ export function LeadCell({ label, rhythm, hr, className }: LeadCellProps) {
       <span className="absolute top-1 left-2 z-10 text-xs font-mono font-bold text-ecg-green drop-shadow-[0_0_2px_black]">
         {label}
       </span>
-      <canvas ref={canvasRef} className="block h-full w-full" />
+      <canvas
+        ref={canvasRef}
+        data-testid={`lead-canvas-${label}`}
+        className="block h-full w-full"
+      />
     </div>
   )
 }

@@ -221,6 +221,17 @@ _Avoid_: Active model, selected monitor
 The instructor-approved vital values, channel states, rhythm, patient category, and energy setting available to the trainee during an attempt.
 _Avoid_: Draft vitals, admin inputs
 
+**Waveform continuity**:
+The trainee's live ECG, SpO₂, EtCO₂, and CPR compression traces remain part of the same patient-time
+sequence while the monitor is temporarily not visible, including browser backgrounding and every
+temporary monitor surface. Waveform re-entry is the moment that sequence becomes visible again: the
+current sweep is ready at its final display geometry before the temporary surface leaves, reflects
+elapsed real time, and contains no blank sweep, rewind, or false trace connecting moments that were
+not observed continuously. A new Attempt, monitor reset, power cycle, newly confirmed signal, or
+Off-to-On transition begins a new sequence; navigation does not. Each trainee and Spectator display
+maintains its own continuous sweep phase. A full browser reload is outside this continuity guarantee.
+_Avoid_: Hidden rendering, ECG restart, paused waveform
+
 **Automatic FC lock**:
 A rhythm-controlled clinical state in which FC is forced On and its rate is determined by the selected
 ECG rhythm. The Instructor cannot edit the FC number or turn FC Off while the lock applies; leaving

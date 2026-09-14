@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { AcquiringDialog } from '@/components/monitor/AcquiringDialog'
 import { BottomStatusBar } from '@/components/monitor/BottomStatusBar'
 import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
+import { ContinuousWaveformSurface } from '@/components/monitor/ContinuousWaveformSurface'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { EnergyScaleColumn } from '@/components/monitor/EnergyScaleColumn'
 import { EventLogModal } from '@/components/monitor/EventLogModal'
@@ -102,24 +103,35 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
           />
         }
         main={
-          controller.view === '12lead' ? (
-            <TwelveLeadPage rhythm={projection.confirmed.rhythm} hr={projection.confirmed.hr} />
-          ) : (
-            <WaveformPanel
-              secondaryChannel={controller.secondary}
-              rhythm={projection.confirmed.rhythm}
-              hr={projection.displayedHr}
-              spo2={projection.confirmed.spo2}
-              etco2={projection.confirmed.etco2}
-              spo2Waveform={projection.confirmed.spo2_waveform}
-              etco2Waveform={projection.confirmed.etco2_waveform}
-              showAllSecondaryChannels={!controller.bottomStatusVisible}
-              selected={selected}
-              etco2Calibrated={projection.etco2Loaded}
-              etco2Loading={projection.etco2Loading}
-              cprOverride={projection.cprOverrideActive}
-            />
-          )
+          <ContinuousWaveformSurface
+            temporarySurfaceActive={controller.view === '12lead'}
+            temporarySurface={({ occluded, onReady }) => (
+              <TwelveLeadPage
+                rhythm={projection.confirmed.rhythm}
+                hr={projection.confirmed.hr}
+                occluded={occluded}
+                onReady={onReady}
+              />
+            )}
+            waveform={({ occluded, onReady }) => (
+              <WaveformPanel
+                secondaryChannel={controller.secondary}
+                rhythm={projection.confirmed.rhythm}
+                hr={projection.displayedHr}
+                spo2={projection.confirmed.spo2}
+                etco2={projection.confirmed.etco2}
+                spo2Waveform={projection.confirmed.spo2_waveform}
+                etco2Waveform={projection.confirmed.etco2_waveform}
+                showAllSecondaryChannels={!controller.bottomStatusVisible}
+                selected={selected}
+                etco2Calibrated={projection.etco2Loaded}
+                etco2Loading={projection.etco2Loading}
+                cprOverride={projection.cprOverrideActive}
+                occluded={occluded}
+                onReady={onReady}
+              />
+            )}
+          />
         }
         vitalsPlacement={useRestingVitalLayout ? 'bottom' : 'right'}
         vitals={

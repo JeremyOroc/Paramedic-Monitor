@@ -33,6 +33,8 @@ type SecondaryChannelProps = {
   connected?: boolean
   loading?: boolean
   showLabels?: boolean
+  occluded?: boolean
+  onReady?: () => void
 }
 
 function LiveSecondaryCanvas({
@@ -42,9 +44,18 @@ function LiveSecondaryCanvas({
   etco2,
   spo2Waveform,
   etco2Waveform,
+  occluded = false,
+  onReady,
 }: Pick<
   SecondaryChannelProps,
-  'channel' | 'hr' | 'spo2' | 'etco2' | 'spo2Waveform' | 'etco2Waveform'
+  | 'channel'
+  | 'hr'
+  | 'spo2'
+  | 'etco2'
+  | 'spo2Waveform'
+  | 'etco2Waveform'
+  | 'occluded'
+  | 'onReady'
 >) {
   const isEtco2 = channel === 'etco2'
   const canvasRef = useWaveformRenderer(
@@ -75,6 +86,7 @@ function LiveSecondaryCanvas({
       }
     },
     [isEtco2],
+    { occluded, onReady },
   )
 
   return (
@@ -100,6 +112,8 @@ export function SecondaryChannel({
   connected = true,
   loading = false,
   showLabels = true,
+  occluded = false,
+  onReady,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
 
@@ -146,6 +160,8 @@ export function SecondaryChannel({
           etco2={etco2}
           spo2Waveform={spo2Waveform}
           etco2Waveform={etco2Waveform}
+          occluded={occluded}
+          onReady={onReady}
         />
       ) : (
         <DisconnectedWaveform

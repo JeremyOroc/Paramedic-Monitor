@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
+import { useLayoutEffect, type ReactNode } from 'react'
 
 import { pauseAlarm, playAlarm, playCallerInfoAlert, stopAllAudio } from '@/lib/audio'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -183,6 +183,8 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     etco2Loading,
     cprOverride,
     hr,
+    occluded,
+    onReady,
   }: {
     secondaryChannel?: 'spo2' | 'etco2'
     showAllSecondaryChannels?: boolean
@@ -193,7 +195,13 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
     etco2Loading?: boolean
     cprOverride?: boolean
     hr?: number
+    occluded?: boolean
+    onReady?: () => void
   }) => {
+    useLayoutEffect(() => {
+      if (!occluded) onReady?.()
+    }, [occluded, onReady])
+
     const selected = secondaryChannel ?? 'spo2'
     const selectedWaveform = selected === 'etco2' ? etco2Waveform : spo2Waveform
     const bothSecondaryOff = spo2Waveform === 'off' && etco2Waveform === 'off'
@@ -236,6 +244,24 @@ vi.mock('@/components/monitor/WaveformPanel', () => ({
         ) : null}
       </div>
     )
+  },
+}))
+
+vi.mock('@/components/monitor/TwelveLeadPage', () => ({
+  TwelveLeadPage: ({
+    rhythm,
+    occluded,
+    onReady,
+  }: {
+    rhythm: string
+    occluded?: boolean
+    onReady?: () => void
+  }) => {
+    useLayoutEffect(() => {
+      if (!occluded) onReady?.()
+    }, [occluded, onReady])
+
+    return <div data-testid="twelve-lead-page" data-rhythm={rhythm} />
   },
 }))
 
@@ -529,13 +555,16 @@ describe('MonitorPage', () => {
     })
 
     render(<MonitorPage />)
+    const ecgSurface = screen.getByTestId('mock-ecg-canvas')
     await user.click(screen.getByRole('button', { name: 'Call Info (sidebar)' }))
 
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
     expect(screen.getByLabelText('Caller info')).toHaveClass('fixed', 'inset-0')
     expect(screen.getByRole('button', { name: 'Back to monitor' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Back to monitor' }))
 
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
     expect(screen.queryByRole('heading', { name: 'New Assignment' })).not.toBeInTheDocument()
   })
 
@@ -1750,8 +1779,15 @@ describe('MonitorPage', () => {
   it('keeps specialized 12-lead vitals on the right and restores resting placement on Back', async () => {
     const user = userEvent.setup()
     render(<MonitorPage />)
+    const ecgSurface = screen.getByTestId('mock-ecg-canvas')
 
     await user.click(screen.getByRole('button', { name: '12-lead view' }))
+    const twelveLeadSurface = screen.getByTestId('twelve-lead-page')
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
+    expect(screen.getByTestId('continuous-waveform-layer')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
     expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
       'data-placement',
       'right',
@@ -1762,10 +1798,29 @@ describe('MonitorPage', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(screen.getByTestId('mock-ecg-canvas')).toBe(ecgSurface)
+    await waitFor(() => {
+      expect(screen.getByTestId('continuous-waveform-layer')).not.toHaveAttribute(
+        'aria-hidden',
+      )
+    })
     expect(screen.getByTestId('monitor-vitals-region')).toHaveAttribute(
       'data-placement',
       'bottom',
     )
+    expect(screen.getByTestId('twelve-lead-page')).toBe(twelveLeadSurface)
+    expect(screen.getByTestId('temporary-monitor-surface')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
+
+    await user.click(screen.getByRole('button', { name: '12-lead view' }))
+    await waitFor(() => {
+      expect(screen.getByTestId('temporary-monitor-surface')).not.toHaveAttribute(
+        'aria-hidden',
+      )
+    })
+    expect(screen.getByTestId('twelve-lead-page')).toBe(twelveLeadSurface)
   })
 
   it('keeps right-side vitals beside the energy scale throughout Charge', () => {

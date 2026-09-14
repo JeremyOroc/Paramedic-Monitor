@@ -1,9 +1,18 @@
 'use client'
 
-import { useEffect, useRef, type DependencyList } from 'react'
-import { startRenderer, type RendererOptions } from '@/lib/ecg/renderer'
+import { useEffect, useLayoutEffect, useRef, type DependencyList } from 'react'
+import {
+  startRenderer,
+  type RendererController,
+  type RendererOptions,
+} from '@/lib/ecg/renderer'
 
 export type WaveformRendererOptions = Omit<RendererOptions, 'canvas'>
+
+type WaveformRendererActivity = {
+  occluded?: boolean
+  onReady?: () => void
+}
 
 /**
  * Shared React glue for the canvas waveform renderer.
@@ -20,20 +29,35 @@ export function useWaveformRenderer<T>(
   live: T,
   buildOptions: (getLatest: () => T) => WaveformRendererOptions,
   deps: DependencyList,
+  activity: WaveformRendererActivity = {},
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const liveRef = useRef(live)
+  const activityRef = useRef(activity)
+  const rendererRef = useRef<RendererController | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     liveRef.current = live
+    activityRef.current = activity
   })
+
+  useLayoutEffect(() => {
+    rendererRef.current?.setOccluded(activity.occluded ?? false)
+  }, [activity.occluded])
 
   useEffect(() => {
     if (!canvasRef.current) return
-    return startRenderer({
+    const renderer = startRenderer({
       canvas: canvasRef.current,
       ...buildOptions(() => liveRef.current),
+      initiallyOccluded: activityRef.current.occluded ?? false,
+      onReady: () => activityRef.current.onReady?.(),
     })
+    rendererRef.current = renderer
+    return () => {
+      rendererRef.current = null
+      renderer()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 
