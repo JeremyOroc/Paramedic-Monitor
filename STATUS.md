@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**Compact Scenario library and atomic Reports deletion — COMPLETE (2026-09-14).**
+Saved Scenario rows now measure 44px at the desktop breakpoint and keep drag, title, bounded folder,
+Up/Down, Save/Save Copy, and Delete controls in one ordered line, with compact narrow wrapping and an
+equally dense inline Draft row. The editor label is now `Change scenario title`, with the matching
+accessible name and `Enter scenario title` placeholder. Reports now has a current-page delete mode,
+eligible-only multi-selection, count/detail confirmation, disabled detail actions, failure-preserving
+selection, and valid-page recovery. Single and bulk deletion share one owner-scoped 1–25 report RPC;
+RLS and the transaction both prevent deletion of the current unexpired active Attempt and preserve
+all-or-nothing behavior. All 106 focused tests and all 40 report RLS pgTAP checks pass, along with
+TypeScript, the Webpack production build, database lint/advisors, and ESLint with zero errors and the
+same 12 warnings. Rendered 1440px QA confirmed 44px rows, right-side control order, eligible-only
+selection, active-Attempt protection, and contextual confirmation with no browser warnings. The full
+suite records 1,409 passing tests and one skip; its same three established unrelated failures remain.
+
 **Dedicated Instructor Room QR rail — COMPLETE (2026-09-13).**
 The complete 480px Room-controls panel now uses a stable 65% operational region and 35% QR rail while
 joining is available. The isolated rail has an approximately 202px minimum, a subtle divider, and

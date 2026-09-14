@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(35);
+select plan(40);
 
 select has_table('public', 'evaluation_reports', 'durable Evaluation reports have their own table');
 select has_table('public', 'evaluation_report_audit_log', 'report mutations have a protected audit table');
@@ -155,6 +155,30 @@ select ok(
   'Attempt-name changes are audited without their value'
 );
 
+set local role authenticated;
+set local request.jwt.claim.sub = '40000000-0000-0000-0000-000000000001';
+delete from public.evaluation_reports where attempt_version = 1;
+select is(
+  (select count(*) from public.evaluation_reports where attempt_version = 1),
+  1::bigint,
+  'direct Data API deletion cannot remove the current active Attempt report'
+);
+reset role;
+select is(
+  (select count(*) from public.evaluation_report_audit_log where action = 'delete'),
+  0::bigint,
+  'a blocked active-Attempt deletion does not create a false audit row'
+);
+set local role authenticated;
+set local request.jwt.claim.sub = '40000000-0000-0000-0000-000000000001';
+select throws_ok(
+  $$select public.delete_evaluation_reports(array[(select id from public.evaluation_reports where attempt_version = 1)]::uuid[])$$,
+  '55000',
+  'The active Attempt report cannot be deleted',
+  'the atomic deletion function rejects the current active Attempt report contextually'
+);
+reset role;
+
 update public.sessions
 set active_attempt_version = 2, status = 'waiting'
 where id = '41000000-0000-0000-0000-000000000001';
@@ -236,9 +260,21 @@ select is_empty(
 );
 
 set local request.jwt.claim.sub = '40000000-0000-0000-0000-000000000001';
-select lives_ok(
-  $$delete from public.evaluation_reports where attempt_version = 1$$,
-  'the owner may permanently delete a report'
+select throws_ok(
+  $$select public.delete_evaluation_reports(array[(select id from public.evaluation_reports where attempt_version = 1), 'ffffffff-ffff-4fff-8fff-ffffffffffff'::uuid])$$,
+  'P0002',
+  'One or more reports were not found',
+  'a missing selected report rejects the entire atomic deletion'
+);
+select is(
+  (select count(*) from public.evaluation_reports),
+  2::bigint,
+  'a failed atomic deletion leaves every selected report intact'
+);
+select is(
+  public.delete_evaluation_reports(array[(select id from public.evaluation_reports where attempt_version = 1)]::uuid[]),
+  1,
+  'the owner may atomically delete a historical report'
 );
 
 reset role;

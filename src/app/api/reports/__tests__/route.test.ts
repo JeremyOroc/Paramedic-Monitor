@@ -7,6 +7,7 @@ const reports = vi.hoisted(() => ({
   updateEvaluationReport: vi.fn(),
   manuallyCompleteEvaluationReport: vi.fn(),
   deleteEvaluationReport: vi.fn(),
+  deleteEvaluationReports: vi.fn(),
 }))
 
 vi.mock('@/server/reports/access', () => ({ requireReportAccess: vi.fn().mockResolvedValue(account) }))
@@ -18,6 +19,7 @@ vi.mock('@/server/reports/service', async (importOriginal) => ({
 import { DELETE, GET as getDetail, PATCH } from '../[id]/route'
 import { POST as complete } from '../[id]/complete/route'
 import { GET as getList } from '../route'
+import { POST as bulkDelete } from '../delete/route'
 
 const context = { params: Promise.resolve({ id: '51000000-0000-4000-8000-000000000001' }) }
 
@@ -67,5 +69,22 @@ describe('persistent report routes', () => {
     })
     expect(reports.manuallyCompleteEvaluationReport).toHaveBeenCalledWith(account, expect.any(String))
     expect(reports.deleteEvaluationReport).toHaveBeenCalledWith(account, expect.any(String))
+  })
+
+  it('routes one validated atomic multi-report deletion request', async () => {
+    const reportIds = [
+      '51000000-0000-4000-8000-000000000001',
+      '51000000-0000-4000-8000-000000000002',
+    ]
+    reports.deleteEvaluationReports.mockResolvedValue(2)
+
+    const response = await bulkDelete(new Request('http://localhost/api/reports/delete', {
+      method: 'POST',
+      body: JSON.stringify({ reportIds }),
+    }))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ deleted: 2 })
+    expect(reports.deleteEvaluationReports).toHaveBeenCalledWith(account, { reportIds })
   })
 })

@@ -458,6 +458,12 @@ export type Database = {
         }
         Returns: unknown
       }
+      delete_evaluation_reports: {
+        Args: {
+          p_report_ids: string[]
+        }
+        Returns: number
+      }
     }
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>

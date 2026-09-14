@@ -6,6 +6,7 @@ export const REPORT_PAGE_SIZE = 25
 export const REPORT_STUDENT_NAME_MAX = 100
 export const REPORT_STUDENT_NAMES_MAX = 100
 export const REPORT_ATTEMPT_LABEL_MAX = 60
+export const REPORT_DELETE_MAX = 25
 
 export type ReportStatus = 'incomplete' | 'complete'
 export type ReportCompletionMethod = 'attempt_transition' | 'room_ended' | 'manual' | 'account_disabled'
@@ -24,6 +25,7 @@ export type EvaluationReportSummary = {
   completed_at: string | null
   created_at: string
   updated_at: string
+  deletion_blocked: boolean
 }
 
 export type EvaluationReport = EvaluationReportSummary & {
@@ -128,6 +130,7 @@ function parseSummary(value: unknown): EvaluationReportSummary {
     completed_at: nullableString(value, 'completed_at'),
     created_at: stringValue(value, 'created_at'),
     updated_at: stringValue(value, 'updated_at'),
+    deletion_blocked: value.deletion_blocked === true,
   }
 }
 
@@ -243,8 +246,19 @@ export async function getEvaluationReport(
     .maybeSingle()
   if (error) throw new ReportError('Unable to load report', 503)
   if (!data || !isRecord(data)) throw new ReportError('Report not found', 404)
+  const { data: activeRoom, error: activeRoomError } = await auth
+    .from('sessions')
+    .select('id')
+    .eq('id', stringValue(data, 'source_session_id'))
+    .eq('owner_user_id', account.user_id)
+    .eq('status', 'active')
+    .eq('active_attempt_version', typeof data.attempt_version === 'number' ? data.attempt_version : 1)
+    .gt('expires_at', new Date().toISOString())
+    .maybeSingle()
+  if (activeRoomError) throw new ReportError('Unable to check report deletion availability', 503)
   return {
     ...parseSummary(data),
+    deletion_blocked: Boolean(activeRoom),
     owner_user_id: stringValue(data, 'owner_user_id'),
     source_session_id: stringValue(data, 'source_session_id'),
     scenario_snapshot: data.scenario_snapshot ?? {},
@@ -300,16 +314,43 @@ export async function deleteEvaluationReport(
   account: Pick<ActiveAccount, 'user_id'>,
   id: string,
 ) {
+  await deleteEvaluationReports(account, { reportIds: [id] })
+}
+
+function normalizeReportIds(value: unknown): string[] {
+  if (!Array.isArray(value) || value.length < 1 || value.length > REPORT_DELETE_MAX) {
+    throw new ReportError(`Select between 1 and ${REPORT_DELETE_MAX} reports`, 400)
+  }
+  if (value.some((id) => typeof id !== 'string' || !UUID_PATTERN.test(id))) {
+    throw new ReportError('Invalid report selection', 400)
+  }
+  const ids = value as string[]
+  if (new Set(ids).size !== ids.length) {
+    throw new ReportError('Each selected report must be unique', 400)
+  }
+  return ids
+}
+
+export async function deleteEvaluationReports(
+  _account: Pick<ActiveAccount, 'user_id'>,
+  input: unknown,
+): Promise<number> {
+  if (!isRecord(input)) throw new ReportError('Invalid report deletion', 400)
+  const ids = normalizeReportIds(input.reportIds)
   const auth = await createAuthenticatedClient()
-  const { data, error } = await auth
-    .from('evaluation_reports')
-    .delete()
-    .eq('id', reportId(id))
-    .eq('owner_user_id', account.user_id)
-    .select('id')
-    .maybeSingle()
-  if (error) throw new ReportError('Unable to delete report', 503)
-  if (!data) throw new ReportError('Report not found', 404)
+  const { data, error } = await auth.rpc('delete_evaluation_reports', {
+    p_report_ids: ids,
+  })
+  if (error) {
+    if (error.code === '55000') throw new ReportError(error.message, 409)
+    if (error.code === 'P0002') throw new ReportError('One or more reports were not found', 404)
+    throw new ReportError('Unable to delete reports', 503)
+  }
+  const deleted = typeof data === 'number' ? data : Number(data)
+  if (!Number.isSafeInteger(deleted) || deleted !== ids.length) {
+    throw new ReportError('Unable to verify report deletion', 503)
+  }
+  return deleted
 }
 
 /** Explicit End Room completes its current report. Passive expiry never calls this. */

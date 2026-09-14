@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 
 type ConfirmationDialogProps = {
   open: boolean
   title: string
-  description: string
+  description: ReactNode
   confirmLabel: string
   cancelLabel?: string
   onConfirm: () => void
@@ -114,9 +114,9 @@ export function ConfirmationDialog({
         >
           {title}
         </h2>
-        <p id={descriptionId} className="mt-3 text-sm leading-6 text-white">
+        <div id={descriptionId} className="mt-3 text-sm leading-6 text-white">
           {description}
-        </p>
+        </div>
         <div className="mt-6 grid grid-cols-2 gap-3">
           <button
             ref={cancelButtonRef}

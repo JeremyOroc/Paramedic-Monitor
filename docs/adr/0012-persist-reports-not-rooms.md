@@ -25,8 +25,8 @@ retaining the mutable access paths and presence data of an inactive classroom Ro
 - Once its Room ends or expires, an owner may manually complete an Incomplete record without changing
   its timeline; expiry never silently claims that an Attempt completed normally.
 - Reports may be searched, opened, have their Attempt/Student names edited, have their timeline
-  copied, and be permanently deleted. Export, sharing, grading, comments, and bulk operations remain
-  outside the first release.
+  copied, and be permanently deleted. Export, sharing, grading, and comments remain outside the first
+  release. The former bulk-operation deferral is superseded by ADR 0021.
 - The list is newest-first and paginated by 25, with combined case-insensitive Attempt/scenario/Student
   search, status filter, and date range. UTC timestamps display in Toronto time, and copied timelines
   carry EST/EDT.

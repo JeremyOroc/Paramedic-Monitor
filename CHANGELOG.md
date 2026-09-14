@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-09-14] [instructor/reports] — Compact scenarios and add atomic report multi-delete
+
+- Reduced Saved scenario rows to a measured 44px desktop height, moved folder and Up/Down controls
+  into the right-side action sequence before Save/Delete, added compact narrow wrapping, and matched
+  Scenario draft density with an inline badge.
+- Renamed the visible and accessible editor label to `Change scenario title` and changed its
+  placeholder to `Enter scenario title`.
+- Added a current-page Reports delete mode with eligible-only individual/Select-all controls,
+  selection count, Cancel, disabled detail interactions, and a scrollable Attempt/scenario/Toronto
+  date confirmation. Failures retain the mode and selection; success clears both and repairs paging.
+- Added one owner-scoped atomic bulk-delete route and security-invoker database function for 1–25
+  unique reports. The single-delete path now uses the same transaction, while RLS and transaction
+  checks both reject the current unexpired active Attempt without partial deletion or false audit rows.
+- Added ADR 0021, updated ADR 0012, service/API/UI/migration regressions, and report RLS coverage. All
+  106 focused tests and 40 pgTAP checks pass; TypeScript, the Webpack production build, database
+  lint/advisors, and ESLint with zero errors and the same 12 warnings pass. Rendered 1440px QA
+  confirmed the 44px rows, right-side action order, protected active row, eligible-only selection,
+  and contextual confirmation with no browser warnings. The full suite has 1,409 passing tests, one
+  skip, and the same three established unrelated failures.
+
+## [2026-09-13] [planning/instructor] — Define compact scenarios and atomic report deletion
+
+- Approved approximately half-height Saved scenario and Scenario draft rows, a one-line ordinary-width
+  control order with narrow wrapping, and clearer scenario-title label/placeholder copy.
+- Defined a current-page report delete mode with accessible multi-selection, contextual count/list
+  confirmation, predictable selection clearing, retained single deletion, and valid-page recovery.
+- Required atomic owner-scoped deletion and database-enforced protection for the current unexpired
+  active Attempt's Evaluation record across single, bulk, and direct Data API paths.
+- Added ADR 0021 to supersede the first-release bulk-operation deferral in ADR 0012. No glossary term
+  changed; implementation and verification are pending.
+
 ## [2026-09-13] [instructor/ui] — Isolate Room operations from the QR rail
 
 - Rebuilt the fixed-height Room-controls panel as a 65%/35% internal grid: Room code, status, actions,

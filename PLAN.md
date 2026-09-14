@@ -8,6 +8,49 @@
 
 ## Current Requirement Updates
 
+- 2026-09-13 requirement update — compact Saved scenario rows and safe page-scoped report deletion:
+  reduce each Saved scenario row from its current two-tier card to an approximately 44–48px compact
+  row. At ordinary Instructor Console widths, order the controls as drag handle, truncating title,
+  bounded same-library folder selector, Up, Down, Save/Save Copy, and Delete on one line. Below roughly
+  768px, controls may wrap into a compact second line rather than overflow horizontally. Scenario
+  draft rows use the same density with an inline `Draft` badge. Replace the scenario-title field's
+  visible and accessible label with `Change scenario title` and use `Enter scenario title` as its
+  placeholder.
+- Reports adds an explicit current-page delete mode. Its list header changes from `Delete reports` to
+  `Select all on page`, `Delete selected (N)`, and `Cancel`; ordinary report opening and detail editing
+  are unavailable while the mode is active. Selection is limited to the current filtered page of at
+  most 25 Evaluation records and clears when the page or applied filters change or the mode is
+  cancelled. The confirmation identifies the selected count and presents every selected Attempt,
+  scenario, and Toronto date in a scrollable list without typed-name confirmation. The existing
+  single-report permanent-delete action remains available outside delete mode.
+- Multi-report deletion is owner-scoped and atomic: either every selected Evaluation record is deleted
+  or none are. The current unexpired active Attempt's Evaluation record is never deletable through
+  either the single- or multi-report path. It remains visible with a disabled selection control and
+  an `Active Attempt — cannot delete` explanation. The application preflights the rule for contextual
+  feedback and the database enforces it against direct Data API access and request races. Historical
+  Evaluation records from the same Room remain deletable. On success, selection clears and Reports
+  keeps the current page when it remains valid or moves to the preceding valid page; on failure, the
+  atomic rollback preserves delete mode and every selection.
+
+### Testing — compact scenarios and safe report deletion
+
+- Cover single-line saved-row structure and control order, approximately half-height compact utility
+  classes, bounded/truncating title and folder controls, draft badge compaction, narrow wrapping,
+  nested-control row-activation isolation, Template `Save Copy`, edit permissions, and active-Attempt
+  control disabling.
+- Cover the new visible label, accessible name, and placeholder wherever Scenario title editing is
+  integrated.
+- Cover entering/cancelling delete mode, page-scoped individual and Select-all selection, active
+  Attempt ineligibility, count-aware confirmation with every Attempt/scenario/Toronto date, disabled
+  normal detail interactions, selection reset on page/filter changes, atomic failure preservation,
+  successful list/detail cleanup, and last-page normalization.
+- Cover owner-scoped 1–25 ID validation, all-or-nothing bulk deletion, inaccessible/missing records,
+  current unexpired active-Attempt rejection, expired and historical Attempt deletion, database-level
+  direct-delete protection, row-level deletion audit continuity, and parity between single and bulk
+  service/API paths.
+- Run the focused Scenario library, Reports component, route, service, migration-contract, and RLS
+  suites, then TypeScript, ESLint, the production build, and rendered 1024px plus narrow-viewport QA.
+
 - 2026-09-13 requirement revision — instructor Room QR and optional Device nickname: while an
   Instructor-owned Room is open, divide the complete fixed-height Room-controls panel into a stable
   internal 65%/35% grid. The left region owns Room code and Copy, status and Attempt context, Room

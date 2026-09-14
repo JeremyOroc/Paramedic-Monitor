@@ -122,6 +122,7 @@ type ScenarioRowActionsProps = {
   saving: boolean
   deleting: boolean
   saveLabel?: string
+  className?: string
   onSave: () => void
   onDelete: () => void
 }
@@ -133,12 +134,13 @@ function ScenarioRowActions({
   saving,
   deleting,
   saveLabel = 'Save',
+  className,
   onSave,
   onDelete,
 }: ScenarioRowActionsProps) {
   return (
     <div
-      className="grid grid-cols-2 gap-2"
+      className={cn('grid grid-cols-2 gap-1', className)}
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
@@ -147,7 +149,7 @@ function ScenarioRowActions({
         aria-label={`Save ${title}`}
         onClick={onSave}
         disabled={saveDisabled}
-        className="border border-ecg-green bg-neutral-900 px-3 py-2 font-mono text-[10px] font-bold uppercase text-ecg-green hover:bg-ecg-green/10 focus:outline-none focus:ring-2 focus:ring-ecg-green disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
+        className="min-h-8 border border-ecg-green bg-neutral-900 px-2 py-1 font-mono text-[10px] font-bold uppercase text-ecg-green hover:bg-ecg-green/10 focus:outline-none focus:ring-2 focus:ring-ecg-green disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
       >
         {saving ? 'Saving' : saveLabel}
       </button>
@@ -156,7 +158,7 @@ function ScenarioRowActions({
         aria-label={`Delete ${title}`}
         onClick={onDelete}
         disabled={deleteDisabled}
-        className="border border-alarm-red bg-neutral-900 px-3 py-2 font-mono text-[10px] font-bold uppercase text-alarm-red hover:bg-alarm-red/10 focus:outline-none focus:ring-2 focus:ring-alarm-red disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
+        className="min-h-8 border border-alarm-red bg-neutral-900 px-2 py-1 font-mono text-[10px] font-bold uppercase text-alarm-red hover:bg-alarm-red/10 focus:outline-none focus:ring-2 focus:ring-alarm-red disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-600 disabled:hover:bg-neutral-900"
       >
         {deleting ? 'Deleting' : 'Delete'}
       </button>
@@ -197,13 +199,13 @@ function ScenarioDraftRow({
         onUnload()
       }}
       className={cn(
-        'grid cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border border-ecg-green bg-ecg-green/10 p-2 focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+        'grid min-h-11 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-1 border border-ecg-green bg-ecg-green/10 p-1 focus:outline-none focus:ring-2 focus:ring-cyan-bp',
         disabled && 'cursor-not-allowed opacity-60',
       )}
     >
-      <div className="min-w-0 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white">
-        <span className="block truncate">{title}</span>
-        <span className="mt-1 block font-mono text-[10px] uppercase text-pending-amber">Draft</span>
+      <div className="flex min-h-8 min-w-0 items-center gap-2 border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-white">
+        <span className="min-w-0 flex-1 truncate">{title}</span>
+        <span className="shrink-0 font-mono text-[9px] uppercase text-pending-amber">Draft</span>
       </div>
       <ScenarioRowActions
         title={title}
@@ -748,12 +750,12 @@ export function ScenarioLibraryPanel({
       </div>
 
       <label className="mt-3 grid gap-1">
-        <span className="text-xs uppercase tracking-wider text-neutral-400">Scenario title</span>
+        <span className="text-xs uppercase tracking-wider text-neutral-400">Change scenario title</span>
         <input
           value={scenarioDraftTitle}
           onChange={(event) => onScenarioTitleChange(event.target.value)}
-          aria-label="Scenario title"
-          placeholder="Scenario title"
+          aria-label="Change scenario title"
+          placeholder="Enter scenario title"
           className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
         />
       </label>
@@ -1015,7 +1017,7 @@ export function ScenarioLibraryPanel({
                             onDrop={(event) => handleScenarioDrop(event, folder.id, scenario.id)}
                             onDragEnd={() => setDropTarget(null)}
                             className={cn(
-                              'relative grid cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border p-2 focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+                              'relative grid min-h-11 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-bp md:grid-cols-[auto_minmax(0,1fr)_minmax(8rem,10rem)_auto_auto]',
                               selected
                                 ? 'border-ecg-green bg-ecg-green/10'
                                 : 'border-neutral-800 bg-neutral-950 hover:border-cyan-bp/60',
@@ -1025,8 +1027,56 @@ export function ScenarioLibraryPanel({
                             )}
                           >
                             <span aria-hidden="true" title="Drag to reorder or move" className="cursor-grab font-mono text-neutral-600">⋮⋮</span>
-                            <div className="min-w-0 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white">
+                            <div className="min-h-8 min-w-0 border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm leading-6 text-white">
                               <span className="block truncate">{scenario.title}</span>
+                            </div>
+                            <label
+                              className="col-start-2 row-start-2 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-1 md:col-auto md:row-auto"
+                              onClick={stopRowActivation}
+                              onKeyDown={stopRowKeyboardActivation}
+                            >
+                              <span className="text-[9px] uppercase text-neutral-500">Move</span>
+                              <select
+                                aria-label={`Move ${scenario.title}`}
+                                value={folder.id}
+                                onChange={(event) => void moveScenario(
+                                  scenario.id,
+                                  folder.id,
+                                  event.target.value,
+                                )}
+                                disabled={controlsDisabled || !scenario.can_edit}
+                                className="min-h-8 min-w-0 border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200 disabled:opacity-40"
+                              >
+                                {folders
+                                  .filter((target) => target.library_kind === folder.library_kind)
+                                  .map((target) => (
+                                  <option key={target.id} value={target.id}>{target.name}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <div
+                              className="col-start-3 row-start-2 grid grid-cols-2 gap-1 md:col-auto md:row-auto"
+                              onClick={stopRowActivation}
+                              onKeyDown={stopRowKeyboardActivation}
+                            >
+                              <button
+                                type="button"
+                                aria-label={`Move ${scenario.title} up`}
+                                onClick={() => moveScenarioBy(folder.id, scenario.id, -1)}
+                                disabled={index === 0 || controlsDisabled || !scenario.can_edit}
+                                className="min-h-8 border border-neutral-700 px-2 py-1 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Move ${scenario.title} down`}
+                                onClick={() => moveScenarioBy(folder.id, scenario.id, 1)}
+                                disabled={index === scenarios.length - 1 || controlsDisabled || !scenario.can_edit}
+                                className="min-h-8 border border-neutral-700 px-2 py-1 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
+                              >
+                                ↓
+                              </button>
                             </div>
                             <ScenarioRowActions
                               title={scenario.title}
@@ -1035,57 +1085,12 @@ export function ScenarioLibraryPanel({
                               saving={selected && scenarioAction === 'saving'}
                               deleting={scenarioAction === 'deleting'}
                               saveLabel={scenario.can_edit ? 'Save' : 'Save Copy'}
+                              className="col-start-3 row-start-1 md:col-auto md:row-auto"
                               onSave={() => onSaveScenario(
                                 scenario.can_edit ? undefined : personalFolders[0]?.id ?? null,
                               )}
                               onDelete={() => onDeleteScenario(scenario)}
                             />
-                            <div
-                              className="col-start-2 col-span-2 grid grid-cols-[auto_minmax(8rem,1fr)] gap-2"
-                              onClick={stopRowActivation}
-                              onKeyDown={stopRowKeyboardActivation}
-                            >
-                              <div className="grid grid-cols-2 gap-1">
-                                <button
-                                  type="button"
-                                  aria-label={`Move ${scenario.title} up`}
-                                  onClick={() => moveScenarioBy(folder.id, scenario.id, -1)}
-                                  disabled={index === 0 || controlsDisabled || !scenario.can_edit}
-                                  className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
-                                >
-                                  ↑
-                                </button>
-                                <button
-                                  type="button"
-                                  aria-label={`Move ${scenario.title} down`}
-                                  onClick={() => moveScenarioBy(folder.id, scenario.id, 1)}
-                                  disabled={index === scenarios.length - 1 || controlsDisabled || !scenario.can_edit}
-                                  className="border border-neutral-700 px-2 py-2 font-mono text-xs text-cyan-bp disabled:cursor-not-allowed disabled:text-neutral-700"
-                                >
-                                  ↓
-                                </button>
-                              </div>
-                              <label className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
-                                <span className="text-[10px] uppercase text-neutral-500">Move</span>
-                                <select
-                                  aria-label={`Move ${scenario.title}`}
-                                  value={folder.id}
-                                  onChange={(event) => void moveScenario(
-                                    scenario.id,
-                                    folder.id,
-                                    event.target.value,
-                                  )}
-                                  disabled={controlsDisabled || !scenario.can_edit}
-                                  className="min-w-0 border border-neutral-700 bg-neutral-900 px-2 py-2 text-xs text-neutral-200 disabled:opacity-40"
-                                >
-                                  {folders
-                                    .filter((target) => target.library_kind === folder.library_kind)
-                                    .map((target) => (
-                                    <option key={target.id} value={target.id}>{target.name}</option>
-                                  ))}
-                                </select>
-                              </label>
-                            </div>
                           </div>
                         )
                       })

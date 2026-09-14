@@ -257,8 +257,9 @@ describe('ScenarioLibraryPanel', () => {
       />,
     )
 
-    const title = screen.getByLabelText('Scenario title')
+    const title = screen.getByLabelText('Change scenario title')
     expect(title).toHaveValue('Chest Pain')
+    expect(title).toHaveAttribute('placeholder', 'Enter scenario title')
     expect(title.closest('section')).toHaveAccessibleName('Scenarios library')
     await user.type(title, ' Updated')
     expect(onScenarioTitleChange).toHaveBeenLastCalledWith('Chest Pain Updated')
@@ -357,6 +358,30 @@ describe('ScenarioLibraryPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Delete Older Call' }))
     expect(onDeleteScenario).toHaveBeenCalledWith('scenario-2')
     expect(onLoad).not.toHaveBeenCalled()
+  })
+
+  it('keeps saved-scenario movement and actions in compact responsive row order', async () => {
+    createFetchMock()
+    const user = userEvent.setup()
+    render(<Harness />)
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
+
+    const row = await screen.findByRole('button', { name: 'Load Chest Pain' })
+    expect(row).toHaveClass(
+      'min-h-11',
+      'py-1',
+      'md:grid-cols-[auto_minmax(0,1fr)_minmax(8rem,10rem)_auto_auto]',
+    )
+    const nestedControls = Array.from(row.querySelectorAll('select, button'))
+      .map((control) => control.getAttribute('aria-label'))
+    expect(nestedControls).toEqual([
+      'Move Chest Pain',
+      'Move Chest Pain up',
+      'Move Chest Pain down',
+      'Save Chest Pain',
+      'Delete Chest Pain',
+    ])
+    expect(screen.getByLabelText('Move Chest Pain')).toHaveClass('min-w-0', 'min-h-8')
   })
 
   it('opens folders independently and allows every folder to be closed', async () => {
@@ -549,6 +574,9 @@ describe('ScenarioLibraryPanel', () => {
       'true',
     )
     expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeDisabled()
+    const draftRow = screen.getByRole('button', { name: 'Unload Untitled Scenario' })
+    expect(draftRow).toHaveClass('min-h-11', 'p-1')
+    expect(screen.getByText('Draft').parentElement).toHaveClass('flex', 'items-center')
 
     rerender(
       <Harness

@@ -35,9 +35,9 @@ vi.mock('@/components/instructor/ScenarioLibraryPanel', () => ({
   }) => (
     <section aria-label="Scenarios library">
       <label>
-        Scenario title
+        Change scenario title
         <input
-          aria-label="Scenario title"
+          aria-label="Change scenario title"
           value={scenarioDraftTitle}
           onChange={(event) => onScenarioTitleChange(event.target.value)}
         />
@@ -1021,7 +1021,7 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'Report' })).toBeInTheDocument()
     expect(screen.getByLabelText('Scenarios library')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
-    expect(screen.getByLabelText('Scenario title')).toBeInTheDocument()
+    expect(screen.getByLabelText('Change scenario title')).toBeInTheDocument()
     expect(screen.getByLabelText('Auto-sort scenario')).toBeInTheDocument()
     expect(screen.getByLabelText('Adresse')).toBeInTheDocument()
     expect(screen.queryByText('Vitals')).toBeNull()
@@ -1157,7 +1157,7 @@ describe('AdminPage', () => {
     await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
-    await user.type(screen.getByLabelText('Scenario title'), 'Fall from ladder')
+    await user.type(screen.getByLabelText('Change scenario title'), 'Fall from ladder')
 
     act(() => {
       useMonitorStore.getState().setCallerInfoDraft('address', '123 Rue Principale')

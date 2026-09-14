@@ -86,6 +86,10 @@ export function createSupabaseStub(resolve: Resolver) {
         op.filters.push({ op: 'lt', column, value })
         return builder
       },
+      gt(column: string, value: unknown) {
+        op.filters.push({ op: 'gt', column, value })
+        return builder
+      },
       ilike(column: string, value: unknown) {
         op.filters.push({ op: 'ilike', column, value })
         return builder
