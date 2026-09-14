@@ -13,6 +13,7 @@ vi.mock('@/lib/supabase/server', () => ({
 import {
   completeEvaluationReportForRoom,
   deleteEvaluationReport,
+  deleteEvaluationReports,
   getEvaluationReport,
   listEvaluationReports,
   manuallyCompleteEvaluationReport,
@@ -36,6 +37,7 @@ const SUMMARY = {
   completed_at: null,
   created_at: '2026-09-07T14:00:00.000Z',
   updated_at: '2026-09-07T14:00:00.000Z',
+  deletion_blocked: false,
 }
 
 function reportResolver(op: RecordedOp) {
@@ -124,6 +126,7 @@ describe('persistent report service', () => {
     expect(report.participants).toEqual([{ id: 'p1', nickname: 'Trainee' }])
     expect(report.events[0]).toMatchObject({ kind: 'analyze', participant_id: 'p1' })
     expect(report.state_history[0]).toMatchObject({ version: 1, attempt_version: 2 })
+    expect(report.deletion_blocked).toBe(false)
     expect(stub.opsFor('evaluation_reports')[0].filters).toEqual(expect.arrayContaining([
       { op: 'eq', column: 'id', value: REPORT_ID },
       { op: 'eq', column: 'owner_user_id', value: ACCOUNT.user_id },
@@ -150,16 +153,49 @@ describe('persistent report service', () => {
     authClient = stub.client
 
     await manuallyCompleteEvaluationReport(ACCOUNT, REPORT_ID)
+    const rpc = vi.fn().mockResolvedValue({ data: 1, error: null })
+    authClient = { rpc }
     await deleteEvaluationReport(ACCOUNT, REPORT_ID)
 
     expect(stub.opsFor('evaluation_reports')[0]).toMatchObject({
       method: 'update',
       payload: { status: 'complete', completion_method: 'manual' },
     })
-    expect(stub.opsFor('evaluation_reports')[1]).toMatchObject({ method: 'delete' })
-    for (const op of stub.opsFor('evaluation_reports')) {
-      expect(op.filters).toContainEqual({ op: 'eq', column: 'owner_user_id', value: ACCOUNT.user_id })
+    expect(rpc).toHaveBeenCalledWith('delete_evaluation_reports', {
+      p_report_ids: [REPORT_ID],
+    })
+  })
+
+  it('uses one bounded atomic RPC for multi-report deletion', async () => {
+    const secondId = '51000000-0000-4000-8000-000000000002'
+    const rpc = vi.fn().mockResolvedValue({ data: 2, error: null })
+    authClient = { rpc }
+
+    await expect(deleteEvaluationReports(ACCOUNT, {
+      reportIds: [REPORT_ID, secondId],
+    })).resolves.toBe(2)
+    expect(rpc).toHaveBeenCalledWith('delete_evaluation_reports', {
+      p_report_ids: [REPORT_ID, secondId],
+    })
+  })
+
+  it('rejects invalid bulk selections and preserves active-Attempt conflicts', async () => {
+    await expect(deleteEvaluationReports(ACCOUNT, { reportIds: [] }))
+      .rejects.toMatchObject({ status: 400 })
+    await expect(deleteEvaluationReports(ACCOUNT, { reportIds: [REPORT_ID, REPORT_ID] }))
+      .rejects.toMatchObject({ status: 400 })
+
+    authClient = {
+      rpc: vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '55000', message: 'The active Attempt report cannot be deleted' },
+      }),
     }
+    await expect(deleteEvaluationReports(ACCOUNT, { reportIds: [REPORT_ID] }))
+      .rejects.toMatchObject({
+        status: 409,
+        message: 'The active Attempt report cannot be deleted',
+      })
   })
 
   it('completes only explicit End Room through the privileged lifecycle path', async () => {

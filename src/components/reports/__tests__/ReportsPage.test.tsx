@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -20,6 +20,25 @@ const SUMMARY = {
   completed_at: null,
   created_at: '2026-09-07T14:00:00.000Z',
   updated_at: '2026-09-07T14:00:00.000Z',
+  deletion_blocked: false,
+}
+
+const SECOND = {
+  ...SUMMARY,
+  id: '51000000-0000-4000-8000-000000000002',
+  attempt_version: 3,
+  attempt_label: 'Afternoon',
+  scenario_name: 'Stroke',
+  status: 'complete' as const,
+}
+
+const ACTIVE = {
+  ...SUMMARY,
+  id: '51000000-0000-4000-8000-000000000003',
+  attempt_version: 4,
+  attempt_label: 'Live cohort',
+  scenario_name: 'Active trauma',
+  deletion_blocked: true,
 }
 
 const DETAIL = {
@@ -102,5 +121,91 @@ describe('ReportsPage', () => {
     expect(screen.getByRole('alertdialog')).toHaveTextContent('Afternoon')
     expect(screen.getByRole('alertdialog')).toHaveTextContent('Cardiac arrest')
     expect(screen.getByRole('alertdialog')).toHaveTextContent('cannot be recovered')
+  })
+
+  it('selects only eligible current-page reports and atomically deletes after contextual confirmation', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input)
+      if (url.startsWith('/api/reports?')) {
+        return response({ items: [SUMMARY, SECOND, ACTIVE], total: 3, page: 1, pageSize: 25 })
+      }
+      if (url === '/api/reports/delete' && init?.method === 'POST') {
+        return response({ deleted: 2 })
+      }
+      return response({ report: DETAIL })
+    })
+    const user = userEvent.setup()
+    render(<ReportsPage />)
+
+    await user.click(await screen.findByRole('button', { name: 'Delete reports' }))
+    expect(screen.getByText(/Delete mode active/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Attempt 2 · Morning/ })).toBeNull()
+    expect(screen.getByRole('checkbox', { name: /Live cohort.*Active trauma/ })).toBeDisabled()
+    expect(screen.getByText('Active Attempt — cannot delete')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Select all on page' }))
+    expect(screen.getByRole('button', { name: 'Delete selected (2)' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Delete selected (2)' }))
+
+    const dialog = screen.getByRole('alertdialog', { name: 'Delete 2 reports permanently?' })
+    expect(dialog).toHaveTextContent('Morning')
+    expect(dialog).toHaveTextContent('Cardiac arrest')
+    expect(dialog).toHaveTextContent('Afternoon')
+    expect(dialog).toHaveTextContent('Stroke')
+    expect(within(dialog).getByRole('list', { name: 'Reports selected for deletion' }))
+      .toHaveClass('max-h-56', 'overflow-y-auto')
+
+    await user.click(within(dialog).getByRole('button', { name: 'Delete 2 reports' }))
+    expect(await screen.findByText('2 reports permanently deleted.')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith('/api/reports/delete', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({ reportIds: [SUMMARY.id, SECOND.id] }),
+    }))
+    expect(screen.getByRole('button', { name: 'Delete reports' })).toBeInTheDocument()
+  })
+
+  it('preserves delete mode and selection when atomic deletion fails, then clears on cancel', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input)
+      if (url.startsWith('/api/reports?')) {
+        return response({ items: [SUMMARY], total: 1, page: 1, pageSize: 25 })
+      }
+      if (url === '/api/reports/delete' && init?.method === 'POST') {
+        return response({ error: 'The selected reports changed and were not deleted' }, 409)
+      }
+      return response({ report: DETAIL })
+    })
+    const user = userEvent.setup()
+    render(<ReportsPage />)
+
+    await user.click(await screen.findByRole('button', { name: 'Delete reports' }))
+    const checkbox = screen.getByRole('checkbox', { name: /Morning.*Cardiac arrest/ })
+    await user.click(checkbox)
+    await user.click(screen.getByRole('button', { name: 'Delete selected (1)' }))
+    await user.click(screen.getByRole('button', { name: 'Delete 1 reports' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('not deleted')
+    expect(checkbox).toBeChecked()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+
+  it('clears page-scoped selection when filters are applied', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      const url = String(input)
+      if (url.startsWith('/api/reports?')) {
+        return response({ items: [SUMMARY], total: 1, page: 1, pageSize: 25 })
+      }
+      return response({ report: DETAIL })
+    })
+    const user = userEvent.setup()
+    render(<ReportsPage />)
+
+    await user.click(await screen.findByRole('button', { name: 'Delete reports' }))
+    await user.click(screen.getByRole('checkbox', { name: /Morning.*Cardiac arrest/ }))
+    expect(screen.getByRole('button', { name: 'Delete selected (1)' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+    expect(screen.getByRole('button', { name: 'Delete selected (0)' })).toBeDisabled()
   })
 })

@@ -46,7 +46,7 @@ describe('CallerInfoForm', () => {
     renderCallerInfoForm()
 
     expect(screen.getByRole('heading', { name: 'Caller Info' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Scenario title')).toBeNull()
+    expect(screen.queryByLabelText('Change scenario title')).toBeNull()
     expect(screen.getByLabelText('Auto-sort scenario')).toBeInTheDocument()
     expect(screen.getByText('Call / Priority / MPDS')).toBeInTheDocument()
     expect(screen.getByLabelText('Call #')).toBeInTheDocument()
@@ -74,7 +74,7 @@ describe('CallerInfoForm', () => {
       'aria-expanded',
       'false',
     )
-    expect(screen.queryByLabelText('Scenario title')).toBeNull()
+    expect(screen.queryByLabelText('Change scenario title')).toBeNull()
     expect(screen.queryByRole('button', { name: /Save Scenario/ })).toBeNull()
 
     await user.click(expand)
@@ -82,7 +82,7 @@ describe('CallerInfoForm', () => {
       'aria-expanded',
       'true',
     )
-    expect(screen.queryByLabelText('Scenario title')).toBeNull()
+    expect(screen.queryByLabelText('Change scenario title')).toBeNull()
     expect(screen.queryByRole('button', { name: /Save Scenario/ })).toBeNull()
   })
 
