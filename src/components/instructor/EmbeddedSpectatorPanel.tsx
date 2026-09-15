@@ -585,6 +585,8 @@ export function EmbeddedSpectatorPanel({
             <span className="shrink-0 text-neutral-500">
               {envelope?.projection.model === 'wagamiZ'
                 ? 'Wagami Z'
+                : envelope?.projection.model === 'wagamiA'
+                  ? 'Wagami A'
                 : envelope
                   ? 'Wagami X'
                   : 'Monitor pending'}

@@ -26,6 +26,7 @@ describe('DefibrillatorPanel', () => {
       'aria-pressed',
       'false',
     )
+    expect(screen.queryByRole('button', { name: 'Wagami A' })).not.toBeInTheDocument()
   })
 
   it('shows dirty and pending selection states through Save and Send', async () => {
@@ -60,5 +61,13 @@ describe('DefibrillatorPanel', () => {
       'true',
     )
     expect(screen.getByRole('button', { name: 'Wagami Z' })).toHaveClass('bg-ecg-green')
+  })
+
+  it('explains an imported Wagami A draft without adding A to live choices', () => {
+    act(() => useMonitorStore.getState().setDefibrillatorModelDraft('wagamiA'))
+    render(<DefibrillatorPanel />)
+
+    expect(screen.getByText(/Wagami A is preview-only/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Wagami A' })).not.toBeInTheDocument()
   })
 })

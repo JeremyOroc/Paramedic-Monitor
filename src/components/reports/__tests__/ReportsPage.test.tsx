@@ -94,6 +94,21 @@ describe('ReportsPage', () => {
     expect(screen.getByText('Wagami Z', { exact: false })).toBeInTheDocument()
   })
 
+  it('labels an A report explicitly when one is present', async () => {
+    const aSummary = { ...SUMMARY, defibrillator_model: 'wagamiA' as const }
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+      if (String(input).startsWith('/api/reports?')) {
+        return response({ items: [aSummary], total: 1, page: 1, pageSize: 25 })
+      }
+      return response({ report: { ...DETAIL, defibrillator_model: 'wagamiA' } })
+    })
+    const user = userEvent.setup()
+    render(<ReportsPage />)
+
+    await user.click(await screen.findByRole('button', { name: /Attempt 2 · Morning/ }))
+    expect(await screen.findByText('Wagami A', { exact: false })).toBeInTheDocument()
+  })
+
   it('saves metadata, manually completes, and shows contextual permanent deletion', async () => {
     const completed = { ...SUMMARY, attempt_label: 'Afternoon', student_names: ['Alice', 'Bob'], status: 'complete' as const, completion_method: 'manual' as const, completed_at: '2026-09-07T15:00:00.000Z' }
     vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {

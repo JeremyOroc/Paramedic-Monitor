@@ -60,6 +60,17 @@ describe('SendButton', () => {
     expect(button).toBeDisabled()
   })
 
+  it('keeps a saved Wagami A draft out of live Send', () => {
+    act(() => {
+      useMonitorStore.getState().setDefibrillatorModelDraft('wagamiA')
+      useMonitorStore.getState().save()
+    })
+    render(<SendButton />)
+
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+    expect(useMonitorStore.getState().defibrillatorModelConfirmed).toBe('wagamiX')
+  })
+
   it('fires send and disables again afterward', async () => {
     const user = userEvent.setup()
     act(() => {

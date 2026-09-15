@@ -6,6 +6,53 @@
 ---
 
 ## Current Phase
+**Wagami A phased roadmap — ACCEPTED; A0 inventory — COMPLETE; A1 Precision Graphite concept gate — COMPLETE; A2 local implementation — COMPLETE (2026-09-15); A3 awaits approval.**
+A is additive and X/Z remain available. The accepted direction is a matte-charcoal rugged field
+tablet with top vital cards, dominant waveforms, a separate defib panel, six task destinations,
+and physical-style Power/Charge/Shock. Existing working clinical timing and state guards carry
+forward. The six destinations are 12-lead, EtCO2, Medications, Call Info, Print/Capture, and
+Configure; Call Info opens the Assignment dashboard, while the medication Event Log stays within
+Medications. The v2 image tile reading `ÉVÉNEMENTS` is a superseded label; images remain unchanged.
+Inert X-only controls are omitted. French/English Device language and shell-LED choice
+are local to one Attempt and mirrored by Spectator; LED Off affects only the shell light, never
+screen/audio warnings. Global all-cues mute has an honest label. The supported landscape iPad and
+desktop contract remains. Incomplete A is excluded from live Instructor Attempts but directly
+previewable, powered on and dispatch-bypassed, at `/?dev=3` with a visible `PREVIEW` label and no
+Room join. X stays the development default; any A default change and X/Z public-availability
+change require explicit later decisions, not automation. The seven-phase roadmap and tests are
+recorded in `PLAN.md`; A0 asset/provenance findings are in `docs/research/wagami-a-phase0-inventory.md`.
+The programmer approved Precision Graphite v2, the exact A-only palette, PNI-card reading action,
+and persistent waveform-header global-audio mute. The five-criterion concept-level review is
+complete in `docs/design/wagami-a-concepts/precision-graphite-spec.md`. Actual rendered/iPad fit
+checks belong to A3/A6 once UI code exists. Future distributable-asset disposition remains open.
+A2 now recognizes A explicitly in model/scenario/projection/report contracts and labels, while
+legacy unknown models still default to X. Its independent `/?dev=3` powered-on construction
+preview uses code-native A tokens, shows all six future right-side destinations and `PREVIEW`,
+and never enters Room routing. Instructor still offers only X/Z; imported A drafts are explained
+and cannot be Sent, and the server rejects A before live state/history writes. A local forward
+report-check migration was created and transactionally tested; it has **not** been applied to
+production, and the existing report capture trigger still limits live creation to X/Z. Focused
+A2 app suites pass; TypeScript, ESLint (zero errors, 12 pre-existing warnings), and Webpack
+production build pass. The full Vitest run reports three independently reproduced unrelated
+Room-ownership/Patient-Info baseline failures, while the local 42-assertion report pgTAP run
+reports two existing-audit-row failures; both new A constraint assertions pass. Rendered 1024×768
+and 1366×768 preview DOM checks show no overflow. A3/A4 must replace explicit placeholders with
+the approved original shell and functional monitor. No live Instructor A option or A Attempt was
+enabled; no public asset removal or IP clearance decision was made.
+Three original A1 bitmap concepts and three versioned v2 revisions are saved under
+`docs/design/wagami-a-concepts/`; generation/revision is complete and the programmer selected
+Precision Graphite v2 as the visual direction. Field Slate and Rescue Neutral remain available.
+The first-pass menu icons hid the six secondary destinations behind two taps. The programmer
+approved a 2×3 labeled touch grid at upper-right inside the screen, with a compact always-visible
+defib status panel below; the physical Shock stays separated on the lower-right shell. All v2s
+show this arrangement, but their bitmap targets, separate PNI/audio quick actions, and iPad fit
+are not implementation proof. A1 concept decisions are complete; actual fit testing follows in
+A3/A6. The programmer approved the staged A1→A2 scope. A uses original visual/voice assets unless reuse rights
+are documented, while X/Z assets remain untouched. Tracked ZOLL reference photos remain private
+planning references pending an explicit public-source-distribution decision. The accepted screen
+orders FC/SpO2/PNI/EtCO2 above large ECG and smaller SpO2/EtCO2 traces, with a right-side defib
+status pane rather than a right-side vital stack.
+
 **Dispatch route same-run enrichment — COMPLETE (2026-09-14).**
 Only the first dispatch, a normalized Incident-scene change, or a changed countdown now creates a new
 Dispatch run. Coordinate/status/geometry enrichment and Unit-origin changes retain the run id, clocks,

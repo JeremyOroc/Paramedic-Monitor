@@ -195,6 +195,16 @@ describe('latest trainee monitor projection (PLAN 17)', () => {
 })
 
 describe('updateSessionState — instructor-side history (PLAN 12b)', () => {
+  it('rejects Wagami A before writing live state or Attempt history', async () => {
+    const stub = withResolver()
+
+    await expect(updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, {
+      defibrillatorModelConfirmed: 'wagamiA',
+    })).rejects.toMatchObject({ status: 400 })
+    expect(stub.opsFor('session_state')).toHaveLength(0)
+    expect(stub.opsFor('session_state_history')).toHaveLength(0)
+  })
+
   it('appends a history row carrying the attempt, version, and state', async () => {
     const stub = withResolver({
       session_state: (op) =>

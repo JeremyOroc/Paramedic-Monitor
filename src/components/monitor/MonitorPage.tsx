@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useSearchParams } from 'next/navigation'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { WagamiZDevice } from '@/components/monitor/WagamiZDevice'
+import { WagamiAPreview } from '@/components/monitor/WagamiAPreview'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
 import { SubBar } from '@/components/monitor/SubBar'
@@ -836,6 +837,17 @@ export function MonitorPage({
     )
   }
 
+  if (activeDefibrillatorModel === 'wagamiA') {
+    return (
+      <main className="fixed inset-0 grid place-items-center bg-wagami-a-screen p-8 text-wagami-a-text">
+        <div className="max-w-xl rounded-xl border border-wagami-a-border bg-wagami-a-surface p-8 text-center">
+          <h1 className="font-mono text-2xl">WAGAMI A</h1>
+          <p className="mt-4 text-wagami-a-muted-text">Ce modèle est actuellement disponible seulement en prévisualisation à /?dev=3. Aucun Attempt en direct ne peut l’utiliser.</p>
+        </div>
+      </main>
+    )
+  }
+
   if (isWagamiZ) {
     return (
       <WagamiZDevice
@@ -1062,6 +1074,7 @@ export default function MonitorPageRoute() {
 
 function MonitorPageOrLanding() {
   const searchParams = useSearchParams()
+  if (searchParams.get('dev') === '3') return <WagamiAPreview />
   if (process.env.NODE_ENV === 'test') return <MonitorPage />
   if (searchParams.get('dev') === '1' || searchParams.get('dev') === '2') {
     return <MonitorPage />

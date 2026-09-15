@@ -51,6 +51,20 @@
   --color-wagami-z-charge-gray: #8a8e95;
   --color-wagami-z-knob: #17191c;
   --color-wagami-z-readiness: #102b31;
+  /* Wagami A Precision Graphite v2 — keep in sync with WAGAMI_A_COLORS. */
+  --color-wagami-a-screen: #081014;
+  --color-wagami-a-surface: #0D1B20;
+  --color-wagami-a-surface-raised: #14272F;
+  --color-wagami-a-text: #F3F8FB;
+  --color-wagami-a-muted-text: #B9CAD1;
+  --color-wagami-a-border: #517380;
+  --color-wagami-a-ecg: #65E5D9;
+  --color-wagami-a-spo2: #FFE082;
+  --color-wagami-a-pni: #C6ECFF;
+  --color-wagami-a-etco2: #AAA6FF;
+  --color-wagami-a-alarm: #FF5656;
+  --color-wagami-a-pending: #E6B55C;
+  --color-wagami-a-shock-shell: #D62B2B;
   /* 12-lead Capture printout (warm tan/salmon ECG paper, dark ink) + acquire bar */
   --color-print-paper: #f4dcc6;
   --color-print-grid: #e0b193;

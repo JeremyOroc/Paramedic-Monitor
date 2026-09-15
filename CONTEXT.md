@@ -288,6 +288,23 @@ _Avoid_: Respiratory strength
 The established Wagami defibrillator model whose controls provide the simulator's existing physical-button interactions.
 _Avoid_: Old monitor, legacy monitor
 
+**Wagami A**:
+A new Wagami defibrillator model that coexists with Wagami X and Wagami Z. It presents the same
+instructor-confirmed clinical scenario through a distinct device-like interaction design rather
+than replacing Wagami X.
+_Avoid_: Wagami X replacement, generic Wagami X
+
+**Call Info destination**:
+The Wagami A live-screen task that leads to the trainee's Assignment dashboard and caller
+information. It is distinct from the medication Event Log.
+_Avoid_: Events destination, Event Log tile
+
+**Device language**:
+The French or English Wagami A interface presentation selected on one Scenario device and mirrored
+by its Spectator view for the current Attempt. It does not change instructor-confirmed clinical
+state or the language of other Scenario devices.
+_Avoid_: Scenario language, instructor language, Account language
+
 **Resting vital layout**:
 The Wagami X main-view placement used after power-on and before the first accepted physical Analyze or Charge action. FC, PNI, EtCO2, and SpO2 occupy four equal cells in the fixed bottom region; collapsing that region temporarily uses the defib vital layout.
 _Avoid_: Apply Electrodes screen, default status bar

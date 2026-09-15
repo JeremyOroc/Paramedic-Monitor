@@ -56,7 +56,7 @@ export function SendButton({ beforeSend, onSent, forceDisabled = false }: SendBu
           setStatus('error')
         }
       }}
-      disabled={forceDisabled || disabled || status === 'sending'}
+      disabled={forceDisabled || defibrillatorModelSaved === 'wagamiA' || disabled || status === 'sending'}
       className={cn(
         'px-4 py-2 border font-mono font-bold uppercase tracking-wider text-sm',
         'border-pending-amber bg-pending-amber text-black hover:brightness-110',

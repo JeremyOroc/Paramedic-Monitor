@@ -5,6 +5,202 @@
 
 ---
 
+## [2026-09-15] [ui/model] — Complete local Wagami A A2 contracts and isolated preview
+
+- Added the third explicit model to normalization, version-one Saved scenarios, semantic
+  projection validation, report/timeline types and labels, without changing X's legacy default.
+  Added A-only Precision Graphite tokens and clarified X/A guidance in `AGENTS.md`.
+- Built a separate powered-on `/?dev=3` code-native construction preview with `PREVIEW`, no
+  Room join, and six visibly named future right-side tasks. Kept live Instructor choices X/Z;
+  imported A drafts are explained and disabled for Send, with server-side rejection before
+  live state/history writes and explicit A-not-X Spectator/monitor fallback notices.
+- Created a local forward report-model constraint migration but did not deploy it. New A
+  constraint assertions passed inside a rolled-back local pgTAP run; two unrelated local
+  audit-row assertions failed. Focused A2 tests, TypeScript, and Webpack build pass; ESLint has
+  zero errors and 12 existing warnings. Full Vitest has three independently reproduced baseline
+  failures outside A2. Browser QA measured no overflow at 1024×768 and 1366×768; A3/A4 own
+  faithful shell/display and interaction work.
+
+## [2026-09-15] [planning/design] — Complete Wagami A A1 concept gate
+
+- Accepted the proposed exact Precision Graphite A-only palette and the two quick-action
+  placements: PNI card starts a reading; a persistent global-audio mute sits in the waveform
+  header just left of the right task dock and carries into secondary views.
+- Completed the five-criterion concept-level readability/usability/button/iPad-composition/X-Z
+  structural scorecard, with rendered iPad/touch and qualified IP checks explicitly deferred to
+  their implementation/release phases. Marked A1 complete and A2 starting; no UI code or live
+  Instructor A selection had changed at this milestone.
+
+## [2026-09-15] [planning/design] — Propose Precision Graphite palette and A2 inventory
+
+- Extracted a candidate A-only design system from the selected concept, including exact proposed
+  color tokens, calculated screen/surface color-pair ratios, shell/layout/component constraints,
+  and required deviations for Call Info plus missing PNI/audio quick actions.
+- Recorded a preliminary five-criterion review with explicit rendered/iPad/IP gates and the
+  staged A2 model, report, preview, and test inventory. Palette and quick-action placements await
+  programmer approval; no app code, live model selection, or production migration changed.
+
+## [2026-09-15] [planning/design] — Select Precision Graphite for Wagami A
+
+- Recorded the programmer's selection of Precision Graphite v2 as A's visual direction. Field
+  Slate and Rescue Neutral remain available as alternatives; no concept images were removed.
+- Kept A1 open for exact palette, formal X/Z distinctness/readability scorecard, and implemented
+  touch/iPad fit. The image's Events label remains superseded by Call Info, and missing PNI/audio
+  quick actions remain requirements. A2 code awaits an explicitly confirmed implementation plan.
+
+## [2026-09-15] [planning/domain] — Correct Wagami A Events tile to Call Info
+
+- Changed the planned fourth permanent A destination from Events to Call Info in `PLAN.md`,
+  `CONTEXT.md`, the composition ADR, `STATUS.md`, and the concept review notes. Call Info leads
+  to the trainee Assignment dashboard/caller-information workflow; the medication Event Log
+  stays within Medications and has no separate permanent tile.
+- Kept all first-pass and v2 bitmap images unchanged at the programmer's request. Their
+  `ÉVÉNEMENTS` label is explicitly superseded by the documentation; final bilingual label copy
+  and launcher behavior remain for A5 implementation/testing. No application code changed.
+
+## [2026-09-15] [planning/design] — Revise three Wagami A right-dock concepts
+
+- Used the built-in image-editing workflow on each original A1 concept to produce versioned
+  `field-slate-v2.png`, `rescue-neutral-v2.png`, and `precision-graphite-v2.png` without overwriting
+  the first-pass images or using ZOLL media as references.
+- All three v2s visibly show six upper-right touchscreen task tiles over an always-visible
+  compact defibrillation status panel and retain shell-only Power, Charge, and Shock. Corrected
+  illustrative status/wordmark defects where feasible.
+- Recorded the edit prompt set, variant critique, and bitmap limitations in the concept README.
+  User selection, exact palette, real-iPad touch-target validation, and application code remain
+  pending.
+
+## [2026-09-15] [planning/design] — Place Wagami A task grid above defibrillation status
+
+- Approved six labeled, simultaneous one-tap task launchers in a 2×3 grid at the upper-right of
+  A's touchscreen, with a compact always-visible defibrillation status panel below. The physical
+  Shock remains separately located on the lower-right outer shell.
+- This right-side placement avoids X's left-key resemblance without hiding the six destinations.
+  A1 first-pass concepts remain available; versioned image revisions and concept selection are
+  pending. No application code changed.
+
+## [2026-09-15] [planning/design] — Confirm one-tap visibility for Wagami A destinations
+
+- Confirmed that 12-lead, EtCO2, Medications, Events, Print/Capture, and Configure must all be
+  simultaneously visible one-tap launchers from the live A screen; the prior two-step menu
+  assumption and three first-pass images do not meet the requirement.
+- Recorded the programmer's proposed right-side placement to avoid Wagami X's left-key bank,
+  with its arrangement alongside the right-side defib status panel still to be decided. A1
+  selection remains paused until revised concepts and iPad touch/spacing review.
+
+## [2026-09-15] [planning/design] — Flag hidden Wagami A task groups in concept review
+
+- The user identified that all three A1 images hide 12-lead, EtCO2, Medications, Events,
+  Print/Capture, and Configure behind a small menu icon. Reaching a destination would take at
+  least two taps; this does not show immediately accessible groups.
+- Paused A1 concept selection, recorded the access-behavior clarification in `PLAN.md`, and
+  marked the concept prompts as needing revision before choosing a design. No application code
+  or assets were removed.
+
+## [2026-09-15] [planning/design] — Complete Wagami A Phase A0 inventory
+
+- Verified tracked X photographs, ignored Z research, reference-derived code-native shells,
+  served public media, missing per-asset rights records, working X clinical workflows, and
+  third-model/report compatibility constraints in a read-only repository inventory.
+- Recorded the accepted original-A-asset policy and shared A1 concept brief in `PLAN.md`, marked
+  A0 complete and A1 concept selection in progress in `STATUS.md`, and kept asset disposition
+  and qualified IP review as later explicit gates. No assets or application code were changed.
+
+## [2026-09-15] [planning/design] — Generate three original Wagami A concept previews
+
+- Settled original A artwork/icons/bilingual prompts as the default asset policy unless reuse
+  rights are documented, leaving X/Z media untouched and keeping tracked ZOLL reference photos
+  as private planning material pending a public-source-distribution decision.
+- Fixed the top FC/SpO2/PNI/EtCO2 order, large ECG plus smaller SpO2/EtCO2 traces, and a narrow
+  right-side defibrillation status pane with touch Analyze/energy and shell-only Charge/Shock.
+- Used the built-in image-generation workflow without source image references to create Field
+  Slate, Rescue Neutral, and Precision Graphite previews in `docs/design/wagami-a-concepts/`.
+  Recorded prompts, visible inaccuracies, and the accepted review scorecard. Generation is
+  complete; user concept selection and exact palette remain pending. No app code changed.
+
+## [2026-09-15] [planning/design] — Accept Wagami A phased roadmap and direct preview gate
+
+- Accepted phases A0–A6 with per-phase tests and completion records, from asset/IP inventory and
+  three concepts through contracts, shell, clinical core, secondary/bilingual screens, and live/
+  real-device/release verification. A0 is in progress; no A UI implementation has started.
+- Fixed `/?dev=3` as a powered-on, dispatch-bypassing, visibly labeled direct A preview without
+  Room join or live Instructor selection during construction. Recorded that gate in ADR 0027.
+- Kept X as the development default; any later A default switch or X/Z public-availability change
+  requires an explicit product-team decision, not an automatic release step.
+- Added Phase 0 repository inventory of tracked X references and shipped media with missing
+  per-asset provenance/license notes; this is a documentation gap, not a legal conclusion.
+
+## [2026-09-15] [planning/design] — Define Wagami A preferences, preview, and compatibility gates
+
+- Defined Configure LED Off as shell-light-only, retaining screen/audio warnings. Device language
+  and LED choice persist within one Attempt through navigation, power cycles, and reloads, then
+  reset to French/LED On on New Attempt or a new Room.
+- Required bilingual fixed A UI, scripted clinical voice prompts, and locale-neutral fixed event/
+  report labels while leaving instructor-authored content untouched; existing audio/assets need a
+  provenance and language audit. Sharpened Device language in the glossary and recorded ADR 0026.
+- Kept incomplete A out of live Instructor Attempts but added `/?dev=3` as its direct preview path;
+  preview access/power semantics remain open. Accepted version-1 Saved scenario A support with
+  legacy X fallback and a report-model migration before A Attempts.
+- Accepted a five-criterion scorecard for choosing among three original A mockups, separate from
+  qualified IP review. No A UI code was changed.
+
+## [2026-09-15] [planning/design] — Resolve Wagami A alarm shell and local presentation pattern
+
+- Added the upper-left physical-style alarm LED with ready-white, brief red-onset pulse, steady
+  alarm-red, no-flash presentation, and persistent on-screen text/icon; Configure exposes an LED
+  on/off control whose Off semantics and lifetime still need a decision.
+- Preserved X's all-cues audio mute under an honest A label, made Language Scenario-device-local with
+  Spectator parity, kept 12-lead full-screen, and chose contained sheets for the other five menu
+  destinations. No A UI code was changed.
+- Identified third-model compatibility gates in scenario normalization, Instructor selection,
+  trainee/Spectator routing, and persistent Evaluation reports; the report database constraint
+  currently admits only X/Z, so its migration must precede A Attempts.
+
+## [2026-09-15] [planning/design] — Define Wagami A menu, language, and release boundaries
+
+- Kept Wagami X/Z available for now, deferring any public-release removal decision rather than
+  assuming they must be deleted or hidden immediately. Scoped the redesign to A-specific trainee
+  device and secondary screens, with only model selection added to the existing Instructor Console.
+- Split A's contextual menu into 12-lead, EtCO2, Medications, Events, Print/Capture, and Configure;
+  Configure includes Patient mode, PNI settings, and an A-only French-default/English-toggle Language.
+- Retained critical-process guards and timing through navigation, persistent alarm access across A
+  views, and charged-state-only one-press Shock without a confirmation dialog. Kept the suggested
+  top-shell physical-style LED as an open accessibility-reviewed option, not a settled design.
+- Accepted three original field-tablet variants for comparison before exact visual details and
+  implementation; Language scope/persistence and public model availability remain to be resolved.
+
+## [2026-09-15] [planning/design] — Fix Wagami A control and clinical-state boundaries
+
+- Placed physical-style Power top-right, Charge left-shoulder, and Shock lower-right; made Analyze,
+  energy, PNI reading, and alarm silence visible one-tap touchscreen actions, with other working
+  secondary flows grouped in a contextual menu.
+- Chose fixed top vital cards and a changing defibrillation panel; preserved X's working clinical
+  timing/state and scenario outcomes while redesigning invocation, and omitted inert X-only release
+  controls until they receive explicit training behavior.
+- Accepted a new dark-slate, accessible channel palette with red reserved for alarms/Shock, retained
+  the supported landscape iPad/desktop contract, and flagged the need to update X-era centralized
+  color conventions before A code. ADR 0025 records the clinical-parity trade-off.
+
+## [2026-09-15] [planning/design] — Choose Wagami A field-tablet composition
+
+- Accepted a matte-charcoal rugged field-tablet silhouette with asymmetric protective corners and
+  an almost edge-to-edge screen, instead of reusing the rounded blue Wagami X/Z device anatomy.
+- Placed top vital cards over a dominant waveform workspace with separate defibrillation state;
+  kept urgent touch actions visible and grouped secondary actions in a contextual task menu.
+- Required every displayed control to work at public release and set Canada as the first market for
+  qualified IP review. Recorded the visual/interaction trade-off in ADR 0024; finer design decisions
+  and Wagami A implementation remain pending.
+
+## [2026-09-15] [planning/design] — Establish additive Wagami A redesign boundary
+
+- Recorded Wagami A as a new model alongside retained Wagami X and Wagami Z, with clinical functions
+  and safety-critical feedback preserved but a distinct device-like visual and interaction design.
+- Fixed Power, Charge, and Shock as physical-style outer-shell controls; other touchscreen and shell
+  decisions remain open for the next design round.
+- Reframed the historical Zoll-matching plan as Wagami X history rather than the new model's goal,
+  added phased test and distinctness-review expectations, and captured the new model in the glossary
+  and ADR 0023. No Wagami A UI code was changed.
+
 ## [2026-09-14] [dispatch/instructor] — Keep late route resolution in the active Dispatch run
 
 - Changed re-dispatch identity to use only first dispatch, normalized Incident-scene changes, and saved

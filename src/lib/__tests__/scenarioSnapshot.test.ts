@@ -96,6 +96,15 @@ describe('scenario snapshots', () => {
     expect(normalizeScenarioSnapshot(input)?.defibrillatorModel).toBe('wagamiZ')
   })
 
+  it('round-trips Wagami A in the same version-one snapshot contract', () => {
+    const input = createEmptyScenarioSnapshot()
+    input.defibrillatorModel = 'wagamiA'
+
+    expect(normalizeScenarioSnapshot(input)?.version).toBe(1)
+    expect(normalizeScenarioSnapshot(input)?.defibrillatorModel).toBe('wagamiA')
+    expect(hasMeaningfulScenarioContent(input)).toBe(true)
+  })
+
   it('normalizes every automatic scenario FC value and activates FC', () => {
     const vf = createEmptyScenarioSnapshot()
     vf.monitor.draft.hr = 70

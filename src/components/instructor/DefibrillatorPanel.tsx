@@ -61,6 +61,11 @@ export function DefibrillatorPanel({ disabled = false }: DefibrillatorPanelProps
           )
         })}
       </div>
+      {selectedModel === 'wagamiA' && (
+        <p className="mt-3 font-mono text-xs text-pending-amber">
+          Wagami A is preview-only. Choose X or Z before sending a live Attempt.
+        </p>
+      )}
     </section>
   )
 }

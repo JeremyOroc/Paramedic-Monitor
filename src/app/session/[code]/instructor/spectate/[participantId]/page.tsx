@@ -39,7 +39,7 @@ export default function SpectatePage() {
       <header className="flex h-12 shrink-0 items-center gap-5 border-b border-neutral-800 bg-neutral-950 px-4 font-mono text-xs uppercase tracking-wider">
         <strong className="text-white">{data?.participant.nickname ?? 'Device'}</strong>
         <span className="text-neutral-400">
-          {envelope?.projection.model === 'wagamiZ' ? 'Wagami Z' : envelope ? 'Wagami X' : 'Monitor pending'}
+          {envelope?.projection.model === 'wagamiZ' ? 'Wagami Z' : envelope?.projection.model === 'wagamiA' ? 'Wagami A' : envelope ? 'Wagami X' : 'Monitor pending'}
         </span>
         <span
           aria-hidden={!availability.isLive}

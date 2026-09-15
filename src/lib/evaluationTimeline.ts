@@ -239,7 +239,9 @@ const ETCO2_WAVEFORM_LABELS: Record<Etco2Waveform, string> = {
   obstructed: 'Obstructed',
   off: 'Off',
 }
-const DEFIB_LABELS: Record<DefibrillatorModel, string> = { wagamiX: 'Wagami X', wagamiZ: 'Wagami Z' }
+const DEFIB_LABELS: Record<DefibrillatorModel, string> = {
+  wagamiX: 'Wagami X', wagamiZ: 'Wagami Z', wagamiA: 'Wagami A',
+}
 
 function stringOrEmpty(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
@@ -254,7 +256,7 @@ function etco2WaveformOrOff(value: unknown): Etco2Waveform {
 }
 
 function defibOrNull(value: unknown): DefibrillatorModel | null {
-  return value === 'wagamiX' || value === 'wagamiZ' ? value : null
+  return value === 'wagamiX' || value === 'wagamiZ' || value === 'wagamiA' ? value : null
 }
 
 /** `4:00`, for a response time or any other duration the instructor set. */

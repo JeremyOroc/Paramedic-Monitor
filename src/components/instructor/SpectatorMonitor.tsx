@@ -64,6 +64,16 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
   const controller = projection.controller
   const defib = projection.defib
   const defibProgress = useProjectedDefibProgress(defib)
+  if (projection.model === 'wagamiA') {
+    return (
+      <div className="grid h-full w-full place-items-center bg-wagami-a-screen p-8 text-center text-wagami-a-text">
+        <div className="rounded-xl border border-wagami-a-border bg-wagami-a-surface p-8 font-mono">
+          <strong>WAGAMI A · PREVIEW ONLY</strong>
+          <p className="mt-3 text-sm text-wagami-a-muted-text">Live Attempts are not enabled for this model.</p>
+        </div>
+      </div>
+    )
+  }
   const useRestingVitalLayout =
     defib.state === 'idle' && controller.view !== '12lead' && controller.bottomStatusVisible
   const vitalLogTotalPages = Math.max(

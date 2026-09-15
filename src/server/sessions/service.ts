@@ -78,7 +78,7 @@ export function isMonitorProjection(value: unknown): value is MonitorProjection 
   return (
     projection.version === MONITOR_PROJECTION_VERSION &&
     typeof projection.capturedAt === 'string' &&
-    (projection.model === 'wagamiX' || projection.model === 'wagamiZ') &&
+    (projection.model === 'wagamiX' || projection.model === 'wagamiZ' || projection.model === 'wagamiA') &&
     (projection.surface === 'dispatch' || projection.surface === 'monitor') &&
     isRecord(projection.controller) &&
     isRecord(projection.confirmed) &&
@@ -950,6 +950,12 @@ export async function updateSessionState(
   // An ended room is closed to changes: a Send here would write history the
   // record shows as part of an attempt that had already finished.
   if (session.status === 'ended') throw new SessionError('Session has ended', 410)
+  if (
+    typeof state === 'object' && state !== null && !Array.isArray(state) &&
+    (state as Record<string, unknown>).defibrillatorModelConfirmed === 'wagamiA'
+  ) {
+    throw new SessionError('Wagami A is preview-only and unavailable in live Attempts', 400)
+  }
   const supabase = createServiceClient()
   const { data: current, error: currentError } = await supabase
     .from('session_state')
