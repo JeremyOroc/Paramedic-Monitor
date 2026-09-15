@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-09-15] [ui/model] — Complete Wagami A A3 original shell and live display
+
+- Replaced the A2 construction preview at `/?dev=3` with an original code-native rugged shell,
+  fixed FC/SpO2/PNI/EtCO2 vital cards, dominant ECG and smaller SpO2/EtCO2 lanes, upper-left
+  alarm LED, separate defibrillation status, and six immediately visible corrected right-side
+  task launchers. Power off/on works; A4 clinical and A5 destination actions are disabled until
+  wired, rather than exposed as inert controls. X/Z remain available and unchanged.
+- Added a pure direct-preview resolver that labels normal fallback values as simulated only
+  when no confirmed channels are active, otherwise displays confirmed store channels and
+  disconnects inactive traces. Reused the existing waveform mechanisms with centralized
+  A-only colors and an A-specific canvas background, preserving X renderer defaults.
+- All 31 focused A3 tests, TypeScript, optimized Webpack build, and ESLint with zero errors
+  passed; the 12 existing lint warnings and three unrelated full-suite failures remain.
+  Browser QA checked 1024×768 fit, 375×812 guard, Power off/on, and clean console. A generated
+  shell cutout was excluded because its checkerboard was baked in; the released local preview
+  uses CSS/SVG shell artwork. No live A Attempt, public-availability change, or IP clearance
+  decision was made.
+
 ## [2026-09-15] [ui/model] — Complete local Wagami A A2 contracts and isolated preview
 
 - Added the third explicit model to normalization, version-one Saved scenarios, semantic

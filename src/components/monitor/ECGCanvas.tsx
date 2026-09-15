@@ -9,7 +9,7 @@ import {
 } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
 import { getTorsadesPacketDurationMs } from '@/lib/automaticHeartRate'
-import { COLORS } from '@/lib/constants'
+import { COLORS, WAGAMI_A_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
 import { DisconnectedWaveform } from './DisconnectedWaveform'
@@ -22,6 +22,7 @@ type ECGCanvasProps = {
   className?: string
   occluded?: boolean
   onReady?: () => void
+  palette?: 'wagamiX' | 'wagamiA'
 }
 
 function LiveECGCanvas({
@@ -31,11 +32,14 @@ function LiveECGCanvas({
   className,
   occluded = false,
   onReady,
+  palette = 'wagamiX',
 }: Omit<ECGCanvasProps, 'connected'>) {
+  const color = palette === 'wagamiA' ? WAGAMI_A_COLORS.ecg : COLORS.ecgGreen
   const canvasRef = useWaveformRenderer(
     { rhythm, hr, cprOverride },
     (get) => ({
-      color: COLORS.ecgGreen,
+      color,
+      background: palette === 'wagamiA' ? WAGAMI_A_COLORS.screen : COLORS.bg,
       sweepMs: ECG_SWEEP_MS,
       synchronizeSweep: true,
       ampJitter: 0.05,
@@ -49,7 +53,7 @@ function LiveECGCanvas({
         return ECG_RHYTHMS[get().rhythm].cycleMs ?? 60000 / Math.max(20, get().hr)
       },
     }),
-    [],
+    [color],
     { occluded, onReady },
   )
 
@@ -60,6 +64,7 @@ function LiveECGCanvas({
       data-rhythm={rhythm}
       data-cpr-override={cprOverride ? 'true' : 'false'}
       data-heart-rate={hr}
+      data-palette={palette}
       className={cn('block h-full w-full', className)}
     />
   )
@@ -73,8 +78,16 @@ export function ECGCanvas({
   className,
   occluded = false,
   onReady,
+  palette = 'wagamiX',
 }: ECGCanvasProps) {
   if (!connected && !cprOverride) {
+    if (palette === 'wagamiA') {
+      return (
+        <div data-testid="disconnected-waveform" data-channel="ecg" className={cn('grid h-full w-full place-items-center bg-wagami-a-screen', className)}>
+          <span className="w-[94%] border-t-2 border-dashed border-wagami-a-ecg/60" />
+        </div>
+      )
+    }
     return (
       <DisconnectedWaveform
         channel="ecg"
@@ -92,6 +105,7 @@ export function ECGCanvas({
       className={className}
       occluded={occluded}
       onReady={onReady}
+      palette={palette}
     />
   )
 }

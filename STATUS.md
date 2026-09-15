@@ -6,7 +6,7 @@
 ---
 
 ## Current Phase
-**Wagami A phased roadmap — ACCEPTED; A0 inventory — COMPLETE; A1 Precision Graphite concept gate — COMPLETE; A2 local implementation — COMPLETE (2026-09-15); A3 awaits approval.**
+**Wagami A phased roadmap — ACCEPTED; A0 inventory — COMPLETE; A1 Precision Graphite concept gate — COMPLETE; A2 local implementation — COMPLETE; A3 original shell/live display — COMPLETE (2026-09-15).**
 A is additive and X/Z remain available. The accepted direction is a matte-charcoal rugged field
 tablet with top vital cards, dominant waveforms, a separate defib panel, six task destinations,
 and physical-style Power/Charge/Shock. Existing working clinical timing and state guards carry
@@ -36,9 +36,23 @@ A2 app suites pass; TypeScript, ESLint (zero errors, 12 pre-existing warnings), 
 production build pass. The full Vitest run reports three independently reproduced unrelated
 Room-ownership/Patient-Info baseline failures, while the local 42-assertion report pgTAP run
 reports two existing-audit-row failures; both new A constraint assertions pass. Rendered 1024×768
-and 1366×768 preview DOM checks show no overflow. A3/A4 must replace explicit placeholders with
-the approved original shell and functional monitor. No live Instructor A option or A Attempt was
+and 1366×768 preview DOM checks show no overflow. A3 replaced the construction placeholder with
+the approved original shell and display; A4/A5 own clinical and destination interactions. No live Instructor A option or A Attempt was
 enabled; no public asset removal or IP clearance decision was made.
+The A3 direct preview now uses a code-native faceted shell, upper-left white/red alarm LED,
+upper-right Power, left Charge, and guarded lower-right Shock. The screen has fixed
+FC/SpO2/PNI/EtCO2 cards, a dominant ECG workspace with smaller SpO2/EtCO2 traces, a separate
+defib status panel, and all six corrected right-dock tasks immediately visible. Existing waveform
+renderers use A-only colors without changing X/Z defaults. With no active confirmed channels,
+the isolated preview marks normal values as simulated; otherwise it shows the confirmed store
+state and disconnects inactive traces. Power works now; Charge/Shock, clinical touch actions,
+and destination launchers are visibly disabled until A4/A5, with phase explanations. A3-focused
+tests pass (31), TypeScript, ESLint (zero errors, 12 pre-existing warnings), and the optimized
+Webpack build pass. Browser QA checked Power off/on, clean console, no overflow at the 1024×768
+minimum, and the unsupported-width guard at 375×812. The complete Vitest run has 1,468 passing,
+one skipped, and the same three unrelated baseline failures. The generated shell cutout was not
+adopted because its checkerboard was baked into the pixels, so the rendered shell remains original
+CSS/SVG work; real-iPad and qualified IP review remain A6 gates.
 Three original A1 bitmap concepts and three versioned v2 revisions are saved under
 `docs/design/wagami-a-concepts/`; generation/revision is complete and the programmer selected
 Precision Graphite v2 as the visual direction. Field Slate and Rescue Neutral remain available.

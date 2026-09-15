@@ -4,6 +4,8 @@ import type { WaveformDef } from './rhythms'
 export type RendererOptions = {
   canvas: HTMLCanvasElement
   color: string
+  /** Canvas clear/erase color; X remains black unless a model palette overrides it. */
+  background?: string
   getWaveform: () => WaveformDef
   getCycleMs: () => number
   getSignalKey?: () => string
@@ -52,6 +54,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
   const {
     canvas,
     color,
+    background = COLORS.bg,
     getWaveform,
     getCycleMs,
     getSignalKey,
@@ -136,7 +139,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     canvas.width = cssWidth * dpr
     canvas.height = cssHeight * dpr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.fillStyle = COLORS.bg
+    ctx.fillStyle = background
     ctx.fillRect(0, 0, cssWidth, cssHeight)
 
     if (traceSnapshot) {
@@ -250,7 +253,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
   }
 
   const reconstructCurrentSweep = () => {
-    ctx.fillStyle = COLORS.bg
+    ctx.fillStyle = background
     ctx.fillRect(0, 0, cssWidth, cssHeight)
 
     const gapWidth = eraseWidth()
@@ -404,7 +407,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     }
 
     const nextEraseWidth = eraseWidth()
-    ctx.fillStyle = COLORS.bg
+    ctx.fillStyle = background
     if (nextX + nextEraseWidth <= cssWidth) {
       ctx.fillRect(nextX, 0, nextEraseWidth, cssHeight)
     } else {
