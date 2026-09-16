@@ -4,10 +4,9 @@ type WagamiADefibPanelProps = {
   state: DefibState
   energy: number
   progress: number
-  canAnalyse: boolean
   canAdjustEnergy: boolean
   cprTime?: string
-  onAnalyse?: () => void
+  selectedAction?: string | null
   onEnergyDown?: () => void
   onEnergyUp?: () => void
 }
@@ -16,10 +15,9 @@ export function WagamiADefibPanel({
   state,
   energy,
   progress,
-  canAnalyse,
   canAdjustEnergy,
   cprTime = '--:--',
-  onAnalyse,
+  selectedAction,
   onEnergyDown,
   onEnergyUp,
 }: WagamiADefibPanelProps) {
@@ -31,13 +29,12 @@ export function WagamiADefibPanel({
       <div className="grid gap-1">
         <span className="text-wagami-a-muted-text">ÉNERGIE (J)</span>
         <div className="grid min-h-[44px] grid-cols-[44px_minmax(0,1fr)_44px] overflow-hidden rounded-[5px] border border-wagami-a-border text-center font-mono text-[clamp(15px,1.7cqw,25px)] font-bold">
-          <button type="button" aria-label="Diminuer l’énergie" disabled={!canAdjustEnergy || !onEnergyDown} onClick={onEnergyDown} className="border-r border-wagami-a-border text-wagami-a-pni disabled:cursor-not-allowed enabled:hover:bg-wagami-a-surface-raised">−</button>
+          <button type="button" aria-label="Diminuer l’énergie" disabled={!canAdjustEnergy || !onEnergyDown} onClick={onEnergyDown} data-navigation-selected={selectedAction === 'energyDown' ? 'true' : 'false'} className="border-r border-wagami-a-border text-wagami-a-pni disabled:cursor-not-allowed enabled:hover:bg-wagami-a-surface-raised data-[navigation-selected=true]:ring-2 data-[navigation-selected=true]:ring-inset data-[navigation-selected=true]:ring-wagami-a-pni">−</button>
           <span className="grid place-items-center tabular-nums">{energy}</span>
-          <button type="button" aria-label="Augmenter l’énergie" disabled={!canAdjustEnergy || !onEnergyUp} onClick={onEnergyUp} className="border-l border-wagami-a-border text-wagami-a-pni disabled:cursor-not-allowed enabled:hover:bg-wagami-a-surface-raised">+</button>
+          <button type="button" aria-label="Augmenter l’énergie" disabled={!canAdjustEnergy || !onEnergyUp} onClick={onEnergyUp} data-navigation-selected={selectedAction === 'energyUp' ? 'true' : 'false'} className="border-l border-wagami-a-border text-wagami-a-pni disabled:cursor-not-allowed enabled:hover:bg-wagami-a-surface-raised data-[navigation-selected=true]:ring-2 data-[navigation-selected=true]:ring-inset data-[navigation-selected=true]:ring-wagami-a-pni">+</button>
         </div>
       </div>
       <div className="grid gap-1">
-        <button type="button" disabled={!canAnalyse || !onAnalyse} onClick={onAnalyse} className="min-h-[44px] rounded-[5px] border border-wagami-a-border bg-wagami-a-surface-raised font-semibold text-wagami-a-text disabled:cursor-not-allowed enabled:hover:brightness-125 focus-visible:outline-2 focus-visible:outline-wagami-a-pni">ANALYSER</button>
         <span className="text-center font-mono text-wagami-a-pending">{state === 'idle' ? 'EN ATTENTE' : state.toUpperCase()}</span>
       </div>
       <div className="grid min-h-0 content-end gap-1.5 text-wagami-a-muted-text">

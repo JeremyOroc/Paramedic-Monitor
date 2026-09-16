@@ -1,5 +1,14 @@
 # Wagami A — Phase A1 Concept Previews
 
+**Current amendment (2026-09-15):** The programmer accepted a new pre-A4 shell-control,
+navigation, and Vital Log decision pack. [Precision Graphite shell-controls v3](./precision-graphite-shell-controls-v3.png)
+is the updated **programmer-approved A3.1 visual direction**, with its [review spec](./precision-graphite-shell-controls-v3-spec.md).
+The code/test implementation and [rendered QA with 1024/1536 screenshots](./a3-1-rendered-qa.md)
+were accepted as done. A4 onward is reserved for the [collaborator handoff](../../handoff/wagami-a-a4-onward.md).
+The older A1 descriptions below are historical and
+their left-Charge/lower-right-Shock/touch-Analyze/touch-mute/Print-Capture placements are
+superseded by the current amendment in `PLAN.md`. Neither older concept nor X/Z was deleted.
+
 Status: three original bitmap concepts and three non-destructive right-dock revisions generated
 for user review on 2026-09-15. The programmer selected Precision Graphite v2 as the visual
 direction; exact palette values and formal fit/scorecard sign-off remain open. These are decision

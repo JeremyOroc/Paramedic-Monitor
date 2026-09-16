@@ -15,21 +15,21 @@ const vitals = { ...DEFAULT_VITALS }
 const active = { hr: true, bp_sys: true, bp_dia: true, etco2: true, spo2: true }
 
 describe('Wagami A live waveform workspace', () => {
-  it('uses A palette on three reused live renderers and places mute left of the dock', () => {
+  it('uses A palette on three reused live renderers without a touchscreen mute action', () => {
     render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={[]} />)
 
     expect(screen.getByTestId('a-ecg-mock')).toHaveAttribute('data-palette', 'wagamiA')
     expect(screen.getByTestId('a-spo2-mock')).toHaveAttribute('data-palette', 'wagamiA')
     expect(screen.getByTestId('a-etco2-mock')).toHaveAttribute('data-palette', 'wagamiA')
-    expect(screen.getByRole('button', { name: 'Couper tous les sons' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Couper tous les sons' })).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('AUCUNE ALARME')
   })
 
-  it('keeps on-screen alarm text even when audio is muted', () => {
-    render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={['hr', 'spo2']} muted onMute={() => {}} />)
+  it('keeps on-screen alarm text independently of the shell mute action', () => {
+    render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={['hr', 'spo2']} />)
 
     expect(screen.getByRole('status')).toHaveTextContent('ALARME · FC / SpO₂')
-    expect(screen.getByRole('button', { name: 'Réactiver les sons' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: 'Réactiver les sons' })).not.toBeInTheDocument()
   })
 
   it('disconnects the ECG renderer when the confirmed FC channel is inactive', () => {

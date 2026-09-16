@@ -7,11 +7,58 @@
 
 ## Current Phase
 **Wagami A phased roadmap — ACCEPTED; A0 inventory — COMPLETE; A1 Precision Graphite concept gate — COMPLETE; A2 local implementation — COMPLETE; A3 original shell/live display — COMPLETE (2026-09-15).**
+**Pre-A4 shell-control and Vital Log revision — A3.1 COMPLETE AND PROGRAMMER-ACCEPTED; A4/A5/A6 NOT STARTED, RESERVED FOR COLLABORATOR HANDOFF (2026-09-15).**
+The programmer explicitly declared A3 done, including its A3.1 shell-control amendment,
+and asked this agent to stop before A4. The continuation brief is
+`docs/handoff/wagami-a-a4-onward.md`. This acceptance closes the local rendered-design gate,
+not the real-iPad or qualified IP gates in A6. The A3.1 changes and this handoff remain
+uncommitted on local branch `wagami-a`; another device must receive this working tree or
+an explicitly approved commit/transfer before relying on the brief.
+The collaborator prompt now includes an install/check list for Build Web Apps UI skills,
+later Supabase work, optional personal planning skills, and a Playwright fallback. These
+are environment recommendations, not permission to start A4 or perform A6 migration.
+The programmer has requested a new right-shell Analyze/Charge/Shock vertical group, left-shell
+sound mute/Patient mode/BP reading, lower-shell Left/Enter/Right screen navigation, and a Vital Log
+replacement for Print/Capture. `PLAN.md` records the accepted amendment; A3.1 has now
+superseded the historical A3 control placement without changing X/Z. Patient mode is confirmed disabled throughout active Analyze, Charge, and shock-ready
+states until delivery/cancellation. The former Print/Capture launcher is confirmed to become a
+timestamped Vital Log of FC, accepted BP, SpO2, and EtCO2; 12-lead capture/printing remains in
+12-lead. The shell is confirmed to remain visible and operable across every secondary view,
+including full-display 12-lead and Call Info content. Analyze, all-cues mute, and BP reading
+are shell-only actions; their old touch buttons were removed, while PNI and defib
+status remain visible/read-only. The Patient mode shell button is the sole mode changer,
+cycling Adult/Pediatric/Neonate/Adult on permitted presses, with shell and screen state labels;
+Configure shows the mode read-only. Power stays isolated upper-right; the right-stack Shock
+retains a guard. Left/Right cyclically select enabled inner-display controls (six dock tiles in
+row order, then energy controls), excluding shell actions, read-only cards, and disabled states;
+Enter activates once, and secondary views have their own focus cycle with live-screen selection
+restoration. Vital Log uses X's five-minute snapshots, eight-row pages, and power-off/refresh
+reset; the Room-free preview does not fabricate history. The v3 concept is approved,
+A3.1 shell/navigation code and tests are implemented, and the programmer accepted the
+flatter rendered code-native housing as done. Real-iPad and qualified
+IP review remain A6 gates.
+The non-destructive Precision Graphite shell-controls v3 image and review spec are saved under
+`docs/design/wagami-a-concepts/` and were visually approved as A3.1 direction. It depicts all requested
+outer-shell buttons, six corrected task labels, and the retained vital/waveform hierarchy,
+but its illustrated date, numbers, dimensions, and icon/button behavior are not clinical or
+iPad-fit evidence. The new right-side hardware stack shares a broad motif with Wagami Z;
+renewed side-by-side distinctness review and qualified Canadian IP review remain necessary.
+The attached BP icon was not used as image input or project asset. A3.1 replaced the
+Print/Capture tile with `Journal des signes vitaux`, moved Analyze/mute/PNI-reading to
+shell-only guarded callback slots, and added an original cuff/gauge SVG and three hardware
+navigation keys. Its focus model wraps only enabled inner actions and remembers selection
+per view. The direct preview still enables Power alone; A4/A5 own clinical activation and
+destinations. All 22 A3.1-focused tests, TypeScript, affected-file ESLint, and Webpack build
+pass. Desktop browser QA covers 1024×768, 1536×1024, narrow fallback, no overflow/errors,
+and Power cycling; screenshots and fidelity ledger are in the A concept folder. The full
+suite re-run has 1,476 passing, one skipped, and only the three pre-existing
+Room-ownership/PatientInfo failures. The stale A preview-label assertion was updated.
 A is additive and X/Z remain available. The accepted direction is a matte-charcoal rugged field
 tablet with top vital cards, dominant waveforms, a separate defib panel, six task destinations,
 and physical-style Power/Charge/Shock. Existing working clinical timing and state guards carry
-forward. The six destinations are 12-lead, EtCO2, Medications, Call Info, Print/Capture, and
-Configure; Call Info opens the Assignment dashboard, while the medication Event Log stays within
+forward. The A3 baseline had a Print/Capture tile; A3.1 relabeled it Vital Log. Its actual
+timestamped history awaits A5. Call Info opens the
+Assignment dashboard, while the medication Event Log stays within
 Medications. The v2 image tile reading `ÉVÉNEMENTS` is a superseded label; images remain unchanged.
 Inert X-only controls are omitted. French/English Device language and shell-LED choice
 are local to one Attempt and mirrored by Spectator; LED Off affects only the shell light, never
@@ -21,8 +68,9 @@ previewable, powered on and dispatch-bypassed, at `/?dev=3` with a visible `PREV
 Room join. X stays the development default; any A default change and X/Z public-availability
 change require explicit later decisions, not automation. The seven-phase roadmap and tests are
 recorded in `PLAN.md`; A0 asset/provenance findings are in `docs/research/wagami-a-phase0-inventory.md`.
-The programmer approved Precision Graphite v2, the exact A-only palette, PNI-card reading action,
-and persistent waveform-header global-audio mute. The five-criterion concept-level review is
+At the historical A1 gate, the programmer approved Precision Graphite v2, the exact A-only palette,
+PNI-card reading action, and persistent waveform-header global-audio mute. A3.1 superseded
+those two action placements. The five-criterion concept-level review is
 complete in `docs/design/wagami-a-concepts/precision-graphite-spec.md`. Actual rendered/iPad fit
 checks belong to A3/A6 once UI code exists. Future distributable-asset disposition remains open.
 A2 now recognizes A explicitly in model/scenario/projection/report contracts and labels, while
@@ -39,8 +87,9 @@ reports two existing-audit-row failures; both new A constraint assertions pass. 
 and 1366×768 preview DOM checks show no overflow. A3 replaced the construction placeholder with
 the approved original shell and display; A4/A5 own clinical and destination interactions. No live Instructor A option or A Attempt was
 enabled; no public asset removal or IP clearance decision was made.
-The A3 direct preview now uses a code-native faceted shell, upper-left white/red alarm LED,
-upper-right Power, left Charge, and guarded lower-right Shock. The screen has fixed
+At the historical A3 milestone, the direct preview used a code-native faceted shell,
+upper-left white/red alarm LED, upper-right Power, left Charge, and guarded lower-right
+Shock; A3.1 superseded those Charge/Shock positions. The screen has fixed
 FC/SpO2/PNI/EtCO2 cards, a dominant ECG workspace with smaller SpO2/EtCO2 traces, a separate
 defib status panel, and all six corrected right-dock tasks immediately visible. Existing waveform
 renderers use A-only colors without changing X/Z defaults. With no active confirmed channels,

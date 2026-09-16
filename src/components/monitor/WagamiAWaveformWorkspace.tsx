@@ -7,21 +7,16 @@ type WagamiAWaveformWorkspaceProps = {
   vitals: Vitals
   active: VitalActiveState
   alarms: AlarmChannel[]
-  muted?: boolean
-  onMute?: () => void
 }
 
 const ALARM_LABELS: Record<AlarmChannel, string> = { hr: 'FC', bp: 'PNI', spo2: 'SpO₂' }
 
-export function WagamiAWaveformWorkspace({ vitals, active, alarms, muted = false, onMute }: WagamiAWaveformWorkspaceProps) {
+export function WagamiAWaveformWorkspace({ vitals, active, alarms }: WagamiAWaveformWorkspaceProps) {
   const alarmText = alarms.length > 0 ? `ALARME · ${alarms.map((channel) => ALARM_LABELS[channel]).join(' / ')}` : 'AUCUNE ALARME'
   return (
     <section aria-label="Wagami A waveform workspace" className="grid min-h-0 grid-rows-[clamp(28px,3.3cqw,46px)_minmax(0,1fr)]">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 pr-1 font-sans text-[clamp(10px,1cqw,15px)]">
+      <div className="grid grid-cols-1 items-center gap-1.5 pr-1 font-sans text-[clamp(10px,1cqw,15px)]">
         <span role="status" className={alarms.length > 0 ? 'font-semibold text-wagami-a-alarm' : 'text-wagami-a-muted-text'}>{alarmText}</span>
-        <button type="button" disabled={!onMute} onClick={onMute} aria-pressed={muted} title={!onMute ? 'Disponible en phase A4' : undefined} className="min-h-[44px] rounded-[5px] border border-wagami-a-border px-[clamp(7px,0.8cqw,13px)] font-semibold text-wagami-a-text disabled:cursor-not-allowed enabled:hover:bg-wagami-a-surface-raised focus-visible:outline-2 focus-visible:outline-wagami-a-pni">
-          {muted ? 'Réactiver les sons' : 'Couper tous les sons'}
-        </button>
       </div>
       <div className="grid min-h-0 grid-rows-[minmax(0,1.9fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] gap-[clamp(3px,0.55cqw,9px)]">
         <div className="relative min-h-0 overflow-hidden rounded-[5px] border border-wagami-a-border bg-wagami-a-screen">

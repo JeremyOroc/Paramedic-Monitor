@@ -10,7 +10,6 @@ describe('Wagami A Room-free live-display preview', () => {
     render(<WagamiAPreview />)
 
     expect(screen.getByTestId('wagami-a-preview')).toBeInTheDocument()
-    expect(screen.getByText('PREVIEW · HORS SALLE')).toBeInTheDocument()
     expect(screen.getByText('PREVIEW · DONNÉES SIMULÉES')).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-vital-fc')).toHaveTextContent('80')
     expect(screen.getByText('Info appel')).toBeInTheDocument()
@@ -18,6 +17,9 @@ describe('Wagami A Room-free live-display preview', () => {
     expect(within(dock).getAllByRole('button')).toHaveLength(6)
     expect(screen.getByRole('button', { name: 'Charge WAGAMI A' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Choc WAGAMI A' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Analyser WAGAMI A' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Mesurer la pression artérielle' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Droite' })).toBeDisabled()
   })
 
   it('toggles only the shell Power action at this stage', () => {

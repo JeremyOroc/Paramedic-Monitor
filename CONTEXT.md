@@ -294,6 +294,26 @@ instructor-confirmed clinical scenario through a distinct device-like interactio
 than replacing Wagami X.
 _Avoid_: Wagami X replacement, generic Wagami X
 
+**Wagami A shell control**:
+A physical-style action button on Wagami A's outer housing, distinct from a touchscreen action
+or task launcher within its display.
+_Avoid_: Soft key, touchscreen button
+
+**Device Patient mode**:
+The Adult, Pediatric, or Neonate operating category chosen on one Scenario device. It is
+distinct from the Instructor-confirmed patient category in Confirmed clinical state.
+_Avoid_: Confirmed patient category, patient age
+
+**Wagami A full-display view**:
+A secondary Wagami A view that fills the device's inner display while its outer shell remains
+visible and operable.
+_Avoid_: Browser fullscreen, shell-free page
+
+**Vital Log**:
+The Scenario device's time-ordered history of monitored vital measurements during an Attempt.
+It is distinct from the medication Event Log and from a captured or printed 12-lead.
+_Avoid_: Print/Capture log, medication Event Log, 12-lead printout
+
 **Call Info destination**:
 The Wagami A live-screen task that leads to the trainee's Assignment dashboard and caller
 information. It is distinct from the medication Event Log.

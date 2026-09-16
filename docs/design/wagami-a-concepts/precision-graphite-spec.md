@@ -1,5 +1,14 @@
 # Wagami A — Precision Graphite Design Specification (A1 accepted)
 
+**2026-09-15 amendment:** This remains the historical A1 record for the selected palette and
+core screen hierarchy. Its left-shoulder Charge, lower-right Shock, touchscreen Analyze/mute,
+clickable PNI card, and Print/Capture launcher are superseded by the accepted shell-control/
+navigation/Vital Log amendment in `PLAN.md`. The
+[v3 shell-controls concept](./precision-graphite-shell-controls-v3.png) and
+[review spec](./precision-graphite-shell-controls-v3-spec.md) were **visually approved by the
+programmer** for A3.1 code. Do not implement the older control-placement bullets below as
+current A requirements.
+
 Status: Precision Graphite v2, the exact A-only palette below, and both quick-action placements
 were approved by the programmer on 2026-09-15. Staged A1→A2 scope was also approved. This is the
 **accepted concept-level A1 specification**; code, rendered touch geometry, and real-iPad QA

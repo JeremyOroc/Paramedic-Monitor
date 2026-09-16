@@ -25,6 +25,9 @@ describe('Wagami A fixed live display', () => {
     expect(labels.map((label) => label.textContent)).toEqual(['FC', 'SpO₂', 'PNI', 'EtCO₂'])
     expect(screen.getByTestId('a-waveform-workspace')).toBeInTheDocument()
     expect(screen.getByText('DONNÉES SIMULÉES', { exact: false })).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-vital-pni').tagName).toBe('DIV')
+    expect(screen.queryByRole('button', { name: 'ANALYSER' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Démarrer une mesure PNI' })).not.toBeInTheDocument()
   })
 
   it('renders confirmed channel values without changing card geometry', () => {

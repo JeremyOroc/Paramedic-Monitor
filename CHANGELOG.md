@@ -5,6 +5,135 @@
 
 ---
 
+## [2026-09-15] [planning/handoff] — Add collaborator Codex plugin and skill checklist
+
+- Added device-specific setup guidance and installation checks inside the A4-onward
+  collaborator prompt: Build Web Apps UI skills, later Supabase/data skills, optional
+  personal design/ADR skills, and a Playwright fallback. Kept A4 approval and the
+  uncommitted A3.1 transfer as the actual start gates; no A4 code or plugin installation
+  was performed.
+
+## [2026-09-15] [planning/handoff] — Close Wagami A A3.1 and reserve A4 onward for collaborator
+
+- The programmer declared A3 done after reviewing the code-native A3.1 render and instructed
+  this agent not to start A4. Closed the rendered-design gate in `PLAN.md`, `STATUS.md`, and
+  the concept QA notes, while retaining real-iPad validation and qualified IP review in A6.
+- Created a continuation brief with current code/phase boundaries, superseded historical
+  assumptions, testing baselines, transfer caveat, and a Codex prompt for a collaborator
+  using GPT-5.6 Sol with High reasoning. No A4/A5/A6 clinical, destination, or live-A code
+  was implemented. The local `wagami-a` working tree is still uncommitted; no Git transfer
+  or remote push was performed.
+
+## [2026-09-15] [ui/testing] — Implement Wagami A A3.1 shell controls and enabled-action navigation
+
+- Repositioned the A-only physical-style controls to right Analyze/Charge/guarded Shock,
+  left mute/Patient mode/BP, upper-right Power, and lower-center Left/Enter/Right. Drew
+  original SVG shell icons; did not embed or trace the supplied BP image. Removed the
+  touchscreen Analyze, waveform mute, and clickable PNI card while retaining read-only
+  vitals/defib status.
+- Renamed the fifth immediate task tile to `Journal des signes vitaux`; added a pure
+  circular enabled-action navigation model and per-view remembered selection. The Room-free
+  preview keeps unavailable clinical/task actions disabled until A4/A5.
+- Updated A tests; all 22 focused tests, TypeScript, affected-file ESLint, and Webpack
+  production build pass. The full suite retains three unrelated established failures;
+  a stale A preview-label test was updated and retested. Saved 1024/1536 browser screenshots
+  and a fidelity ledger; no scrollbars/page errors and Power cycling passed. The code-native
+  housing is flatter than the accepted illustrative v3 bitmap, so programmer rendered
+  visual review remains open before A4. Bilingual tests are explicitly routed to A5.
+
+## [2026-09-15] [planning/design] — Approve Precision Graphite shell-controls v3 for A3.1
+
+- The programmer visually approved the non-destructive v3 concept as the implementation
+  direction for A3.1. Updated `PLAN.md`, `STATUS.md`, and concept docs to close the visual
+  gate and start the shell/navigation implementation phase.
+- This approval does not establish rendered 1024px/iPad fit, functional clinical controls,
+  X/Z copyright distinctness, qualified IP clearance, or live Instructor A selection.
+
+## [2026-09-15] [planning/design] — Generate Precision Graphite shell-controls v3 review candidate
+
+- Used built-in ImageGen to edit the project's original Precision Graphite v2 concept into a
+  non-destructive v3 candidate with right-shell Analyse/Charge/guarded Choc, left-shell
+  mute/Patient mode/PNI, lower-shell circular navigation, all six corrected task labels,
+  and no duplicate on-screen Analyze/mute/PNI action. Saved the 1536×1024 image and its
+  provenance/five-criterion review spec in `docs/design/wagami-a-concepts/`.
+- The supplied BP icon was not an image input or copied asset; no online/ZOLL/X/Z reference
+  input was used. Updated the A1 README/spec with historical-placement warnings and logged
+  the v3 visual gate in `PLAN.md` and `STATUS.md`.
+- Programmer visual approval, rendered touch/fit testing, renewed X/Z structural review, and
+  qualified IP review remain open. No A3/A3.1 code or live A Attempt changed.
+
+## [2026-09-15] [planning/design] — Accept Wagami A shell/nav/log decision pack
+
+- Confirmed isolated upper-right Power, centered right-shell Analyze/Charge/guarded Shock,
+  original left-shell BP icon direction, and lower-shell navigation. Left/Right cycle enabled
+  inner-screen options (six dock tiles in visual order, then energy; contextual actions in
+  secondary views), Enter activates once, shell/read-only/disabled actions are excluded, and
+  navigation restores live selection without cancelling active clinical processes. ADR 0030
+  records the non-obvious enabled-only focus boundary.
+- Confirmed X-parity Vital Log five-minute snapshots, eight-row pages, power-off/refresh
+  reset, accepted cuff BP sampled values, and no invented direct-preview history. Added the
+  A3.1 shell/navigation amendment and Testing subsection to `PLAN.md` before A4/A5, with
+  updated Precision Graphite concept approval required before A3 code changes.
+- Marked functional decisions accepted and visual sign-off pending in `STATUS.md`. X/Z, A3
+  code, live A Attempts, and public asset decisions remain unchanged.
+
+## [2026-09-15] [planning/domain] — Give Wagami A Patient mode a sole circular shell control
+
+- Confirmed that each permitted Patient mode press cycles Adult → Pediatric → Neonate → Adult,
+  without a selection dialog or duplicate Configure changer. Shell and screen show the current
+  Device Patient mode; Configure shows it read-only. The active-defibrillation mode guard from
+  ADR 0028 remains in force.
+- Updated `PLAN.md`, `STATUS.md`, and the `Device Patient mode` glossary term distinguishing
+  trainee-local operating category from Instructor-confirmed patient category. No UI code or
+  X/Z behavior changed.
+
+## [2026-09-15] [planning/design] — Make Wagami A Analyze, mute, and BP shell-only actions
+
+- Confirmed that the new shell controls own Analyze, all-device-cues mute, and BP reading
+  without duplicate inner-screen actions. The existing touch Analyze button, waveform-header
+  mute button, and clickable PNI card are to be removed in the revision; defibrillation state
+  and the fixed PNI card remain visible and read-only.
+- Updated `PLAN.md` A4 scope/testing and `STATUS.md`. No A3 code or X/Z behavior changed;
+  Patient mode cycling, shell geometry, navigation, and Vital Log sampling remain open.
+
+## [2026-09-15] [planning/domain] — Keep Wagami A shell across secondary views
+
+- Confirmed that 12-lead, Call Info, and every other A destination fill the inner display
+  without hiding or disabling the outer shell. Physical-style controls stay visible/operable
+  with their existing clinical guards during navigation; `full-display` no longer implies a
+  shell-free browser page for A.
+- Recorded the boundary in `PLAN.md`, `STATUS.md`, the domain glossary, and ADR 0029. A3 UI
+  code and WAGAMI X/Z presentation remain unchanged; shell-control duplication and navigation
+  behavior are still design decisions.
+
+## [2026-09-15] [planning/domain] — Replace Wagami A Print/Capture launcher with Vital Log
+
+- Confirmed `Journal des signes vitaux` as a real timestamped FC, accepted cuff BP, SpO2, and
+  EtCO2 history rather than a renamed Print/Capture screen. Retained 12-lead capture/printing
+  within the 12-lead workflow, with no standalone Print/Capture task launcher.
+- Updated the A5 phase and testing contract in `PLAN.md`, current design state in `STATUS.md`,
+  and the `Vital Log` domain term in `CONTEXT.md`. Sampling/retention and presentation remain
+  open; no A UI code, live Attempt selection, or X/Z behavior changed.
+
+## [2026-09-15] [planning/domain] — Lock Wagami A Patient mode during active defibrillation
+
+- Confirmed that the new shell Patient mode action is unavailable from Analyze/Charge start
+  through shock delivery or cancellation, including shock-ready states, so pending energy
+  cannot silently change. Recorded the A-only guard in `PLAN.md`, `STATUS.md`, and ADR 0028;
+  WAGAMI X/Z code remains unchanged and A implementation remains unapproved.
+
+## [2026-09-15] [planning/design] — Record requested Wagami A shell-control revision for interview
+
+- Captured the proposed right-shell Analyze/Charge/Shock stack, left-shell sound mute/Patient
+  mode/BP reading, lower-shell Left/Enter/Right circular screen navigation, and Vital Log
+  replacement for Print/Capture in `PLAN.md` and `STATUS.md`. Earlier approved A3 placement
+  assumptions are identified as superseded proposals, not silently rewritten.
+- Kept the supplied cuff/gauge image reference-only. No A3 UI code, X/Z model, or clinical
+  behavior changed; guards, duplicate touch actions, mode cycle, navigation, and log scope
+  remain for explicit design decisions.
+- Clarified `Wagami A shell control` in the domain glossary as an outer-housing action,
+  distinct from an on-screen task launcher.
+
 ## [2026-09-15] [ui/model] — Complete Wagami A A3 original shell and live display
 
 - Replaced the A2 construction preview at `/?dev=3` with an original code-native rugged shell,

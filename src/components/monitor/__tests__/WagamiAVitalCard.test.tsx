@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
 
 import { WagamiAVitalCard } from '../WagamiAVitalCard'
 
@@ -12,13 +12,9 @@ describe('Wagami A vital cards', () => {
     expect(screen.getByText('bpm')).toBeInTheDocument()
   })
 
-  it('reserves the whole PNI card as the reading control without an inert click', () => {
-    const onReading = vi.fn()
-    const { rerender } = render(<WagamiAVitalCard channel="pni" label="PNI" value="118/76" unit="mmHg" />)
-    expect(screen.getByRole('button', { name: 'Démarrer une mesure PNI' })).toBeDisabled()
-
-    rerender(<WagamiAVitalCard channel="pni" label="PNI" value="118/76" unit="mmHg" onReading={onReading} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Démarrer une mesure PNI' }))
-    expect(onReading).toHaveBeenCalledTimes(1)
+  it('keeps the PNI card read-only after moving BP reading to the shell', () => {
+    render(<WagamiAVitalCard channel="pni" label="PNI" value="118/76" unit="mmHg" />)
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('118/76')
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 })

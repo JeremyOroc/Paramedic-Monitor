@@ -1,4 +1,5 @@
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
+import type { WagamiATask } from './WagamiATaskDock'
 import { WagamiADefibPanel } from './WagamiADefibPanel'
 import { WagamiATaskDock } from './WagamiATaskDock'
 import { WagamiAVitalCard } from './WagamiAVitalCard'
@@ -7,9 +8,17 @@ import { WagamiAWaveformWorkspace } from './WagamiAWaveformWorkspace'
 type WagamiAScreenProps = {
   display: WagamiADisplayState
   energy: number
+  patientMode?: 'adult' | 'pediatric' | 'neonate'
+  selectedAction?: string | null
+  canAdjustEnergy?: boolean
+  onTask?: (task: WagamiATask) => void
+  onEnergyDown?: () => void
+  onEnergyUp?: () => void
 }
 
-export function WagamiAScreen({ display, energy }: WagamiAScreenProps) {
+const PATIENT_MODE_LABEL = { adult: 'ADULTE', pediatric: 'PÉDIATRIQUE', neonate: 'NÉONATAL' } as const
+
+export function WagamiAScreen({ display, energy, patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp }: WagamiAScreenProps) {
   const { vitals, active, alarms, simulated } = display
   const pniValue = active.bp_sys && active.bp_dia ? `${vitals.bp_sys}/${vitals.bp_dia}` : '--/--'
   return (
@@ -23,12 +32,12 @@ export function WagamiAScreen({ display, energy }: WagamiAScreenProps) {
         </div>
         <WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={alarms} />
         <div className="flex min-w-0 items-center justify-between gap-3 rounded-[4px] border border-wagami-a-border bg-wagami-a-surface px-[clamp(6px,0.8cqw,12px)] font-mono text-[clamp(9px,0.9cqw,13px)] text-wagami-a-muted-text">
-          <span>MODE ADULTE</span><span className="truncate">PREVIEW · {simulated ? 'DONNÉES SIMULÉES' : 'DONNÉES CONFIRMÉES'}</span>
+          <span>MODE {PATIENT_MODE_LABEL[patientMode]}</span><span className="truncate">PREVIEW · {simulated ? 'DONNÉES SIMULÉES' : 'DONNÉES CONFIRMÉES'}</span>
         </div>
       </div>
       <aside aria-label="Wagami A right-side task and defib rail" className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-[clamp(4px,0.65cqw,10px)]">
-        <WagamiATaskDock />
-        <WagamiADefibPanel state="idle" energy={energy} progress={0} canAnalyse={false} canAdjustEnergy={false} />
+        <WagamiATaskDock onTask={onTask} selectedAction={selectedAction} />
+        <WagamiADefibPanel state="idle" energy={energy} progress={0} canAdjustEnergy={canAdjustEnergy} onEnergyDown={onEnergyDown} onEnergyUp={onEnergyUp} selectedAction={selectedAction} />
       </aside>
     </section>
   )

@@ -12,6 +12,8 @@ describe('Wagami A right task dock', () => {
     expect(tasks).toHaveLength(6)
     expect(tasks.every((task) => task.hasAttribute('disabled'))).toBe(true)
     expect(within(dock).getByRole('button', { name: 'Info appel' })).toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: 'Journal des signes vitaux' })).toBeInTheDocument()
+    expect(within(dock).queryByRole('button', { name: 'Imprimer / capturer' })).not.toBeInTheDocument()
     expect(within(dock).queryByRole('button', { name: 'Événements' })).not.toBeInTheDocument()
   })
 
