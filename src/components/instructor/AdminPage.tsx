@@ -51,10 +51,12 @@ import {
 } from '@/lib/scenarioSnapshot'
 import { ALL_MEDICATIONS } from '@/lib/monitor/medications'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
+import { VITAL_TREND_FIELDS } from '@/lib/vitalTrend'
 import { useMonitorStore } from '@/store/monitorStore'
 import { usePatientSnsMeasurements } from '@/hooks/usePatientSnsMeasurements'
 import { useDispatchRouteResolution } from '@/hooks/useDispatchRouteResolution'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
+import { useVitalTrendClock } from '@/hooks/useVitalTrendClock'
 import { cn } from '@/lib/utils'
 import {
   hasDispatchCountdownDirty,
@@ -177,6 +179,7 @@ function getResponseError(data: unknown, fallback: string): string {
 
 export default function AdminPage({ initialExistingRoom, session }: SessionAdminProps = {}) {
   useStoreHydration()
+  useVitalTrendClock()
   // Only the "Room ended" notice navigates; End Room itself stays put.
   const router = useRouter()
   const [tab, setTab] = useState<AdminTab>('scenarios')
@@ -246,6 +249,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   const scenarioVitalsDraft = useMonitorStore((s) => s.draft)
   const scenarioVitalActive = useMonitorStore((s) => s.draftVitalActive)
   const scenarioLastRhythm = useMonitorStore((s) => s.lastRhythm)
+  const scenarioVitalTrend = useMonitorStore((s) => s.vitalTrendDraft)
   const scenarioCallerInfo = useMonitorStore((s) => s.callerInfoDraft)
   const scenarioDispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
   const scenarioDispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
@@ -290,6 +294,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   const [pastReview, setPastReview] = useState<PastReview | null>(null)
   const [sessionError, setSessionError] = useState('')
   const sessionWriteQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const trendCompletionPublishingRef = useRef(new Set<string>())
   const routePublishSequenceRef = useRef(0)
   const routePublishTargetRef = useRef('')
   const lastPublishedRouteRef = useRef('')
@@ -495,30 +500,57 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     attemptLabels.find((entry) => entry.attempt_version === attemptVersion)?.label ?? ''
 
   const sendSessionState = useCallback(async (
-    updateKind: 'instructor' | 'route-enrichment' = 'instructor',
+    updateKind: 'instructor' | 'route-enrichment' | 'trend-completion' = 'instructor',
   ) => {
     if (!session || !canControlRoom) return
+    // Completion can sit behind an in-flight Send in the serialized queue.
+    // Capture the exact terminal snapshot now so later instructor edits or a
+    // replacement Trend cannot change which command/value set gets recorded.
+    const trendCompletionSnapshot =
+      updateKind === 'trend-completion' ? getSharedState() : null
+    const trendCompletionId = trendCompletionSnapshot?.activeVitalTrend?.id ?? ''
     const write = async () => {
-      const sharedState = getSharedState()
+      const sharedState = trendCompletionSnapshot ?? getSharedState()
+      const activeTrend = sharedState.activeVitalTrend
+      // A zero-duration Trend has already reached its targets by the time the
+      // original Send is published. Preserve its starting readings in that
+      // command row so the following completion write owns the final change,
+      // exactly like a timed Trend does.
+      if (
+        updateKind === 'instructor' &&
+        activeTrend?.status === 'complete' &&
+        !activeTrend.completionPublished
+      ) {
+        for (const field of VITAL_TREND_FIELDS) {
+          const participant = activeTrend.participants[field]
+          if (participant) sharedState.confirmed[field] = participant.start
+        }
+      }
       const scenarioTitleForWrite = updateKind === 'route-enrichment'
         ? lastPublishedScenarioTitleRef.current ?? scenarioTitle.trim()
         : scenarioTitle.trim()
-      const instructorOnly = updateKind === 'route-enrichment'
-        ? { stateUpdateKind: updateKind }
-        : {
-            stateUpdateKind: updateKind,
-            patientInformation: {
-              selected: {
-                sample: [...patientSelections.sample].sort(),
-                opqrst: [...patientSelections.opqrst].sort(),
-              },
-              values: {
-                sample: { ...patientText.sample },
-                opqrst: { ...patientText.opqrst },
-              },
-            },
-            patientSns: { ...patientPhysicalFindings },
-          }
+      const instructorOnly =
+        updateKind === 'route-enrichment'
+          ? { stateUpdateKind: updateKind }
+          : updateKind === 'trend-completion'
+            ? {
+                stateUpdateKind: updateKind,
+                trendCompletionId,
+              }
+            : {
+                stateUpdateKind: updateKind,
+                patientInformation: {
+                  selected: {
+                    sample: [...patientSelections.sample].sort(),
+                    opqrst: [...patientSelections.opqrst].sort(),
+                  },
+                  values: {
+                    sample: { ...patientText.sample },
+                    opqrst: { ...patientText.opqrst },
+                  },
+                },
+                patientSns: { ...patientPhysicalFindings },
+              }
       const response = await fetch(`/api/session/${session.code}/state`, {
         method: 'POST',
         headers: {
@@ -563,6 +595,46 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     patientText,
     scenarioTitle,
     session,
+  ])
+
+  const completedVitalTrend = useMonitorStore((state) =>
+    state.activeVitalTrend?.status === 'complete' &&
+    !state.activeVitalTrend.completionPublished
+      ? state.activeVitalTrend
+      : null,
+  )
+  const markVitalTrendCompletionPublished = useMonitorStore(
+    (state) => state.markVitalTrendCompletionPublished,
+  )
+  useEffect(() => {
+    if (!completedVitalTrend) return
+    const id = completedVitalTrend.id
+    if (!session || sessionStatus === 'ended') {
+      markVitalTrendCompletionPublished(id)
+      return
+    }
+    if (!canControlRoom) return
+    if (trendCompletionPublishingRef.current.has(id)) return
+
+    trendCompletionPublishingRef.current.add(id)
+    markVitalTrendCompletionPublished(id)
+    void sendSessionState('trend-completion')
+      .catch((caught) => {
+        markVitalTrendCompletionPublished(id, false)
+        setSessionError(
+          caught instanceof Error ? caught.message : 'Unable to record Trend completion',
+        )
+      })
+      .finally(() => {
+        trendCompletionPublishingRef.current.delete(id)
+      })
+  }, [
+    canControlRoom,
+    completedVitalTrend,
+    markVitalTrendCompletionPublished,
+    sendSessionState,
+    session,
+    sessionStatus,
   ])
 
   const publishRouteEnrichment = useCallback(
@@ -880,6 +952,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
       draftVitalActive: scenarioVitalActive,
       lastRhythm: scenarioLastRhythm,
     },
+    trend: scenarioVitalTrend,
     callerInfo: scenarioCallerInfo,
     dispatch: {
       minutes: scenarioDispatchMinutes,

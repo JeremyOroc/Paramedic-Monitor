@@ -5,6 +5,39 @@
 
 ---
 
+## [2026-09-19] [instructor/realtime] — Add timed per-vital Trends and move ECG above FC
+
+- Moved the complete ECG control row directly below the Vitals/Trend headings and above FC, then added
+  accessible absolute Trend targets between each numeric vital and its On/Off control plus one shared
+  minute/second timer with Ready, Running, Complete, and Cancelled states.
+- Added draft → saved → confirmed Trend commands with linear whole-second timestamp derivation, exact
+  deadlines, rising/falling and zero-duration behavior, replacement from intermediate values, direct-
+  value partial cancellation, Off-channel progression, independent BP targets, CPR priority, and
+  Automatic FC-lock cancellation.
+- Extended shared Room state, persisted store migration, Saved scenario snapshots, reset/New Attempt,
+  Monitor/Spectator clinical consumers, and NIBP sampling without per-second server writes.
+- Added idempotent completion publication and Evaluation rendering that hides Trend-only starts, retains
+  ordinary mixed-Send changes, and records one final-values-only `Trend completed` row.
+- Added component, hook, interpolation, store, scenario, session-service, and evaluation regressions.
+  All 442 focused tests, TypeScript, ESLint with zero errors, and the Webpack production build pass;
+  rendered 1280×720 QA verified FC 120→150 over 30 seconds. The full suite has 1,468 passing tests,
+  one skip, and the same three established unrelated failures. Turbopack remains blocked by the host's
+  worker-port restriction.
+
+## [2026-09-19] [planning/instructor] — Define vital Trends and ECG-first controls
+
+- Defined absolute per-vital Trend targets, one shared dispatch-format duration, linear timestamp-based
+  progression, Save/Send command consumption, direct override/replacement, terminal states, and exact
+  participation rules for Off channels, BP/NIBP, CPR, and Automatic FC locks.
+- Replaced the established ECG-beside-FC requirement with a full-width ECG section directly below
+  Vitals and above the FC-first numeric rows, including the new Trend column and retained CPR/timed-
+  vitals utility controls.
+- Defined shared-device synchronization, downstream clinical effects, Saved-scenario configuration,
+  lifecycle persistence/cancellation, validation, and one completion-only Evaluation entry with no
+  target disclosure or interrupted-Trend entry.
+- Added the domain glossary and complete implementation/testing contract. Implementation remains
+  pending explicit plan approval.
+
 ## [2026-09-19] [dispatch/monitor] — Lock the countdown at Start and restore Dispatch after hospital preview
 
 - Changed Send into a staging action and made **Start / Dispatch** the persisted countdown-lock boundary.

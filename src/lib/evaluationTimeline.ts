@@ -96,6 +96,7 @@ export type TimelineActionRow = TimelineRowBase & {
 
 export type TimelineInstructorRow = TimelineRowBase & {
   kind: 'instructor'
+  changeKind: 'send' | 'trend-completion'
   version: number
   /**
    * The one-line summary: clinical changes named individually, the dispatch
@@ -291,6 +292,22 @@ function isRouteEnrichmentState(value: unknown): boolean {
   if (!isRecord(value)) return false
   const instructorOnly = isRecord(value.instructorOnly) ? value.instructorOnly : {}
   return instructorOnly.stateUpdateKind === 'route-enrichment'
+}
+
+function isTrendCompletionState(value: unknown): boolean {
+  if (!isRecord(value)) return false
+  const instructorOnly = isRecord(value.instructorOnly) ? value.instructorOnly : {}
+  return instructorOnly.stateUpdateKind === 'trend-completion'
+}
+
+function isUnpublishedTrendCommandState(value: unknown): boolean {
+  if (!isRecord(value)) return false
+  const trend = isRecord(value.activeVitalTrend) ? value.activeVitalTrend : {}
+  return (
+    (trend.status === 'running' || trend.status === 'complete') &&
+    trend.completionPublished !== true &&
+    !isTrendCompletionState(value)
+  )
 }
 
 export function normalizeHistoryState(state: unknown): NormalizedState {
@@ -819,7 +836,9 @@ export function buildEvaluationTimeline(
   for (const item of history) {
     const normalized = normalizeHistoryState(item.entry.state)
     const withInheritedInstructorOnly: NormalizedState =
-      isRouteEnrichmentState(item.entry.state) && previousHistoryState
+      (isRouteEnrichmentState(item.entry.state) ||
+        isTrendCompletionState(item.entry.state)) &&
+      previousHistoryState
         ? {
             ...normalized,
             patientInformation: previousHistoryState.patientInformation,
@@ -881,6 +900,24 @@ export function buildEvaluationTimeline(
     return state ? buildContext(state, everActive, bpAt(at)) : { kind: 'missing' }
   }
 
+  const visibleHistoryVersions = new Set<number>()
+  history.forEach((item, index) => {
+    if (isRouteEnrichmentState(item.entry.state)) return
+    const state = states.get(item.entry.version)
+    if (!state) return
+    const previousEntry = index > 0 ? history[index - 1] : null
+    const previous = previousEntry ? states.get(previousEntry.entry.version) : undefined
+    const changes = previous ? diffStates(previous, state) : []
+    if (
+      previous &&
+      changes.length === 0 &&
+      isUnpublishedTrendCommandState(item.entry.state)
+    ) {
+      return
+    }
+    visibleHistoryVersions.add(item.entry.version)
+  })
+
   // The version the instructor had sent by a given moment, so an action can
   // be checked against what it should have been looking at.
   const instructorChangesBehind = (stateVersion: number, at: number): number => {
@@ -889,7 +926,7 @@ export function buildEvaluationTimeline(
       if (item.at > at) break
       if (
         item.entry.version > stateVersion &&
-        !isRouteEnrichmentState(item.entry.state)
+        visibleHistoryVersions.has(item.entry.version)
       ) {
         count += 1
       }
@@ -932,7 +969,7 @@ export function buildEvaluationTimeline(
 
   history.forEach((item, index) => {
     const state = states.get(item.entry.version)
-    if (!state || isRouteEnrichmentState(item.entry.state)) return
+    if (!state || !visibleHistoryVersions.has(item.entry.version)) return
     const previousEntry = index > 0 ? history[index - 1] : null
     const previous = previousEntry ? states.get(previousEntry.entry.version) : undefined
     const context = buildContext(state, everActive, bpAt(item.at))
@@ -942,6 +979,9 @@ export function buildEvaluationTimeline(
     const opening = previous === undefined
     rows.push({
       kind: 'instructor',
+      changeKind: isTrendCompletionState(item.entry.state)
+        ? 'trend-completion'
+        : 'send',
       id: `state-${item.entry.version}`,
       offsetMs,
       offset: formatOffset(offsetMs),

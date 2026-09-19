@@ -300,6 +300,31 @@ describe('VitalInput', () => {
     expect(screen.getByTestId('status-hr')).toHaveAttribute('data-status', 'clean')
   })
 
+  it('shows the live intermediate Trend value until the instructor edits it', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 120)
+      store.save()
+      store.send()
+      store.setVitalTrendTarget('hr', 150)
+      store.setVitalTrendSeconds(30)
+      store.save()
+      store.send()
+      store.advanceVitalTrend(
+        (useMonitorStore.getState().activeVitalTrend?.startsAt ?? 0) + 15_000,
+      )
+    })
+    render(<VitalInput field="hr" label="FC" />)
+    const input = screen.getByLabelText('FC')
+    expect(input).toHaveValue(135)
+
+    await user.clear(input)
+    await user.type(input, '80')
+    expect(input).toHaveValue(80)
+    expect(useMonitorStore.getState().draft.hr).toBe(80)
+  })
+
   it('can turn a stored vital off without clearing its numeric value', async () => {
     const user = userEvent.setup()
     render(<VitalInput field="hr" label="FC" />)

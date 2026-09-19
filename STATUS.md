@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**Instructor vital Trend and ECG-first layout — COMPLETE (2026-09-19).**
+ECG now spans the Instructor Vitals panel directly below its heading and above FC. Every numeric vital
+has an absolute Trend target between its current value and On/Off control, with one shared dispatch-
+format minute/second timer. Save stages the configuration and Send consumes it into a timestamp-derived
+linear progression; current values update once per second and every participating field reaches its exact
+target at the deadline. Replacement, direct-value cancellation, Off-channel progression, independent BP,
+NIBP sampling, CPR display priority, Automatic FC locking, reset/New Attempt, hydration, Room-device
+synchronization, and Saved-scenario preparation follow the documented contract. Evaluation suppresses a
+Trend-only start and publishes one idempotent completion row with final values. All 442 focused tests,
+TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the Webpack production build
+pass. The complete suite records 1,468 passing tests and one skip with the same three established unrelated
+failures. Rendered 1280×720 QA confirmed the layout and a live FC 120→150 Trend completed at `00:00`.
+The default Turbopack build remains environment-blocked by its worker-port restriction.
+
 **Start-locked dispatch countdown and hospital preview restoration — COMPLETE (2026-09-19).**
 The staged countdown remains editable through Save and Send, while **Start / Dispatch** now snapshots the
 last sent duration, stamps the response/route clocks, and persists an authoritative lock that UI controls,

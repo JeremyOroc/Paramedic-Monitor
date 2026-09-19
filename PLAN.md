@@ -8,6 +8,84 @@
 
 ## Current Requirement Updates
 
+- 2026-09-19 requirement update — Instructor vital Trend and ECG-first layout: move the complete ECG
+  rhythm section out of the side-by-side numeric-vitals arrangement so it spans the Vitals panel
+  immediately below the `Vitals` heading and above FC. Below ECG, preserve the numeric order
+  FC → SpO2 → BP sys → BP dia → EtCO2, add a `Trend` column heading, and insert one numeric Trend
+  target between each current vital input and its On/Off control. CPR and T1–U3 remain a separate
+  utility block beside the numeric rows. Add one shared Trend Timer with dispatch-style nonnegative
+  integer minute input, `0–59` integer second input, and a live `MM:SS` countdown/status display.
+- A Trend target is an absolute final value, uses the corresponding vital's range, and is optional:
+  blank excludes that vital while `0` is an explicit target. A target equal to the starting value is
+  a no-op and does not participate; if every target is a no-op, no countdown starts. `00:00` applies
+  participating targets immediately. Invalid Trend data blocks saving the Trend until corrected.
+- Trend configuration follows the existing draft → saved → confirmed workflow. Save stages targets
+  and duration without changing the monitor; Send consumes a newly saved Trend command and begins it
+  from each participating vital's then-current confirmed value. Later unrelated Sends do not restart
+  the command. Editing fields while a Trend runs changes only the draft until another Save and Send;
+  a newly sent Trend replaces affected participation from current intermediate values. A direct
+  vital value sent without a new Trend target cancels that vital's participation and applies the
+  direct value immediately while unaffected vital Trends continue.
+- Every participating vital interpolates linearly from its starting value to its absolute target over
+  the one shared duration. Display values are recomputed from authoritative start/end timestamps once
+  per second, rounded to the nearest integer, and forced to the exact targets at the deadline. The
+  timestamp model must align Room devices despite polling delay and catch up after backgrounding,
+  navigation, reload, or monitor power-off/on. Intermediate values are real Confirmed clinical state
+  for alarms, waveform/pulse cadence, Spectator, Vital Log, NIBP, and every other clinical consumer.
+- Trend participation is independent of a channel's On/Off state: an Off vital progresses invisibly
+  and stays Off until separately enabled. BP systolic and diastolic participate independently;
+  trainee NIBP continues to reveal the accepted BP values sampled at cuff-reading time. CPR retains
+  display priority while the underlying FC Trend progresses. An Automatic FC lock disables the FC
+  Trend target, excludes FC from new Trends, and cancels active FC participation at its current
+  intermediate manual value without automatic resumption; the retained target becomes editable after
+  leaving the lock and requires a new Save and Send.
+- An Active Trend has no pause state. New Attempt and monitor reset cancel the whole Trend; replacement
+  instructions cancel only their affected participation. Cancelling the last participant stops the
+  countdown and displays `Cancelled`; otherwise remaining participants continue to the shared
+  deadline. Completion leaves the targets visible, the timer at `00:00`, and a `Complete` state until
+  the instructor edits or clears the configuration. The prepared configuration is included in Saved
+  scenarios, but an active countdown, timestamps, and partial progress are never saved in a scenario.
+- Evaluation history does not expose Trend targets, duration, or a Trend-only Send. A mixed Send records
+  only its ordinary immediate changes. When at least one participant successfully reaches the shared
+  deadline, one `Trend completed` entry records only the final values that reached their targets at
+  completion time. Cancelled or interrupted participation never produces a completion entry. The
+  completion write must be idempotent across polling, reload, and multiple Scenario devices.
+
+### Testing — Instructor vital Trend and ECG-first layout
+
+- Add pure interpolation and validation coverage for rising/falling values, one-second elapsed-time
+  derivation, nearest-integer rounding, exact deadlines, zero duration, blank/zero/equal targets,
+  range boundaries, invalid seconds/minutes, delayed ticks, and background catch-up.
+- Cover draft/saved/confirmed Trend staging; Send consumption; unrelated Send non-restart; multi-vital
+  shared timing; replacement from intermediate values; direct-value partial cancellation; last-
+  participant cancellation; Complete/Cancelled terminal states; Off-channel progression; separate BP
+  targets; CPR priority; Automatic FC exclusion and mid-run cancellation; reset/New Attempt; power,
+  navigation, reload, hydration, and persisted-state migration.
+- Extend Shared monitor state and projection tests to prove timestamp-based Room-device parity and
+  intermediate-value effects across alarms, waveform cadence, Wagami X/Z, Spectator, Vital Log, and
+  NIBP accepted readings without per-second instructor writes.
+- Extend Saved scenario snapshots and migrations to retain prepared targets/duration while excluding
+  active progress. Cover load/edit/save behavior and backward compatibility for snapshots without
+  Trend fields.
+- Cover one idempotent completion history entry, mixed-Send ordinary history, Trend-only Send omission,
+  interrupted/cancelled omission, affected-vitals-only payloads, reload/polling races, and evaluation
+  report rendering.
+- Update Instructor component tests for the full-width ECG-before-FC order, current/Trend/On-Off row
+  structure, retained CPR and T1–U3 utility block, dispatch-format timer inputs, live status, disabled
+  FC target, accessible labels, keyboard behavior, compact desktop containment, and no monitor-page
+  scrollbars. Run focused suites, the full Vitest suite, TypeScript, ESLint, the production build, and
+  rendered QA at the supported desktop minimum and an ordinary Instructor display.
+
+**Completed 2026-09-19.** The Instructor Vitals panel now implements the ECG-first layout, per-vital
+absolute targets, and shared Trend Timer through the existing Save/Send workflow. Active values derive
+from absolute timestamps and propagate through shared Monitor state and clinical consumers while retaining
+all documented replacement, cancellation, lock, lifecycle, scenario, and evaluation semantics. All 442
+focused tests, TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the Webpack
+production build pass. The complete suite records 1,468 passing tests and one skip with the same three
+established unrelated failures. Rendered 1280×720 QA verified the control geometry and a live FC 120→150
+run ending exactly at `Complete 00:00`; the default Turbopack build remains blocked by the host's worker-
+port restriction.
+
 - 2026-09-13 requirement update — compact Saved scenario rows and safe page-scoped report deletion:
   reduce each Saved scenario row from its current two-tier card to an approximately 44–48px compact
   row. At ordinary Instructor Console widths, order the controls as drag handle, truncating title,

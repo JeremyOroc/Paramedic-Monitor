@@ -18,6 +18,10 @@ import type {
   ScenarioVitalsDraft,
 } from '@/types/savedScenario'
 import type { Rhythm, VitalActiveState } from '@/types/vitals'
+import {
+  createEmptyVitalTrendConfiguration,
+  normalizeVitalTrendConfiguration,
+} from '@/lib/vitalTrend'
 
 const VALID_RHYTHMS = new Set<Rhythm>([
   'off',
@@ -67,6 +71,7 @@ type ScenarioSnapshotInput = {
   defibrillatorModel: ScenarioSnapshotV1['defibrillatorModel']
   autoSortText: string
   monitor: ScenarioSnapshotV1['monitor']
+  trend?: ScenarioSnapshotV1['trend']
   callerInfo: ScenarioSnapshotV1['callerInfo']
   dispatch: ScenarioSnapshotV1['dispatch']
   patientInformation: {
@@ -121,6 +126,7 @@ export function createEmptyScenarioSnapshot(): ScenarioSnapshotV1 {
       draftVitalActive: { ...INACTIVE_VITALS },
       lastRhythm: 'nsr',
     },
+    trend: createEmptyVitalTrendConfiguration(),
     callerInfo: { ...DEFAULT_CALLER_INFO },
     dispatch: {
       minutes: 0,
@@ -154,6 +160,7 @@ export function createScenarioSnapshot(input: ScenarioSnapshotInput): ScenarioSn
       draftVitalActive,
       lastRhythm: input.monitor.lastRhythm,
     },
+    trend: normalizeVitalTrendConfiguration(input.trend),
     callerInfo: { ...input.callerInfo },
     dispatch: { ...input.dispatch },
     patientInformation: {
@@ -235,6 +242,7 @@ export function normalizeScenarioSnapshot(value: unknown): ScenarioSnapshotV1 | 
       },
       lastRhythm,
     },
+    trend: normalizeVitalTrendConfiguration(value.trend),
     callerInfo: normalizeCallerInfo(callerInfo),
     dispatch: {
       minutes: Math.max(0, Math.floor(normalizeNumber(dispatch.minutes))),

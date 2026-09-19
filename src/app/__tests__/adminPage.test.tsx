@@ -844,6 +844,57 @@ describe('AdminPage', () => {
     expect(useMonitorStore.getState().dispatch.runId).toBe(runId)
   })
 
+  it('publishes one completed Trend state with a completion-only history marker', async () => {
+    const fetchMock = vi.spyOn(window, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          session: { status: 'active', active_attempt_version: 1 },
+          participants: [],
+          events: [],
+          state: { version: 1 },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    )
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 120)
+      store.save()
+      store.send()
+      store.setVitalTrendTarget('hr', 150)
+      store.save()
+      store.send()
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+
+    await waitFor(() => {
+      const completionCall = fetchMock.mock.calls.find(([input, init]) => {
+        if (!String(input).endsWith('/state') || init?.method !== 'POST') return false
+        const body = JSON.parse(String(init.body))
+        return body.state.instructorOnly?.stateUpdateKind === 'trend-completion'
+      })
+      expect(completionCall).toBeDefined()
+    })
+    const calls = fetchMock.mock.calls.filter(([input, init]) => {
+      if (!String(input).endsWith('/state') || init?.method !== 'POST') return false
+      const body = JSON.parse(String(init.body))
+      return body.state.instructorOnly?.stateUpdateKind === 'trend-completion'
+    })
+    expect(calls).toHaveLength(1)
+    const body = JSON.parse(String(calls[0][1]?.body))
+    expect(body.state).toMatchObject({
+      confirmed: { hr: 150 },
+      activeVitalTrend: {
+        status: 'complete',
+        completionPublished: true,
+      },
+      instructorOnly: {
+        stateUpdateKind: 'trend-completion',
+      },
+    })
+  })
+
   it('serializes a manual Send behind an in-flight route enrichment write', async () => {
     let stateCalls = 0
     let resolveFirstState: (response: Response) => void = () => {
