@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-09-19] [dispatch/monitor] — Lock the countdown at Start and restore Dispatch after hospital preview
+
+- Changed Send into a staging action and made **Start / Dispatch** the persisted countdown-lock boundary.
+  Start stamps the absolute response/countdown and Dispatch-route clocks from the last successfully sent
+  duration; unsaved or unsent countdown changes block Start.
+- Added store-enforced timer guards across direct setters, Save, Send, scenario loading, shared state, and
+  persistence migration. Active information and address updates now preserve the locked duration, run id,
+  timestamps, Acknowledge, Arrival, and Transport milestones, including after the countdown reaches `00:00`.
+- Disabled the configured minute/second inputs while locked and added a separate live countdown readout.
+  New Attempt and reset restore editability, including for zero-duration runs.
+- Split Receiving-hospital preview routing from the compact active route. The directory continues to show
+  the selected hospital distance/ETA, minimizing before Transport returns to the progressing Dispatch route
+  without clearing the selection, and Transport promotes the hospital route to the compact map.
+- Added and updated store, hydration, scenario, instructor control, Start preflight, active address-update,
+  monitor flow, and hospital-routing regressions. All 265 focused tests and TypeScript pass; ESLint has zero
+  errors with the same 12 unrelated warnings. The full suite has 1,444 passing tests, one skip, and the same
+  three established unrelated failures. Production build remains blocked by Turbopack's worker-port denial.
+
 ## [2026-09-14] [dispatch/instructor] — Keep late route resolution in the active Dispatch run
 
 - Changed re-dispatch identity to use only first dispatch, normalized Incident-scene changes, and saved

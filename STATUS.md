@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**Start-locked dispatch countdown and hospital preview restoration — COMPLETE (2026-09-19).**
+The staged countdown remains editable through Save and Send, while **Start / Dispatch** now snapshots the
+last sent duration, stamps the response/route clocks, and persists an authoritative lock that UI controls,
+direct store actions, scenario loads, hydration, and later Sends cannot bypass. Active caller, vital,
+Incident-scene, Unit-origin, and route updates retain the run id, absolute countdown, Acknowledge, Arrival,
+and Transport milestones. The configured duration remains visible in disabled inputs beside a separate
+live countdown, including a locked `00:00`; New Attempt/reset establishes the next editable cycle. A
+pre-Transport Receiving-hospital selection remains available in its directory preview, but minimizing now
+restores the compact Dispatch route at its current progress; Transport promotes the selected hospital route
+to the compact active route. All 265 focused store/hook/Admin/Monitor/component tests pass, TypeScript is
+clean, and ESLint has zero errors with the same 12 unrelated warnings. The complete suite records 1,444
+passing tests and one skip with the same three established unrelated failures. Production build remains
+environment-blocked because Turbopack cannot bind its worker process port.
+
 **Dispatch route same-run enrichment — COMPLETE (2026-09-14).**
 Only the first dispatch, a normalized Incident-scene change, or a changed countdown now creates a new
 Dispatch run. Coordinate/status/geometry enrichment and Unit-origin changes retain the run id, clocks,

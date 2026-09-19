@@ -815,7 +815,7 @@ export function MonitorPage({
         info={callerInfoConfirmed}
         onCallerEvent={onCallerEvent}
         buttonState={callerButtonState}
-        showCountdown={!countdown.isDone}
+        showCountdown={dispatchState.countdownLocked}
         countdownFormatted={countdown.formatted}
         responseFormatted={responseTimer.formatted}
         fullScreen
@@ -1037,6 +1037,7 @@ export function MonitorPage({
         canEnterMonitor
         onEnterMonitor={controller.onBack}
         responseFormatted={responseTimer.formatted}
+        showCountdown={dispatchState.countdownLocked}
         countdownFormatted={countdown.formatted}
         route={hospitalRouting.effectiveRoute}
         hospitalMap={hospitalRouting.mapState}

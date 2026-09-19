@@ -30,6 +30,7 @@ export function SendButton({ beforeSend, onSent, forceDisabled = false }: SendBu
   const dispatchRouteConfirmed = useMonitorStore((s) => s.dispatchRouteConfirmed)
   const dispatchSavedSeconds = useMonitorStore((s) => s.dispatchSavedSeconds)
   const dispatchConfirmedSeconds = useMonitorStore((s) => s.dispatchConfirmedSeconds)
+  const dispatchCountdownLocked = useMonitorStore((s) => s.dispatch.countdownLocked)
   const defibrillatorModelSaved = useMonitorStore((s) => s.defibrillatorModelSaved)
   const defibrillatorModelConfirmed = useMonitorStore((s) => s.defibrillatorModelConfirmed)
   const send = useMonitorStore((s) => s.send)
@@ -39,7 +40,8 @@ export function SendButton({ beforeSend, onSent, forceDisabled = false }: SendBu
     !hasVitalActivePending(savedVitalActive, confirmedVitalActive) &&
     !hasCallerInfoPending(callerInfoSaved, callerInfoConfirmed) &&
     !hasDispatchRouteAuthoredChanged(dispatchRouteSaved, dispatchRouteConfirmed) &&
-    !hasDispatchRouteDurationPending(dispatchSavedSeconds, dispatchConfirmedSeconds) &&
+    (dispatchCountdownLocked ||
+      !hasDispatchRouteDurationPending(dispatchSavedSeconds, dispatchConfirmedSeconds)) &&
     !hasDefibrillatorModelPending(defibrillatorModelSaved, defibrillatorModelConfirmed)
 
   return (

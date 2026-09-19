@@ -15,6 +15,7 @@ import {
   DEFAULT_DISPATCH_ROUTE,
   JOHN_ABBOTT_ADDRESS,
 } from '@/types/dispatchRoute'
+import { createEmptyScenarioSnapshot } from '@/lib/scenarioSnapshot'
 
 const defaultsAsVitals = () => ({
   hr: 0,
@@ -287,7 +288,7 @@ describe('monitorStore', () => {
     useMonitorStore.getState().send()
     const confirmedRoute = useMonitorStore.getState().dispatchRouteConfirmed
     expect(confirmedRoute.destinationAddress).toBe(readyRoute.destinationAddress)
-    expect(confirmedRoute.startedAt).toBe(now)
+    expect(confirmedRoute.startedAt).toBeNull()
     expect(confirmedRoute.durationSeconds).toBe(0)
     nowSpy.mockRestore()
   })
@@ -313,8 +314,13 @@ describe('monitorStore', () => {
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
 
-    const { dispatch, dispatchRouteConfirmed } = useMonitorStore.getState()
+    let { dispatch, dispatchRouteConfirmed } = useMonitorStore.getState()
     expect(dispatchRouteConfirmed.durationSeconds).toBe(195)
+    expect(dispatchRouteConfirmed.startedAt).toBeNull()
+    expect(dispatch.countdownEndsAt).toBeNull()
+
+    useMonitorStore.getState().startDispatchClock()
+    ;({ dispatch, dispatchRouteConfirmed } = useMonitorStore.getState())
     expect(dispatchRouteConfirmed.startedAt).toBe(1_000_000)
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + 195_000)
   })
@@ -349,36 +355,58 @@ describe('monitorStore', () => {
 
     const { dispatch, dispatchRouteConfirmed } = useMonitorStore.getState()
     expect(dispatchRouteConfirmed.durationSeconds).toBe(480)
-    expect(dispatchRouteConfirmed.startedAt).toBe(1_000_000)
-    // The changed countdown re-dispatches, so the gate restarts on the new
-    // duration rather than staying frozen at the first arm.
-    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 480_000)
+    expect(dispatchRouteConfirmed.startedAt).toBeNull()
+    expect(dispatch.countdownEndsAt).toBeNull()
     expect(useMonitorStore.getState().dispatchSavedSeconds).toBe(480)
     expect(useMonitorStore.getState().dispatchConfirmedSeconds).toBe(480)
   })
 
-  it('a changed countdown re-dispatches: restarts the gate and clears acknowledge/arrival', () => {
+  it('locks the confirmed countdown at Start and ignores later timer edits', () => {
     const nowSpy = vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
     useMonitorStore.getState().setDispatchMinutes(5)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
+    useMonitorStore.getState().startDispatchClock()
 
     const firstRunId = useMonitorStore.getState().dispatch.runId
     useMonitorStore.getState().acknowledgeCall('14:05:11')
     expect(useMonitorStore.getState().dispatch.acknowledgedAt).toBe('14:05:11')
 
-    // Instructor saves a new countdown and re-sends from a later wall-clock time.
+    // Direct store writes are guarded as well as the disabled form controls.
     nowSpy.mockReturnValue(1_500_000)
     useMonitorStore.getState().setDispatchMinutes(8)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
 
-    const { dispatch } = useMonitorStore.getState()
-    expect(dispatch.startedAt).toBe(1_500_000)
-    expect(dispatch.countdownEndsAt).toBe(1_500_000 + 480_000)
-    expect(dispatch.acknowledgedAt).toBeNull()
+    const { dispatch, dispatchMinutes, dispatchSavedSeconds, dispatchConfirmedSeconds } =
+      useMonitorStore.getState()
+    expect(dispatch.countdownLocked).toBe(true)
+    expect(dispatch.startedAt).toBe(1_000_000)
+    expect(dispatch.countdownEndsAt).toBe(1_000_000 + 300_000)
+    expect(dispatch.acknowledgedAt).toBe('14:05:11')
     expect(dispatch.arrivedAt).toBeNull()
-    expect(dispatch.runId).not.toBe(firstRunId)
+    expect(dispatch.runId).toBe(firstRunId)
+    expect(dispatchMinutes).toBe(5)
+    expect(dispatchSavedSeconds).toBe(300)
+    expect(dispatchConfirmedSeconds).toBe(300)
+  })
+
+  it('loads scenario content without replacing an active locked countdown', () => {
+    useMonitorStore.getState().setDispatchMinutes(5)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().startDispatchClock()
+    const snapshot = createEmptyScenarioSnapshot()
+    snapshot.dispatch.minutes = 12
+    snapshot.dispatch.seconds = 34
+    snapshot.callerInfo.problem = 'Updated scenario problem'
+
+    useMonitorStore.getState().applyScenarioDraft(snapshot)
+
+    const state = useMonitorStore.getState()
+    expect(state.dispatchMinutes).toBe(5)
+    expect(state.dispatchSeconds).toBe(0)
+    expect(state.callerInfoDraft.problem).toBe('Updated scenario problem')
   })
 
   it('a later send with the same countdown keeps the gate and acknowledge/arrival', () => {
@@ -386,6 +414,7 @@ describe('monitorStore', () => {
     useMonitorStore.getState().setDispatchMinutes(5)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
+    useMonitorStore.getState().startDispatchClock()
     const firstRunId = useMonitorStore.getState().dispatch.runId
     useMonitorStore.getState().acknowledgeCall('14:05:11')
 
@@ -402,10 +431,11 @@ describe('monitorStore', () => {
     expect(dispatch.runId).toBe(firstRunId)
   })
 
-  it('treats an incident-address change as a re-dispatch and clears transport', () => {
+  it('keeps the active run and milestones when the incident address changes', () => {
     useMonitorStore.getState().setDispatchMinutes(5)
     useMonitorStore.getState().save()
     useMonitorStore.getState().send()
+    useMonitorStore.getState().startDispatchClock()
     useMonitorStore.getState().acknowledgeCall('14:05:11')
     useMonitorStore.getState().arriveCall('14:06:00')
     useMonitorStore.getState().transportCall('14:10:00')
@@ -416,10 +446,10 @@ describe('monitorStore', () => {
     useMonitorStore.getState().send()
 
     const { dispatch } = useMonitorStore.getState()
-    expect(dispatch.runId).not.toBe(firstRunId)
-    expect(dispatch.acknowledgedAt).toBeNull()
-    expect(dispatch.arrivedAt).toBeNull()
-    expect(dispatch.transportedAt).toBeNull()
+    expect(dispatch.runId).toBe(firstRunId)
+    expect(dispatch.acknowledgedAt).toBe('14:05:11')
+    expect(dispatch.arrivedAt).toBe('14:06:00')
+    expect(dispatch.transportedAt).toBe('14:10:00')
   })
 
   it('keeps the run and milestones when route coordinates enrich the same address', () => {
@@ -832,23 +862,20 @@ describe('monitorStore', () => {
     expect(useMonitorStore.getState().confirmed.rhythm).toBe('vf')
   })
 
-  it('re-stamps the dispatch clock when the room opens', () => {
+  it('starts and locks the dispatch clock when the room opens', () => {
     vi.useFakeTimers()
     const store = () => useMonitorStore.getState()
     store().setDispatchMinutes(2)
     store().save()
     store().send()
 
-    const stampedAtSend = store().dispatch.countdownEndsAt
-    expect(stampedAtSend).not.toBeNull()
+    expect(store().dispatch.countdownEndsAt).toBeNull()
+    expect(store().dispatch.countdownLocked).toBe(false)
 
-    // Send stamps the clock, but with Start gated behind a Send the instructor
-    // can spend minutes settling the room first — trainees would otherwise
-    // arrive with travel time already burned off.
     vi.advanceTimersByTime(90_000)
     store().startDispatchClock()
 
-    expect(store().dispatch.countdownEndsAt).toBeGreaterThan(stampedAtSend as number)
+    expect(store().dispatch.countdownLocked).toBe(true)
     expect(store().dispatch.startedAt).toBe(Date.now())
     expect(store().dispatch.countdownEndsAt).toBe(Date.now() + 2 * 60 * 1000)
     vi.useRealTimers()
@@ -1069,6 +1096,7 @@ describe('dispatch gate', () => {
   it('starts disarmed with empty caller events', () => {
     const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
+    expect(dispatch.countdownLocked).toBe(false)
     expect(dispatch.startedAt).toBeNull()
     expect(dispatch.countdownEndsAt).toBeNull()
     expect(dispatch.callerEvents).toEqual([])
@@ -1076,17 +1104,45 @@ describe('dispatch gate', () => {
     expect(dispatchSeconds).toBe(0)
   })
 
-  it('first send arms the gate with an absolute countdown end from minutes + seconds', () => {
+  it('first Send stages the gate and Start locks an absolute countdown end', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
     useMonitorStore.getState().setDispatchMinutes(5)
     useMonitorStore.getState().setDispatchSeconds(30)
+    useMonitorStore.getState().save()
     useMonitorStore.getState().send()
 
-    const { dispatch } = useMonitorStore.getState()
+    let { dispatch } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(true)
+    expect(dispatch.countdownLocked).toBe(false)
     expect(dispatch.runId).not.toBe('')
+    expect(dispatch.startedAt).toBeNull()
+    expect(dispatch.countdownEndsAt).toBeNull()
+
+    useMonitorStore.getState().startDispatchClock()
+    ;({ dispatch } = useMonitorStore.getState())
+    expect(dispatch.countdownLocked).toBe(true)
     expect(dispatch.startedAt).toBe(1_000_000)
     expect(dispatch.countdownEndsAt).toBe(1_000_000 + (5 * 60 + 30) * 1000)
+  })
+
+  it('keeps an initial zero-duration countdown locked until reset', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    useMonitorStore.getState().save()
+    useMonitorStore.getState().send()
+    useMonitorStore.getState().startDispatchClock()
+
+    expect(useMonitorStore.getState().dispatch).toMatchObject({
+      countdownLocked: true,
+      startedAt: 1_000_000,
+      countdownEndsAt: 1_000_000,
+    })
+    useMonitorStore.getState().setDispatchMinutes(9)
+    expect(useMonitorStore.getState().dispatchMinutes).toBe(0)
+
+    useMonitorStore.getState().resetForNewAttempt()
+    expect(useMonitorStore.getState().dispatch.countdownLocked).toBe(false)
+    useMonitorStore.getState().setDispatchMinutes(9)
+    expect(useMonitorStore.getState().dispatchMinutes).toBe(9)
   })
 
   it('creates a fresh dispatch run id after a full reset and re-arm', () => {
@@ -1153,6 +1209,7 @@ describe('dispatch gate', () => {
 
     const { dispatch, dispatchMinutes, dispatchSeconds } = useMonitorStore.getState()
     expect(dispatch.armed).toBe(false)
+    expect(dispatch.countdownLocked).toBe(false)
     expect(dispatch.runId).toBe('')
     expect(dispatch.startedAt).toBeNull()
     expect(dispatch.countdownEndsAt).toBeNull()
@@ -1398,6 +1455,7 @@ describe('persist migration', () => {
     expect(s.dispatch).toEqual({
       runId: '',
       armed: false,
+      countdownLocked: false,
       startedAt: null,
       countdownEndsAt: null,
       acknowledgedAt: null,
@@ -1434,6 +1492,43 @@ describe('persist migration', () => {
     const dispatch = useMonitorStore.getState().dispatch
     expect(dispatch.runId).toBe('legacy-1234567')
     expect(dispatch.startedAt).toBe(1_234_567 - 5 * 60_000)
+    expect(dispatch.countdownLocked).toBe(true)
+  })
+
+  it('keeps an explicitly staged dispatch unlocked across hydration', async () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 12,
+        state: {
+          dispatch: {
+            runId: 'staged-run',
+            armed: true,
+            countdownLocked: false,
+            startedAt: null,
+            countdownEndsAt: null,
+            acknowledgedAt: null,
+            arrivedAt: null,
+            transportedAt: null,
+            callerEvents: [],
+          },
+          dispatchMinutes: 5,
+          dispatchSeconds: 0,
+          dispatchSavedSeconds: 300,
+          dispatchConfirmedSeconds: 300,
+        },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    expect(useMonitorStore.getState().dispatch).toMatchObject({
+      runId: 'staged-run',
+      armed: true,
+      countdownLocked: false,
+      startedAt: null,
+      countdownEndsAt: null,
+    })
   })
 })
 

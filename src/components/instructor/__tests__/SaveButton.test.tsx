@@ -69,6 +69,22 @@ describe('SaveButton', () => {
     expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled()
   })
 
+  it('does not become dirty when a locked countdown edit is attempted', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDispatchMinutes(5)
+      store.save()
+      store.send()
+      store.startDispatchClock()
+      store.setDispatchMinutes(7)
+    })
+
+    render(<SaveButton />)
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(useMonitorStore.getState().dispatchMinutes).toBe(5)
+  })
+
   it('does not become dirty for background route enrichment', () => {
     act(() => {
       const store = useMonitorStore.getState()

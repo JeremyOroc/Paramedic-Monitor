@@ -31,6 +31,7 @@ const allActive = {
 const armedDispatch = (runId: string): DispatchState => ({
   runId,
   armed: true,
+  countdownLocked: true,
   startedAt: 1_000,
   countdownEndsAt: 61_000,
   acknowledgedAt: null,

@@ -222,12 +222,13 @@ function normalizeVitalActive(
   }
 }
 
-// Dispatch / startup-gate state. The admin "Send" arms this (lock + countdown);
-// the trainee must Acknowledge, wait out the countdown, then mark Arrival before
-// the monitor power button works. Persisted so a refresh resumes the drill.
+// Dispatch / startup-gate state. Send stages the call; Start locks and stamps
+// the countdown. The trainee must Acknowledge, wait it out, then mark Arrival
+// before the monitor power button works. Persisted so refresh resumes the drill.
 export type DispatchState = {
   runId: string
   armed: boolean
+  countdownLocked: boolean
   startedAt: number | null // absolute ms epoch; response timer counts up from here
   countdownEndsAt: number | null // absolute ms epoch; survives refresh
   acknowledgedAt: string | null // EST HH:MM:SS
@@ -239,6 +240,7 @@ export type DispatchState = {
 export const DEFAULT_DISPATCH: DispatchState = {
   runId: '',
   armed: false,
+  countdownLocked: false,
   startedAt: null,
   countdownEndsAt: null,
   acknowledgedAt: null,
@@ -259,16 +261,24 @@ function normalizeDispatch(
 ): DispatchState {
   const runId = typeof dispatch?.runId === 'string' ? dispatch.runId : ''
   const armed = dispatch?.armed === true
+  const hasExplicitStartedAt = dispatch !== undefined && 'startedAt' in dispatch
   const startedAt = typeof dispatch?.startedAt === 'number' ? dispatch.startedAt : null
   const countdownEndsAt =
     typeof dispatch?.countdownEndsAt === 'number' ? dispatch.countdownEndsAt : null
   const legacyStartedAt =
     countdownEndsAt !== null ? countdownEndsAt - fallbackDurationMs : Date.now()
+  const normalizedStartedAt =
+    startedAt ?? (armed && !hasExplicitStartedAt ? legacyStartedAt : null)
+  const countdownLocked =
+    typeof dispatch?.countdownLocked === 'boolean'
+      ? dispatch.countdownLocked
+      : armed && normalizedStartedAt !== null
 
   return {
     runId: runId || (armed ? `legacy-${countdownEndsAt ?? 'active'}` : ''),
     armed,
-    startedAt: startedAt ?? (armed ? legacyStartedAt : null),
+    countdownLocked,
+    startedAt: normalizedStartedAt,
     countdownEndsAt,
     acknowledgedAt: typeof dispatch?.acknowledgedAt === 'string' ? dispatch.acknowledgedAt : null,
     arrivedAt: typeof dispatch?.arrivedAt === 'string' ? dispatch.arrivedAt : null,
@@ -525,9 +535,19 @@ export const useMonitorStore = create<MonitorState>()(
       setPatientSex: (sex) =>
         set((s) => ({ patientInfo: { ...s.patientInfo, sex } })),
       setDispatchMinutes: (minutes) =>
-        set({ dispatchMinutes: Math.max(0, Math.floor(minutes) || 0) }),
+        set((s) =>
+          s.dispatch.countdownLocked
+            ? s
+            : { dispatchMinutes: Math.max(0, Math.floor(minutes) || 0) },
+        ),
       setDispatchSeconds: (seconds) =>
-        set({ dispatchSeconds: Math.min(59, Math.max(0, Math.floor(seconds) || 0)) }),
+        set((s) =>
+          s.dispatch.countdownLocked
+            ? s
+            : {
+                dispatchSeconds: Math.min(59, Math.max(0, Math.floor(seconds) || 0)),
+              },
+        ),
       applyScenarioDraft: (snapshot) =>
         set((s) => {
           const draft = normalizeVitals(snapshot.monitor.draft)
@@ -561,11 +581,15 @@ export const useMonitorStore = create<MonitorState>()(
                 : s.draftVitalActive.hr
               : null,
             callerInfoDraft: normalizeCallerInfo(snapshot.callerInfo),
-            dispatchMinutes: Math.max(0, Math.floor(snapshot.dispatch.minutes) || 0),
-            dispatchSeconds: Math.min(
-              59,
-              Math.max(0, Math.floor(snapshot.dispatch.seconds) || 0),
-            ),
+            dispatchMinutes: s.dispatch.countdownLocked
+              ? s.dispatchMinutes
+              : Math.max(0, Math.floor(snapshot.dispatch.minutes) || 0),
+            dispatchSeconds: s.dispatch.countdownLocked
+              ? s.dispatchSeconds
+              : Math.min(
+                  59,
+                  Math.max(0, Math.floor(snapshot.dispatch.seconds) || 0),
+                ),
             dispatchRouteDraft: {
               ...DEFAULT_DISPATCH_ROUTE,
               originAddress,
@@ -692,26 +716,33 @@ export const useMonitorStore = create<MonitorState>()(
           savedVitalsActive: anyVitalActive(s.draftVitalActive),
           callerInfoSaved: { ...s.callerInfoDraft },
           dispatchRouteSaved: { ...s.dispatchRouteDraft },
-          dispatchSavedSeconds: dispatchCountdownSeconds(
-            s.dispatchMinutes,
-            s.dispatchSeconds,
-          ),
+          dispatchSavedSeconds: s.dispatch.countdownLocked
+            ? s.dispatchConfirmedSeconds
+            : dispatchCountdownSeconds(s.dispatchMinutes, s.dispatchSeconds),
         })),
-      // Re-stamp the dispatch clock at the moment the room opens.
-      //
-      // Send arms the gate and stamps the countdown as a side effect, but with
-      // Start gated behind a Send the instructor stages the call first and may
-      // take minutes settling the room before opening it. Left alone, trainees
-      // would arrive with travel time already burned off — or expired. Both the
-      // travel countdown and the response timer should measure from when the
-      // call actually reaches them.
+      // Start is the immutable countdown boundary. Send only stages the call;
+      // the response timer and route movement begin when the room opens.
       startDispatchClock: () =>
         set((s) => {
-          if (!s.dispatch.armed) return s
+          if (!s.dispatch.armed || s.dispatch.countdownLocked) return s
           const now = Date.now()
+          const lockedMinutes = Math.floor(s.dispatchConfirmedSeconds / 60)
+          const lockedSeconds = s.dispatchConfirmedSeconds % 60
           return {
+            dispatchMinutes: lockedMinutes,
+            dispatchSeconds: lockedSeconds,
+            dispatchSavedSeconds: s.dispatchConfirmedSeconds,
+            dispatchRouteConfirmed: {
+              ...s.dispatchRouteConfirmed,
+              startedAt: s.dispatchRouteConfirmed.status === 'ready' ? now : null,
+              durationSeconds:
+                s.dispatchRouteConfirmed.status === 'ready'
+                  ? s.dispatchConfirmedSeconds
+                  : s.dispatchRouteConfirmed.durationSeconds,
+            },
             dispatch: {
               ...s.dispatch,
+              countdownLocked: true,
               startedAt: now,
               countdownEndsAt: now + s.dispatchConfirmedSeconds * 1000,
               // Nobody has been able to act yet; this is the start of the run.
@@ -722,19 +753,24 @@ export const useMonitorStore = create<MonitorState>()(
         }),
       send: () =>
         set((s) => {
-          const now = Date.now()
-          // A new dispatch countdown (saved value differs from the one already
-          // confirmed) makes this Send a re-dispatch: the timing restarts and the
-          // trainee must Acknowledge/Arrive again. The first Send is always one.
+          // Before Start, a changed countdown or Incident scene restages the
+          // pending run. Once Start locks the timer, every later Send is a
+          // same-run content/route update.
           const countdownChanged = s.dispatchSavedSeconds !== s.dispatchConfirmedSeconds
           const incidentChanged =
             normalizeDispatchAddress(s.callerInfoSaved.address) !==
             normalizeDispatchAddress(s.callerInfoConfirmed.address)
-          const redispatch = !s.dispatch.armed || countdownChanged || incidentChanged
+          const redispatch =
+            !s.dispatch.armed ||
+            (!s.dispatch.countdownLocked && (countdownChanged || incidentChanged))
 
-          const dispatchDurationSeconds = s.dispatchSavedSeconds
+          const dispatchDurationSeconds = s.dispatch.countdownLocked
+            ? s.dispatchConfirmedSeconds
+            : s.dispatchSavedSeconds
           const routeReady = s.dispatchRouteSaved.status === 'ready'
-          const routeStartedAt = redispatch ? now : s.dispatch.startedAt
+          const routeStartedAt = s.dispatch.countdownLocked
+            ? s.dispatch.startedAt
+            : null
           const dispatchRouteConfirmed: DispatchRoute = {
             ...s.dispatchRouteSaved,
             startedAt: routeReady ? routeStartedAt : s.dispatchRouteSaved.startedAt,
@@ -749,27 +785,28 @@ export const useMonitorStore = create<MonitorState>()(
             confirmedVitalsActive: anyVitalActive(s.savedVitalActive),
             callerInfoConfirmed: { ...s.callerInfoSaved },
             dispatchRouteConfirmed,
-            dispatchConfirmedSeconds: s.dispatchSavedSeconds,
+            dispatchConfirmedSeconds: dispatchDurationSeconds,
+            ...(s.dispatch.countdownLocked
+              ? {
+                  dispatchMinutes: Math.floor(dispatchDurationSeconds / 60),
+                  dispatchSeconds: dispatchDurationSeconds % 60,
+                  dispatchSavedSeconds: dispatchDurationSeconds,
+                }
+              : {}),
           }
-          // Later Sends that keep the same countdown only push updated content —
-          // the armed gate, its countdown, and any Acknowledge/Arrival are left
-          // intact and the route ETA keeps ticking from its original start.
+          // Same-run Sends push updated content while preserving the gate,
+          // absolute clock, run identity, and trainee milestones.
           if (!redispatch) return base
 
-          // First arm reads the not-yet-saved draft countdown; a re-dispatch uses
-          // the saved countdown (the change that triggered the restart), so the
-          // gate and the map ETA stay on the same clock.
-          const durationMs = s.dispatch.armed
-            ? dispatchDurationSeconds * 1000
-            : (s.dispatchMinutes * 60 + s.dispatchSeconds) * 1000
           return {
             ...base,
             dispatch: {
               ...s.dispatch,
               runId: nanoid(),
               armed: true,
-              startedAt: now,
-              countdownEndsAt: now + durationMs,
+              countdownLocked: false,
+              startedAt: null,
+              countdownEndsAt: null,
               acknowledgedAt: null,
               arrivedAt: null,
               transportedAt: null,
@@ -805,8 +842,8 @@ export const useMonitorStore = create<MonitorState>()(
 
           // Dispatch timing/content is instructor-authoritative, but the gate
           // progress belongs to this trainee. Same run keeps their progress; a
-          // new armed run clears Ack/Arrival (same contract as a local
-          // re-dispatch Send); a disarmed gate is a full drill reset.
+          // new armed run clears Ack/Arrival; a disarmed gate is a full drill
+          // reset. Same-run content and route updates preserve local progress.
           const incoming = normalizeDispatch(
             shared.dispatch,
             s.dispatchConfirmedSeconds * 1000,
@@ -943,7 +980,7 @@ export const useMonitorStore = create<MonitorState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 11,
+      version: 12,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist

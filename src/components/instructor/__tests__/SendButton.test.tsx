@@ -128,6 +128,23 @@ describe('SendButton', () => {
     expect(btn).toBeDisabled()
   })
 
+  it('keeps Send disabled for attempted countdown edits after Start', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDispatchMinutes(5)
+      store.save()
+      store.send()
+      store.startDispatchClock()
+      store.setDispatchMinutes(7)
+      store.save()
+    })
+
+    render(<SendButton />)
+
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+    expect(useMonitorStore.getState().dispatchConfirmedSeconds).toBe(300)
+  })
+
   it('does not treat background route enrichment as pending instructor work', () => {
     act(() => {
       const store = useMonitorStore.getState()

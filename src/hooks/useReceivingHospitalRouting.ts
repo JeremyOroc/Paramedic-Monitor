@@ -173,7 +173,19 @@ export function useReceivingHospitalRouting({
     }
   }, [identity, mapState.selectedHospitalId, storageScope, transportRoute])
 
-  const effectiveRoute = transportRoute ?? dispatchRoute
+  const showingTransportRoute =
+    transportRoute !== null &&
+    (transported || mapState.directoryOpen || mapState.fullscreen)
+  const effectiveRoute = showingTransportRoute && transportRoute
+    ? transportRoute
+    : dispatchRoute
+  const effectiveMapState = useMemo<HospitalMapState>(
+    () => ({
+      ...mapState,
+      routeKind: showingTransportRoute ? 'transport' : 'dispatch',
+    }),
+    [mapState, showingTransportRoute],
+  )
 
   const openDirectory = useCallback(() => {
     if (!dispatchRoute.destination) {
@@ -346,7 +358,7 @@ export function useReceivingHospitalRouting({
 
   return {
     effectiveRoute,
-    mapState,
+    mapState: effectiveMapState,
     atHospital,
     openDirectory,
     closeDirectory,

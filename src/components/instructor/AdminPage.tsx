@@ -57,6 +57,8 @@ import { useDispatchRouteResolution } from '@/hooks/useDispatchRouteResolution'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { cn } from '@/lib/utils'
 import {
+  hasDispatchCountdownDirty,
+  hasDispatchRouteDurationPending,
   hasDefibrillatorModelDirty,
   hasDefibrillatorModelPending,
   normalizeDispatchAddress,
@@ -247,6 +249,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   const scenarioCallerInfo = useMonitorStore((s) => s.callerInfoDraft)
   const scenarioDispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
   const scenarioDispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
+  const dispatchSavedSeconds = useMonitorStore((s) => s.dispatchSavedSeconds)
+  const dispatchConfirmedSeconds = useMonitorStore((s) => s.dispatchConfirmedSeconds)
   const scenarioDispatchOrigin = useMonitorStore((s) => s.dispatchRouteDraft.originAddress)
   const callerInfoSavedAddress = useMonitorStore((s) => s.callerInfoSaved.address)
   const callerInfoConfirmedAddress = useMonitorStore((s) => s.callerInfoConfirmed.address)
@@ -654,6 +658,12 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     normalizeDispatchAddress(callerInfoSavedAddress) !==
       normalizeDispatchAddress(callerInfoConfirmedAddress)
   const routeChangesNotSent = routeAuthoredUnsaved || routeAuthoredUnsent
+  const countdownChangesNotSent =
+    hasDispatchCountdownDirty(
+      scenarioDispatchMinutes,
+      scenarioDispatchSeconds,
+      dispatchSavedSeconds,
+    ) || hasDispatchRouteDurationPending(dispatchSavedSeconds, dispatchConfirmedSeconds)
 
   const runStart = useCallback(async () => {
     if (!session || !canControlRoom || dispatchActionBusyRef.current) return
@@ -698,9 +708,10 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     const state = useMonitorStore.getState()
     const createsNewRun =
       !state.dispatch.armed ||
-      state.dispatchSavedSeconds !== state.dispatchConfirmedSeconds ||
-      normalizeDispatchAddress(state.callerInfoSaved.address) !==
-        normalizeDispatchAddress(state.callerInfoConfirmed.address)
+      (!state.dispatch.countdownLocked &&
+        (state.dispatchSavedSeconds !== state.dispatchConfirmedSeconds ||
+          normalizeDispatchAddress(state.callerInfoSaved.address) !==
+            normalizeDispatchAddress(state.callerInfoConfirmed.address)))
     if (!createsNewRun) return true
     if (!getRouteWarning(state.dispatchRouteSaved, state.callerInfoSaved.address)) return true
     setDispatchConfirmation('send')
@@ -1349,6 +1360,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
                 title={
                   !dispatchArmed
                     ? 'Save and Send the call info before starting'
+                    : countdownChangesNotSent
+                      ? 'Save and Send the countdown changes before starting'
                     : routeChangesNotSent
                       ? 'Save and Send the route changes before starting'
                     : !defibrillatorModelReady
@@ -1361,6 +1374,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
                   !canControlRoom ||
                   !dispatchArmed ||
                   dispatchActionBusy ||
+                  countdownChangesNotSent ||
                   routeChangesNotSent ||
                   !defibrillatorModelReady
                 }

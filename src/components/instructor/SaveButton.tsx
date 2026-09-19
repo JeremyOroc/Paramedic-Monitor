@@ -23,6 +23,7 @@ export function SaveButton() {
   const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
   const dispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
   const dispatchSavedSeconds = useMonitorStore((s) => s.dispatchSavedSeconds)
+  const dispatchCountdownLocked = useMonitorStore((s) => s.dispatch.countdownLocked)
   const defibrillatorModelDraft = useMonitorStore((s) => s.defibrillatorModelDraft)
   const defibrillatorModelSaved = useMonitorStore((s) => s.defibrillatorModelSaved)
   const save = useMonitorStore((s) => s.save)
@@ -31,7 +32,8 @@ export function SaveButton() {
     !hasVitalActiveDirty(draftVitalActive, savedVitalActive) &&
     !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved) &&
     !hasDispatchRouteAuthoredChanged(dispatchRouteDraft, dispatchRouteSaved) &&
-    !hasDispatchCountdownDirty(dispatchMinutes, dispatchSeconds, dispatchSavedSeconds) &&
+    (dispatchCountdownLocked ||
+      !hasDispatchCountdownDirty(dispatchMinutes, dispatchSeconds, dispatchSavedSeconds)) &&
     !hasDefibrillatorModelDirty(defibrillatorModelDraft, defibrillatorModelSaved)
 
   return (

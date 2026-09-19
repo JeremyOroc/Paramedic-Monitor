@@ -1192,6 +1192,38 @@ retains the same three unrelated baseline failures. Production build and live br
 in this environment because Turbopack is denied its worker port and the existing port-3000 Next process is
 unresponsive and holds the development lock.
 
+**Requirement change (2026-09-19) — Start-locked dispatch countdown and hospital preview:**
+Supersedes the earlier rules that a changed saved countdown or Incident-scene address always creates a new
+dispatch run, and that minimizing a pre-Transport hospital preview keeps that preview as the compact route.
+- Before **Start / Dispatch**, the countdown remains editable through Save and Send. Starting is blocked
+  while dispatch changes are unsaved or unsent. **Start / Dispatch** snapshots and locks the last successfully
+  sent duration; unsaved draft values never become the active timer. The configured minutes/seconds remain
+  visible but disabled while a separate live countdown derives from the run's absolute timestamps.
+- During an active run, Save and Send may publish caller details, vitals, route-address corrections, and
+  scenario content without changing the locked duration, run id, countdown timestamps, Acknowledge,
+  Arrival, or Transport milestones. Incident and unit-origin corrections may resolve and publish a new
+  Dispatch route, but it uses the original run clock and duration. Loading a scenario preserves the locked
+  timer while applying its other authored fields.
+- The countdown remains accurate through refresh, reconnect, CALL INFO navigation, and hospital previews.
+  Reaching `00:00`, including a run configured as `00:00`, does not unlock or restart it. Only End/Cancel,
+  New Attempt, or the existing full reset establishes a new editable dispatch cycle.
+- Before Transport, selecting a Receiving hospital opens a local preview with its distance and ETA. The
+  choice remains selected and the countdown continues invisibly, but minimizing the directory restores the
+  compact Incident-scene Dispatch route at its current progress. Reopening the directory restores the
+  selected preview. Once Transport begins, the hospital route becomes the compact active route and retains
+  the existing reroute behavior.
+- Existing update presentation remains unchanged; no additional Dispatch-updated notification is added.
+
+**Testing:**
+- Store coverage proves the Start boundary locks the last sent duration, guarded setters and scenario loads
+  cannot replace it, active-run Sends preserve identity/timestamps/milestones, address corrections reroute
+  without re-dispatch, zero-duration runs remain locked, and reset/New Attempt unlocks the next cycle.
+- Instructor component and page coverage verifies disabled locked inputs, separate configured/live values,
+  Save/Send behavior before and after Start, and Start's unsaved/unsent preflight.
+- Receiving-hospital hook and map integration coverage verifies preview ETA in the directory, continued
+  dispatch countdown progress, compact Dispatch-route restoration before Transport, retained selection, and
+  compact Transport-route behavior after Transport.
+
 - The assignment dashboard's route map also supports a trainee-local Receiving Hospital Directory.
   It uses the exact supplied set of 16 adult and 2 pediatric Montréal-area Receiving hospitals and
   appears both on initial New Assignment and when the assignment dashboard is reopened through CALL

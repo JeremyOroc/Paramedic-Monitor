@@ -729,7 +729,41 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'Start / Dispatch' })).toBeDisabled()
   })
 
-  it('warns before an active Send that would create a new unresolved run', async () => {
+  it('prevents Start until countdown edits are saved and sent', async () => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(
+      JSON.stringify({
+        session: { status: 'waiting', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ))
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setCallerInfoDraft('address', '100 First Street')
+      store.setDispatchMinutes(5)
+      store.save()
+      store.send()
+      store.setDispatchMinutes(7)
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('waiting')).toBeInTheDocument())
+
+    const start = screen.getByRole('button', { name: 'Start / Dispatch' })
+    expect(start).toBeDisabled()
+    expect(start).toHaveAttribute(
+      'title',
+      'Save and Send the countdown changes before starting',
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect(start).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(start).toBeEnabled()
+  })
+
+  it('sends an active Incident-scene correction without creating a new run', async () => {
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(
       JSON.stringify({
         session: { status: 'active', active_attempt_version: 1 },
@@ -744,6 +778,7 @@ describe('AdminPage', () => {
       store.setCallerInfoDraft('address', '100 First Street')
       store.save()
       store.send()
+      store.startDispatchClock()
     })
     const initialRunId = useMonitorStore.getState().dispatch.runId
 
@@ -757,9 +792,7 @@ describe('AdminPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Send' }))
 
-    expect(screen.getByRole('button', { name: 'Send Anyway' })).toBeInTheDocument()
-    expect(useMonitorStore.getState().dispatch.runId).toBe(initialRunId)
-    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('button', { name: 'Send Anyway' })).not.toBeInTheDocument()
     expect(useMonitorStore.getState().dispatch.runId).toBe(initialRunId)
   })
 
