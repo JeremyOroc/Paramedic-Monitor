@@ -6,6 +6,13 @@
 ---
 
 ## Current Phase
+**Compact EtCO2/Trend timer row — COMPLETE (2026-09-19).**
+The Instructor EtCO2 calibration indicator and complete Trend Timer now share one non-wrapping row
+beneath the numeric vitals. The row precedes CPR/timed-vitals utilities when stacked and spans both
+Vitals columns at desktop widths. Rendered QA measured the indicator and timer at the same 396px Y
+coordinate in one 28px-high, 565px-wide row with no clipping. All 22 focused tests, TypeScript,
+ESLint with zero errors and the same 12 unrelated warnings, and the Webpack production build pass.
+
 **Instructor vital Trend and ECG-first layout — COMPLETE (2026-09-19).**
 ECG now spans the Instructor Vitals panel directly below its heading and above FC. Every numeric vital
 has an absolute Trend target between its current value and On/Off control, with one shared dispatch-

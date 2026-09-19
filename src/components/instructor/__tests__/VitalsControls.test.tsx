@@ -189,6 +189,30 @@ describe('VitalsControls', () => {
     expect(screen.getByLabelText('Trend status')).toHaveTextContent('Ready')
   })
 
+  it('keeps the EtCO2 calibration indicator and complete Trend timer on one row', () => {
+    render(<VitalsControls autoSortText="" />)
+
+    const row = screen.getByTestId('admin-etco2-trend-timer-row')
+    const indicator = screen.getByTestId('admin-etco2-calibration-indicator')
+    const timer = screen.getByTestId('vital-trend-timer')
+    const utilityColumn = screen.getByTestId('admin-utility-column')
+
+    expect(row).toHaveClass(
+      'flex',
+      'items-center',
+      'order-2',
+      'sm:order-3',
+      'sm:col-span-2',
+    )
+    expect(row).toContainElement(indicator)
+    expect(row).toContainElement(timer)
+    expect(timer).toHaveClass('flex', 'flex-1', 'items-center')
+    expect(within(timer).getByLabelText('Trend minutes')).toBeInTheDocument()
+    expect(within(timer).getByLabelText('Trend seconds')).toBeInTheDocument()
+    expect(within(timer).getByLabelText('Trend status')).toBeInTheDocument()
+    expect(utilityColumn).toHaveClass('order-3', 'sm:order-2')
+  })
+
   it('locks the FC Trend target when the draft rhythm owns FC', async () => {
     const user = userEvent.setup()
     render(<VitalsControls autoSortText="" />)

@@ -88,7 +88,7 @@ export function VitalsControls({
       </div>
 
       <div className="grid min-w-0 grid-cols-1 items-start gap-2 sm:grid-cols-[minmax(15rem,0.9fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:grid-cols-[minmax(17rem,1fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:gap-4">
-        <div className="flex min-w-0 flex-col gap-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[25rem] xl:[@media(min-height:800px)]:gap-3" data-testid="admin-vitals-column">
+        <div className="order-1 flex min-w-0 flex-col gap-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[25rem] xl:[@media(min-height:800px)]:gap-3" data-testid="admin-vitals-column">
           <div className="flex items-center" data-testid="admin-vital-row-fc">
             <VitalInput compact showTrend field="hr" label="FC" unit="bpm" min={0} max={300} />
           </div>
@@ -108,26 +108,9 @@ export function VitalsControls({
           <div className="flex items-center" data-testid="admin-vital-row-etco2">
             <VitalInput compact showTrend field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
           </div>
-          <div
-            role="status"
-            aria-label="EtCO2 calibration status"
-            data-testid="admin-etco2-calibration-indicator"
-            data-calibrated={etco2Calibrated}
-            className={[
-              'ml-14 flex h-7 w-20 items-center justify-center border px-2',
-              'xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:h-9 xl:[@media(min-height:800px)]:w-24',
-              'font-mono text-[10px] font-bold uppercase tracking-wider transition-colors xl:[@media(min-height:800px)]:text-xs',
-              etco2Calibrated
-                ? 'border-purple-etco2 bg-purple-etco2/15 text-purple-etco2 shadow-[0_0_16px_-6px_var(--color-purple-etco2)]'
-                : 'border-neutral-700 bg-neutral-950 text-neutral-600',
-            ].join(' ')}
-          >
-            EtCO2
-          </div>
-          <VitalTrendTimer />
         </div>
 
-        <div className="min-w-0 self-start xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[24rem]" data-testid="admin-utility-column">
+        <div className="order-3 min-w-0 self-start sm:order-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[24rem]" data-testid="admin-utility-column">
           <div
             role="group"
             className="grid grid-cols-2 gap-1.5"
@@ -169,6 +152,29 @@ export function VitalsControls({
               </button>
             ))}
           </div>
+        </div>
+
+        <div
+          className="order-2 flex min-w-0 items-center gap-3 sm:order-3 sm:col-span-2"
+          data-testid="admin-etco2-trend-timer-row"
+        >
+          <div
+            role="status"
+            aria-label="EtCO2 calibration status"
+            data-testid="admin-etco2-calibration-indicator"
+            data-calibrated={etco2Calibrated}
+            className={[
+              'flex h-7 w-20 shrink-0 items-center justify-center border px-2',
+              'xl:[@media(min-height:800px)]:h-9 xl:[@media(min-height:800px)]:w-24',
+              'font-mono text-[10px] font-bold uppercase tracking-wider transition-colors xl:[@media(min-height:800px)]:text-xs',
+              etco2Calibrated
+                ? 'border-purple-etco2 bg-purple-etco2/15 text-purple-etco2 shadow-[0_0_16px_-6px_var(--color-purple-etco2)]'
+                : 'border-neutral-700 bg-neutral-950 text-neutral-600',
+            ].join(' ')}
+          >
+            EtCO2
+          </div>
+          <VitalTrendTimer />
         </div>
       </div>
       {patientSns ? <PatientSnsControls {...patientSns} /> : null}

@@ -8,6 +8,26 @@
 
 ## Current Requirement Updates
 
+- 2026-09-19 requirement refinement — compact EtCO2/Trend timer row: place the Instructor
+  EtCO2 calibration indicator and the complete Trend Timer controls/status on one non-wrapping
+  horizontal row beneath the numeric vitals. At narrow widths this row appears immediately after
+  EtCO2 and before the CPR/timed-vitals utility block; at desktop widths it spans beneath both
+  Vitals columns so neither control wraps or clips.
+
+### Testing — compact EtCO2/Trend timer row
+
+- Verify the calibration indicator and Trend Timer share one explicit layout container, the timer
+  remains a single horizontal row, narrow/desktop ordering is stable, and all existing calibration
+  and Trend timer behavior remains unchanged. Run the focused Instructor controls tests, TypeScript,
+  ESLint, a production build, and rendered layout QA.
+
+**Completed 2026-09-19.** The EtCO2 calibration indicator and complete Trend Timer now share one
+non-wrapping responsive row beneath the numeric vitals. CSS ordering keeps the row immediately after
+EtCO2 when stacked and lets it span both Vitals columns on desktop before the next content section.
+All 22 focused tests, TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the
+Webpack production build pass. Rendered QA confirmed both controls share a 28px-high, 565px-wide row
+without overlap or clipping.
+
 - 2026-09-19 requirement update — Instructor vital Trend and ECG-first layout: move the complete ECG
   rhythm section out of the side-by-side numeric-vitals arrangement so it spans the Vitals panel
   immediately below the `Vitals` heading and above FC. Below ECG, preserve the numeric order
