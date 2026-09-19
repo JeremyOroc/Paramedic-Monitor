@@ -5,6 +5,24 @@
 
 ---
 
+## [2026-09-19] [instructor/ui] — Place EtCO2 calibration and Trend timer on one row
+
+- Moved the EtCO2 calibration indicator and complete Trend Timer into one non-wrapping responsive row
+  beneath the numeric vitals, spanning both Vitals columns on desktop and remaining ahead of the CPR/
+  timed-vitals utilities when stacked.
+- Kept the timer label, minute/second inputs, and Ready/Running/Complete/Cancelled status inline without
+  changing calibration or Trend behavior.
+- Added a structural layout regression. All 22 focused tests, TypeScript, ESLint with zero errors and
+  the same 12 unrelated warnings, and the Webpack production build pass. Rendered QA confirmed a shared
+  28px-high row with no overlap or clipping.
+
+## [2026-09-19] [planning/instructor] — Refine the EtCO2 and Trend timer layout
+
+- Confirmed that the EtCO2 calibration indicator and complete Trend Timer should share one horizontal
+  row beneath the numeric vitals, with responsive ordering that keeps the row ahead of the utility
+  controls when stacked and lets it span both columns on desktop.
+- Added the implementation and regression-testing contract; implementation is in progress.
+
 ## [2026-09-19] [instructor/realtime] — Add timed per-vital Trends and move ECG above FC
 
 - Moved the complete ECG control row directly below the Vitals/Trend headings and above FC, then added

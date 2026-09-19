@@ -27,13 +27,13 @@ export function VitalTrendTimer() {
 
   return (
     <div
-      className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-2 xl:[@media(min-height:800px)]:grid-cols-[4rem_minmax(0,1fr)]"
+      className="flex min-w-0 flex-1 items-center gap-2"
       data-testid="vital-trend-timer"
     >
-      <span className="text-xs text-neutral-300 xl:[@media(min-height:800px)]:text-sm">
+      <span className="w-14 shrink-0 text-xs text-neutral-300 xl:[@media(min-height:800px)]:w-16 xl:[@media(min-height:800px)]:text-sm">
         Timer
       </span>
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
         <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
           <input
             type="number"
@@ -72,7 +72,7 @@ export function VitalTrendTimer() {
         <output
           aria-label="Trend status"
           className={cn(
-            'min-w-[6.75rem] font-mono text-[10px] font-bold uppercase tracking-wider',
+            'min-w-[6.75rem] shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider',
             activeTrend?.status === 'running' && 'text-pending-amber',
             activeTrend?.status === 'complete' && 'text-ecg-green',
             activeTrend?.status === 'cancelled' && 'text-alarm-red',
