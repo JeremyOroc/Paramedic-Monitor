@@ -12,6 +12,7 @@ import {
 } from '@/lib/automaticHeartRate'
 
 import { OnOffToggle } from './OnOffToggle'
+import { VitalTrendInput } from './VitalTrendInput'
 
 type VitalInputProps = {
   compact?: boolean
@@ -20,6 +21,7 @@ type VitalInputProps = {
   unit?: string
   min?: number
   max?: number
+  showTrend?: boolean
 }
 
 const STATUS_CLASS: Record<'clean' | 'dirty' | 'pending', string> = {
@@ -37,10 +39,13 @@ export function VitalInput({
   unit,
   min,
   max,
+  showTrend = false,
 }: VitalInputProps) {
   const draft = useMonitorStore((s) => s.draft)
   const saved = useMonitorStore((s) => s.saved)
-  const confirmed = useMonitorStore((s) => s.confirmed)
+  const confirmed = useMonitorStore((s) => s.confirmedAuthored)
+  const liveConfirmed = useMonitorStore((s) => s.confirmed)
+  const activeVitalTrend = useMonitorStore((s) => s.activeVitalTrend)
   const draftVitalActive = useMonitorStore((s) => s.draftVitalActive)
   const savedVitalActive = useMonitorStore((s) => s.savedVitalActive)
   const confirmedVitalActive = useMonitorStore((s) => s.confirmedVitalActive)
@@ -57,7 +62,14 @@ export function VitalInput({
     savedVitalActive,
     confirmedVitalActive,
   )
-  const value = draft[field] as number
+  const hasAuthoredEdit =
+    draft[field] !== saved[field] || saved[field] !== confirmed[field]
+  const value =
+    activeVitalTrend?.status === 'running' &&
+    activeVitalTrend.participants[field] &&
+    !hasAuthoredEdit
+      ? liveConfirmed[field]
+      : draft[field]
   const active = draftVitalActive[field]
   const automaticHeartRate = field === 'hr' && isAutomaticHeartRateRhythm(rhythm)
   const heartRateToggleLocked =
@@ -140,6 +152,14 @@ export function VitalInput({
           </span>
         )}
       </div>
+      {showTrend ? (
+        <VitalTrendInput
+          field={field}
+          label={label}
+          min={min ?? 0}
+          max={max ?? Number.MAX_SAFE_INTEGER}
+        />
+      ) : null}
       <OnOffToggle
         active={active}
         compact={compact}

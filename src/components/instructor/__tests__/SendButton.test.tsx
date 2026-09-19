@@ -177,4 +177,25 @@ describe('SendButton', () => {
     expect(beforeSend).toHaveBeenCalledOnce()
     expect(useMonitorStore.getState().confirmed.hr).toBe(0)
   })
+
+  it('enables only after a Trend is saved and consumes it on Send', async () => {
+    const user = userEvent.setup()
+    render(<SendButton />)
+
+    act(() => {
+      useMonitorStore.getState().setVitalTrendTarget('hr', 150)
+      useMonitorStore.getState().setVitalTrendSeconds(30)
+    })
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+
+    act(() => useMonitorStore.getState().save())
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+    expect(useMonitorStore.getState().activeVitalTrend).toMatchObject({
+      status: 'running',
+      participants: { hr: { start: 0, target: 150 } },
+    })
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+  })
 })

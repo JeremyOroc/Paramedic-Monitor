@@ -10,6 +10,10 @@ import {
   hasVitalActiveDirty,
 } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
+import {
+  isValidVitalTrendConfiguration,
+  vitalTrendConfigurationsEqual,
+} from '@/lib/vitalTrend'
 
 export function SaveButton() {
   const draft = useMonitorStore((s) => s.draft)
@@ -26,15 +30,19 @@ export function SaveButton() {
   const dispatchCountdownLocked = useMonitorStore((s) => s.dispatch.countdownLocked)
   const defibrillatorModelDraft = useMonitorStore((s) => s.defibrillatorModelDraft)
   const defibrillatorModelSaved = useMonitorStore((s) => s.defibrillatorModelSaved)
+  const vitalTrendDraft = useMonitorStore((s) => s.vitalTrendDraft)
+  const vitalTrendSaved = useMonitorStore((s) => s.vitalTrendSaved)
   const save = useMonitorStore((s) => s.save)
   const disabled =
-    !hasDirty(draft, saved) &&
-    !hasVitalActiveDirty(draftVitalActive, savedVitalActive) &&
-    !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved) &&
-    !hasDispatchRouteAuthoredChanged(dispatchRouteDraft, dispatchRouteSaved) &&
-    (dispatchCountdownLocked ||
-      !hasDispatchCountdownDirty(dispatchMinutes, dispatchSeconds, dispatchSavedSeconds)) &&
-    !hasDefibrillatorModelDirty(defibrillatorModelDraft, defibrillatorModelSaved)
+    !isValidVitalTrendConfiguration(vitalTrendDraft) ||
+    (!hasDirty(draft, saved) &&
+      !hasVitalActiveDirty(draftVitalActive, savedVitalActive) &&
+      !hasCallerInfoDirty(callerInfoDraft, callerInfoSaved) &&
+      !hasDispatchRouteAuthoredChanged(dispatchRouteDraft, dispatchRouteSaved) &&
+      (dispatchCountdownLocked ||
+        !hasDispatchCountdownDirty(dispatchMinutes, dispatchSeconds, dispatchSavedSeconds)) &&
+      !hasDefibrillatorModelDirty(defibrillatorModelDraft, defibrillatorModelSaved) &&
+      vitalTrendConfigurationsEqual(vitalTrendDraft, vitalTrendSaved))
 
   return (
     <button

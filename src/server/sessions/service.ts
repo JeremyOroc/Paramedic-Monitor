@@ -940,6 +940,27 @@ export function splitInstructorOnlyState(state: unknown): {
   return { shared, history: state }
 }
 
+function trendCompletionId(state: unknown): string | null {
+  if (!isPlainRecord(state)) return null
+  const instructorOnly = isPlainRecord(state[INSTRUCTOR_ONLY_STATE_KEY])
+    ? state[INSTRUCTOR_ONLY_STATE_KEY]
+    : null
+  if (instructorOnly?.stateUpdateKind !== 'trend-completion') return null
+  return typeof instructorOnly.trendCompletionId === 'string'
+    ? instructorOnly.trendCompletionId
+    : null
+}
+
+function hasPublishedTrendCompletion(state: unknown, id: string): boolean {
+  if (!isPlainRecord(state)) return false
+  const trend = isPlainRecord(state.activeVitalTrend) ? state.activeVitalTrend : null
+  return (
+    trend?.id === id &&
+    trend.status === 'complete' &&
+    trend.completionPublished === true
+  )
+}
+
 export async function updateSessionState(
   code: string,
   account: RoomAccount,
@@ -953,11 +974,19 @@ export async function updateSessionState(
   const supabase = createServiceClient()
   const { data: current, error: currentError } = await supabase
     .from('session_state')
-    .select('version')
+    .select('state, version, updated_at')
     .eq('session_id', session.id)
     .maybeSingle()
 
   if (currentError) throw new SessionError(currentError.message, 500)
+  const incomingTrendCompletionId = trendCompletionId(state)
+  if (
+    incomingTrendCompletionId &&
+    current &&
+    hasPublishedTrendCompletion(current.state, incomingTrendCompletionId)
+  ) {
+    return { session, state: current }
+  }
   const nextVersion =
     typeof current?.version === 'number' ? current.version + 1 : 1
 

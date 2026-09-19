@@ -136,11 +136,12 @@ describe('VitalsControls', () => {
     expect(bpDia.compareDocumentPosition(etco2)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
-  it('keeps ECG beside FC and removes SpO2/EtCO2 right-side graph controls', () => {
+  it('places ECG above FC and keeps CPR/timed controls in a separate utility column', () => {
     render(<VitalsControls autoSortText="" />)
 
     const vitalsColumn = screen.getByTestId('admin-vitals-column')
     const ecgColumn = screen.getByTestId('admin-ecg-column')
+    const utilityColumn = screen.getByTestId('admin-utility-column')
     const fcRow = screen.getByTestId('admin-vital-row-fc')
     const ecgRow = screen.getByTestId('admin-graph-row-ecg')
     const spo2Row = screen.getByTestId('admin-vital-row-spo2')
@@ -151,11 +152,10 @@ describe('VitalsControls', () => {
     expect(vitalsColumn).toHaveClass('flex', 'flex-col', 'gap-2', 'min-w-0')
     expect(vitalsColumn).toHaveClass(
       'xl:[@media(min-height:800px)]:mx-auto',
-      'xl:[@media(min-height:800px)]:max-w-[18rem]',
+      'xl:[@media(min-height:800px)]:max-w-[25rem]',
     )
-    expect(ecgColumn).toHaveClass(
+    expect(utilityColumn).toHaveClass(
       'self-start',
-      'min-w-0',
       'xl:[@media(min-height:800px)]:mx-auto',
       'xl:[@media(min-height:800px)]:max-w-[24rem]',
     )
@@ -165,6 +165,7 @@ describe('VitalsControls', () => {
     expect(vitalsColumn).toContainElement(bpDiaRow)
     expect(vitalsColumn).toContainElement(etco2Row)
     expect(ecgColumn).toContainElement(ecgRow)
+    expect(ecgRow.compareDocumentPosition(fcRow)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(within(fcRow).getByLabelText('FC')).toBeInTheDocument()
     expect(within(ecgRow).getByRole('heading', { name: 'ECG' })).toBeInTheDocument()
     expect(within(ecgRow).getByRole('heading', { name: 'ECG' }).closest('section')).not.toHaveClass(
@@ -174,6 +175,30 @@ describe('VitalsControls', () => {
     expect(within(etco2Row).getByLabelText('EtCO2')).toBeInTheDocument()
     expect(screen.queryByTestId('admin-graph-row-spo2')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-graph-row-etco2')).not.toBeInTheDocument()
+  })
+
+  it('adds one Trend target per numeric vital and a shared dispatch-format timer', () => {
+    render(<VitalsControls autoSortText="" />)
+
+    for (const label of ['FC', 'SpO2', 'BP sys', 'BP dia', 'EtCO2']) {
+      expect(screen.getByLabelText(`${label} trend target`)).toBeInTheDocument()
+    }
+    expect(screen.getByText('Trend')).toBeInTheDocument()
+    expect(screen.getByLabelText('Trend minutes')).toHaveAttribute('min', '0')
+    expect(screen.getByLabelText('Trend seconds')).toHaveAttribute('max', '59')
+    expect(screen.getByLabelText('Trend status')).toHaveTextContent('Ready')
+  })
+
+  it('locks the FC Trend target when the draft rhythm owns FC', async () => {
+    const user = userEvent.setup()
+    render(<VitalsControls autoSortText="" />)
+
+    await user.click(screen.getByRole('button', { name: 'NSR (Off)' }))
+    await user.click(screen.getByRole('button', { name: 'Cardiac Arrest' }))
+    await user.click(screen.getByRole('button', { name: 'Asystole' }))
+
+    expect(screen.getByLabelText('FC trend target')).toBeDisabled()
+    expect(screen.getByLabelText('SpO2 trend target')).toBeEnabled()
   })
 
   it('renders timed vitals buttons under the ECG control', () => {

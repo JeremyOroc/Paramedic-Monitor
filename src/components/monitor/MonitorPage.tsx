@@ -45,6 +45,7 @@ import { useNibpReading } from '@/hooks/useNibpReading'
 import { useNibpAutoMode } from '@/hooks/useNibpAutoMode'
 import { useReceivingHospitalRouting } from '@/hooks/useReceivingHospitalRouting'
 import { useMonitorViewportLock } from '@/hooks/useMonitorViewportLock'
+import { useVitalTrendClock } from '@/hooks/useVitalTrendClock'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -82,6 +83,7 @@ export function MonitorPage({
   const { date, time } = useMonitorClock()
 
   useStoreHydration()
+  useVitalTrendClock()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const defibrillatorModelConfirmed = useMonitorStore(
     (s) => s.defibrillatorModelConfirmed,

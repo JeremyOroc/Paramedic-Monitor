@@ -13,6 +13,7 @@ import {
   type PatientSnsControlsProps,
 } from './PatientSnsControls'
 import { VitalInput } from './VitalInput'
+import { VitalTrendTimer } from './VitalTrendTimer'
 
 const AUTO_SORT_FIELDS: ReadonlyArray<NumericVitalField> = [
   'hr',
@@ -71,27 +72,41 @@ export function VitalsControls({
 
   return (
     <section className="flex h-full min-w-0 flex-col gap-2 border border-neutral-800 bg-neutral-950 p-3 xl:[@media(min-height:800px)]:gap-3 xl:[@media(min-height:800px)]:p-4">
-      <h2 className="text-xs uppercase tracking-wider text-neutral-400 xl:[@media(min-height:800px)]:text-sm">Vitals</h2>
+      <div className="grid grid-cols-[3.5rem_5rem_4rem_minmax(0,1fr)] items-center gap-2 xl:[@media(min-height:800px)]:grid-cols-[4rem_6rem_5rem_minmax(0,1fr)] xl:[@media(min-height:800px)]:gap-3">
+        <h2 className="col-span-2 text-xs uppercase tracking-wider text-neutral-400 xl:[@media(min-height:800px)]:text-sm">
+          Vitals
+        </h2>
+        <span className="text-center text-xs uppercase tracking-wider text-neutral-400 xl:[@media(min-height:800px)]:text-sm">
+          Trend
+        </span>
+      </div>
+
+      <div className="min-w-0" data-testid="admin-ecg-column">
+        <div data-testid="admin-graph-row-ecg">
+          <EcgRhythmSelector compact />
+        </div>
+      </div>
+
       <div className="grid min-w-0 grid-cols-1 items-start gap-2 sm:grid-cols-[minmax(15rem,0.9fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:grid-cols-[minmax(17rem,1fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:gap-4">
-        <div className="flex min-w-0 flex-col gap-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[18rem] xl:[@media(min-height:800px)]:gap-3" data-testid="admin-vitals-column">
+        <div className="flex min-w-0 flex-col gap-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[25rem] xl:[@media(min-height:800px)]:gap-3" data-testid="admin-vitals-column">
           <div className="flex items-center" data-testid="admin-vital-row-fc">
-            <VitalInput compact field="hr" label="FC" unit="bpm" min={0} max={300} />
+            <VitalInput compact showTrend field="hr" label="FC" unit="bpm" min={0} max={300} />
           </div>
 
           <div className="flex items-center" data-testid="admin-vital-row-spo2">
-            <VitalInput compact field="spo2" label="SpO2" unit="%" min={0} max={100} />
+            <VitalInput compact showTrend field="spo2" label="SpO2" unit="%" min={0} max={100} />
           </div>
 
           <div className="flex items-center" data-testid="admin-vital-row-bp-sys">
-            <VitalInput compact field="bp_sys" label="BP sys" unit="mmHg" min={0} max={300} />
+            <VitalInput compact showTrend field="bp_sys" label="BP sys" unit="mmHg" min={0} max={300} />
           </div>
 
           <div className="flex items-center" data-testid="admin-vital-row-bp-dia">
-            <VitalInput compact field="bp_dia" label="BP dia" unit="mmHg" min={0} max={300} />
+            <VitalInput compact showTrend field="bp_dia" label="BP dia" unit="mmHg" min={0} max={300} />
           </div>
 
           <div className="flex items-center" data-testid="admin-vital-row-etco2">
-            <VitalInput compact field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
+            <VitalInput compact showTrend field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
           </div>
           <div
             role="status"
@@ -109,15 +124,13 @@ export function VitalsControls({
           >
             EtCO2
           </div>
+          <VitalTrendTimer />
         </div>
 
-        <div className="min-w-0 self-start xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[24rem]" data-testid="admin-ecg-column">
-          <div data-testid="admin-graph-row-ecg">
-            <EcgRhythmSelector compact />
-          </div>
+        <div className="min-w-0 self-start xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[24rem]" data-testid="admin-utility-column">
           <div
             role="group"
-            className="mt-2 grid grid-cols-2 gap-1.5"
+            className="grid grid-cols-2 gap-1.5"
             aria-label="CPR mode"
           >
             {CPR_MODES.map(({ mode, label }) => {
