@@ -185,8 +185,11 @@ describe('VitalsControls', () => {
     }
     expect(screen.getByText('Trend')).toBeInTheDocument()
     expect(screen.getByLabelText('Trend minutes')).toHaveAttribute('min', '0')
+    expect(screen.getByLabelText('Trend minutes')).toHaveAttribute('placeholder', 'MIN')
     expect(screen.getByLabelText('Trend seconds')).toHaveAttribute('max', '59')
+    expect(screen.getByLabelText('Trend seconds')).toHaveAttribute('placeholder', 'SEC')
     expect(screen.getByLabelText('Trend status')).toHaveTextContent('Ready')
+    expect(screen.getByLabelText('Trend status')).toHaveClass('sr-only')
   })
 
   it('keeps the EtCO2 calibration indicator and complete Trend timer on one row', () => {
@@ -211,6 +214,83 @@ describe('VitalsControls', () => {
     expect(within(timer).getByLabelText('Trend seconds')).toBeInTheDocument()
     expect(within(timer).getByLabelText('Trend status')).toBeInTheDocument()
     expect(utilityColumn).toHaveClass('order-3', 'sm:order-2')
+  })
+
+  it('uses MIN and SEC as empty-box placeholders that yield to entered values', async () => {
+    const user = userEvent.setup()
+    render(<VitalsControls autoSortText="" />)
+
+    const minutes = screen.getByLabelText('Trend minutes')
+    const seconds = screen.getByLabelText('Trend seconds')
+    expect(minutes).toHaveValue(null)
+    expect(seconds).toHaveValue(null)
+
+    await user.type(minutes, '2')
+    await user.type(seconds, '30')
+
+    expect(minutes).toHaveValue(2)
+    expect(seconds).toHaveValue(30)
+  })
+
+  it('shows the live countdown in amber timer boxes and green zeroes at completion', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 120)
+      store.save()
+      store.send()
+      store.setVitalTrendTarget('hr', 150)
+      store.setVitalTrendSeconds(30)
+      store.save()
+      store.send()
+    })
+
+    render(<VitalsControls autoSortText="" />)
+
+    const minutes = screen.getByLabelText('Trend minutes')
+    const seconds = screen.getByLabelText('Trend seconds')
+    expect(minutes).toHaveValue(0)
+    expect(seconds).toHaveValue(30)
+    expect(minutes).toHaveAttribute('readonly')
+    expect(seconds).toHaveAttribute('readonly')
+    expect(minutes).toHaveClass('text-pending-amber')
+    expect(seconds).toHaveClass('text-pending-amber')
+    expect(screen.getByText('Running 00:30')).toHaveClass('sr-only')
+
+    const endsAt = useMonitorStore.getState().activeVitalTrend?.endsAt
+    expect(endsAt).toBeDefined()
+    act(() => useMonitorStore.getState().advanceVitalTrend(endsAt))
+
+    expect(minutes).toHaveValue(0)
+    expect(seconds).toHaveValue(0)
+    expect(minutes).not.toHaveAttribute('readonly')
+    expect(seconds).not.toHaveAttribute('readonly')
+    expect(minutes).toHaveClass('text-ecg-green')
+    expect(seconds).toHaveClass('text-ecg-green')
+    expect(screen.queryByText('Complete 00:00')).toBeNull()
+    expect(screen.getByLabelText('Trend status')).toHaveTextContent('Complete')
+  })
+
+  it('shows the remaining timer values in red when a Trend is cancelled', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 120)
+      store.save()
+      store.send()
+      store.setVitalTrendTarget('hr', 150)
+      store.setVitalTrendSeconds(30)
+      store.save()
+      store.send()
+      store.setDraft('hr', 80)
+      store.save()
+      store.send()
+    })
+
+    render(<VitalsControls autoSortText="" />)
+
+    expect(useMonitorStore.getState().activeVitalTrend?.status).toBe('cancelled')
+    expect(screen.getByLabelText('Trend minutes')).toHaveClass('text-alarm-red')
+    expect(screen.getByLabelText('Trend seconds')).toHaveClass('text-alarm-red')
+    expect(screen.getByLabelText('Trend status')).toHaveTextContent('Cancelled')
   })
 
   it('locks the FC Trend target when the draft rhythm owns FC', async () => {

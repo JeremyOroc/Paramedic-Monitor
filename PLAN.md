@@ -8,6 +8,28 @@
 
 ## Current Requirement Updates
 
+- 2026-09-19 requirement refinement — timer-box countdown presentation: use muted `MIN` and `SEC`
+  placeholders inside empty Trend Timer inputs and hide each placeholder whenever that box contains a
+  number. Before Send, the boxes remain editable with ordinary white numbers. During an Active Trend,
+  both boxes become read-only, display the live remaining minute/second values (including zero), and
+  color those values amber. At completion both display green zeroes. Remove the separate visible
+  Ready/Running/Complete countdown text while retaining an accessible status announcement; cancelled
+  countdown values use the existing alarm-red state.
+
+### Testing — timer-box countdown presentation
+
+- Cover in-box `MIN`/`SEC` placeholders, disappearance on numeric entry, editable white draft values,
+  read-only live countdown values, amber running state, green completion zeroes, red cancellation, and
+  the absence of visible `Complete 00:00` text while preserving an accessible status. Run focused timer/
+  Instructor tests, TypeScript, ESLint, a production build, and rendered layout QA.
+
+**Completed 2026-09-19.** Empty timer boxes now use muted `MIN`/`SEC` placeholders, while entered values
+remain white and live running values replace them in amber. Running inputs are read-only; completion shows
+editable green zeroes, cancellation shows red remaining values, and the visible status string is gone.
+An `aria-live`, screen-reader-only output preserves Ready/Running/Complete/Cancelled announcements. All
+25 focused tests, TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the Webpack
+production build pass. Rendered QA confirmed the placeholder, amber countdown, and green completion states.
+
 - 2026-09-19 requirement refinement — compact EtCO2/Trend timer row: place the Instructor
   EtCO2 calibration indicator and the complete Trend Timer controls/status on one non-wrapping
   horizontal row beneath the numeric vitals. At narrow widths this row appears immediately after
