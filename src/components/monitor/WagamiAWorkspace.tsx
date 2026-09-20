@@ -40,6 +40,7 @@ type WagamiAWorkspaceProps = {
   callerInfo: CallerInfo
   dispatchRoute?: DispatchRoute
   selectedAction?: string | null
+  readOnly?: boolean
 }
 
 type ViewFrameProps = {
@@ -83,6 +84,7 @@ export function WagamiAWorkspace({
   callerInfo,
   dispatchRoute,
   selectedAction,
+  readOnly = false,
 }: WagamiAWorkspaceProps) {
   const text = getWagamiAText(controller.preferences.locale)
   const [eventPage, setEventPage] = useState(1)
@@ -107,6 +109,7 @@ export function WagamiAWorkspace({
         onTask={controller.openTask}
         onEnergyDown={onEnergyDown}
         onEnergyUp={onEnergyUp}
+        onOpenNibpSettings={readOnly ? undefined : () => controller.setView('nibpSettings')}
         locale={controller.preferences.locale}
       />
     )
@@ -210,7 +213,6 @@ export function WagamiAWorkspace({
       <ViewFrame title={text.configureTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full content-center gap-3 p-6">
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.patientModeLabel}</span><strong>{patientMode === 'adult' ? text.adult : patientMode === 'pediatric' ? text.pediatric : text.neonate}</strong></div>
-          <button type="button" onClick={() => controller.setView('nibpSettings')} className="grid min-h-[52px] grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4 text-left focus-visible:outline-2 focus-visible:outline-wagami-a-pni"><span>{text.pniSettings}</span><span>›</span></button>
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.language}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.locale === 'fr'} onClick={() => controller.setLocale('fr')}>{text.french}</Toggle><Toggle active={controller.preferences.locale === 'en'} onClick={() => controller.setLocale('en')}>{text.english}</Toggle></div></div>
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.alarmLed}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.shellAlarmLedEnabled} onClick={() => controller.setShellAlarmLedEnabled(true)}>{text.on}</Toggle><Toggle active={!controller.preferences.shellAlarmLedEnabled} onClick={() => controller.setShellAlarmLedEnabled(false)}>{text.off}</Toggle></div></div>
         </div>

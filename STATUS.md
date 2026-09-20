@@ -6,6 +6,37 @@
 ---
 
 ## Current Phase
+**Wagami A direct PNI-settings entry — COMPLETE LOCALLY (2026-09-20).** The complete
+on-screen PNI card is now the sole localized entry to PNI settings on Wagami A, including while
+PNI is Off or a reading is active. The current reading continues unchanged; edits affect later
+readings. Configure loses its PNI-settings row, the physical PNI shell key retains exclusive
+measure/cancel ownership, Preview/live remain interactive, Spectator only mirrors the projected
+view, and X/Z plus all current PNI operating behavior remain unchanged. Back and physical-navigation
+behavior are resolved: Back returns directly to Monitor, the card stays outside the shell action ring,
+and the physical PNI key plus reading completion leave settings open while the measurement proceeds
+in the background. Settings navigation adds no Evaluation event. The 162-test expanded
+BP/navigation suite, TypeScript, ESLint with zero errors and 12 existing warnings, rendered 1280×720
+interaction review, and Next.js 16.3 Webpack production build pass. The complete suite reports 1,572
+passing, one skipped, and the same three unrelated Room-ownership/PatientInfoPanel failures.
+
+**Shared Wagami A/X cuff-pressure count-up — COMPLETE LOCALLY (2026-09-20).** One shared immediate
+numeric cuff sequence now serves both models: start at `0 mmHg`, rise in the
+main PNI slot for approximately eight seconds to systolic + 30, then settle to the accepted SYS/DIA
+result. Wagami A displays no detail messages during or after measurement. Cancellation restores the
+old accepted reading, readings snapshot their target at start, BP-only alarm suppression continues,
+pending Off completes before clearing PNI, partial-active results show both numbers while keeping
+independent log/alarm flags, and start/cancel event attribution is normalized. A removes its detail
+line and enlarges PNI to match its other vital values; A keeps inline `SYS/DIA`, X keeps stacked
+SYS/DIA, and the exact peak holds for 100 ms. Intermediate values remain presentation-only. Reset
+boundaries cancel without acceptance; Wagami Z stays unchanged. The source count-up uses elapsed-time
+catch-up, Spectator shows the latest projected value without a second clock, the BP control retains an
+accessible Cancel action, and A uses full single-vital sizing before a largest-safe final `SYS/DIA`
+size. The source hook derives progress from elapsed time, reaches the exact peak at eight seconds,
+and settles 100 ms later. The 130-test focused suite, TypeScript, ESLint with zero errors and 12
+existing warnings, a rendered 1280×720 Wagami A review, and the Next.js 16.3 Webpack production build
+pass. The complete suite reports 1,565 passing, one skipped, and the same three unrelated existing
+Room-ownership/PatientInfoPanel failures. No ADR is warranted for this reversible change.
+
 **Wagami A clinical status-line consolidation — COMPLETE LOCALLY (2026-09-20).** The main bottom
 source/mode strip and preview/live metadata are removed, and the waveform workspace uses the recovered
 height. A fixed shared line now shows dynamic Device Patient mode plus only active localized alarms in

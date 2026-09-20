@@ -160,6 +160,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
           shellAlarmLedEnabled={state.preferences.shellAlarmLedEnabled}
           screenContent={
             <WagamiAWorkspace
+              readOnly
               controller={projectedController}
               display={display}
               energy={defib.energy}

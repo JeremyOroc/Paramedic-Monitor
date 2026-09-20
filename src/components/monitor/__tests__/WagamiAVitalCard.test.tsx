@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { WagamiAVitalCard } from '../WagamiAVitalCard'
 
@@ -12,15 +12,25 @@ describe('Wagami A vital cards', () => {
     expect(screen.getByText('bpm')).toBeInTheDocument()
   })
 
-  it('keeps the PNI card read-only after moving BP reading to the shell', () => {
-    render(<WagamiAVitalCard channel="pni" label="PNI" value="118/76" unit="mmHg" />)
+  it('uses the complete PNI card as an accessible settings action when enabled', () => {
+    const onClick = vi.fn()
+    render(<WagamiAVitalCard channel="pni" label="PNI" value="118/76" unit="mmHg" actionLabel="Ouvrir les réglages PNI" onClick={onClick} />)
     expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('118/76')
+    expect(screen.getByText('118/76')).toHaveAttribute('data-value-layout', 'inline-bp')
+    screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }).click()
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  it('remains a read-only card when no settings action is supplied', () => {
+    render(<WagamiAVitalCard channel="pni" label="PNI" value="118/76" unit="mmHg" />)
+    expect(screen.getByTestId('wagami-a-vital-pni').tagName).toBe('DIV')
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 
-  it('shows the cuff progress detail without turning it into a second action', () => {
-    render(<WagamiAVitalCard channel="pni" label="PNI" value="118/76" unit="mmHg" detail="Mesure en cours · 72" />)
-    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('Mesure en cours · 72')
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  it('uses the full single-vital scale for the cuff-pressure count-up without a detail message', () => {
+    render(<WagamiAVitalCard channel="pni" label="PNI" value="72" unit="mmHg" />)
+    expect(screen.getByText('72')).toHaveAttribute('data-value-layout', 'single')
+    expect(screen.getByText('72')).toHaveClass('text-[clamp(26px,3.5cqw,62px)]')
+    expect(screen.queryByText(/mesure|patient|reading/i)).not.toBeInTheDocument()
   })
 })

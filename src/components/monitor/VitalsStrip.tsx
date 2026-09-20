@@ -82,28 +82,10 @@ export function VitalsStrip({
         selected={selected === 'hrVital'}
         className={vitalCellClassName}
       />
-      {nibpPhase === 'please_wait' || nibpPhase === 'reading' ? (
-        <div
-          className={cn(
-            'grid grid-rows-[auto_1fr_auto]',
-            'border-b border-neutral-800 px-1 py-1',
-            vitalCellClassName,
-          )}
-        >
-          <div className="flex items-baseline justify-between -mx-1 -mt-1 bg-cyan-bp px-1 py-0.5">
-            <span className="text-[12px] font-mono uppercase tracking-normal text-black">PNI</span>
-            <span className="text-[10px] font-mono text-black/70">mmHg</span>
-          </div>
-          <div className="flex h-full min-h-0 flex-col items-center justify-center text-center">
-            <span className="font-mono text-[9px] leading-tight text-cyan-bp break-words px-0.5">
-              {nibpDisplayValue}
-            </span>
-          </div>
-        </div>
-      ) : nibpPhase === 'counting' ? (
+      {nibpPhase === 'please_wait' || nibpPhase === 'reading' || nibpPhase === 'counting' ? (
         <VitalBox
           label="PNI"
-          value={nibpDisplayValue}
+          value={typeof nibpDisplayValue === 'number' ? nibpDisplayValue : 0}
           unit="mmHg"
           color="cyanBP"
           alarming={alarms.includes('bp')}

@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useMonitorStore } from '@/store/monitorStore'
 import { WagamiAPreview } from '../WagamiAPreview'
@@ -82,10 +82,42 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Annuler' }))
     fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
-    fireEvent.click(screen.getByRole('button', { name: /Réglages PNI/ }))
+    expect(screen.queryByRole('button', { name: /Réglages PNI/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }))
     fireEvent.click(screen.getByRole('button', { name: 'Automatique' }))
     fireEvent.click(screen.getByRole('button', { name: '15 min' }))
     expect(screen.getByRole('button', { name: '15 min' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('keeps PNI settings open while the physical key starts and completes a reading', () => {
+    vi.useFakeTimers()
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview />)
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mesurer la pression artérielle' }))
+    expect(screen.getByRole('heading', { name: 'Réglages PNI' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Annuler la mesure de pression artérielle' })).toBeInTheDocument()
+
+    act(() => vi.advanceTimersByTime(8100))
+    expect(screen.getByRole('heading', { name: 'Réglages PNI' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Mesurer la pression artérielle' })).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('opens PNI settings from the active count without cancelling the reading', () => {
+    vi.useFakeTimers()
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mesurer la pression artérielle' }))
+    expect(screen.getByRole('button', { name: 'Annuler la mesure de pression artérielle' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }))
+
+    expect(screen.getByRole('heading', { name: 'Réglages PNI' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Annuler la mesure de pression artérielle' })).toBeInTheDocument()
+    vi.useRealTimers()
   })
 
   it('cycles Patient mode and uses the energy ring without activating guarded Shock', () => {

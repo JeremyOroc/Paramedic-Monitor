@@ -72,6 +72,23 @@ describe('VitalsStrip', () => {
     expect(screen.queryByText('76')).not.toBeInTheDocument()
   })
 
+  it('never renders loading copy for legacy active NIBP phases', () => {
+    render(
+      <VitalsStrip
+        hr={80}
+        bpSys={118}
+        bpDia={76}
+        etco2={35}
+        spo2={98}
+        nibpPhase="please_wait"
+        nibpDisplayValue="Please Wait"
+      />,
+    )
+
+    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.queryByText('Please Wait')).not.toBeInTheDocument()
+  })
+
   it('renders settled NIBP as stacked sys and dia with a divider', () => {
     const { container } = render(
       <VitalsStrip

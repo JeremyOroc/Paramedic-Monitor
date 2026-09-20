@@ -10,6 +10,96 @@
 
 ## Current Requirement Updates
 
+- 2026-09-20 Wagami A direct PNI-settings entry — **implemented locally after the completed
+  grill-with-docs design interview and programmer confirmation**. Move `Réglages PNI` / `NIBP settings` out of Configure
+  and make the complete on-screen PNI vital card its sole settings entry point on Wagami A. The card
+  retains its clinical appearance but becomes an accessible button named `Ouvrir les réglages PNI` /
+  `Open NIBP settings`, remains available when PNI is Off, and may open settings while a cuff-pressure
+  count-up continues in the background. Settings changes affect later readings and never cancel or
+  alter the current snapshotted reading. The separate physical PNI shell control remains exclusively
+  responsible for starting and cancelling measurements. Preview and live are interactive; Spectator
+  mirrors the projected settings view but remains read-only. Manual/Automatic behavior, intervals,
+  persistence, scheduling, power/reset semantics, Wagami X, and Wagami Z remain unchanged. Both the
+  on-screen Back control and shell Back action return directly to the monitor. The PNI card remains
+  outside the shell Left/Right/Enter action ring. Pressing the physical PNI key while settings are
+  open still starts or cancels a background reading without closing settings; completion likewise
+  leaves settings open. Opening or closing settings adds no Evaluation event.
+
+  #### Testing
+
+  Cover the localized whole-card accessible action, Off and active-reading entry, removal from
+  Configure, retained physical measure/cancel ownership, unchanged mode/interval behavior,
+  direct-to-monitor Back behavior, unchanged shell action order, background physical-key start/cancel,
+  no completion-driven navigation, no new Evaluation event, Preview/live interaction, projected
+  read-only Spectator parity, and explicit X/Z isolation.
+
+  This requirement supersedes the earlier Wagami A fixed-PNI-card read-only contract and Configure
+  ownership of PNI settings. No ADR is required because this entry-point move is localized and
+  reversible.
+
+  **Implementation completed locally on 2026-09-20.** The PNI card conditionally renders as the
+  localized settings button on interactive A surfaces and remains a noninteractive vital card in
+  Spectator. Configure no longer contains the duplicate route, and PNI-settings Back now resolves
+  directly to Monitor. Physical measure/cancel ownership, background reading behavior, the shell
+  action ring, event attribution, settings semantics, and X/Z remain unchanged. The 162-test expanded
+  BP/navigation suite, TypeScript, ESLint with zero errors and 12 existing warnings, rendered
+  1280×720 interaction review, and Next.js 16.3 Webpack production build pass. The complete suite
+  reports 1,572 passing, one skipped, and the same three unrelated Room-ownership/PatientInfoPanel
+  baseline failures.
+
+- 2026-09-20 shared Wagami A/X cuff-pressure count-up — **implemented locally after the completed
+  grill-with-docs design interview and programmer confirmation**. Replace `Veuillez patienter` / `Please wait` and
+  `Mesure en cours` / `Measurement in progress` on both Wagami A and Wagami X with one shared numeric
+  cuff-pressure presentation. A manual or automatic reading starts visibly at `0 mmHg` immediately,
+  rises for approximately eight seconds in the existing monotonic, slightly uneven increments to
+  30 mmHg above the snapshotted systolic target, then settles to the real accepted systolic/diastolic
+  result. During the active reading, the main PNI value slot shows only the large single count-up and
+  unit; Wagami A's detail line is blank and the previous accepted reading is hidden. Apply the same
+  functional sequence to Preview, live trainee, and Spectator presentations. A second press during
+  the rise cancels without accepting a result and immediately restores the prior accepted BP. The
+  active reading uses the target and active flags snapshotted at its start; later Instructor sends
+  apply only to the next reading. Suppress only BP alarms during the rise, then restore alarm behavior
+  from the old accepted result on cancellation or the new result on completion. A completed pending
+  BP-Off reading performs `0 → 30 mmHg` before clearing PNI; cancelling it keeps the old result. If
+  either BP channel is active, both captured SYS/DIA numbers are visibly presented after completion,
+  while alarms and Vital Log retain independent active flags. Record one trainee NIBP Start on the
+  initial press, no second Start or new cancellation entry on the cancelling press, and record the
+  result only on completion. Wagami A shows no detail message during or after a reading; its PNI value
+  expands into that space to match the scale and placement of the FC, SpO₂, and EtCO₂ values. A and X
+  retain their model-specific completed layouts—inline `SYS/DIA` on A and stacked SYS over DIA on X.
+  The exact systolic + 30 peak remains visible for 100 ms before the accepted result replaces it.
+  Intermediate cuff pressures are presentation-only and never feed alarms, waveforms, Vital Log,
+  Evaluation facts, or accepted BP. The shared sequence derives progress from elapsed time so browser
+  throttling catches up instead of stretching the reading; the source device owns that progression.
+  Spectator displays the newest projected pressure and exact final result but need not reproduce every
+  intermediate increment or run a second animation clock. The physical BP control retains its
+  accessible Cancel-measurement action during the rise without adding visual copy or sound. Wagami A
+  uses the same full vital-number scale as FC/SpO₂/EtCO₂ for the single count-up, then the largest
+  responsive inline `SYS/DIA` size that fits without clipping. Power-off, monitor reset, and New
+  Attempt cancel without acceptance. Wagami Z retains its current immediate-PNI behavior.
+
+  #### Testing
+
+  Cover immediate numeric start, absence of loading copy in both languages, shared A/X manual and
+  automatic timing, monotonic uneven ascent, exact peak and final accepted result, active-slot
+  replacement, cancellation restoration, start-time snapshotting, BP-only alarm suppression, pending
+  Off, partial-active display with independent alarm/log flags, normalized start/cancel attribution,
+  enlarged A PNI typography without detail copy, model-specific completed layouts, peak hold,
+  intermediate-data isolation, elapsed-time catch-up, projected Spectator updates without a duplicate
+  clock, accessible cancellation labeling, responsive final-value fit, reset cancellation, Wagami Z
+  isolation, and Preview/live/Spectator parity.
+
+  **Implementation completed locally on 2026-09-20.** The shared hook now enters the numeric count
+  immediately, derives each uneven monotonic step from elapsed time, exposes the exact peak at eight
+  seconds, and settles 100 ms later. A removes all PNI detail copy and uses the recovered card space;
+  X keeps its stacked final layout. Source-owned projection, cancellation attribution, active-flag
+  snapshotting, alarm isolation, pending-Off, partial-active, and reset semantics are covered. The
+  130-test focused suite, TypeScript, ESLint with zero errors and 12 existing warnings, rendered
+  1280×720 Wagami A review, and Next.js 16.3 Webpack production build pass. The complete suite has
+  1,565 passing, one skipped, and the same three unrelated Room-ownership/PatientInfoPanel baseline
+  failures. No ADR is required because the shared cuff presentation and timing remain localized and
+  reversible.
+
 - 2026-09-20 Wagami A clinical status-line consolidation — **programmer-approved after a complete
   grill-with-docs design interview**. Remove the main screen's bottom mode/source strip and delete
   both `EN DIRECT · DONNÉES CONFIRMÉES` and `PREVIEW · DONNÉES SIMULÉES`. Move the current Device

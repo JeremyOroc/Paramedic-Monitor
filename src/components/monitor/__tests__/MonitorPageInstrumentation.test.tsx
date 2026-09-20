@@ -120,7 +120,7 @@ describe('trainee action instrumentation (PLAN 12d)', () => {
 
   it('reports the BP button press as its own event, before any reading exists', () => {
     // The evaluator grades ordering, so the moment the trainee reached for the
-    // cuff is the fact that matters -- the reading lands ~11s later.
+    // cuff is the fact that matters -- the reading lands ~8s later.
     sendActiveBp(118, 76)
     const onStudentEvent = renderMonitor()
 
@@ -132,6 +132,18 @@ describe('trainee action instrumentation (PLAN 12d)', () => {
         payload: expect.objectContaining({ mode: 'manual' }),
       }),
     )
+    expect(kindsFrom(onStudentEvent)).not.toContain('nibp_result')
+  })
+
+  it('does not report a second NIBP start when the active-reading press cancels', () => {
+    sendActiveBp(118, 76)
+    const onStudentEvent = renderMonitor()
+    const bpButton = screen.getByRole('button', { name: 'Patient event' })
+
+    fireEvent.click(bpButton)
+    fireEvent.click(bpButton)
+
+    expect(kindsFrom(onStudentEvent).filter((kind) => kind === 'nibp_start')).toHaveLength(1)
     expect(kindsFrom(onStudentEvent)).not.toContain('nibp_result')
   })
 

@@ -57,6 +57,28 @@ describe('Wagami A live Attempt integration', () => {
     })
   })
 
+  it('opens PNI settings without recording a clinical action and projects the view', async () => {
+    const events: StudentEventRecord[] = []
+    const projections: MonitorProjection[] = []
+    render(
+      <MonitorPage
+        transportStorageScope="ABC234.participant-1.1"
+        onStudentEvent={(event) => events.push(event)}
+        onProjectionChange={(projection) => projections.push(projection)}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    events.length = 0
+    fireEvent.click(screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }))
+
+    expect(screen.getByRole('heading', { name: 'Réglages PNI' })).toBeInTheDocument()
+    expect(events).toEqual([])
+    await waitFor(() => {
+      expect(projections.at(-1)?.wagamiA?.view).toBe('nibpSettings')
+    })
+  })
+
   it('resets device preferences for a new Attempt scope', async () => {
     const first = render(
       <MonitorPage
