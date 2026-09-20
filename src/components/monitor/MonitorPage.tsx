@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation'
 import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { WagamiZDevice } from '@/components/monitor/WagamiZDevice'
 import { WagamiAPreview } from '@/components/monitor/WagamiAPreview'
+import { WagamiADevice } from '@/components/monitor/WagamiADevice'
+import { WagamiAWorkspace } from '@/components/monitor/WagamiAWorkspace'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
 import { SubBar } from '@/components/monitor/SubBar'
@@ -32,6 +34,7 @@ import {
   VITAL_LOG_ITEMS_PER_PAGE,
 } from '@/components/monitor/VitalLogModal'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
+import { useCPRTimer } from '@/hooks/useCPRTimer'
 import { energyDown, energyUp } from '@/lib/defib/defibMachine'
 import { useAlarm } from '@/hooks/useAlarm'
 import { useMonitorController, ACQUIRE_MS } from '@/hooks/useMonitorController'
@@ -46,10 +49,14 @@ import { useNibpReading } from '@/hooks/useNibpReading'
 import { useNibpAutoMode } from '@/hooks/useNibpAutoMode'
 import { useReceivingHospitalRouting } from '@/hooks/useReceivingHospitalRouting'
 import { useMonitorViewportLock } from '@/hooks/useMonitorViewportLock'
+import { useWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
+import { useWagamiAWorkspaceWithPreferences } from '@/hooks/useWagamiAWorkspace'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
 import { playCallerInfoAlert, setAudioMuted, stopAllAudio } from '@/lib/audio'
+import { isWagamiAPatientModeLocked, nextWagamiAPatientMode } from '@/lib/wagamiAPatientMode'
+import { playWagamiACprPrompt, playWagamiADefibPrompt } from '@/lib/wagamiAVoice'
 import { SessionLandingPage } from '@/components/session/SessionLandingPage'
 import { getCprHeartRate } from '@/types/vitals'
 import { useAutomaticDisplayHeartRate } from '@/hooks/useAutomaticDisplayHeartRate'
@@ -59,6 +66,7 @@ import {
   type MonitorProjection,
 } from '@/types/monitorProjection'
 import type { PowerState } from '@/components/monitor/DeviceShell'
+import type { WagamiAProjectionState } from '@/types/wagamiA'
 
 const CALLER_INFO_ALERT_FLASH_MS = 2320
 
@@ -133,6 +141,11 @@ export function MonitorPage({
         ? 'wagamiX'
         : defibrillatorModelConfirmed
   const isWagamiZ = activeDefibrillatorModel === 'wagamiZ'
+  const isWagamiA = activeDefibrillatorModel === 'wagamiA'
+  const wagamiAPreferenceState = useWagamiAPreferences(
+    transportStorageScope ?? 'unscoped-live',
+    isWagamiA,
+  )
   const callerInfoVariant: CallerInfoVariant =
     searchParams.get('callerInfoVariant') === 'classic' ? 'classic' : 'assignment'
   const [devicePowerState, setDevicePowerState] = useState<PowerState>(
@@ -320,6 +333,16 @@ export function MonitorPage({
   const defib = useDefibSequence({
     patientMode: controller.patientMode,
     rhythm: confirmed.rhythm,
+    shockRequiresCharge: isWagamiA,
+    playPrompt: isWagamiA
+      ? (prompt) => playWagamiADefibPrompt(wagamiAPreferenceState.preferences.locale, prompt)
+      : undefined,
+    playCprPrompt: isWagamiA
+      ? (onEnded) => playWagamiACprPrompt(
+          wagamiAPreferenceState.preferences.locale,
+          onEnded,
+        )
+      : undefined,
     onAnalyzeResult(result) {
       controller.onAnalyzeResult(result, createEventLogStamp())
       onStudentEvent?.({
@@ -329,6 +352,12 @@ export function MonitorPage({
       })
     },
   })
+  const cprTimer = useCPRTimer(defib.state === 'cpr' ? defib.cprStartTime : null)
+  const wagamiAShockPressedRef = useRef(false)
+
+  useEffect(() => {
+    if (defib.state !== 'charged') wagamiAShockPressedRef.current = false
+  }, [defib.state])
   const resetDefib = defib.reset
   const defibResetVersionRef = useRef(monitorResetVersion)
 
@@ -417,44 +446,15 @@ export function MonitorPage({
     acceptedBpActive.bp_dia ||
     confirmedVitalActive.bp_sys ||
     confirmedVitalActive.bp_dia
-  const { handleManualTrigger: handleScheduledPatientEvent } = useNibpAutoMode({
-    enabled:
-      controller.isPoweredOn &&
-      controller.nibpMode === 'automatic' &&
-      bpButtonEnabled,
-    intervalMinutes: controller.nibpAutoInterval,
-    readingActive: isNibpReadingActive,
-    onTrigger: handlePatientEvent,
-  })
-  /**
-   * The BP button press, logged separately from the reading it produces.
-   * The evaluator grades ordering, so *when the trainee reached for it* is the
-   * fact that matters -- the result lands ~11s later, after the cuff cycle.
-   */
-  const handleBpButtonPress = useCallback(() => {
-    onStudentEvent?.({
-      kind: 'nibp_start',
-      label: 'NIBP Start',
-      payload: {
-        mode: controller.nibpMode,
-        intervalMinutes:
-          controller.nibpMode === 'automatic' ? controller.nibpAutoInterval : null,
-      },
-    })
-    handleScheduledPatientEvent()
-  }, [
-    controller.nibpAutoInterval,
-    controller.nibpMode,
-    handleScheduledPatientEvent,
-    onStudentEvent,
-  ])
 
   const acceptedBpDisplayActive = acceptedBpActive.bp_sys || acceptedBpActive.bp_dia
-  const displayedEtco2 = etco2Loaded
-    ? confirmedVitalActive.etco2
-      ? confirmed.etco2
-      : 0
-    : null
+  const displayedEtco2 = isWagamiA
+    ? confirmedVitalActive.etco2 ? confirmed.etco2 : null
+    : etco2Loaded
+      ? confirmedVitalActive.etco2
+        ? confirmed.etco2
+        : 0
+      : null
   const vitalLogSnapshot = useMemo(
     () => ({
       fc: displayedHrActive ? effectiveClinicalHr : null,
@@ -480,6 +480,48 @@ export function MonitorPage({
     isRunning: controller.isTimerRunning,
     snapshot: vitalLogSnapshot,
   })
+  const wagamiAWorkspace = useWagamiAWorkspaceWithPreferences({
+    rhythm: confirmed.rhythm,
+    hr: effectiveClinicalHr,
+    vitalLog,
+    onStudentEvent,
+    preferenceState: wagamiAPreferenceState,
+  })
+  const activeNibpMode = isWagamiA ? wagamiAWorkspace.nibpMode : controller.nibpMode
+  const activeNibpAutoInterval = isWagamiA
+    ? wagamiAWorkspace.nibpAutoInterval
+    : controller.nibpAutoInterval
+  const { handleManualTrigger: handleScheduledPatientEvent } = useNibpAutoMode({
+    enabled:
+      controller.isPoweredOn &&
+      activeNibpMode === 'automatic' &&
+      bpButtonEnabled,
+    intervalMinutes: activeNibpAutoInterval,
+    readingActive: isNibpReadingActive,
+    onTrigger: handlePatientEvent,
+  })
+  /**
+   * The BP button press, logged separately from the reading it produces.
+   * The evaluator grades ordering, so *when the trainee reached for it* is the
+   * fact that matters -- the result lands ~11s later, after the cuff cycle.
+   */
+  const handleBpButtonPress = useCallback(() => {
+    onStudentEvent?.({
+      kind: 'nibp_start',
+      label: 'NIBP Start',
+      payload: {
+        mode: activeNibpMode,
+        intervalMinutes:
+          activeNibpMode === 'automatic' ? activeNibpAutoInterval : null,
+      },
+    })
+    handleScheduledPatientEvent()
+  }, [
+    activeNibpAutoInterval,
+    activeNibpMode,
+    handleScheduledPatientEvent,
+    onStudentEvent,
+  ])
   const vitalLogTotalPages = Math.max(
     1,
     Math.ceil(vitalLog.length / VITAL_LOG_ITEMS_PER_PAGE),
@@ -492,6 +534,63 @@ export function MonitorPage({
         ? alarm.activeAlarms.filter((channel) => channel !== 'bp')
         : alarm.activeAlarms,
     [alarm.activeAlarms, isNibpReadingActive],
+  )
+  const wagamiADisplay = useMemo(
+    () => ({
+      vitals: {
+        ...confirmed,
+        hr: visibleFcHr,
+        bp_sys: acceptedBp.bp_sys,
+        bp_dia: acceptedBp.bp_dia,
+        etco2: displayedEtco2 ?? confirmed.etco2,
+      },
+      active: {
+        ...confirmedVitalActive,
+        hr: displayedHrActive,
+        bp_sys: acceptedBpActive.bp_sys,
+        bp_dia: acceptedBpActive.bp_dia,
+        etco2: displayedEtco2 !== null,
+      },
+      alarms: visibleAlarms,
+      simulated: false,
+    }),
+    [
+      acceptedBp.bp_dia,
+      acceptedBp.bp_sys,
+      acceptedBpActive.bp_dia,
+      acceptedBpActive.bp_sys,
+      confirmed,
+      confirmedVitalActive,
+      displayedEtco2,
+      displayedHrActive,
+      visibleAlarms,
+      visibleFcHr,
+    ],
+  )
+  const wagamiAProjection = useMemo<WagamiAProjectionState | undefined>(
+    () => isWagamiA ? {
+      view: wagamiAWorkspace.view,
+      preferences: wagamiAWorkspace.preferences,
+      etco2CalibrationStatus: wagamiAWorkspace.etco2Status,
+      patientMode: controller.patientMode,
+      nibpMode: wagamiAWorkspace.nibpMode,
+      nibpAutoInterval: wagamiAWorkspace.nibpAutoInterval,
+      medicationEvents: wagamiAWorkspace.medicationEvents,
+      vitalLog,
+      twelveLead: wagamiAWorkspace.twelveLead,
+    } : undefined,
+    [
+      controller.patientMode,
+      isWagamiA,
+      vitalLog,
+      wagamiAWorkspace.etco2Status,
+      wagamiAWorkspace.medicationEvents,
+      wagamiAWorkspace.nibpAutoInterval,
+      wagamiAWorkspace.nibpMode,
+      wagamiAWorkspace.preferences,
+      wagamiAWorkspace.twelveLead,
+      wagamiAWorkspace.view,
+    ],
   )
   // Timed defib phases are reconstructed from absolute timestamps by the
   // spectator, so requestAnimationFrame progress does not generate network
@@ -556,6 +655,7 @@ export function MonitorPage({
       },
       mergedEventLog,
       vitalLog,
+      wagamiA: wagamiAProjection,
     }),
     [
       acceptedBp,
@@ -595,6 +695,7 @@ export function MonitorPage({
       visibleFcHr,
       visibleAlarms,
       vitalLog,
+      wagamiAProjection,
       defib.canAdjustEnergy,
       defib.canAnalyse,
       defib.canCharge,
@@ -614,7 +715,10 @@ export function MonitorPage({
     onProjectionChange?.(projection)
   }, [onProjectionChange, projection])
 
-  useDefibAudio(defib.state, controller.isMuted || isWagamiZ)
+  useDefibAudio(
+    defib.state,
+    controller.isMuted || isWagamiZ || !controller.isPoweredOn,
+  )
 
   const handlePowerOn = () => {
     onStudentEvent?.({ kind: 'power_on', label: 'Power On' })
@@ -629,6 +733,62 @@ export function MonitorPage({
     controller.onPowerOff()
     defib.reset()
     setAudioMuted(false)
+  }
+
+  const handleWagamiAPowerToggle = () => {
+    if (controller.isPoweredOn) {
+      wagamiAWorkspace.onDevicePowerOff()
+      handlePowerOff()
+      setDevicePowerState('off')
+      return
+    }
+    handlePowerOn()
+    setDevicePowerState('on')
+  }
+
+  const handleWagamiACharge = () => {
+    if (!controller.isPoweredOn || !defib.canCharge) return
+    onStudentEvent?.({
+      kind: 'charge',
+      label: 'Charge',
+      payload: { joules: defib.energy, state: defib.state },
+    })
+    defib.onCharge()
+  }
+
+  const handleWagamiAShock = () => {
+    if (
+      !controller.isPoweredOn ||
+      !defib.canShock ||
+      wagamiAShockPressedRef.current
+    ) return
+    wagamiAShockPressedRef.current = true
+    onStudentEvent?.({
+      kind: 'shock',
+      label: 'Shock',
+      payload: { joules: defib.energy, state: defib.state },
+    })
+    defib.onShock()
+  }
+
+  const handleWagamiAEnergyChange = (direction: 'up' | 'down') => {
+    if (!controller.isPoweredOn || !defib.canAdjustEnergy) return
+    const nextEnergy = direction === 'up'
+      ? energyUp(
+          { patientMode: controller.patientMode, energy: defib.energy },
+          controller.patientMode,
+        ).energy
+      : energyDown(
+          { patientMode: controller.patientMode, energy: defib.energy },
+          controller.patientMode,
+        ).energy
+    onStudentEvent?.({
+      kind: 'energy_change',
+      label: direction === 'up' ? 'Energy Up' : 'Energy Down',
+      payload: { from: defib.energy, to: nextEnergy },
+    })
+    if (direction === 'up') defib.onEnergyUp()
+    else defib.onEnergyDown()
   }
 
   const useRestingVitalLayout =
@@ -838,11 +998,88 @@ export function MonitorPage({
   }
 
   if (activeDefibrillatorModel === 'wagamiA') {
+    const patientModeLocked = isWagamiAPatientModeLocked(defib.state)
     return (
-      <main className="fixed inset-0 grid place-items-center bg-wagami-a-screen p-8 text-wagami-a-text">
-        <div className="max-w-xl rounded-xl border border-wagami-a-border bg-wagami-a-surface p-8 text-center">
-          <h1 className="font-mono text-2xl">WAGAMI A</h1>
-          <p className="mt-4 text-wagami-a-muted-text">Ce modèle est actuellement disponible seulement en prévisualisation à /?dev=3. Aucun Attempt en direct ne peut l’utiliser.</p>
+      <main
+        data-testid="wagami-a-live"
+        className="fixed inset-0 grid h-screen w-screen min-w-[1024px] place-items-center overflow-hidden bg-wagami-a-screen text-wagami-a-text max-[1023px]:min-w-0"
+      >
+        <div className="hidden max-[1023px]:grid max-[1023px]:place-items-center max-[1023px]:p-8 max-[1023px]:text-center">
+          <div className="font-sans text-xl font-semibold">
+            {wagamiAWorkspace.preferences.locale === 'fr'
+              ? 'Affichage paysage requis'
+              : 'Landscape display required'}
+          </div>
+          <p className="mt-3 text-wagami-a-muted-text">
+            {wagamiAWorkspace.preferences.locale === 'fr'
+              ? 'Utilisez un iPad compatible en mode paysage ou un écran de 1024 pixels minimum.'
+              : 'Use a supported iPad in landscape or a display at least 1024 pixels wide.'}
+          </p>
+        </div>
+        <div className="max-[1023px]:hidden">
+          <WagamiADevice
+            display={wagamiADisplay}
+            energy={defib.energy}
+            defibState={defib.state}
+            defibProgress={defib.progress}
+            cprTime={defib.state === 'cpr' ? cprTimer.formatted : '--:--'}
+            cprOverride={cprOverrideActive}
+            nibpPhase={nibpPhase}
+            nibpDisplayValue={nibpDisplayValue}
+            bpReadingActive={isNibpReadingActive}
+            poweredOn={controller.isPoweredOn}
+            onPowerToggle={handleWagamiAPowerToggle}
+            patientMode={controller.patientMode}
+            patientModeLocked={patientModeLocked}
+            muted={controller.isMuted}
+            canAnalyse={defib.canAnalyse}
+            canCharge={defib.canCharge}
+            canShock={defib.canShock}
+            canReadBP={bpButtonEnabled}
+            canAdjustEnergy={defib.canAdjustEnergy}
+            onAnalyse={defib.onAnalyse}
+            onCharge={handleWagamiACharge}
+            onShock={handleWagamiAShock}
+            onMute={controller.onToggleMute}
+            onPatientModeCycle={() => {
+              if (!patientModeLocked) {
+                controller.onSelectPatientMode(
+                  nextWagamiAPatientMode(controller.patientMode),
+                )
+              }
+            }}
+            onReadBP={handleBpButtonPress}
+            onEnergyDown={() => handleWagamiAEnergyChange('down')}
+            onEnergyUp={() => handleWagamiAEnergyChange('up')}
+            onTask={wagamiAWorkspace.openTask}
+            navigationView={wagamiAWorkspace.view}
+            secondaryActions={wagamiAWorkspace.view === 'monitor'
+              ? undefined
+              : [{ id: 'back', enabled: true, activate: wagamiAWorkspace.goBack }]}
+            screenContent={(selectedAction) => (
+              <WagamiAWorkspace
+                controller={wagamiAWorkspace}
+                display={wagamiADisplay}
+                energy={defib.energy}
+                defibState={defib.state}
+                defibProgress={defib.progress}
+                cprTime={defib.state === 'cpr' ? cprTimer.formatted : '--:--'}
+                cprOverride={cprOverrideActive}
+                nibpPhase={nibpPhase}
+                nibpDisplayValue={nibpDisplayValue}
+                patientMode={controller.patientMode}
+                canAdjustEnergy={defib.canAdjustEnergy}
+                onEnergyDown={() => handleWagamiAEnergyChange('down')}
+                onEnergyUp={() => handleWagamiAEnergyChange('up')}
+                callerInfo={callerInfoConfirmed}
+                dispatchRoute={hospitalRouting.effectiveRoute}
+                selectedAction={selectedAction}
+                displayMode="live"
+              />
+            )}
+            locale={wagamiAWorkspace.preferences.locale}
+            shellAlarmLedEnabled={wagamiAWorkspace.preferences.shellAlarmLedEnabled}
+          />
         </div>
       </main>
     )

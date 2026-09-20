@@ -100,6 +100,7 @@ export function stopAllAudio(): void {
     el.pause()
     el.currentTime = 0
   }
+  if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
 }
 
 // Map for arbitrary system audio files
@@ -247,13 +248,16 @@ if (typeof window !== 'undefined') {
 // 'ended' event and, when the voice line plays from a buffer, a timer for the
 // buffer's duration — buffer sources have no 'ended' event we can rely on here.
 function handlePerformCprEnded(): void {
-  if (!_muted && _100bpm) {
-    _100bpm.currentTime = 0
-    _100bpm.play().catch(() => {})
-  }
+  playCprMetronome()
   const cb = _onPerformCprEnded
   _onPerformCprEnded = null
   cb?.()
+}
+
+export function playCprMetronome(): void {
+  if (_muted || !_100bpm) return
+  _100bpm.currentTime = 0
+  _100bpm.play().catch(() => {})
 }
 
 export function playCprAudioSequence(onEnded?: () => void): void {

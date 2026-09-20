@@ -709,12 +709,13 @@ body.monitor-viewport-lock {
   box-shadow: 0 0 9px color-mix(in srgb, var(--color-wagami-a-text) 65%, transparent);
 }
 .wagami-a-shell-led[data-alarming='true'] {
-  animation: wagami-a-alarm-led 1.2s steps(1, end) infinite;
+  animation: wagami-a-alarm-led 900ms ease-out 1 forwards;
 }
 @keyframes wagami-a-alarm-led {
-  0%, 49% { background: var(--color-wagami-a-alarm); box-shadow: 0 0 13px var(--color-wagami-a-alarm); }
-  50%, 100% { background: var(--color-wagami-a-text); box-shadow: 0 0 9px var(--color-wagami-a-text); }
+  0%, 38% { background: var(--color-wagami-a-text); box-shadow: 0 0 9px color-mix(in srgb, var(--color-wagami-a-text) 65%, transparent); }
+  55%, 100% { background: var(--color-wagami-a-alarm); box-shadow: 0 0 13px var(--color-wagami-a-alarm); }
 }
+.wagami-a-shell-led[data-enabled='false'] { animation: none; background: var(--color-wagami-a-screen); box-shadow: inset 0 0 0 2px var(--color-wagami-a-border); }
 .wagami-a-grid-overlay {
   background-image:
     linear-gradient(to right, color-mix(in srgb, var(--color-wagami-a-border) 17%, transparent) 1px, transparent 1px),

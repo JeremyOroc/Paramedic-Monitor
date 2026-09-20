@@ -95,7 +95,8 @@ export function isMonitorProjection(value: unknown): value is MonitorProjection 
     isRecord(projection.defib) &&
     Array.isArray(projection.alarms) &&
     Array.isArray(projection.mergedEventLog) &&
-    Array.isArray(projection.vitalLog)
+    Array.isArray(projection.vitalLog) &&
+    (projection.wagamiA === undefined || isRecord(projection.wagamiA))
   )
 }
 
@@ -950,12 +951,6 @@ export async function updateSessionState(
   // An ended room is closed to changes: a Send here would write history the
   // record shows as part of an attempt that had already finished.
   if (session.status === 'ended') throw new SessionError('Session has ended', 410)
-  if (
-    typeof state === 'object' && state !== null && !Array.isArray(state) &&
-    (state as Record<string, unknown>).defibrillatorModelConfirmed === 'wagamiA'
-  ) {
-    throw new SessionError('Wagami A is preview-only and unavailable in live Attempts', 400)
-  }
   const supabase = createServiceClient()
   const { data: current, error: currentError } = await supabase
     .from('session_state')

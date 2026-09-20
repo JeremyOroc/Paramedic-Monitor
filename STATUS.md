@@ -7,16 +7,61 @@
 
 ## Current Phase
 **Wagami A phased roadmap — ACCEPTED; A0 inventory — COMPLETE; A1 Precision Graphite concept gate — COMPLETE; A2 local implementation — COMPLETE; A3 original shell/live display — COMPLETE (2026-09-15).**
-**Pre-A4 shell-control and Vital Log revision — A3.1 COMPLETE AND PROGRAMMER-ACCEPTED; A4/A5/A6 NOT STARTED, RESERVED FOR COLLABORATOR HANDOFF (2026-09-15).**
-The programmer explicitly declared A3 done, including its A3.1 shell-control amendment,
-and asked this agent to stop before A4. The continuation brief is
-`docs/handoff/wagami-a-a4-onward.md`. This acceptance closes the local rendered-design gate,
-not the real-iPad or qualified IP gates in A6. The A3.1 changes and this handoff remain
-uncommitted on local branch `wagami-a`; another device must receive this working tree or
-an explicitly approved commit/transfer before relying on the brief.
-The collaborator prompt now includes an install/check list for Build Web Apps UI skills,
-later Supabase work, optional personal planning skills, and a Playwright fallback. These
-are environment recommendations, not permission to start A4 or perform A6 migration.
+**A3.1 shell/navigation — COMPLETE AND PROGRAMMER-ACCEPTED; A4 clinical core — COMPLETE
+(2026-09-15); A5 destinations/localization/preferences — COMPLETE (2026-09-16); A6 live
+integration — COMPLETE LOCALLY (2026-09-17), with external release gates still open.**
+**2026-09-19 handoff audit — COMPLETE; no next phase or external gate started.** A fresh fetch
+confirmed local HEAD and `origin/wagami-a` at `d03cd3f` with zero commit divergence. The complete
+A4/A5/A6 state remains local in 38 modified tracked files and 17 untracked files. The remote has
+only older versions of the tracked paths and none of the untracked files. Transfer the exact working tree described in
+`docs/handoff/wagami-a-a4-onward.md` before another agent relies on this status.
+The A4, A5, and A6 plans were approved before implementation. The repository record does not show
+a separate post-implementation acceptance of the combined A4–A6 working tree, and local completion
+does not imply release acceptance.
+The programmer approved the concrete A6 plan after accepting A3/A3.1 and completing A4/A5.
+A3.1 and the
+original handoff are committed at `d03cd3f` on `wagami-a`; the subsequent A4/A5 changes
+and the A6 implementation remain uncommitted in this working tree. The rendered design,
+destination, and local live-integration gates are closed. Controlled database execution and
+report readback, production migration authorization, real-iPad QA, renewed distinctness review,
+qualified IP advice, and release/default/public-availability decisions remain A6 gates. Any later device must receive this complete working tree or an approved
+commit/transfer before relying on A4/A5/A6 integration completion. See
+`docs/handoff/wagami-a-a4-onward.md` for the current boundary.
+The Room-free `/?dev=3` preview runs the approved A clinical core and all six A5
+destinations inside the persistent shell: 12-lead capture/print/transmit, EtCO₂
+calibration, Medications with nested Event Log, the existing Assignment dashboard, Vital
+Log, and Configure/PNI. French is the default; English is selectable. Device language and
+shell-LED choice persist by supplied Room/Attempt scope, while LED Off leaves on-screen
+and audio alarm behavior intact. English uses existing recorded prompts; French uses
+`fr-CA` browser speech. Events retain locale-neutral semantic kinds/payloads. The direct
+preview invents no Vital Log rows. Optional typed A projection state renders these choices
+in Spectator. Instructor A selection, normal Save/Send, live Attempts, semantic event publication,
+shared Vital Log, and Room/participant/Attempt-scoped A projection publication are now enabled in
+the local application. X/Z remain available and X remains the default.
+Shell-only Analyze, Charge, charged-only one-press Shock, BP reading, all-cues mute,
+Patient-mode cycle/lock, Power, and touch energy remain functional. Confirmed pending BP
+is hidden until cuff acceptance, BP alarms pause during reading, and X/Z default clinical
+behavior remains unchanged.
+A6 focused integration tests pass (151 across 15 files), including Instructor selection/send,
+Saved scenario round-trip, live monitor actions, scoped preference reset, projection/Spectator,
+server state/history, reports, and migration contracts. TypeScript, full source ESLint
+(0 errors; 12 established warnings), and the Webpack production build pass. Rendered
+1280×720 and 1024×768 QA covered all destinations, French/English switching, LED state,
+rapid contained-map navigation, and exact viewport fit without page overflow or console errors.
+Full Windows Vitest has 1,509 passing, one skipped, and the same 11 unrelated
+failures: seven operations-script tests requiring Bash absent on PATH, two Room-ownership
+baselines, one PatientInfoPanel class expectation, and one LF-only config assertion against
+this CRLF checkout. No A4/A5/A6 test fails. The A report migration and pgTAP assertions have
+source-level contract tests; this machine has no Supabase CLI, PostgreSQL client, or Docker, so
+the disposable local database run remains pending and no remote database was touched.
+For the 2026-09-19 handoff audit, a fresh selected 15-file A6 run passed 147 tests and the full
+suite again reported 1,509 passing, one skipped, and the same 11 failures. Sequential
+`npx tsc --noEmit`, full source ESLint (zero errors, 12 warnings), and the Webpack build passed.
+The earlier 151-test result and the new 147-test result used different selected file lists; neither
+is the complete suite. No Wagami A test failed in the fresh full run.
+The collaborator prompt includes an install/check list for UI skills and Supabase work,
+optional personal planning skills, and a Playwright fallback. These are environment
+recommendations, not permission to perform a production migration or make a release decision.
 The programmer has requested a new right-shell Analyze/Charge/Shock vertical group, left-shell
 sound mute/Patient mode/BP reading, lower-shell Left/Enter/Right screen navigation, and a Vital Log
 replacement for Print/Capture. `PLAN.md` records the accepted amendment; A3.1 has now
@@ -47,8 +92,9 @@ The attached BP icon was not used as image input or project asset. A3.1 replaced
 Print/Capture tile with `Journal des signes vitaux`, moved Analyze/mute/PNI-reading to
 shell-only guarded callback slots, and added an original cuff/gauge SVG and three hardware
 navigation keys. Its focus model wraps only enabled inner actions and remembers selection
-per view. The direct preview still enables Power alone; A4/A5 own clinical activation and
-destinations. All 22 A3.1-focused tests, TypeScript, affected-file ESLint, and Webpack build
+per view. At the A3.1 milestone the direct preview enabled Power alone; A4 subsequently
+enabled clinical controls and A5 subsequently enabled all destinations. All 22 A3.1-focused tests,
+TypeScript, affected-file ESLint, and Webpack build
 pass. Desktop browser QA covers 1024×768, 1536×1024, narrow fallback, no overflow/errors,
 and Power cycling; screenshots and fidelity ledger are in the A concept folder. The full
 suite re-run has 1,476 passing, one skipped, and only the three pre-existing
@@ -56,16 +102,17 @@ Room-ownership/PatientInfo failures. The stale A preview-label assertion was upd
 A is additive and X/Z remain available. The accepted direction is a matte-charcoal rugged field
 tablet with top vital cards, dominant waveforms, a separate defib panel, six task destinations,
 and physical-style Power/Charge/Shock. Existing working clinical timing and state guards carry
-forward. The A3 baseline had a Print/Capture tile; A3.1 relabeled it Vital Log. Its actual
-timestamped history awaits A5. Call Info opens the
+forward. The A3 baseline had a Print/Capture tile; A3.1 relabeled it Vital Log. A5 now presents
+the shared five-minute timestamped history without inventing rows in the direct preview. Call Info opens the
 Assignment dashboard, while the medication Event Log stays within
 Medications. The v2 image tile reading `ÉVÉNEMENTS` is a superseded label; images remain unchanged.
 Inert X-only controls are omitted. French/English Device language and shell-LED choice
 are local to one Attempt and mirrored by Spectator; LED Off affects only the shell light, never
 screen/audio warnings. Global all-cues mute has an honest label. The supported landscape iPad and
-desktop contract remains. Incomplete A is excluded from live Instructor Attempts but directly
-previewable, powered on and dispatch-bypassed, at `/?dev=3` with a visible `PREVIEW` label and no
-Room join. X stays the development default; any A default change and X/Z public-availability
+desktop contract remains. At the historical A2/A3 construction gate, incomplete A was excluded
+from live Instructor Attempts; A6 has superseded that restriction and live A Attempts are now
+enabled locally. The separate powered-on, dispatch-bypassed `/?dev=3` route remains a visible
+`PREVIEW` with no Room join. X stays the development default; any A default change and X/Z public-availability
 change require explicit later decisions, not automation. The seven-phase roadmap and tests are
 recorded in `PLAN.md`; A0 asset/provenance findings are in `docs/research/wagami-a-phase0-inventory.md`.
 At the historical A1 gate, the programmer approved Precision Graphite v2, the exact A-only palette,
@@ -73,19 +120,20 @@ PNI-card reading action, and persistent waveform-header global-audio mute. A3.1 
 those two action placements. The five-criterion concept-level review is
 complete in `docs/design/wagami-a-concepts/precision-graphite-spec.md`. Actual rendered/iPad fit
 checks belong to A3/A6 once UI code exists. Future distributable-asset disposition remains open.
-A2 now recognizes A explicitly in model/scenario/projection/report contracts and labels, while
+A2 recognized A explicitly in model/scenario/projection/report contracts and labels, while
 legacy unknown models still default to X. Its independent `/?dev=3` powered-on construction
 preview uses code-native A tokens, shows all six future right-side destinations and `PREVIEW`,
-and never enters Room routing. Instructor still offers only X/Z; imported A drafts are explained
-and cannot be Sent, and the server rejects A before live state/history writes. A local forward
-report-check migration was created and transactionally tested; it has **not** been applied to
-production, and the existing report capture trigger still limits live creation to X/Z. Focused
+and never enters Room routing. At that historical gate Instructor offered only X/Z, imported A
+drafts could not be Sent, and the server rejected A before live state/history writes; the approved
+A6 implementation supersedes those restrictions. A local forward report-check migration was
+created and transactionally tested; it has **not** been applied to production, where the existing
+report capture trigger therefore still limits live creation to X/Z. Focused
 A2 app suites pass; TypeScript, ESLint (zero errors, 12 pre-existing warnings), and Webpack
 production build pass. The full Vitest run reports three independently reproduced unrelated
 Room-ownership/Patient-Info baseline failures, while the local 42-assertion report pgTAP run
 reports two existing-audit-row failures; both new A constraint assertions pass. Rendered 1024×768
 and 1366×768 preview DOM checks show no overflow. A3 replaced the construction placeholder with
-the approved original shell and display; A4/A5 own clinical and destination interactions. No live Instructor A option or A Attempt was
+the approved original shell and display; A4/A5 subsequently added clinical and destination interactions. No live Instructor A option or A Attempt was
 enabled; no public asset removal or IP clearance decision was made.
 At the historical A3 milestone, the direct preview used a code-native faceted shell,
 upper-left white/red alarm LED, upper-right Power, left Charge, and guarded lower-right

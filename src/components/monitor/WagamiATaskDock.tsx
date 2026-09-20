@@ -1,20 +1,14 @@
 import { cn } from '@/lib/utils'
+import { getWagamiAText } from '@/lib/wagamiALocalization'
+import type { WagamiALocale } from '@/types/wagamiA'
 
 export type WagamiATask = 'twelveLead' | 'etco2' | 'medications' | 'callInfo' | 'vitalLog' | 'configure'
 
 type WagamiATaskDockProps = {
   onTask?: (task: WagamiATask) => void
   selectedAction?: string | null
+  locale?: WagamiALocale
 }
-
-const TASKS: ReadonlyArray<{ key: WagamiATask; label: string }> = [
-  { key: 'twelveLead', label: '12 dérivations' },
-  { key: 'etco2', label: 'EtCO₂' },
-  { key: 'medications', label: 'Médicaments' },
-  { key: 'callInfo', label: 'Info appel' },
-  { key: 'vitalLog', label: 'Journal des signes vitaux' },
-  { key: 'configure', label: 'Configurer' },
-]
 
 function TaskIcon({ task }: { task: WagamiATask }) {
   const common = 'h-[clamp(19px,2.5cqw,37px)] w-[clamp(19px,2.5cqw,37px)] fill-none stroke-current stroke-[1.8] [stroke-linecap:round] [stroke-linejoin:round]'
@@ -26,17 +20,25 @@ function TaskIcon({ task }: { task: WagamiATask }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true" className={common}><path d="M10 2h4l.5 2.4 2 .8 2-1.3 2.8 2.8-1.3 2 .8 2L23 10v4l-2.4.5-.8 2 1.3 2-2.8 2.8-2-1.3-2 .8L14 23h-4l-.5-2.4-2-.8-2 1.3-2.8-2.8 1.3-2-.8-2L1 14v-4l2.4-.5.8-2-1.3-2 2.8-2.8 2 1.3 2-.8z" /><circle cx="12" cy="12" r="3" /></svg>
 }
 
-export function WagamiATaskDock({ onTask, selectedAction }: WagamiATaskDockProps) {
+export function WagamiATaskDock({ onTask, selectedAction, locale = 'fr' }: WagamiATaskDockProps) {
+  const text = getWagamiAText(locale)
+  const tasks: ReadonlyArray<{ key: WagamiATask; label: string }> = [
+    { key: 'twelveLead', label: text.taskTwelveLead },
+    { key: 'etco2', label: text.taskEtco2 },
+    { key: 'medications', label: text.taskMedications },
+    { key: 'callInfo', label: text.taskCallInfo },
+    { key: 'vitalLog', label: text.taskVitalLog },
+    { key: 'configure', label: text.taskConfigure },
+  ]
   return (
     <nav aria-label="Wagami A task dock" className="grid min-h-0 grid-cols-2 grid-rows-3 gap-[clamp(3px,0.6cqw,9px)]">
-      {TASKS.map(({ key, label }) => (
+      {tasks.map(({ key, label }) => (
         <button
           key={key}
           type="button"
           data-task={key}
           data-navigation-selected={selectedAction === key ? 'true' : 'false'}
           disabled={!onTask}
-          title={!onTask ? 'Disponible en phase A5' : undefined}
           onClick={() => onTask?.(key)}
           className={cn(
             'grid min-h-[44px] min-w-0 place-content-center justify-items-center gap-[clamp(3px,0.55cqw,8px)] rounded-[6px] border border-wagami-a-border bg-wagami-a-surface-raised px-1.5 py-1 text-wagami-a-pni',

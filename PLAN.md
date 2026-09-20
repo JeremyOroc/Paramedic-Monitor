@@ -10,6 +10,15 @@
 
 ## Current Requirement Updates
 
+- 2026-09-15 Wagami A A4 shock-advice clarification — **programmer-approved before A4 code**.
+  A shockable Analyze result on A advises a shock but does not enable the guarded Shock key.
+  One Charge press starts the established four-second timed charge; Shock becomes enabled only
+  in `charged` and delivers with one press. The `press_shock` voice cue occurs when A is ready,
+  not while Charge is still required. An advised shock followed by delivery enters the existing
+  CPR sequence; a manual charge retains its existing delivered-state behavior. Power-off
+  cancels the active sequence and resets the lock. This A-only policy leaves X/Z's existing
+  `shock_advised` delivery path unchanged. No separate Cancel key is added in A4.
+
 - 2026-09-15 Wagami A shell-control revision — **functional decisions, Precision Graphite
   shell-controls v3 visual direction, and A3.1 rendered implementation accepted; A4 reserved for handoff**. The programmer approved a vertically
   centered right-shell Analyze → Charge → Shock group, with Power remaining isolated at the
@@ -359,7 +368,7 @@ rendered desktop QA pass. The programmer accepted A3 as done, including its A3.1
 and instructed that A4 be left for a collaborator on another device. This is rendered design
 acceptance, not real-iPad validation or qualified IP clearance.
 
-### A4 — Functional Clinical Core (NOT STARTED; COLLABORATOR HANDOFF)
+### A4 — Functional Clinical Core (COMPLETE 2026-09-15)
 
 The collaborator handoff now includes a device-specific Codex plugin/skill checklist.
 Build Web Apps skills are recommended for React/rendered UI QA; Supabase skills become
@@ -372,6 +381,12 @@ touchscreen energy,
 alarms, and CPR to the existing working state rules and timing. Keep PNI card and defibrillation
 status visible but non-clickable. Preserve conflicting-action guards during navigation. No
 displayed release control may remain inert.
+For A's approved charged-only Shock policy, shockable Analyze advice enables Charge rather
+than Shock. One Charge press starts the existing four-second timed phase, then enables the
+one-press Shock guard. Advised delivery enters CPR; direct manual Charge retains the existing
+delivered state. Power-off cancels and resets the process. The isolated preview remains
+Room-free and emits no live Attempt events; A5 owns task destinations and A6 owns live A
+integration.
 
 #### Testing
 
@@ -381,8 +396,23 @@ Patient mode order, legible shell/screen mode state, and Configure read-only mod
 Patient mode shell-button lock during Analyze/Charge/shock-ready through delivery/cancellation,
 charged-state-only one-press Shock, CPR timing, critical-process navigation, and inactive/disabled
 feedback. Run clinical integration suites and rendered device QA.
+Include A-only charge-after-advice and spoken-cue timing, advised-shock CPR, manual-charge
+parity, cancellation on power-off, and explicit X/Z default-policy regression tests.
 
-### A5 — Six Destinations, Bilingual Interface, and Preferences (NOT STARTED)
+**Milestone complete (2026-09-15):** After programmer approval, the Room-free A preview now
+uses the established defib, NIBP, alarm, audio, and CPR hooks through an A clinical adapter.
+Shell-only actions and touchscreen energy function with the approved A-only lock and
+charged-only Shock policy; A5 launchers remain visibly disabled. Focused A4 tests pass
+(53 across 10 files), TypeScript and affected-file ESLint pass, Webpack production build
+passes, and a rendered 1280×720 preview pass checked control states, Power/mute cycling,
+manual Charge/Shock, cuff feedback, Pediatric label fit, and no visible page overflow.
+The full Windows Vitest run has 1,484 passing, one skipped, and 11 unrelated failures:
+the handoff's three baseline failures, seven operations-script tests requiring Bash not on
+this shell's PATH, and one LF-only config assertion against a CRLF checkout. Real-iPad
+testing remained A6; at the A4 milestone, live A Attempts, six destinations, preferences,
+and localization were still A5/A6 gates.
+
+### A5 — Six Destinations, Bilingual Interface, and Preferences (COMPLETE 2026-09-16)
 
 Implement 12-lead, EtCO2, Medications, Call Info, Vital Log, and Configure. Each destination
 occupies the inner A display while the outer shell and its controls remain visible/operable.
@@ -405,7 +435,28 @@ English paths, spoken prompt selection, locale-neutral event rendering, 12-lead 
 versus contained sheets, persistent outer shell/control guard behavior across every destination,
 alarm visibility, safe navigation, preference persistence/reset, and trainee/Spectator parity.
 
-### A6 — Live Integration, Device QA, and Release Decision (NOT STARTED)
+**Milestone complete (2026-09-16):** After programmer approval, the Room-free A preview now
+opens all six destinations inside the persistent shell. It includes timed 12-lead capture with
+print/transmit subflows, EtCO₂ calibration, medication recording with a nested Event Log, the
+existing Assignment dashboard, honest empty/shared-snapshot Vital Log pagination, and Configure
+with read-only Patient mode plus PNI settings. Typed French-default/English localization covers
+fixed A and contained route-map copy; English recorded prompts and French `fr-CA` speech share
+locale-neutral semantic events. Device language and shell-LED choice persist by supplied
+Room/Attempt scope, and optional semantic A projection state renders the same choice in Spectator
+without enabling live A Attempts. The shell LED pulses once then stays red for an active alarm;
+turning it off never suppresses the on-screen alarm.
+
+The focused A/shared suite passes 114 tests across 24 files. TypeScript, full source ESLint
+(0 errors; 12 established warnings), and the Webpack production build pass. Rendered 1280×720 QA
+covered all six destinations, capture persistence across navigation, nested medication history,
+French/English settings, LED-off persistence, automatic PNI interval selection, and exact
+viewport fit with no page overflow and clean hydration/console behavior. The complete Windows suite has 1,504 passing, one skipped,
+and the same 11 unrelated failures: seven Bash operations-script checks, two Room-ownership
+baselines, one PatientInfoPanel class expectation, and one LF-only config assertion on CRLF.
+Live publication of A projection/snapshots, New Attempt/new Room scope wiring, and real-iPad QA
+remain A6 work.
+
+### A6 — Live Integration, Device QA, and Release Decision (IN PROGRESS — LIVE CODE COMPLETE 2026-09-17)
 
 Only after A's visible controls and screens function, enable Instructor model selection and
 end-to-end Attempts. Verify saved scenarios, Spectator, immutable Evaluation reports, and real
@@ -417,6 +468,41 @@ public availability and any A default change; neither decision is automatic.
 Run focused and complete automated suites, TypeScript, ESLint, production build, database checks,
 real-iPad and desktop workflow QA, side-by-side visual review, and report readback. Record known
 baseline failures separately; finish only after phase evidence and required sign-offs are logged.
+
+**Implementation milestone complete (2026-09-17):** After programmer approval, Wagami A is now
+available through the normal Instructor draft/save/send model flow, Saved scenarios, live trainee
+Attempts, semantic student events, shared five-minute Vital Log, Room/participant/Attempt-scoped
+preferences, version-1 projection publication, Spectator rendering, and Evaluation report model
+readback. The live A surface uses the established monitor controller, defibrillation, NIBP, alarm,
+CPR, dispatch, accepted-BP, and power state instead of a parallel clinical state machine. X and Z
+remain available and X remains the default. A contained Leaflet transition race found during rapid
+Call Info navigation was fixed by disabling map transitions in contained views and stopping map
+activity before teardown.
+
+The A6 focused integration set passes 151 tests across 15 files. TypeScript, full source ESLint
+(0 errors; 12 established warnings), and the Webpack production build pass. The complete Windows
+suite has 1,509 passing, one skipped, and the same 11 unrelated environment/baseline failures:
+seven Bash operations-script checks, two Room-ownership baselines, one PatientInfoPanel class
+expectation, and one LF-only config assertion on this CRLF checkout. Rendered 1280×720 and
+1024×768 desktop QA verified all six destinations, French/English preferences, shell-LED state,
+rapid navigation with no console errors, persistent shell presence, and exact viewport fit.
+The report-widening migration and pgTAP assertions have source-level contract coverage, but this
+machine has no Supabase CLI, PostgreSQL client, or Docker runtime, so the disposable local database
+run remains open; production was not contacted or changed.
+
+A6 remains open for controlled database execution, report readback against that controlled
+environment, real landscape-iPad touch/fit evidence, renewed side-by-side A-versus-X/Z
+distinctness review, qualified IP advice, and the programmer's release/default/public-availability
+decisions. These external gates are not implied by the completed local integration.
+
+**Handoff audit (2026-09-19):** No later phase or external gate was started. A fresh fetch confirmed
+that local HEAD and `origin/wagami-a` both remain at `d03cd3f`; the complete A4–A6 result is still
+present only as 38 modified tracked files plus 17 untracked files in this working tree. A selected
+15-file A6 integration rerun passed 147 tests. The full suite reproduced 1,509 passing, one skipped,
+and the same 11 known Windows/baseline failures; sequential TypeScript, full source ESLint (zero
+errors, 12 warnings), and the Webpack production build passed. The next collaborator must receive
+the exact working tree, inspect the implementation and evidence, and present a concrete plan for
+programmer approval before further code, database, device, release, commit, or push work.
 
 - 2026-09-13 requirement update — compact Saved scenario rows and safe page-scoped report deletion:
   reduce each Saved scenario row from its current two-tier card to an approximately 44–48px compact

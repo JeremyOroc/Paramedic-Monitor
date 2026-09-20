@@ -5,7 +5,7 @@ import { DEFAULT_VITALS } from '@/types/vitals'
 import { WagamiAWaveformWorkspace } from '../WagamiAWaveformWorkspace'
 
 vi.mock('../ECGCanvas', () => ({
-  ECGCanvas: ({ palette, rhythm, connected }: { palette: string; rhythm: string; connected: boolean }) => <div data-testid="a-ecg-mock" data-palette={palette} data-rhythm={rhythm} data-connected={String(connected)} />,
+  ECGCanvas: ({ palette, rhythm, connected, cprOverride }: { palette: string; rhythm: string; connected: boolean; cprOverride: boolean }) => <div data-testid="a-ecg-mock" data-palette={palette} data-rhythm={rhythm} data-connected={String(connected)} data-cpr-override={String(cprOverride)} />,
 }))
 vi.mock('../SecondaryChannel', () => ({
   SecondaryChannel: ({ channel, palette, connected }: { channel: string; palette: string; connected: boolean }) => <div data-testid={`a-${channel}-mock`} data-palette={palette} data-connected={String(connected)} />,
@@ -36,5 +36,10 @@ describe('Wagami A live waveform workspace', () => {
     render(<WagamiAWaveformWorkspace vitals={vitals} active={{ ...active, hr: false }} alarms={[]} />)
 
     expect(screen.getByTestId('a-ecg-mock')).toHaveAttribute('data-connected', 'false')
+  })
+
+  it('passes an active CPR override through the A ECG renderer', () => {
+    render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={[]} cprOverride />)
+    expect(screen.getByTestId('a-ecg-mock')).toHaveAttribute('data-cpr-override', 'true')
   })
 })

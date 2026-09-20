@@ -22,9 +22,13 @@ import { TwelveLeadTransmissionPanel } from '@/components/monitor/TwelveLeadTran
 import { VitalLogModal, VITAL_LOG_ITEMS_PER_PAGE } from '@/components/monitor/VitalLogModal'
 import { VitalsStrip } from '@/components/monitor/VitalsStrip'
 import { WagamiZDevice } from '@/components/monitor/WagamiZDevice'
+import { WagamiADevice } from '@/components/monitor/WagamiADevice'
+import { WagamiAWorkspace } from '@/components/monitor/WagamiAWorkspace'
 import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { ACQUIRE_MS } from '@/hooks/useMonitorController'
+import { useCPRTimer } from '@/hooks/useCPRTimer'
 import type { MonitorProjection } from '@/types/monitorProjection'
+import type { WagamiAWorkspaceController } from '@/hooks/useWagamiAWorkspace'
 
 const noop = () => {}
 
@@ -64,13 +68,115 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
   const controller = projection.controller
   const defib = projection.defib
   const defibProgress = useProjectedDefibProgress(defib)
+  const cprTimer = useCPRTimer(defib.state === 'cpr' ? defib.cprStartTime : null)
   if (projection.model === 'wagamiA') {
-    return (
-      <div className="grid h-full w-full place-items-center bg-wagami-a-screen p-8 text-center text-wagami-a-text">
-        <div className="rounded-xl border border-wagami-a-border bg-wagami-a-surface p-8 font-mono">
-          <strong>WAGAMI A · PREVIEW ONLY</strong>
-          <p className="mt-3 text-sm text-wagami-a-muted-text">Live Attempts are not enabled for this model.</p>
+    const state = projection.wagamiA
+    if (!state) {
+      return (
+        <div className="grid h-full w-full place-items-center bg-wagami-a-screen p-8 text-center text-wagami-a-text">
+          <div className="rounded-xl border border-wagami-a-border bg-wagami-a-surface p-8 font-mono">
+            <strong>WAGAMI A · STATE UNAVAILABLE</strong>
+            <p className="mt-3 text-sm text-wagami-a-muted-text">Waiting for the current device state.</p>
+          </div>
         </div>
+      )
+    }
+    const noopState = () => undefined
+    const projectedController: WagamiAWorkspaceController = {
+      view: state.view,
+      preferences: state.preferences,
+      setLocale: noopState,
+      setShellAlarmLedEnabled: noopState,
+      etco2Status: state.etco2CalibrationStatus,
+      medicationEvents: state.medicationEvents,
+      twelveLead: state.twelveLead,
+      nibpMode: state.nibpMode,
+      nibpAutoInterval: state.nibpAutoInterval,
+      vitalLog: state.vitalLog,
+      workflowBusy: state.twelveLead.captureState === 'acquiring' || state.twelveLead.sentUntil !== null,
+      openTask: noopState,
+      goBack: noopState,
+      setView: noopState,
+      startEtco2Calibration: noopState,
+      cancelEtco2Calibration: noopState,
+      recordMedication: noopState,
+      startTwelveLeadCapture: noopState,
+      closeTwelveLeadResult: noopState,
+      openPrint: noopState,
+      openTransmission: noopState,
+      sendTwelveLead: noopState,
+      closeTwelveLeadOverlay: noopState,
+      setNibpMode: noopState,
+      setNibpAutoInterval: noopState,
+      onDevicePowerOff: noopState,
+    }
+    const display = {
+      vitals: {
+        ...projection.confirmed,
+        hr: projection.vfDisplayedHr,
+        bp_sys: projection.acceptedBp.bp_sys,
+        bp_dia: projection.acceptedBp.bp_dia,
+        etco2: projection.displayedEtco2 ?? projection.confirmed.etco2,
+      },
+      active: {
+        ...projection.confirmedVitalActive,
+        hr: projection.displayedHrActive,
+        bp_sys: projection.acceptedBpActive.bp_sys,
+        bp_dia: projection.acceptedBpActive.bp_dia,
+        etco2: projection.displayedEtco2 !== null,
+      },
+      alarms: projection.alarms,
+      simulated: false,
+    }
+    return (
+      <div className="grid h-full w-full place-items-center overflow-hidden bg-wagami-a-screen">
+        <WagamiADevice
+          display={display}
+          energy={defib.energy}
+          defibState={defib.state}
+          defibProgress={defibProgress}
+          poweredOn={projection.powerState === 'on'}
+          onPowerToggle={noop}
+          patientMode={state.patientMode}
+          muted={controller.isMuted}
+          canAnalyse={defib.canAnalyse}
+          canCharge={defib.canCharge}
+          canShock={defib.canShock}
+          canReadBP={projection.nibp.enabled}
+          canAdjustEnergy={defib.canAdjustEnergy}
+          onAnalyse={noop}
+          onCharge={noop}
+          onShock={noop}
+          onMute={noop}
+          onPatientModeCycle={noop}
+          onReadBP={noop}
+          onEnergyDown={noop}
+          onEnergyUp={noop}
+          onTask={noop}
+          navigationView={state.view}
+          locale={state.preferences.locale}
+          shellAlarmLedEnabled={state.preferences.shellAlarmLedEnabled}
+          screenContent={
+            <WagamiAWorkspace
+              controller={projectedController}
+              display={display}
+              energy={defib.energy}
+              defibState={defib.state}
+              defibProgress={defibProgress}
+              cprTime={defib.state === 'cpr' ? cprTimer.formatted : '--:--'}
+              cprOverride={projection.cprOverrideActive}
+              nibpPhase={projection.nibp.phase}
+              nibpDisplayValue={projection.nibp.displayValue}
+              patientMode={state.patientMode}
+              canAdjustEnergy={defib.canAdjustEnergy}
+              onEnergyDown={noop}
+              onEnergyUp={noop}
+              callerInfo={projection.callerInfo}
+              dispatchRoute={projection.dispatchRoute}
+              displayMode="live"
+            />
+          }
+        />
       </div>
     )
   }

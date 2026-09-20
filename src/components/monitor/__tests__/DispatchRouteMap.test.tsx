@@ -12,6 +12,8 @@ const leaflet = vi.hoisted(() => {
   mapInstance.setView = vi.fn(() => mapInstance)
   mapInstance.fitBounds = vi.fn(() => mapInstance)
   mapInstance.invalidateSize = vi.fn(() => mapInstance)
+  mapInstance.stop = vi.fn(() => mapInstance)
+  mapInstance.off = vi.fn(() => mapInstance)
   mapInstance.remove = vi.fn(() => mapInstance)
   const markerInstance: {
     addTo: ReturnType<typeof vi.fn>
@@ -25,13 +27,14 @@ const leaflet = vi.hoisted(() => {
   markerInstance.addTo.mockImplementation(() => markerInstance)
   markerInstance.bindTooltip.mockImplementation(() => markerInstance)
   markerInstance.on.mockImplementation(() => markerInstance)
-  return { mapInstance, markerInstance }
+  const map = vi.fn(() => mapInstance)
+  return { map, mapInstance, markerInstance }
 })
 
 vi.mock('leaflet', () => {
   const layerGroup = { addTo: vi.fn(() => layerGroup), clearLayers: vi.fn() }
   return {
-    map: vi.fn(() => leaflet.mapInstance),
+    map: leaflet.map,
     tileLayer: vi.fn(() => ({ addTo: vi.fn() })),
     layerGroup: vi.fn(() => layerGroup),
     marker: vi.fn(() => leaflet.markerInstance),
@@ -193,6 +196,18 @@ describe('DispatchRouteMap track toggle', () => {
     expect(screen.queryByTestId('map-track-toggle')).not.toBeInTheDocument()
   })
 
+  it('localizes fixed route status copy and disables contained-map transitions', async () => {
+    render(<DispatchRouteMap route={DEFAULT_DISPATCH_ROUTE} locale="fr" contained />)
+    expect(screen.getAllByText('Adresse en attente')).toHaveLength(2)
+    expect(screen.getByText('État')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(leaflet.map).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ zoomAnimation: false, fadeAnimation: false }),
+      )
+    })
+  })
+
   it('cancels delayed size invalidation when the map unmounts', async () => {
     const { rerender, unmount } = render(<DispatchRouteMap route={readyRoute()} />)
 
@@ -217,6 +232,8 @@ describe('DispatchRouteMap track toggle', () => {
 
     expect(() => vi.runOnlyPendingTimers()).not.toThrow()
     expect(leaflet.mapInstance.invalidateSize).not.toHaveBeenCalled()
+    expect(leaflet.mapInstance.stop).toHaveBeenCalled()
+    expect(leaflet.mapInstance.off).toHaveBeenCalled()
     expect(leaflet.mapInstance.remove).toHaveBeenCalled()
   })
 
@@ -256,11 +273,11 @@ describe('DispatchRouteMap track toggle', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Open full screen map' }))
     await waitFor(() => expect(fullscreen.requestFullscreen).toHaveBeenCalledOnce())
-    expect(screen.getByTestId('dispatch-route-map-shell')).toHaveClass(
+    await waitFor(() => expect(screen.getByTestId('dispatch-route-map-shell')).toHaveClass(
       'fixed',
       'h-[100dvh]',
       'w-[100dvw]',
-    )
+    ))
     expect(screen.getByRole('button', { name: 'Toggle hospital directory' })).toBeDisabled()
 
     fullscreen.simulateNativeExit()

@@ -22,4 +22,14 @@ describe('Wagami A separate defib panel', () => {
     expect(onEnergyUp).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('button', { name: 'Augmenter l’énergie' })).toHaveAttribute('data-navigation-selected', 'true')
   })
+
+  it('explains advised charge and CPR in French without offering touch Shock', () => {
+    const { rerender } = render(<WagamiADefibPanel state="shock_advised" energy={120} progress={0} canAdjustEnergy={false} />)
+    expect(screen.getByRole('status')).toHaveTextContent('CHOC CONSEILLÉ · CHARGE REQUISE')
+    expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('NON PRÊT')
+    expect(screen.queryByRole('button', { name: 'Choc WAGAMI A' })).not.toBeInTheDocument()
+    rerender(<WagamiADefibPanel state="cpr" energy={120} progress={0} canAdjustEnergy cprTime="1:36" />)
+    expect(screen.getByRole('status')).toHaveTextContent('RCP EN COURS')
+    expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('1:36')
+  })
 })

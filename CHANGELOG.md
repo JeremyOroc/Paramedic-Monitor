@@ -5,6 +5,103 @@
 
 ---
 
+## [2026-09-19] [planning/handoff] — Audit and package the uncommitted A4–A6 handoff
+
+- Audited repository instructions, the A0–A6 plan and status ledger, ADRs 0023–0030, domain terms,
+  current implementation/tests, environment tools, and Git/remote state without starting another
+  phase. A fresh fetch confirmed local HEAD and `origin/wagami-a` at `d03cd3f`; all A4/A5/A6 work
+  remains unavailable in its current form: the remote has older versions of 38 modified tracked
+  files and none of the 17 untracked files.
+- Rewrote the collaborator brief around an exact transfer inventory, implementation-based
+  complete/partial/not-started status, superseded decisions, key code paths, environment needs,
+  open evidence and owner gates, and a copy-ready prompt that stops after checkout verification
+  and a proposed plan for programmer approval.
+- Revalidated the local state: a selected 15-file A6 run passed 147 tests; the complete suite
+  reproduced 1,509 passing, one skipped, and the same 11 known Windows/baseline failures.
+  Sequential TypeScript, full source ESLint (zero errors, 12 warnings), and the Webpack production
+  build passed. No database runtime, physical-iPad, release, commit, push, or deployment action
+  was performed.
+
+## [2026-09-17] [realtime/ui/data/testing] — Complete local Wagami A A6 live integration
+
+- Enabled Wagami A in the normal Instructor model selector and Save/Send lifecycle, removed the
+  server preview-only rejection, and verified version-one Saved scenario load/save round-trips.
+  Live A now uses the shared monitor power, defibrillation, NIBP, accepted-BP, alarm, CPR,
+  dispatch, Vital Log, and semantic event state while retaining A's charged-only Shock guard,
+  French/English voice behavior, six destinations, and persistent outer shell. X/Z remain
+  available and X remains the default.
+- Wired A preferences to the live `Room.participant.Attempt` scope, published the current A view,
+  workflows, preferences, medication history, Vital Log, and 12-lead state through the optional
+  semantic projection payload, and updated Spectator to render live accepted values and CPR time.
+  Older A projections without semantic state now wait for current state instead of claiming that
+  live A is unavailable.
+- Kept Evaluation report parsing and immutable capture compatible with A, added contract tests for
+  the staged report constraint migration and its pgTAP assertions, and exercised live A state plus
+  history writes. No production or remote database was contacted. A disposable local pgTAP run
+  remains pending because this machine has no Supabase CLI, PostgreSQL client, or Docker runtime.
+- Added live monitor, Attempt reset, Instructor selection/send, Saved scenario, Spectator, report,
+  and migration coverage. A6 focused integration tests pass 151 tests across 15 files; TypeScript,
+  full source ESLint (0 errors; 12 established warnings), and the Webpack production build pass.
+  The full Windows suite has 1,509 passing, one skipped, and the same 11 unrelated failures.
+- Rendered 1280×720 and 1024×768 QA verified all destinations, localization, LED state, persistent
+  shell, clean rapid transitions, and zero viewport overflow. The stress pass exposed and fixed a
+  contained Leaflet teardown race by disabling contained-map animations and stopping map activity
+  before removal. Real-iPad evidence, controlled database execution/report readback, renewed
+  distinctness review, qualified IP advice, and programmer release decisions remain open A6 gates.
+
+## [2026-09-16] [ui/localization/testing] — Complete Wagami A A5 destinations and preferences
+
+- Added the A workspace controller and all six persistent-shell destinations: timed 12-lead
+  capture with print/transmit subflows, EtCO₂ calibration, Medications with nested Event Log,
+  the contained Assignment dashboard, paginated Vital Log, and Configure with read-only Patient
+  mode and functional manual/automatic PNI settings. Active clinical processes continue across
+  navigation, while Power cancels in-progress volatile workflows and keeps completed calibration
+  and Attempt-scoped preferences consistent with the existing monitor lifecycle.
+- Added typed French-default/English localization across fixed A UI, the contained route map,
+  defibrillation prompts, and shell controls. English retains recorded prompt files; French uses
+  `fr-CA` browser speech before the shared CPR metronome. Medication, calibration, and 12-lead
+  events use locale-neutral semantic kinds and payloads, and Instructor-authored content remains
+  unchanged.
+- Added Room/Attempt-scoped language and shell-LED persistence, a single-pulse/steady active LED
+  treatment, on-screen alarms in every destination, and optional typed A projection state for
+  Spectator parity. LED Off affects only the shell lamp. Live Instructor A selection, Attempt
+  publishing, production migration, and A6 release gates remain disabled.
+- Added controller, component, localization, voice, projection-validation, Spectator, pagination,
+  route-map localization, power-race, and X/Z-regression coverage. The focused A/shared suite
+  passes 114 tests across 24 files; TypeScript, full source ESLint (0 errors; 12 established
+  warnings), and the Webpack build pass. Rendered 1280×720 QA verified all destinations, capture
+  persistence, nested logs, bilingual settings, LED state, PNI interval selection, and no page
+  overflow plus clean preference hydration. Full Windows Vitest has 1,504 passing, one skipped, and the same 11 unrelated
+  environment/baseline failures.
+
+## [2026-09-15] [clinical/testing] — Complete Wagami A A4 clinical core in Room-free preview
+
+- Connected A's shell-only Analyze, Charge, guarded Shock, BP reading, all-cues mute,
+  circular Device Patient mode, Power, and touchscreen energy to established clinical
+  hooks. A-only shock advice now requires one timed Charge before Shock, with the spoken
+  Shock cue at readiness and advised delivery entering CPR; manual Charge and X/Z's
+  default behavior remain intact. Power-off cancels timers/cues and resets the lock.
+- Made NIBP progress, accepted cuff BP, alarm suppression, CPR override/time, defib
+  progress/readiness, and disabled feedback visible on the A display. Kept PNI/status
+  read-only, A5 task tiles gated, and the preview Room-free. Wrapped the Pediatric shell
+  label and exposed the current mode as its accessible description.
+- Tests were added beside every changed feature. The focused set passed 53 tests across
+  10 files; TypeScript, affected-file ESLint, and Webpack production build passed.
+  Rendered 1280×720 QA covered the clinical controls, Charge/Shock, cuff feedback,
+  Power/mute cycling, label fit, and no visible overflow. Full Windows Vitest: 1,484
+  passing, one skipped, 11 unrelated failures (three documented baseline, seven Bash
+  unavailable on PATH, one CRLF config mismatch). Real-iPad and live-A verification
+  remain A6.
+
+## [2026-09-15] [planning/clinical] — Clarify A4 charged-only Shock after Analyze advice
+
+- Before A4 implementation, recorded the programmer-approved A-only sequence: shockable
+  advice requires one Charge press and the existing four-second charge before a one-press
+  Shock; the Shock voice cue waits until readiness. Advised delivery enters CPR, manual
+  charging retains its existing delivered state, and Power-off cancels/reset locks. X/Z's
+  existing shock-advised path remains unchanged. No separate Cancel key or live A Attempt
+  integration is part of A4.
+
 ## [2026-09-15] [planning/handoff] — Add collaborator Codex plugin and skill checklist
 
 - Added device-specific setup guidance and installation checks inside the A4-onward

@@ -1,172 +1,285 @@
-# Wagami A — collaborator handoff for A4 onward
+# Wagami A — A4–A6 working-tree handoff
 
-As of 2026-09-15, the programmer has accepted A3 and its A3.1 shell/navigation amendment as
-done. The current agent must not start A4. A4, A5, and A6 are reserved for a collaborator on
-another device. This is a development handoff, not an IP or release approval.
+**Audit date:** 2026-09-19
 
-## Transfer check first
+**Branch:** `wagami-a`
 
-The local repository is on branch `wagami-a` at committed HEAD `83931fa` (`A3`), **but the
-A3.1 code, tests, v3 concept, ADRs, and these handoff notes are still uncommitted in the
-working tree**. A fresh clone of the remote branch at that HEAD is not an A3.1 checkout.
-Before the collaborator starts, transfer this exact working tree or arrange an approved
-commit/push and have the collaborator fetch it. Confirm the recipient has
-`src/hooks/useWagamiANavigation.ts`, `src/lib/wagamiANavigation.ts`, the `WagamiADevice.tsx`
-right Analyze/Charge/Shock stack, ADRs 0028–0030, and this document. No commit, push,
-production migration, or other cross-device transfer was done by this handoff.
+**Local HEAD and fetched `origin/wagami-a`:** `d03cd3ff526fd21a0b7cfb8b4bb1256fd41ee7bc` (`A3-A3.1`)
+**Purpose:** transfer the verified local state and prepare a later plan. This brief does not
+authorize another implementation phase, a database operation, a release, a commit, or a push.
 
-## Read order and precedence
+## Transfer gate
 
-1. Read repository `AGENTS.md` and the relevant Next 16.3 guide under `node_modules/next/dist/docs/`
-   before writing code. Follow its plan-confirmation, tests, status, and changelog rules.
-2. Read `PLAN.md`'s *Current Requirement Updates* for the 2026-09-15 A amendment, then its
-   A3.1/A4/A5/A6 phase sections. Read `STATUS.md` for current boundaries.
-3. Read [ADRs 0028](../adr/0028-lock-wagami-a-patient-mode-during-defibrillation.md),
-   [0029](../adr/0029-keep-wagami-a-shell-across-secondary-views.md), and
-   [0030](../adr/0030-navigate-only-enabled-wagami-a-inner-actions.md), plus `CONTEXT.md`'s
-   *Device Patient mode* term.
-4. Compare the [approved v3 concept](../design/wagami-a-concepts/precision-graphite-shell-controls-v3.png)
-   to the [actual A3.1 renders and fidelity ledger](../design/wagami-a-concepts/a3-1-rendered-qa.md).
-   The flatter code-native render was accepted as done. No concept bitmap is a shipped UI
-   asset or clinical/iPad acceptance test.
+The remote contains the accepted A0–A3.1 history through `d03cd3f`. The complete A4 clinical
+core, A5 destinations/localization/preferences, A6 live integration, their tests, and the current
+planning/handoff records exist only in this working tree. A fetch on 2026-09-19 confirmed that
+local HEAD and `origin/wagami-a` have zero commits of divergence, but the checkout has **38 modified
+tracked files and 17 untracked files**. The remote has older versions of the 38 tracked files and
+does not contain the 17 untracked files; none of the complete 55-path local state is recoverable
+from the remote alone.
 
-Older A1/v2 design text and the historical A3 baseline describe a left Charge, touch mute,
-clickable PNI card, touch Analyze, and Print/Capture tile. **A3.1 supersedes those decisions.**
-The current six immediate right-dock tiles are 12-lead, EtCO₂, Medications, Call Info,
-Vital Log (`Journal des signes vitaux`), and Configure. X/Z are intentionally preserved.
+Transfer the entire working tree, excluding ignored dependencies, build output, and secrets. In
+particular, do not transfer or commit `.env.local`. A recipient has the complete checkout only when
+`git rev-parse HEAD` returns the hash above and `git status --short` reproduces the inventory below.
+Committed HEAD by itself is insufficient.
 
-## Current code boundary
+## What changed since the previous handoff
 
-- `src/components/monitor/WagamiAPreview.tsx` provides `/?dev=3` without joining a Room.
-  `src/components/monitor/MonitorPage.tsx` selects it for `dev=3`. Power works; A4 clinical
-  and A5 task actions are visibly disabled. Preview data can be simulated and is labeled
-  `PREVIEW`; do not invent Vital Log history.
-- `WagamiADevice.tsx` owns the outer-shell buttons and optional callback/eligibility props:
-  Analyze, Charge, guarded Shock, mute, Patient-mode cycle and lock, BP reading, energy,
-  and task launch. It can retain shell controls around inner secondary content via
-  `screenContent`, `navigationView`, and `secondaryActions`. These are A3.1 affordances,
-  **not** clinical implementation.
-- `WagamiAScreen.tsx` displays fixed FC/SpO₂/PNI/EtCO₂ cards, waveform workspace, six task
-  tiles, and passive defib status. PNI and defib status are read-only. No on-screen Analyze,
-  mute, or BP-reading action exists.
-- `src/lib/wagamiANavigation.ts` fixes row-major task order before energy −/+ and excludes
-  disabled items. `src/hooks/useWagamiANavigation.ts` remembers live selection per inner
-  view, wraps Left/Right, activates once on Enter, and synchronizes touch activation.
-  Do not include shell buttons or read-only cards in its action ring.
-- Wagami A uses `WAGAMI_A_COLORS` in `src/lib/constants.ts` and matching
-  `--color-wagami-a-*` tokens in `src/app/globals.css`. No A component should borrow X/Z
-  colors or copy their shell/key anatomy.
+The handoff committed at `d03cd3f` stopped before A4. Since that committed boundary, the local
+working tree gained the approved A4 clinical core, A5 workspace/localization/preferences, and A6
+live integration, plus their tests and completion records. The 2026-09-17 continuation update
+recorded the local A6 result and its open external gates. This 2026-09-19 audit changed only the
+plan/status/changelog/handoff records, refreshed `origin`, and reran verification; it did not alter
+application or test code or begin a remaining gate.
 
-## Remaining phase gates
-
-**A4 — clinical core, not started.** Connect the A shell callbacks to established state
-rules and timing in `src/lib/defib/defibMachine.ts`, `src/hooks/useDefibSequence.ts`,
-`src/hooks/useNibpReading.ts`, `src/hooks/useAlarm.ts`, and defib audio mechanisms. Wire
-touch energy −/+ without duplicating shell Analyze/Charge/Shock/BP/mute events. Patient
-mode cycles Adult → Pediatric → Neonate → Adult on permitted presses, but becomes visibly
-unavailable from Analyze/Charge start through shock delivery/cancellation, including
-charged/shock-ready states; never silently change pending energy. Preserve CPR, alarms,
-active-process navigation, and the charged-state-only one-press Shock guard. Keep X/Z
-clinical behavior unchanged. Add tests with each component/hook/utility change.
-
-**A5 — destinations/localization, not started.** Build all six inner-display destinations
-while the outer A shell stays present, including inner-screen full-display 12-lead and Call
-Info. Call Info opens the existing trainee Assignment dashboard/caller-information flow;
-the medication Event Log stays inside Medications. Vital Log uses X-parity immutable
-five-elapsed-monitor-minute FC/accepted cuff BP/SpO₂/EtCO₂ snapshots, eight rows per page,
-clearing on power-off/refresh; 12-lead capture/printing remains in 12-lead. Configure shows
-Device Patient mode read-only and has PNI settings, shell LED on/off, and Device language
-French (default) ↔ English. Localize fixed A UI/prompts/report labels, not Instructor-authored
-scenario text. Persist preferences through one Attempt, reset at New Attempt/new Room,
-mirror in Spectator. Test all destinations, focus rings, locale paths, snapshots, and shell
-continuity.
-
-**A6 — live integration/release decision, not started.** Only after visible controls and
-destinations function, enable live Instructor A model selection and Attempts. Verify saved
-scenarios, Spectator and immutable Evaluation reports, and apply/check the A report migration
-in a controlled environment; it has not been applied to production. Run real landscape-iPad
-touch/fit testing and renewed A-versus-X/Z distinctness review. Obtain qualified IP advice
-before public release. The programmer alone decides whether A becomes default and whether
-or when X/Z cease public availability; keep them available meanwhile. No automatic release,
-deletion, migration, or legal-clearance assertion.
-
-## Verification baseline and working agreement
-
-The A3.1 focused run passed 22 tests; TypeScript, affected-file ESLint, and
-`npx next build --webpack` passed. Browser QA at 1024×768 and 1536×1024 found no overflow
-or page errors; Power cycled, and unsupported width showed guidance. Full Vitest after the
-A preview test update reported 1,476 passing, one skipped, and **three unrelated pre-existing
-failures**: two in `src/server/sessions/__tests__/roomOwnership.test.ts` and one in
-`src/components/monitor/__tests__/PatientInfoPanel.test.tsx`. Do not conceal new A failures
-inside that baseline. The real-iPad test remains open.
-
-Before changing any requirement, update `PLAN.md`; write tests alongside every feature;
-record completion in `STATUS.md` and an entry at the top of `CHANGELOG.md`. Present an A4
-implementation plan and resolve ambiguity with the programmer before code, per `AGENTS.md`.
-Gate A5 and A6 separately; do not infer permission for live-system or release changes.
-
-## Codex setup on the collaborator's device
-
-The required starting point is the **complete A3.1 working tree**, this repository's
-`AGENTS.md`, a local Codex task with file/shell access, and the project dependencies from
-`package-lock.json` (`npm ci`). Plugins do not substitute for the missing uncommitted files,
-the A4 plan approval, or tests. Select GPT-5.6 Sol with High reasoning if available.
-
-- For A4/A5 React and rendered UI work, install the **Build Web Apps** plugin if it is
-  available in that Codex installation. Use its `react-best-practices` and
-  `frontend-testing-debugging` skills; use `frontend-app-builder` only for a new A5 visual
-  design task. A browser/computer-use plugin is optional: ordinary Playwright is an
-  acceptable rendered-QA fallback. None is a hard A4 prerequisite.
-- Before A5/A6 Supabase, Realtime, schema, or migration work, install/connect the
-  **Supabase** plugin if available and use its `supabase` skill; add
-  `supabase-postgres-best-practices` when working on queries or schema. Connection and
-  project/database permissions are separate; never paste credentials into a prompt or
-  infer authorization for a production migration.
-- If the collaborator wants the same *design discussion and ADR* workflow, transfer or
-  install the personal `grill-with-docs`, `grilling`, and `domain-modeling` skills
-  separately. They are not checked into this repository and are optional for A4 coding.
-  ImageGen is only relevant if new bitmap concepts are requested. A GitHub plugin is not
-  required for local Git operations.
-
-Check the collaborator's actual Plugins/Skills catalog rather than assuming the current
-machine's installations carry over. Install only missing, relevant items using Codex's
-Plugins UI or CLI, then start a fresh Codex task so installed plugin skills are visible.
-If a recommended plugin is unavailable, report that and use repository conventions,
-built-in coding tools, and Playwright where appropriate; do not treat optional tooling
-as a reason to start A4 without approval.
-
-## Suggested Codex prompt (select GPT-5.6 Sol, High reasoning in the app)
+### Modified tracked files (38)
 
 ```text
-Continue Wagami A in this Paramedic Monitor checkout. A3/A3.1 are accepted as done;
-begin with A4, but do not implement it until you present a concrete A4 plan and I approve
-it, per AGENTS.md. First verify this checkout contains src/hooks/useWagamiANavigation.ts,
-the A3.1 right-shell Analyze/Charge/guarded Shock stack, ADRs 0028–0030, and
-docs/handoff/wagami-a-a4-onward.md. If not, stop: the older A3 commit is insufficient.
-Read AGENTS.md, that handoff brief, current PLAN.md/STATUS.md/CONTEXT.md, A components
-and tests, and the relevant installed Next.js 16.3 docs.
+CHANGELOG.md
+PLAN.md
+STATUS.md
+docs/handoff/wagami-a-a4-onward.md
+src/app/__tests__/adminScenarioLibrary.test.tsx
+src/app/globals.css
+src/components/instructor/DefibrillatorPanel.tsx
+src/components/instructor/SendButton.tsx
+src/components/instructor/SpectatorMonitor.tsx
+src/components/instructor/__tests__/DefibrillatorPanel.test.tsx
+src/components/instructor/__tests__/SendButton.test.tsx
+src/components/instructor/__tests__/SpectatorMonitor.test.tsx
+src/components/monitor/CallerInfoModal.tsx
+src/components/monitor/DispatchRouteMap.tsx
+src/components/monitor/MonitorPage.tsx
+src/components/monitor/WagamiADefibPanel.tsx
+src/components/monitor/WagamiADevice.tsx
+src/components/monitor/WagamiAPreview.tsx
+src/components/monitor/WagamiAScreen.tsx
+src/components/monitor/WagamiATaskDock.tsx
+src/components/monitor/WagamiAVitalCard.tsx
+src/components/monitor/WagamiAWaveformWorkspace.tsx
+src/components/monitor/__tests__/DispatchRouteMap.test.tsx
+src/components/monitor/__tests__/WagamiADefibPanel.test.tsx
+src/components/monitor/__tests__/WagamiADevice.test.tsx
+src/components/monitor/__tests__/WagamiAPreview.test.tsx
+src/components/monitor/__tests__/WagamiAScreen.test.tsx
+src/components/monitor/__tests__/WagamiAVitalCard.test.tsx
+src/components/monitor/__tests__/WagamiAWaveformWorkspace.test.tsx
+src/hooks/__tests__/useDefibSequence.test.ts
+src/hooks/useDefibSequence.ts
+src/lib/audio.ts
+src/lib/defib/__tests__/defibMachine.test.ts
+src/lib/defib/defibMachine.ts
+src/server/sessions/__tests__/evaluationRecord.test.ts
+src/server/sessions/__tests__/monitorProjectionValidation.test.ts
+src/server/sessions/service.ts
+src/types/monitorProjection.ts
+```
 
-On your device, check Codex Plugins/Skills and run npm ci. If available, install Build
-Web Apps for react-best-practices and frontend-testing-debugging (frontend-app-builder
-only if a new A5 visual design is requested). Use browser/computer-use tooling for
-rendered QA if available, otherwise Playwright. Before Supabase/Realtime/database work,
-install/connect Supabase and use its supabase skill, plus supabase-postgres-best-practices
-for queries/schema; credentials and migration authorization are separate. Optional for
-our earlier design-interview/ADR style: separately install or transfer the personal
-grill-with-docs, grilling, and domain-modeling skills. ImageGen and a GitHub plugin are
-not needed for A4. Install only missing relevant capabilities, start a fresh Codex task
-after plugin installation, and report unavailable tools with a workable fallback.
+### Untracked required files (17)
 
-Once A4 is approved, connect A's shell-only clinical controls and touchscreen energy
-to established defib, NIBP, alarm, audio, and CPR rules. Preserve the active-defib Patient
-mode lock, one-press Shock guard, honest disabled states, and X/Z behavior. Add feature
-tests, log requirement changes in PLAN.md and completions in STATUS.md/CHANGELOG.md, and
-report focused/full tests, types, lint, build, and rendered QA separately from the three
-documented unrelated baseline failures.
+```text
+src/components/monitor/WagamiAWorkspace.tsx
+src/components/monitor/__tests__/WagamiALiveMonitor.test.tsx
+src/components/monitor/__tests__/WagamiAWorkspace.test.tsx
+src/hooks/__tests__/useWagamiAClinicalCore.test.ts
+src/hooks/__tests__/useWagamiAPreferences.test.ts
+src/hooks/__tests__/useWagamiAWorkspace.test.ts
+src/hooks/useWagamiAClinicalCore.ts
+src/hooks/useWagamiAPreferences.ts
+src/hooks/useWagamiAWorkspace.ts
+src/lib/__tests__/wagamiALocalization.test.ts
+src/lib/__tests__/wagamiAPatientMode.test.ts
+src/lib/__tests__/wagamiAVoice.test.ts
+src/lib/wagamiALocalization.ts
+src/lib/wagamiAPatientMode.ts
+src/lib/wagamiAVoice.ts
+src/server/reports/__tests__/wagamiAReportMigration.test.ts
+src/types/wagamiA.ts
+```
 
-Gate A5 and A6 with separate plans and my approvals. A5 owns all six inner-display
-destinations, Vital Log, French-default/English-toggle UI, and a persistent outer shell.
-A6 alone owns live A selection, controlled database migration, real-iPad and qualified
-IP review, and my explicit decisions on defaults and X/Z public availability. Do not
-make release, deletion, production migration, or legal-clearance decisions for me.
+## Read order and authority
+
+1. Read `AGENTS.md`. Its plan approval, tests, `PLAN.md`, `STATUS.md`, `CHANGELOG.md`, and
+   local Next.js documentation rules apply before code changes.
+2. Read the Wagami A requirement updates and A0–A6 sections in `PLAN.md`, then the current
+   phase block in `STATUS.md` and the 2026-09-15 through 2026-09-19 `CHANGELOG.md` entries.
+3. Read ADRs 0023–0030 and `CONTEXT.md` definitions for Wagami A, Device Patient mode,
+   Wagami A full-display view, Attempt, projection, and Evaluation record.
+4. Inspect the entire uncommitted diff and the untracked files before trusting a phase label.
+5. Before any later Next.js code work, read the relevant Next 16.3 guide under
+   `node_modules/next/dist/docs/` as required by `AGENTS.md`.
+
+`PLAN.md` is the requirement source, `STATUS.md` is the current state ledger, ADRs explain durable
+choices, and this document describes the transfer boundary. Where old prose describes an earlier
+gate, the newer approved amendment and implemented behavior below take precedence.
+
+## Status based on implementation and verification
+
+### Complete and explicitly accepted
+
+- A0 inventory and original-asset policy; A1 Precision Graphite concept; A2 contracts and
+  Room-free preview; A3 original shell/display; and A3.1 shell/navigation are committed at or
+  before `d03cd3f`. A3.1's rendered code-native direction was explicitly accepted.
+- The repository record does not show a separate post-implementation acceptance of the combined
+  A4–A6 working tree. Approval of each implementation plan authorized the work but is not a
+  release or final-product acceptance.
+
+### Implemented and locally verified under approved plans
+
+- A4's approved clinical behavior is implemented locally: shell-only Analyze, Charge, guarded
+  Shock, BP, mute, and Patient mode; touchscreen energy; alarms; CPR; power cancellation; and the
+  A-only rule that shock advice still requires a timed Charge before Shock becomes available.
+- A5 is implemented locally: persistent-shell 12-lead, EtCO₂, Medications/Event Log, Call Info,
+  Vital Log, Configure/PNI, French-default/English fixed copy and prompts, semantic events, and
+  scoped language/shell-LED preferences.
+
+- A6 live code is implemented locally. Instructor model selection, Save/Send, Saved scenario
+  round-trip, live Attempts, shared clinical state, semantic Scenario-device events, five-minute
+  Vital Log sampling, Room/participant/Attempt preference scope, version-one projection,
+  Spectator rendering, and Evaluation model serialization/readback paths include Wagami A.
+- X and Z remain selectable. X remains the default. No public-availability or default decision
+  was made.
+- Desktop rendered QA is complete for the tested 1280×720 and 1024×768 viewports. The rapid
+  contained Call Info loop found a Leaflet teardown race; the local fix stops map activity before
+  removal and disables contained-map transitions. The clean rerun had no console errors or page
+  overflow.
+
+### Partial or awaiting evidence
+
+- `supabase/migrations/20260915160205_widen_wagami_a_report_model.sql` and the existing pgTAP SQL
+  recognize `wagamiA`; source-level migration contract tests pass. The migration has not been run
+  against a disposable or controlled PostgreSQL/Supabase environment, and report readback has not
+  been demonstrated against such a database.
+- Desktop emulation does not satisfy the required physical landscape-iPad touch/fit gate.
+- The A-versus-X/Z distinctness review must be renewed against the final A3.1/A5/A6 surface.
+- Qualified Canadian IP advice has not been obtained or recorded. Internal design review is not
+  legal clearance.
+
+### Not started or not authorized
+
+- No production migration, deployment, or release action has started.
+- No decision has been made to make A the default or to remove/restrict X or Z.
+- No post-A6 implementation phase is approved. The next agent must propose a concrete plan and
+  wait for the programmer's approval before changing code or acting on an external gate.
+- No commit or push contains A4, A5, A6, or this current handoff state.
+
+## Superseded decisions and still-active records
+
+- ADR 0027's preview-only restriction was a construction-stage gate. The approved A6 work now
+  enables A in live Attempts while retaining `/?dev=3` as the visibly labeled Room-free preview.
+- ADR 0024's original launcher list ended with Print/Capture. A3.1 replaced that permanent tile
+  with Vital Log; 12-lead capture/print/transmit remains inside the 12-lead workflow.
+- The A1/v2 clickable PNI card and inner-screen mute/Analyze controls are superseded. BP reading,
+  all-cues mute, and Analyze are shell-only; the PNI card and defib panel are read-only displays.
+- The original A3 control positions are superseded by A3.1: left mute/Patient mode/BP, isolated
+  upper-right Power, right Analyze/Charge/guarded Shock, and lower Left/Enter/Right navigation.
+- ADR 0023 remains active: A is additive and does not retire X/Z. ADR 0025 remains active except
+  for the explicitly approved A-only charged-after-advice refinement. ADRs 0026 and 0028–0030
+  remain active.
+
+## Key implementation map
+
+| Area | Files and behavior |
+|---|---|
+| Live integration | `src/components/monitor/MonitorPage.tsx` selects A from confirmed Attempt state, shares controller/defib/NIBP/alarm/CPR/dispatch state, scopes preferences, emits events, samples Vital Log, and publishes `MonitorProjection.wagamiA`. |
+| A clinical adapter | `src/hooks/useWagamiAClinicalCore.ts`, `src/hooks/useDefibSequence.ts`, `src/lib/defib/defibMachine.ts`, and `src/lib/audio.ts` implement A's charged-only Shock policy and locale-aware prompts without changing X/Z defaults. |
+| Device and display | `WagamiADevice.tsx`, `WagamiAScreen.tsx`, `WagamiADefibPanel.tsx`, `WagamiATaskDock.tsx`, `WagamiAVitalCard.tsx`, and `WagamiAWaveformWorkspace.tsx` implement the persistent Precision Graphite shell/display and guarded navigation. |
+| Destinations | `src/hooks/useWagamiAWorkspace.ts` and `src/components/monitor/WagamiAWorkspace.tsx` own the six routes, workflow state, semantic events, Vital Log, PNI configuration, and power cleanup. |
+| Preferences and language | `useWagamiAPreferences.ts`, `wagamiALocalization.ts`, `wagamiAVoice.ts`, and `src/types/wagamiA.ts` provide Attempt-scoped French/English and shell-LED behavior. |
+| Instructor and Spectator | `DefibrillatorPanel.tsx`, `SendButton.tsx`, `SpectatorMonitor.tsx`, and `adminScenarioLibrary.test.tsx` cover selection, normal Save/Send, saved scenarios, and live read-only projection. |
+| Server/report contracts | `src/server/sessions/service.ts`, `src/types/monitorProjection.ts`, report/session tests, the staged migration, and pgTAP assertions accept A while retaining legacy projection compatibility. |
+| Contained Call Info | `CallerInfoModal.tsx` and `DispatchRouteMap.tsx` provide localized contained assignment/map UI and the teardown-race fix. |
+
+## Exact verification record
+
+Fresh handoff checks on 2026-09-19:
+
+- Selected A6 integration command: **15 test files, 147 tests passed**.
+
+```powershell
+npx vitest run src/app/__tests__/adminScenarioLibrary.test.tsx src/components/instructor/__tests__/DefibrillatorPanel.test.tsx src/components/instructor/__tests__/SendButton.test.tsx src/components/instructor/__tests__/SpectatorMonitor.test.tsx src/components/monitor/__tests__/DispatchRouteMap.test.tsx src/components/monitor/__tests__/WagamiALiveMonitor.test.tsx src/components/monitor/__tests__/WagamiAWorkspace.test.tsx src/hooks/__tests__/useDefibSequence.test.ts src/hooks/__tests__/useWagamiAClinicalCore.test.ts src/hooks/__tests__/useWagamiAPreferences.test.ts src/hooks/__tests__/useWagamiAWorkspace.test.ts src/lib/defib/__tests__/defibMachine.test.ts src/server/sessions/__tests__/evaluationRecord.test.ts src/server/sessions/__tests__/monitorProjectionValidation.test.ts src/server/reports/__tests__/wagamiAReportMigration.test.ts
+```
+
+- Full `npx vitest run`: **190 files total; 185 passed, 4 failed, 1 skipped; 1,509 tests
+  passed, 11 failed, 1 skipped**.
+- `npx tsc --noEmit`: passed when run after the build completed. A deliberately concurrent first
+  invocation collided with Next regenerating `.next/types` and produced transient TS6053 missing
+  generated-file errors; the sequential result is the valid type check.
+- `npx eslint src`: passed with **0 errors and 12 warnings**. The warnings are the established
+  `<img>`, unused-symbol, and `MonitorPage` hook-dependency warnings recorded in `STATUS.md`.
+- `npm run build -- --webpack`: passed under Next.js 16.3.0.
+- `git diff --check`: passed after the 2026-09-19 documentation update.
+
+The 11 full-suite failures reproduce the existing Windows/baseline set:
+
+- 7 `src/operations/__tests__/operationsScripts.test.ts` failures because `bash` is absent.
+- 2 `src/server/sessions/__tests__/roomOwnership.test.ts` behavioral baseline failures.
+- 1 `src/components/monitor/__tests__/PatientInfoPanel.test.tsx` class-name expectation failure.
+- 1 `src/server/accounts/__tests__/inviteOnlyConfig.test.ts` LF-only regex failure against this
+  CRLF checkout.
+
+No Wagami A test failed. The last rendered browser pass was 2026-09-17, at 1280×720 and 1024×768;
+it exercised all six destinations, French/English, LED Off, persistent shell navigation, rapid
+Call Info transitions, exact viewport fit, and clean console behavior. It was not a physical-iPad
+test. No database runtime test was performed.
+
+## Environment and tools
+
+This checkout was audited with Node `v24.14.0`, npm `11.9.0`, Git, installed dependencies, and the
+bundled Next 16.3 documentation. Recreate dependencies from `package-lock.json` with `npm ci`.
+Live application work needs locally supplied `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`; keep them out of Git.
+
+This machine has no `bash`, Supabase CLI, Docker, `psql`, or `pg_prove`. A later authorized
+database-validation plan therefore needs an explicitly disposable/controlled Supabase or
+PostgreSQL target plus compatible migration and pgTAP tooling. Physical-device validation needs
+the supported landscape iPad and a way to open the locally served application. Browser automation
+can supplement that device pass but cannot replace it. Plugins are optional; availability does
+not grant database, deployment, or release authorization.
+
+## Open decisions for the programmer
+
+1. How the 55-file working tree will be transferred: an explicitly authorized commit/push,
+   another exact filesystem transfer, or a separately approved patch/archive workflow.
+2. Whether the locally verified A4–A6 result is accepted as the development baseline after the
+   recipient verifies the complete checkout.
+3. Whether to authorize a disposable/controlled database plan for migration, pgTAP, and report
+   readback. Production is outside the current authorization.
+4. When and where to run the physical landscape-iPad QA and final side-by-side distinctness review.
+5. How to obtain and record qualified IP advice.
+6. After those gates, whether A should be released or become the default, and whether X/Z public
+   availability should change.
+
+## Copy-ready prompt for the next agent
+
+```text
+Prepare to continue Wagami A in this Paramedic Monitor checkout, but do not implement anything yet.
+This is a verification-and-plan task only. First read AGENTS.md and
+docs/handoff/wagami-a-a4-onward.md, then inspect PLAN.md, STATUS.md, CHANGELOG.md, CONTEXT.md,
+ADRs 0023–0030, the actual code/tests, and the complete Git diff. Read the relevant installed
+Next.js 16.3 documentation before proposing any later Next.js change.
+
+Verify the checkout before relying on the handoff. Branch wagami-a must have local HEAD and the
+freshly fetched origin/wagami-a at d03cd3ff526fd21a0b7cfb8b4bb1256fd41ee7bc, with zero commit
+divergence plus exactly 38 modified tracked files and 17 untracked files listed in the handoff.
+Confirm at minimum that src/hooks/useWagamiAClinicalCore.ts,
+src/hooks/useWagamiAWorkspace.ts, src/components/monitor/WagamiAWorkspace.tsx,
+src/components/monitor/__tests__/WagamiALiveMonitor.test.tsx,
+src/server/reports/__tests__/wagamiAReportMigration.test.ts, and ADRs 0028–0030 exist. If the hash,
+status counts, inventory, or required files differ, stop and tell me exactly what is missing;
+remote commit d03cd3f alone contains only A0–A3.1 and is insufficient.
+
+Treat A4, A5, and the A6 live code as locally implemented and tested under approved plans, while
+independently checking those claims against the code; do not infer post-implementation or release
+acceptance. Keep the remaining A6 items separate: controlled database
+migration/pgTAP/report readback, physical landscape-iPad QA, final A-versus-X/Z distinctness review,
+qualified IP advice, and my release/default/X/Z-availability decisions. Note that ADR 0027's
+preview-only restriction and ADR 0024's Print/Capture launcher are superseded as described in the
+handoff. X/Z remain available and X remains the default.
+
+After the audit, present a concrete plan for my approval. Identify the exact scope, tests,
+environment, database/device access, risks, documentation updates, and decision points. Wait for
+my explicit approval before changing code, running a migration, using a remote database, performing
+release work, committing, or pushing. Do not deploy, alter production data, change defaults or
+public availability, delete X/Z, or claim legal clearance.
 ```

@@ -39,4 +39,13 @@ describe('Wagami A fixed live display', () => {
     expect(screen.getByText('DONNÉES CONFIRMÉES', { exact: false })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('200')
   })
+
+  it('shows active cuff, charge and CPR states without another touch Analyze or BP action', () => {
+    render(<WagamiAScreen display={display} energy={120} defibState="charging" defibProgress={0.5} nibpPhase="counting" nibpDisplayValue={72} cprTime="1:42" />)
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('Mesure en cours · 72')
+    expect(screen.getByRole('status')).toHaveTextContent('CHARGE EN COURS')
+    expect(screen.getByRole('progressbar', { name: 'Charge progress' })).toHaveValue(50)
+    expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('1:42')
+    expect(screen.queryByRole('button', { name: 'Analyser WAGAMI A' })).not.toBeInTheDocument()
+  })
 })

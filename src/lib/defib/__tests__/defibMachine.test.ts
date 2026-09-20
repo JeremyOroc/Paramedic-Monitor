@@ -102,6 +102,11 @@ describe('chargeTransition', () => {
       expect(chargeTransition(s)).toBeNull()
     }
   })
+
+  it('charges directly after shock advice only under A policy', () => {
+    expect(chargeTransition('shock_advised')).toBeNull()
+    expect(chargeTransition('shock_advised', true)).toBe('charging')
+  })
 })
 
 describe('shockTransition', () => {

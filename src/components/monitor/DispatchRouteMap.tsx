@@ -14,6 +14,7 @@ import { hospitalDisplayPosition, RECEIVING_HOSPITALS } from '@/lib/receivingHos
 import { cn } from '@/lib/utils'
 import type { DispatchRoute, LatLng } from '@/types/dispatchRoute'
 import type { HospitalMapState } from '@/types/receivingHospital'
+import type { WagamiALocale } from '@/types/wagamiA'
 
 type DispatchRouteMapProps = {
   route: DispatchRoute
@@ -26,7 +27,29 @@ type DispatchRouteMapProps = {
   onCloseDirectory?: () => void
   onFullscreenChange?: (fullscreen: boolean) => void
   onSelectHospital?: (hospitalId: string) => void
+  locale?: WagamiALocale
 }
+
+const MAP_COPY = {
+  en: {
+    loadingRoute: 'Loading route', routeUnavailable: 'Route unavailable', atHospital: 'At hospital',
+    transporting: 'Transporting', routeReady: 'Route ready', onScene: 'On scene', enRoute: 'En route',
+    awaitingAddress: 'Awaiting address', tracking: 'Tracking', trackUnit: 'Track unit', distance: 'Distance',
+    status: 'Status', toggleTracking: 'Toggle unit tracking', toggleHospital: 'Toggle hospital directory',
+    hospitalNeedsCoordinates: 'Hospital directory requires incident coordinates', openMap: 'Open full screen map',
+    closeMap: 'Exit full screen map', minimize: 'Minimize', leaveFullscreen: 'Exit full screen to track the unit',
+    leaveDirectory: 'Use Minimize to leave the full screen hospital directory',
+  },
+  fr: {
+    loadingRoute: 'Chargement de l’itinéraire', routeUnavailable: 'Itinéraire indisponible', atHospital: 'À l’hôpital',
+    transporting: 'Transport en cours', routeReady: 'Itinéraire prêt', onScene: 'Sur les lieux', enRoute: 'En route',
+    awaitingAddress: 'Adresse en attente', tracking: 'Suivi actif', trackUnit: 'Suivre l’unité', distance: 'Distance',
+    status: 'État', toggleTracking: 'Basculer le suivi de l’unité', toggleHospital: 'Basculer le répertoire des hôpitaux',
+    hospitalNeedsCoordinates: 'Le répertoire des hôpitaux exige les coordonnées de l’incident', openMap: 'Ouvrir la carte plein écran',
+    closeMap: 'Fermer la carte plein écran', minimize: 'Réduire', leaveFullscreen: 'Quittez le plein écran pour suivre l’unité',
+    leaveDirectory: 'Utilisez Réduire pour quitter le répertoire des hôpitaux en plein écran',
+  },
+} as const
 
 const FOLLOW_ZOOM = 16
 
@@ -69,7 +92,9 @@ export function DispatchRouteMap({
   onCloseDirectory,
   onFullscreenChange,
   onSelectHospital,
+  locale = 'en',
 }: DispatchRouteMapProps) {
+  const copy = MAP_COPY[locale]
   const rootRef = useRef<HTMLDivElement | null>(null)
   const fullscreenButtonRef = useRef<HTMLButtonElement | null>(null)
   const nativeFullscreenActiveRef = useRef(false)
@@ -174,6 +199,10 @@ export function DispatchRouteMap({
           doubleClickZoom: true,
           boxZoom: true,
           keyboard: true,
+          // Contained task views can be opened and closed in rapid succession.
+          // Avoid leaving a CSS zoom transition queued against a removed map pane.
+          zoomAnimation: !contained,
+          fadeAnimation: !contained,
         }).setView([45.4068, -73.9412], 12)
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -191,7 +220,10 @@ export function DispatchRouteMap({
     return () => {
       disposed = true
       if (invalidateTimerRef.current !== null) window.clearTimeout(invalidateTimerRef.current)
-      mapRef.current?.remove()
+      const map = mapRef.current
+      map?.stop()
+      map?.off()
+      map?.remove()
       mapRef.current = null
       routeLayerRef.current = null
       markerLayerRef.current = null
@@ -199,7 +231,7 @@ export function DispatchRouteMap({
       leafletRef.current = null
       fittedRouteKeyRef.current = ''
     }
-  }, [])
+  }, [contained])
 
   useEffect(() => {
     if (route.status !== 'ready') return
@@ -327,20 +359,20 @@ export function DispatchRouteMap({
   }, [atHospital, fullscreen, hospitalMap, hospitalMode, onSelectHospital, ready, readOnly, route, trackMode, unitPosition])
 
   const statusText = route.status === 'loading'
-    ? 'Loading route'
+    ? copy.loadingRoute
     : route.status === 'failed'
-      ? route.error || 'Route unavailable'
+      ? route.error || copy.routeUnavailable
       : route.status === 'ready'
         ? hospitalMap?.routeKind === 'transport'
           ? progress >= 1
-            ? 'At hospital'
+            ? copy.atHospital
             : transported && route.startedAt
-              ? 'Transporting'
-              : 'Route ready'
+              ? copy.transporting
+              : copy.routeReady
           : progress >= 1
-            ? 'On scene'
-            : 'En route'
-        : 'Awaiting address'
+            ? copy.onScene
+            : copy.enRoute
+        : copy.awaitingAddress
 
   return (
     <div
@@ -374,8 +406,8 @@ export function DispatchRouteMap({
               type="button"
               onClick={toggleTrackMode}
               disabled={fullscreen || readOnly}
-              title={fullscreen ? 'Exit full screen to track the unit' : undefined}
-              aria-label="Toggle unit tracking"
+              title={fullscreen ? copy.leaveFullscreen : undefined}
+              aria-label={copy.toggleTracking}
               aria-pressed={trackMode === 'follow'}
               data-testid="map-track-toggle"
               className={cn(
@@ -386,7 +418,7 @@ export function DispatchRouteMap({
                 'disabled:cursor-not-allowed disabled:opacity-45',
               )}
             >
-              {trackMode === 'follow' ? 'Tracking' : 'Track unit'}
+              {trackMode === 'follow' ? copy.tracking : copy.trackUnit}
             </button>
           )}
           {hospitalMap && (
@@ -396,12 +428,12 @@ export function DispatchRouteMap({
               disabled={fullscreen || !route.destination || readOnly}
               title={
                 fullscreen
-                  ? 'Use Minimize to leave the full screen hospital directory'
+                  ? copy.leaveDirectory
                   : !route.destination
-                    ? 'Hospital directory requires incident coordinates'
+                    ? copy.hospitalNeedsCoordinates
                     : undefined
               }
-              aria-label="Toggle hospital directory"
+              aria-label={copy.toggleHospital}
               aria-pressed={hospitalMode}
               data-testid="map-hospital-toggle"
               className={cn(
@@ -420,7 +452,7 @@ export function DispatchRouteMap({
               type="button"
               onClick={() => void toggleFullscreen()}
               disabled={readOnly}
-              aria-label={fullscreen ? 'Exit full screen map' : 'Open full screen map'}
+              aria-label={fullscreen ? copy.closeMap : copy.openMap}
               aria-pressed={fullscreen}
               data-testid="map-fullscreen-toggle"
               className={cn(
@@ -431,7 +463,7 @@ export function DispatchRouteMap({
               )}
             >
               <FullscreenIcon collapse={fullscreen} />
-              {fullscreen && !contained && <span>Minimize</span>}
+              {fullscreen && !contained && <span>{copy.minimize}</span>}
             </button>
           )}
           {route.status !== 'ready' && (
@@ -444,7 +476,7 @@ export function DispatchRouteMap({
         </div>
         <div className="grid shrink-0 grid-cols-3 border-t border-neutral-700 bg-black/25">
           <div className="px-3 py-2">
-            <p className="text-[10px] font-black uppercase text-dispatch-blue">Distance</p>
+            <p className="text-[10px] font-black uppercase text-dispatch-blue">{copy.distance}</p>
             <p className="text-sm font-black text-white">{formatDistance(route.distanceMeters)}</p>
           </div>
           <div className="border-l border-neutral-700 px-3 py-2">
@@ -454,7 +486,7 @@ export function DispatchRouteMap({
             </p>
           </div>
           <div className="border-l border-neutral-700 px-3 py-2">
-            <p className="text-[10px] font-black uppercase text-dispatch-blue">Status</p>
+            <p className="text-[10px] font-black uppercase text-dispatch-blue">{copy.status}</p>
             <p className="truncate text-sm font-black uppercase text-dispatch-green">
               {statusText}
             </p>

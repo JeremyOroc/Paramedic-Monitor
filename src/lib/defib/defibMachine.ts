@@ -87,8 +87,12 @@ export function energyDown(state: EnergyState, patientMode: PatientMode): Energy
 
 // --- Button transitions ------------------------------------------------------
 
-/** CHARGE press: 'charging' starts the timed charge, 'charge_prompt' arms it, null ignores. */
-export function chargeTransition(state: DefibState): 'charging' | 'charge_prompt' | null {
+/** CHARGE press: A advice starts a timed charge; the default X/Z policy is unchanged. */
+export function chargeTransition(
+  state: DefibState,
+  shockRequiresCharge = false,
+): 'charging' | 'charge_prompt' | null {
+  if (shockRequiresCharge && state === 'shock_advised') return 'charging'
   if (state === 'charge_prompt') return 'charging'
   if (
     state === 'cpr' ||

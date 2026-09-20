@@ -17,4 +17,10 @@ describe('Wagami A vital cards', () => {
     expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('118/76')
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
+
+  it('shows the cuff progress detail without turning it into a second action', () => {
+    render(<WagamiAVitalCard channel="pni" label="PNI" value="118/76" unit="mmHg" detail="Mesure en cours · 72" />)
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('Mesure en cours · 72')
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
 })

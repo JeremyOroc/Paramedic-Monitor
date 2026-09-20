@@ -27,7 +27,7 @@ describe('Wagami A approved v3 shell controls', () => {
     expect(shell).toContainElement(screen.getByRole('button', { name: 'Couper tous les sons' }))
     expect(shell).toContainElement(screen.getByRole('button', { name: 'Changer le mode patient' }))
     expect(shell).toContainElement(screen.getByRole('button', { name: 'Mesurer la pression artérielle' }))
-    expect(screen.getByRole('navigation', { name: 'Navigation physique WAGAMI A' })).toContainElement(screen.getByRole('button', { name: 'Entrée' }))
+    expect(screen.getByRole('navigation', { name: 'Navigation physique Wagami A' })).toContainElement(screen.getByRole('button', { name: 'Entrée' }))
     const right = screen.getByLabelText('Wagami A right clinical shell controls')
     expect(right.querySelectorAll('button')).toHaveLength(3)
     expect(Array.from(right.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'))).toEqual(['Analyser WAGAMI A', 'Charge WAGAMI A', 'Choc WAGAMI A'])
@@ -59,6 +59,7 @@ describe('Wagami A approved v3 shell controls', () => {
     const onAnalyse = vi.fn()
     const { rerender } = render(<WagamiADevice display={display} energy={120} poweredOn onPowerToggle={() => {}} patientMode="pediatric" patientModeLocked onPatientModeCycle={onPatientModeCycle} canAnalyse onAnalyse={onAnalyse} navigationView="callInfo" secondaryActions={[{ id: 'back', enabled: true, activate: vi.fn() }]} screenContent={<div data-testid="secondary-view">Info appel</div>} />)
     expect(screen.getByRole('button', { name: 'Changer le mode patient' })).toHaveTextContent('PÉDIATRIQUE')
+    expect(screen.getByRole('button', { name: 'Changer le mode patient' })).toHaveAccessibleDescription('PÉDIATRIQUE')
     expect(screen.getByRole('button', { name: 'Changer le mode patient' })).toBeDisabled()
     expect(screen.getByTestId('secondary-view')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Analyser WAGAMI A' }))
@@ -74,8 +75,26 @@ describe('Wagami A approved v3 shell controls', () => {
     const { rerender } = render(<WagamiADevice display={{ ...display, alarms: ['hr'] }} energy={120} poweredOn onPowerToggle={() => {}} />)
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-alarming', 'true')
 
+    rerender(<WagamiADevice display={{ ...display, alarms: ['hr'] }} energy={120} poweredOn onPowerToggle={() => {}} shellAlarmLedEnabled={false} />)
+    expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'false')
+    expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-alarming', 'false')
+
     rerender(<WagamiADevice display={{ ...display, alarms: ['hr'] }} energy={120} poweredOn={false} onPowerToggle={() => {}} />)
     expect(screen.getByTestId('wagami-a-screen-off')).toHaveTextContent('ALIMENTATION COUPÉE')
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-alarming', 'false')
+  })
+
+  it('labels the shell BP action as cancellation during a cuff cycle', () => {
+    const onReadBP = vi.fn()
+    render(<WagamiADevice display={display} energy={120} poweredOn onPowerToggle={() => {}} canReadBP onReadBP={onReadBP} bpReadingActive />)
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler la mesure de pression artérielle' }))
+    expect(onReadBP).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: 'Mesurer la pression artérielle' })).not.toBeInTheDocument()
+  })
+
+  it('localizes the physical navigation labels in English', () => {
+    render(<WagamiADevice display={display} energy={120} poweredOn onPowerToggle={() => {}} locale="en" onTask={() => {}} />)
+    expect(screen.getByRole('navigation', { name: 'Wagami A physical navigation' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Left' })).toBeEnabled()
   })
 })

@@ -195,14 +195,20 @@ describe('latest trainee monitor projection (PLAN 17)', () => {
 })
 
 describe('updateSessionState — instructor-side history (PLAN 12b)', () => {
-  it('rejects Wagami A before writing live state or Attempt history', async () => {
-    const stub = withResolver()
+  it('writes Wagami A to live state and immutable Attempt history', async () => {
+    const state = { defibrillatorModelConfirmed: 'wagamiA' }
+    const stub = withResolver({
+      session_state: (op) =>
+        op.method === 'upsert'
+          ? { data: { state: op.payload?.state, version: 8, updated_at: 'now' } }
+          : { data: { version: 7 } },
+    })
 
-    await expect(updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, {
-      defibrillatorModelConfirmed: 'wagamiA',
-    })).rejects.toMatchObject({ status: 400 })
-    expect(stub.opsFor('session_state')).toHaveLength(0)
-    expect(stub.opsFor('session_state_history')).toHaveLength(0)
+    await updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, state)
+
+    const upsert = stub.opsFor('session_state').find((op) => op.method === 'upsert')
+    expect(upsert?.payload?.state).toEqual(state)
+    expect(stub.opsFor('session_state_history')[0]?.payload?.state).toEqual(state)
   })
 
   it('appends a history row carrying the attempt, version, and state', async () => {
