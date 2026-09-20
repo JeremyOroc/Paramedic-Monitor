@@ -6,6 +6,11 @@
 ---
 
 ## Current Phase
+**Wagami A/main merge reconciliation — COMPLETE (2026-09-20).** Both independent documentation
+histories and all three shared Monitor hooks are retained. The merged state passes 511 focused tests
+across 16 files, TypeScript, full source ESLint with zero errors and 12 existing warnings, and the
+Next.js 16.3 Webpack production build.
+
 **Wagami A phased roadmap — ACCEPTED; A0 inventory — COMPLETE; A1 Precision Graphite concept gate — COMPLETE; A2 local implementation — COMPLETE; A3 original shell/live display — COMPLETE (2026-09-15).**
 **A3.1 shell/navigation — COMPLETE AND PROGRAMMER-ACCEPTED; A4 clinical core — COMPLETE
 (2026-09-15); A5 destinations/localization/preferences — COMPLETE (2026-09-16); A6 live
@@ -161,6 +166,48 @@ are documented, while X/Z assets remain untouched. Tracked ZOLL reference photos
 planning references pending an explicit public-source-distribution decision. The accepted screen
 orders FC/SpO2/PNI/EtCO2 above large ECG and smaller SpO2/EtCO2 traces, with a right-side defib
 status pane rather than a right-side vital stack.
+**Timer-box countdown presentation — COMPLETE (2026-09-19).**
+Muted `MIN`/`SEC` placeholders now sit inside empty Trend Timer boxes and disappear for numeric values.
+The boxes become read-only and display the live remaining time in amber while running, then editable
+green zeroes at completion; cancelled remaining values use alarm red. The separate visible status/
+countdown string is removed while an `aria-live` status remains. All 25 focused tests, TypeScript,
+ESLint with zero errors and the same 12 unrelated warnings, and the Webpack production build pass.
+Rendered QA confirmed the placeholder, amber countdown, and green completion states without clipping.
+
+**Compact EtCO2/Trend timer row — COMPLETE (2026-09-19).**
+The Instructor EtCO2 calibration indicator and complete Trend Timer now share one non-wrapping row
+beneath the numeric vitals. The row precedes CPR/timed-vitals utilities when stacked and spans both
+Vitals columns at desktop widths. Rendered QA measured the indicator and timer at the same 396px Y
+coordinate in one 28px-high, 565px-wide row with no clipping. All 22 focused tests, TypeScript,
+ESLint with zero errors and the same 12 unrelated warnings, and the Webpack production build pass.
+
+**Instructor vital Trend and ECG-first layout — COMPLETE (2026-09-19).**
+ECG now spans the Instructor Vitals panel directly below its heading and above FC. Every numeric vital
+has an absolute Trend target between its current value and On/Off control, with one shared dispatch-
+format minute/second timer. Save stages the configuration and Send consumes it into a timestamp-derived
+linear progression; current values update once per second and every participating field reaches its exact
+target at the deadline. Replacement, direct-value cancellation, Off-channel progression, independent BP,
+NIBP sampling, CPR display priority, Automatic FC locking, reset/New Attempt, hydration, Room-device
+synchronization, and Saved-scenario preparation follow the documented contract. Evaluation suppresses a
+Trend-only start and publishes one idempotent completion row with final values. All 442 focused tests,
+TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the Webpack production build
+pass. The complete suite records 1,468 passing tests and one skip with the same three established unrelated
+failures. Rendered 1280×720 QA confirmed the layout and a live FC 120→150 Trend completed at `00:00`.
+The default Turbopack build remains environment-blocked by its worker-port restriction.
+
+**Start-locked dispatch countdown and hospital preview restoration — COMPLETE (2026-09-19).**
+The staged countdown remains editable through Save and Send, while **Start / Dispatch** now snapshots the
+last sent duration, stamps the response/route clocks, and persists an authoritative lock that UI controls,
+direct store actions, scenario loads, hydration, and later Sends cannot bypass. Active caller, vital,
+Incident-scene, Unit-origin, and route updates retain the run id, absolute countdown, Acknowledge, Arrival,
+and Transport milestones. The configured duration remains visible in disabled inputs beside a separate
+live countdown, including a locked `00:00`; New Attempt/reset establishes the next editable cycle. A
+pre-Transport Receiving-hospital selection remains available in its directory preview, but minimizing now
+restores the compact Dispatch route at its current progress; Transport promotes the selected hospital route
+to the compact active route. All 265 focused store/hook/Admin/Monitor/component tests pass, TypeScript is
+clean, and ESLint has zero errors with the same 12 unrelated warnings. The complete suite records 1,444
+passing tests and one skip with the same three established unrelated failures. Production build remains
+environment-blocked because Turbopack cannot bind its worker process port.
 
 **Dispatch route same-run enrichment — COMPLETE (2026-09-14).**
 Only the first dispatch, a normalized Incident-scene change, or a changed countdown now creates a new

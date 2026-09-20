@@ -143,6 +143,23 @@ describe('SendButton', () => {
     expect(btn).toBeDisabled()
   })
 
+  it('keeps Send disabled for attempted countdown edits after Start', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDispatchMinutes(5)
+      store.save()
+      store.send()
+      store.startDispatchClock()
+      store.setDispatchMinutes(7)
+      store.save()
+    })
+
+    render(<SendButton />)
+
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+    expect(useMonitorStore.getState().dispatchConfirmedSeconds).toBe(300)
+  })
+
   it('does not treat background route enrichment as pending instructor work', () => {
     act(() => {
       const store = useMonitorStore.getState()
@@ -174,5 +191,26 @@ describe('SendButton', () => {
 
     expect(beforeSend).toHaveBeenCalledOnce()
     expect(useMonitorStore.getState().confirmed.hr).toBe(0)
+  })
+
+  it('enables only after a Trend is saved and consumes it on Send', async () => {
+    const user = userEvent.setup()
+    render(<SendButton />)
+
+    act(() => {
+      useMonitorStore.getState().setVitalTrendTarget('hr', 150)
+      useMonitorStore.getState().setVitalTrendSeconds(30)
+    })
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+
+    act(() => useMonitorStore.getState().save())
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+    expect(useMonitorStore.getState().activeVitalTrend).toMatchObject({
+      status: 'running',
+      participants: { hr: { start: 0, target: 150 } },
+    })
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
   })
 })

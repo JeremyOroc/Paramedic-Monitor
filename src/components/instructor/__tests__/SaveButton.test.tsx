@@ -69,6 +69,22 @@ describe('SaveButton', () => {
     expect(screen.getByRole('button', { name: 'Save' })).not.toBeDisabled()
   })
 
+  it('does not become dirty when a locked countdown edit is attempted', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDispatchMinutes(5)
+      store.save()
+      store.send()
+      store.startDispatchClock()
+      store.setDispatchMinutes(7)
+    })
+
+    render(<SaveButton />)
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(useMonitorStore.getState().dispatchMinutes).toBe(5)
+  })
+
   it('does not become dirty for background route enrichment', () => {
     act(() => {
       const store = useMonitorStore.getState()
@@ -85,6 +101,16 @@ describe('SaveButton', () => {
 
     render(<SaveButton />)
 
+    expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
+  })
+
+  it('enables for a valid Trend edit and blocks an out-of-range target', () => {
+    const { rerender } = render(<SaveButton />)
+    act(() => useMonitorStore.getState().setVitalTrendTarget('spo2', 95))
+    expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
+
+    act(() => useMonitorStore.getState().setVitalTrendTarget('spo2', 101))
+    rerender(<SaveButton />)
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
   })
 })

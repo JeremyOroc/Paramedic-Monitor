@@ -5,6 +5,14 @@
 
 ---
 
+## [2026-09-20] [git/testing] — Reconcile Wagami A and main feature histories
+
+- Resolved the branch merge by preserving both independent planning/status/changelog histories and
+  combining the Wagami A preference/workspace hooks with the main-branch Vital Trend clock in the
+  shared Monitor page. No requirement or runtime behavior was discarded during reconciliation.
+- Verified 511 focused tests across 16 files, TypeScript, full source ESLint with zero errors and the
+  same 12 existing warnings, and the Next.js 16.3 Webpack production build.
+
 ## [2026-09-20] [planning/git] — Publish the complete Wagami A A4–A6 handoff branch
 
 - On the programmer's explicit selection of the Git branch transfer, committed the audited 55-file
@@ -456,6 +464,96 @@
 - Reframed the historical Zoll-matching plan as Wagami X history rather than the new model's goal,
   added phased test and distinctness-review expectations, and captured the new model in the glossary
   and ADR 0023. No Wagami A UI code was changed.
+## [2026-09-19] [instructor/ui] — Move Trend countdown state into the timer boxes
+
+- Replaced the external `MIN`/`SEC` labels with muted in-box placeholders that disappear whenever an
+  instructor-entered or live numeric value is present.
+- Made the timer boxes show the absolute live countdown as read-only amber values while running, green
+  zeroes at completion, and red remaining values after cancellation; completed boxes remain editable so
+  the next timer edit clears the terminal state as before.
+- Removed the visible Ready/Running/Complete countdown string while retaining an `aria-live`, screen-reader-
+  only status announcement.
+- Added placeholder, editable-value, running, completion, cancellation, and visibility regressions. All
+  25 focused tests, TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the Webpack
+  production build pass. Rendered QA confirmed the muted, amber, and green states without clipping.
+
+## [2026-09-19] [planning/instructor] — Refine Trend timer box presentation
+
+- Confirmed muted `MIN`/`SEC` placeholders inside empty timer boxes, disappearing whenever a numeric
+  value is present.
+- Defined editable white draft values, read-only amber live countdown values, green completion zeroes,
+  red cancellation, removal of the separate visible countdown/status string, and retention of an
+  accessibility-only announcement.
+- Added the implementation and regression-testing contract; implementation is in progress.
+
+## [2026-09-19] [instructor/ui] — Place EtCO2 calibration and Trend timer on one row
+
+- Moved the EtCO2 calibration indicator and complete Trend Timer into one non-wrapping responsive row
+  beneath the numeric vitals, spanning both Vitals columns on desktop and remaining ahead of the CPR/
+  timed-vitals utilities when stacked.
+- Kept the timer label, minute/second inputs, and Ready/Running/Complete/Cancelled status inline without
+  changing calibration or Trend behavior.
+- Added a structural layout regression. All 22 focused tests, TypeScript, ESLint with zero errors and
+  the same 12 unrelated warnings, and the Webpack production build pass. Rendered QA confirmed a shared
+  28px-high row with no overlap or clipping.
+
+## [2026-09-19] [planning/instructor] — Refine the EtCO2 and Trend timer layout
+
+- Confirmed that the EtCO2 calibration indicator and complete Trend Timer should share one horizontal
+  row beneath the numeric vitals, with responsive ordering that keeps the row ahead of the utility
+  controls when stacked and lets it span both columns on desktop.
+- Added the implementation and regression-testing contract; implementation is in progress.
+
+## [2026-09-19] [instructor/realtime] — Add timed per-vital Trends and move ECG above FC
+
+- Moved the complete ECG control row directly below the Vitals/Trend headings and above FC, then added
+  accessible absolute Trend targets between each numeric vital and its On/Off control plus one shared
+  minute/second timer with Ready, Running, Complete, and Cancelled states.
+- Added draft → saved → confirmed Trend commands with linear whole-second timestamp derivation, exact
+  deadlines, rising/falling and zero-duration behavior, replacement from intermediate values, direct-
+  value partial cancellation, Off-channel progression, independent BP targets, CPR priority, and
+  Automatic FC-lock cancellation.
+- Extended shared Room state, persisted store migration, Saved scenario snapshots, reset/New Attempt,
+  Monitor/Spectator clinical consumers, and NIBP sampling without per-second server writes.
+- Added idempotent completion publication and Evaluation rendering that hides Trend-only starts, retains
+  ordinary mixed-Send changes, and records one final-values-only `Trend completed` row.
+- Added component, hook, interpolation, store, scenario, session-service, and evaluation regressions.
+  All 442 focused tests, TypeScript, ESLint with zero errors, and the Webpack production build pass;
+  rendered 1280×720 QA verified FC 120→150 over 30 seconds. The full suite has 1,468 passing tests,
+  one skip, and the same three established unrelated failures. Turbopack remains blocked by the host's
+  worker-port restriction.
+
+## [2026-09-19] [planning/instructor] — Define vital Trends and ECG-first controls
+
+- Defined absolute per-vital Trend targets, one shared dispatch-format duration, linear timestamp-based
+  progression, Save/Send command consumption, direct override/replacement, terminal states, and exact
+  participation rules for Off channels, BP/NIBP, CPR, and Automatic FC locks.
+- Replaced the established ECG-beside-FC requirement with a full-width ECG section directly below
+  Vitals and above the FC-first numeric rows, including the new Trend column and retained CPR/timed-
+  vitals utility controls.
+- Defined shared-device synchronization, downstream clinical effects, Saved-scenario configuration,
+  lifecycle persistence/cancellation, validation, and one completion-only Evaluation entry with no
+  target disclosure or interrupted-Trend entry.
+- Added the domain glossary and complete implementation/testing contract. Implementation remains
+  pending explicit plan approval.
+
+## [2026-09-19] [dispatch/monitor] — Lock the countdown at Start and restore Dispatch after hospital preview
+
+- Changed Send into a staging action and made **Start / Dispatch** the persisted countdown-lock boundary.
+  Start stamps the absolute response/countdown and Dispatch-route clocks from the last successfully sent
+  duration; unsaved or unsent countdown changes block Start.
+- Added store-enforced timer guards across direct setters, Save, Send, scenario loading, shared state, and
+  persistence migration. Active information and address updates now preserve the locked duration, run id,
+  timestamps, Acknowledge, Arrival, and Transport milestones, including after the countdown reaches `00:00`.
+- Disabled the configured minute/second inputs while locked and added a separate live countdown readout.
+  New Attempt and reset restore editability, including for zero-duration runs.
+- Split Receiving-hospital preview routing from the compact active route. The directory continues to show
+  the selected hospital distance/ETA, minimizing before Transport returns to the progressing Dispatch route
+  without clearing the selection, and Transport promotes the hospital route to the compact map.
+- Added and updated store, hydration, scenario, instructor control, Start preflight, active address-update,
+  monitor flow, and hospital-routing regressions. All 265 focused tests and TypeScript pass; ESLint has zero
+  errors with the same 12 unrelated warnings. The full suite has 1,444 passing tests, one skip, and the same
+  three established unrelated failures. Production build remains blocked by Turbopack's worker-port denial.
 
 ## [2026-09-14] [dispatch/instructor] — Keep late route resolution in the active Dispatch run
 

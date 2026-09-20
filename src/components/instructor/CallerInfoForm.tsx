@@ -3,6 +3,7 @@
 import { useState, type ChangeEvent } from 'react'
 
 import { AddressAutocomplete } from '@/components/instructor/AddressAutocomplete'
+import { useCountdown } from '@/hooks/useCountdown'
 import { cn } from '@/lib/utils'
 import { useMonitorStore } from '@/store/monitorStore'
 import {
@@ -63,6 +64,8 @@ export function CallerInfoForm({
   const dispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
   const setDispatchMinutes = useMonitorStore((s) => s.setDispatchMinutes)
   const setDispatchSeconds = useMonitorStore((s) => s.setDispatchSeconds)
+  const dispatchCountdownLocked = useMonitorStore((s) => s.dispatch.countdownLocked)
+  const dispatchCountdownEndsAt = useMonitorStore((s) => s.dispatch.countdownEndsAt)
   const dispatchRouteDraft = useMonitorStore((s) => s.dispatchRouteDraft)
   const setDispatchRouteDraft = useMonitorStore((s) => s.setDispatchRouteDraft)
   const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
@@ -75,6 +78,7 @@ export function CallerInfoForm({
   }
 
   const dispatchEtaPreview = formatDispatchCountdownPreview(dispatchMinutes, dispatchSeconds)
+  const liveDispatchCountdown = useCountdown(dispatchCountdownEndsAt)
 
   return (
     <section className="min-w-0 flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
@@ -110,9 +114,14 @@ export function CallerInfoForm({
                   step={1}
                   value={dispatchMinutes === 0 ? '' : dispatchMinutes}
                   placeholder="0"
+                  disabled={dispatchCountdownLocked}
                   onChange={(e) => setDispatchMinutes(Number(e.target.value))}
                   aria-label="Dispatch countdown minutes"
-                  className="w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                  aria-describedby={dispatchCountdownLocked ? 'dispatch-countdown-lock-status' : undefined}
+                  className={cn(
+                    'w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+                    'disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-500',
+                  )}
                 />
                 <span className="text-xs uppercase tracking-wider text-neutral-500">min</span>
                 <input
@@ -122,12 +131,25 @@ export function CallerInfoForm({
                   step={1}
                   value={dispatchSeconds === 0 ? '' : dispatchSeconds}
                   placeholder="0"
+                  disabled={dispatchCountdownLocked}
                   onChange={(e) => setDispatchSeconds(Number(e.target.value))}
                   aria-label="Dispatch countdown seconds"
-                  className="w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                  aria-describedby={dispatchCountdownLocked ? 'dispatch-countdown-lock-status' : undefined}
+                  className={cn(
+                    'w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+                    'disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-500',
+                  )}
                 />
                 <span className="text-xs uppercase tracking-wider text-neutral-500">sec</span>
               </div>
+              {dispatchCountdownLocked ? (
+                <p
+                  id="dispatch-countdown-lock-status"
+                  className="font-mono text-xs font-bold uppercase tracking-wider text-pending-amber"
+                >
+                  Locked · Live {liveDispatchCountdown.formatted}
+                </p>
+              ) : null}
             </div>
           </div>
           <label className="grid gap-1">

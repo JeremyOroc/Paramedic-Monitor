@@ -264,6 +264,33 @@ describe('updateSessionState — instructor-side history (PLAN 12b)', () => {
     expect(consoleError).toHaveBeenCalled()
     consoleError.mockRestore()
   })
+
+  it('deduplicates a retried Trend completion by its published command id', async () => {
+    const completed = {
+      activeVitalTrend: {
+        id: 'trend-1',
+        status: 'complete',
+        completionPublished: true,
+      },
+    }
+    const stub = withResolver({
+      session_state: () => ({
+        data: { state: completed, version: 8, updated_at: 'now' },
+      }),
+    })
+
+    const result = await updateSessionState(CODE, ACCOUNT, CONTROLLER_TOKEN, {
+      ...completed,
+      instructorOnly: {
+        stateUpdateKind: 'trend-completion',
+        trendCompletionId: 'trend-1',
+      },
+    })
+
+    expect(result.state).toMatchObject({ version: 8 })
+    expect(stub.opsFor('session_state').some((op) => op.method === 'upsert')).toBe(false)
+    expect(stub.opsFor('session_state_history')).toHaveLength(0)
+  })
 })
 
 describe('updateSessionState — history stores what was sent, not what the map drew (PLAN 13f)', () => {

@@ -51,6 +51,7 @@ import { useReceivingHospitalRouting } from '@/hooks/useReceivingHospitalRouting
 import { useMonitorViewportLock } from '@/hooks/useMonitorViewportLock'
 import { useWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
 import { useWagamiAWorkspaceWithPreferences } from '@/hooks/useWagamiAWorkspace'
+import { useVitalTrendClock } from '@/hooks/useVitalTrendClock'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
@@ -91,6 +92,7 @@ export function MonitorPage({
   const { date, time } = useMonitorClock()
 
   useStoreHydration()
+  useVitalTrendClock()
   const confirmed = useMonitorStore((s) => s.confirmed)
   const defibrillatorModelConfirmed = useMonitorStore(
     (s) => s.defibrillatorModelConfirmed,
@@ -976,7 +978,7 @@ export function MonitorPage({
         info={callerInfoConfirmed}
         onCallerEvent={onCallerEvent}
         buttonState={callerButtonState}
-        showCountdown={!countdown.isDone}
+        showCountdown={dispatchState.countdownLocked}
         countdownFormatted={countdown.formatted}
         responseFormatted={responseTimer.formatted}
         fullScreen
@@ -1286,6 +1288,7 @@ export function MonitorPage({
         canEnterMonitor
         onEnterMonitor={controller.onBack}
         responseFormatted={responseTimer.formatted}
+        showCountdown={dispatchState.countdownLocked}
         countdownFormatted={countdown.formatted}
         route={hospitalRouting.effectiveRoute}
         hospitalMap={hospitalRouting.mapState}

@@ -73,6 +73,32 @@ describe('scenario snapshots', () => {
     expect(snapshot?.patientPhysical).not.toHaveProperty('activeIconGroup')
   })
 
+  it('persists prepared Trend configuration but excludes active progress', () => {
+    const input = {
+      ...createEmptyScenarioSnapshot(),
+      trend: {
+        targets: {
+          hr: 150,
+          spo2: null,
+          bp_sys: 90,
+          bp_dia: 60,
+          etco2: null,
+        },
+        durationSeconds: 30,
+      },
+      activeVitalTrend: {
+        id: 'runtime-only',
+        startsAt: 1,
+        endsAt: 31_000,
+      },
+    }
+
+    const snapshot = normalizeScenarioSnapshot(input)
+
+    expect(snapshot?.trend).toEqual(input.trend)
+    expect(snapshot).not.toHaveProperty('activeVitalTrend')
+  })
+
   it('treats Wagami Z alone as meaningful scenario content', () => {
     const snapshot = createEmptyScenarioSnapshot()
     snapshot.defibrillatorModel = 'wagamiZ'

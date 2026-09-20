@@ -509,6 +509,125 @@ Commit `069f611` contains the complete audited A4–A6 implementation and its 55
 and was pushed to `origin/wagami-a`. A collaborator can now fetch the branch, verify that commit is
 an ancestor of a clean checkout, read the handoff, and present a concrete plan for approval. This
 transfer does not close any database, physical-device, distinctness, IP, or release gate.
+- 2026-09-19 requirement refinement — timer-box countdown presentation: use muted `MIN` and `SEC`
+  placeholders inside empty Trend Timer inputs and hide each placeholder whenever that box contains a
+  number. Before Send, the boxes remain editable with ordinary white numbers. During an Active Trend,
+  both boxes become read-only, display the live remaining minute/second values (including zero), and
+  color those values amber. At completion both display green zeroes. Remove the separate visible
+  Ready/Running/Complete countdown text while retaining an accessible status announcement; cancelled
+  countdown values use the existing alarm-red state.
+
+### Testing — timer-box countdown presentation
+
+- Cover in-box `MIN`/`SEC` placeholders, disappearance on numeric entry, editable white draft values,
+  read-only live countdown values, amber running state, green completion zeroes, red cancellation, and
+  the absence of visible `Complete 00:00` text while preserving an accessible status. Run focused timer/
+  Instructor tests, TypeScript, ESLint, a production build, and rendered layout QA.
+
+**Completed 2026-09-19.** Empty timer boxes now use muted `MIN`/`SEC` placeholders, while entered values
+remain white and live running values replace them in amber. Running inputs are read-only; completion shows
+editable green zeroes, cancellation shows red remaining values, and the visible status string is gone.
+An `aria-live`, screen-reader-only output preserves Ready/Running/Complete/Cancelled announcements. All
+25 focused tests, TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the Webpack
+production build pass. Rendered QA confirmed the placeholder, amber countdown, and green completion states.
+
+- 2026-09-19 requirement refinement — compact EtCO2/Trend timer row: place the Instructor
+  EtCO2 calibration indicator and the complete Trend Timer controls/status on one non-wrapping
+  horizontal row beneath the numeric vitals. At narrow widths this row appears immediately after
+  EtCO2 and before the CPR/timed-vitals utility block; at desktop widths it spans beneath both
+  Vitals columns so neither control wraps or clips.
+
+### Testing — compact EtCO2/Trend timer row
+
+- Verify the calibration indicator and Trend Timer share one explicit layout container, the timer
+  remains a single horizontal row, narrow/desktop ordering is stable, and all existing calibration
+  and Trend timer behavior remains unchanged. Run the focused Instructor controls tests, TypeScript,
+  ESLint, a production build, and rendered layout QA.
+
+**Completed 2026-09-19.** The EtCO2 calibration indicator and complete Trend Timer now share one
+non-wrapping responsive row beneath the numeric vitals. CSS ordering keeps the row immediately after
+EtCO2 when stacked and lets it span both Vitals columns on desktop before the next content section.
+All 22 focused tests, TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the
+Webpack production build pass. Rendered QA confirmed both controls share a 28px-high, 565px-wide row
+without overlap or clipping.
+
+- 2026-09-19 requirement update — Instructor vital Trend and ECG-first layout: move the complete ECG
+  rhythm section out of the side-by-side numeric-vitals arrangement so it spans the Vitals panel
+  immediately below the `Vitals` heading and above FC. Below ECG, preserve the numeric order
+  FC → SpO2 → BP sys → BP dia → EtCO2, add a `Trend` column heading, and insert one numeric Trend
+  target between each current vital input and its On/Off control. CPR and T1–U3 remain a separate
+  utility block beside the numeric rows. Add one shared Trend Timer with dispatch-style nonnegative
+  integer minute input, `0–59` integer second input, and a live `MM:SS` countdown/status display.
+- A Trend target is an absolute final value, uses the corresponding vital's range, and is optional:
+  blank excludes that vital while `0` is an explicit target. A target equal to the starting value is
+  a no-op and does not participate; if every target is a no-op, no countdown starts. `00:00` applies
+  participating targets immediately. Invalid Trend data blocks saving the Trend until corrected.
+- Trend configuration follows the existing draft → saved → confirmed workflow. Save stages targets
+  and duration without changing the monitor; Send consumes a newly saved Trend command and begins it
+  from each participating vital's then-current confirmed value. Later unrelated Sends do not restart
+  the command. Editing fields while a Trend runs changes only the draft until another Save and Send;
+  a newly sent Trend replaces affected participation from current intermediate values. A direct
+  vital value sent without a new Trend target cancels that vital's participation and applies the
+  direct value immediately while unaffected vital Trends continue.
+- Every participating vital interpolates linearly from its starting value to its absolute target over
+  the one shared duration. Display values are recomputed from authoritative start/end timestamps once
+  per second, rounded to the nearest integer, and forced to the exact targets at the deadline. The
+  timestamp model must align Room devices despite polling delay and catch up after backgrounding,
+  navigation, reload, or monitor power-off/on. Intermediate values are real Confirmed clinical state
+  for alarms, waveform/pulse cadence, Spectator, Vital Log, NIBP, and every other clinical consumer.
+- Trend participation is independent of a channel's On/Off state: an Off vital progresses invisibly
+  and stays Off until separately enabled. BP systolic and diastolic participate independently;
+  trainee NIBP continues to reveal the accepted BP values sampled at cuff-reading time. CPR retains
+  display priority while the underlying FC Trend progresses. An Automatic FC lock disables the FC
+  Trend target, excludes FC from new Trends, and cancels active FC participation at its current
+  intermediate manual value without automatic resumption; the retained target becomes editable after
+  leaving the lock and requires a new Save and Send.
+- An Active Trend has no pause state. New Attempt and monitor reset cancel the whole Trend; replacement
+  instructions cancel only their affected participation. Cancelling the last participant stops the
+  countdown and displays `Cancelled`; otherwise remaining participants continue to the shared
+  deadline. Completion leaves the targets visible, the timer at `00:00`, and a `Complete` state until
+  the instructor edits or clears the configuration. The prepared configuration is included in Saved
+  scenarios, but an active countdown, timestamps, and partial progress are never saved in a scenario.
+- Evaluation history does not expose Trend targets, duration, or a Trend-only Send. A mixed Send records
+  only its ordinary immediate changes. When at least one participant successfully reaches the shared
+  deadline, one `Trend completed` entry records only the final values that reached their targets at
+  completion time. Cancelled or interrupted participation never produces a completion entry. The
+  completion write must be idempotent across polling, reload, and multiple Scenario devices.
+
+### Testing — Instructor vital Trend and ECG-first layout
+
+- Add pure interpolation and validation coverage for rising/falling values, one-second elapsed-time
+  derivation, nearest-integer rounding, exact deadlines, zero duration, blank/zero/equal targets,
+  range boundaries, invalid seconds/minutes, delayed ticks, and background catch-up.
+- Cover draft/saved/confirmed Trend staging; Send consumption; unrelated Send non-restart; multi-vital
+  shared timing; replacement from intermediate values; direct-value partial cancellation; last-
+  participant cancellation; Complete/Cancelled terminal states; Off-channel progression; separate BP
+  targets; CPR priority; Automatic FC exclusion and mid-run cancellation; reset/New Attempt; power,
+  navigation, reload, hydration, and persisted-state migration.
+- Extend Shared monitor state and projection tests to prove timestamp-based Room-device parity and
+  intermediate-value effects across alarms, waveform cadence, Wagami X/Z, Spectator, Vital Log, and
+  NIBP accepted readings without per-second instructor writes.
+- Extend Saved scenario snapshots and migrations to retain prepared targets/duration while excluding
+  active progress. Cover load/edit/save behavior and backward compatibility for snapshots without
+  Trend fields.
+- Cover one idempotent completion history entry, mixed-Send ordinary history, Trend-only Send omission,
+  interrupted/cancelled omission, affected-vitals-only payloads, reload/polling races, and evaluation
+  report rendering.
+- Update Instructor component tests for the full-width ECG-before-FC order, current/Trend/On-Off row
+  structure, retained CPR and T1–U3 utility block, dispatch-format timer inputs, live status, disabled
+  FC target, accessible labels, keyboard behavior, compact desktop containment, and no monitor-page
+  scrollbars. Run focused suites, the full Vitest suite, TypeScript, ESLint, the production build, and
+  rendered QA at the supported desktop minimum and an ordinary Instructor display.
+
+**Completed 2026-09-19.** The Instructor Vitals panel now implements the ECG-first layout, per-vital
+absolute targets, and shared Trend Timer through the existing Save/Send workflow. Active values derive
+from absolute timestamps and propagate through shared Monitor state and clinical consumers while retaining
+all documented replacement, cancellation, lock, lifecycle, scenario, and evaluation semantics. All 442
+focused tests, TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the Webpack
+production build pass. The complete suite records 1,468 passing tests and one skip with the same three
+established unrelated failures. Rendered 1280×720 QA verified the control geometry and a live FC 120→150
+run ending exactly at `Complete 00:00`; the default Turbopack build remains blocked by the host's worker-
+port restriction.
 
 - 2026-09-13 requirement update — compact Saved scenario rows and safe page-scoped report deletion:
   reduce each Saved scenario row from its current two-tier card to an approximately 44–48px compact
@@ -1693,6 +1812,38 @@ is covered directly. All 411 focused tests pass with TypeScript and ESLint (zero
 retains the same three unrelated baseline failures. Production build and live browser replay could not run
 in this environment because Turbopack is denied its worker port and the existing port-3000 Next process is
 unresponsive and holds the development lock.
+
+**Requirement change (2026-09-19) — Start-locked dispatch countdown and hospital preview:**
+Supersedes the earlier rules that a changed saved countdown or Incident-scene address always creates a new
+dispatch run, and that minimizing a pre-Transport hospital preview keeps that preview as the compact route.
+- Before **Start / Dispatch**, the countdown remains editable through Save and Send. Starting is blocked
+  while dispatch changes are unsaved or unsent. **Start / Dispatch** snapshots and locks the last successfully
+  sent duration; unsaved draft values never become the active timer. The configured minutes/seconds remain
+  visible but disabled while a separate live countdown derives from the run's absolute timestamps.
+- During an active run, Save and Send may publish caller details, vitals, route-address corrections, and
+  scenario content without changing the locked duration, run id, countdown timestamps, Acknowledge,
+  Arrival, or Transport milestones. Incident and unit-origin corrections may resolve and publish a new
+  Dispatch route, but it uses the original run clock and duration. Loading a scenario preserves the locked
+  timer while applying its other authored fields.
+- The countdown remains accurate through refresh, reconnect, CALL INFO navigation, and hospital previews.
+  Reaching `00:00`, including a run configured as `00:00`, does not unlock or restart it. Only End/Cancel,
+  New Attempt, or the existing full reset establishes a new editable dispatch cycle.
+- Before Transport, selecting a Receiving hospital opens a local preview with its distance and ETA. The
+  choice remains selected and the countdown continues invisibly, but minimizing the directory restores the
+  compact Incident-scene Dispatch route at its current progress. Reopening the directory restores the
+  selected preview. Once Transport begins, the hospital route becomes the compact active route and retains
+  the existing reroute behavior.
+- Existing update presentation remains unchanged; no additional Dispatch-updated notification is added.
+
+**Testing:**
+- Store coverage proves the Start boundary locks the last sent duration, guarded setters and scenario loads
+  cannot replace it, active-run Sends preserve identity/timestamps/milestones, address corrections reroute
+  without re-dispatch, zero-duration runs remain locked, and reset/New Attempt unlocks the next cycle.
+- Instructor component and page coverage verifies disabled locked inputs, separate configured/live values,
+  Save/Send behavior before and after Start, and Start's unsaved/unsent preflight.
+- Receiving-hospital hook and map integration coverage verifies preview ETA in the directory, continued
+  dispatch countdown progress, compact Dispatch-route restoration before Transport, retained selection, and
+  compact Transport-route behavior after Transport.
 
 - The assignment dashboard's route map also supports a trainee-local Receiving Hospital Directory.
   It uses the exact supplied set of 16 adult and 2 pediatric Montréal-area Receiving hospitals and

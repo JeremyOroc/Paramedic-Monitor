@@ -1,5 +1,5 @@
-import { describe, expect, it, beforeEach } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
@@ -41,6 +41,8 @@ describe('CallerInfoForm', () => {
   beforeEach(() => {
     useMonitorStore.getState().reset()
   })
+
+  afterEach(() => vi.restoreAllMocks())
 
   it('renders all caller info fields', () => {
     renderCallerInfoForm()
@@ -159,6 +161,23 @@ describe('CallerInfoForm', () => {
 
     const routeSection = screen.getByText('Response route').closest('div')
     expect(routeSection).toHaveTextContent('ETA At scene')
+  })
+
+  it('disables the configured duration and shows a separate live countdown after Start', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDispatchMinutes(5)
+      store.save()
+      store.send()
+      store.startDispatchClock()
+    })
+
+    renderCallerInfoForm()
+
+    expect(screen.getByLabelText('Dispatch countdown minutes')).toBeDisabled()
+    expect(screen.getByLabelText('Dispatch countdown seconds')).toBeDisabled()
+    expect(screen.getByText('Locked · Live 05:00')).toBeInTheDocument()
   })
 
   it('updates caller info draft values', async () => {

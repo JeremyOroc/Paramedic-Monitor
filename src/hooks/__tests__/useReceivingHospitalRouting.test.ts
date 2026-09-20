@@ -55,6 +55,9 @@ describe('receiving hospital route persistence', () => {
     routeMocks.fetchDrivingRoute.mockImplementation(() => new Promise((resolve) => {
       pending.push(resolve)
     }))
+    routeMocks.fetchDrivingDistances.mockResolvedValue(
+      Array.from({ length: 18 }, () => 1000),
+    )
     const dispatchRoute = {
       ...DEFAULT_DISPATCH_ROUTE,
       destinationAddress: 'Incident scene',
@@ -70,6 +73,7 @@ describe('receiving hospital route persistence', () => {
       transported: false,
     }))
 
+    act(() => result.current.openDirectory())
     act(() => result.current.selectHospital('chum'))
     act(() => result.current.selectHospital('montreal-general'))
     await waitFor(() => expect(pending).toHaveLength(2))
@@ -86,6 +90,9 @@ describe('receiving hospital route persistence', () => {
   })
 
   it('starts a previewed hospital route at the Transport press timestamp', async () => {
+    routeMocks.fetchDrivingDistances.mockResolvedValue(
+      Array.from({ length: 18 }, () => 1000),
+    )
     routeMocks.fetchDrivingRoute.mockResolvedValue({
       distanceMeters: 1500,
       durationSeconds: 300,
@@ -100,22 +107,32 @@ describe('receiving hospital route persistence', () => {
       destination: { lat: 45.45, lng: -73.75 },
       status: 'ready' as const,
     }
-    const { result } = renderHook(() => useReceivingHospitalRouting({
-      dispatchRoute,
-      dispatchRunId: 'run-transport',
-      incidentAddress: 'Incident scene',
-      monitorResetVersion: 1,
-      transported: false,
-    }))
+    const { result, rerender } = renderHook(
+      ({ transported }: { transported: boolean }) => useReceivingHospitalRouting({
+        dispatchRoute,
+        dispatchRunId: 'run-transport',
+        incidentAddress: 'Incident scene',
+        monitorResetVersion: 1,
+        transported,
+      }),
+      { initialProps: { transported: false } },
+    )
 
+    act(() => result.current.openDirectory())
     act(() => result.current.selectHospital('chum'))
     await waitFor(() => expect(result.current.mapState.selectedHospitalId).toBe('chum'))
     expect(result.current.effectiveRoute.startedAt).toBeNull()
     act(() => result.current.startTransport(123_456))
     expect(result.current.effectiveRoute.startedAt).toBe(123_456)
+
+    act(() => result.current.closeDirectory())
+    expect(result.current.effectiveRoute.destinationAddress).toBe('Incident scene')
+    rerender({ transported: true })
+    expect(result.current.effectiveRoute.startedAt).toBe(123_456)
+    expect(result.current.mapState.routeKind).toBe('transport')
   })
 
-  it('closes fullscreen without clearing the selected hospital or active route', async () => {
+  it('restores the Dispatch route after minimizing a pre-Transport preview', async () => {
     routeMocks.fetchDrivingDistances.mockResolvedValue(Array.from({ length: 18 }, () => 1000))
     routeMocks.fetchDrivingRoute.mockResolvedValue({
       distanceMeters: 1500,
@@ -138,19 +155,25 @@ describe('receiving hospital route persistence', () => {
       transported: false,
     }))
 
+    act(() => result.current.setFullscreen(true))
     act(() => result.current.selectHospital('chum'))
     await waitFor(() => expect(result.current.mapState.selectedHospitalId).toBe('chum'))
-    const selectedRoute = result.current.effectiveRoute
+    const selectedDestination = result.current.effectiveRoute.destinationAddress
+    expect(result.current.mapState.routeKind).toBe('transport')
 
-    act(() => result.current.setFullscreen(true))
     expect(result.current.mapState).toMatchObject({ fullscreen: true, directoryOpen: true })
     act(() => result.current.setFullscreen(false))
     expect(result.current.mapState).toMatchObject({
       fullscreen: false,
       directoryOpen: false,
       selectedHospitalId: 'chum',
+      routeKind: 'dispatch',
     })
-    expect(result.current.effectiveRoute).toBe(selectedRoute)
+    expect(result.current.effectiveRoute.destinationAddress).toBe('Incident scene')
+
+    act(() => result.current.setFullscreen(true))
+    expect(result.current.effectiveRoute.destinationAddress).toBe(selectedDestination)
+    expect(result.current.mapState.routeKind).toBe('transport')
   })
 
   it('timestamps an active reroute from the current-position selection snapshot', async () => {
@@ -163,22 +186,30 @@ describe('receiving hospital route persistence', () => {
         { lat: 45.511355, lng: -73.556923 },
       ],
     })
-    const { result } = renderHook(() => useReceivingHospitalRouting({
-      dispatchRoute: {
-        ...DEFAULT_DISPATCH_ROUTE,
-        destinationAddress: 'Incident scene',
-        destination: { lat: 45.45, lng: -73.75 },
-        status: 'ready',
-      },
-      dispatchRunId: 'run-reroute',
-      incidentAddress: 'Incident scene',
-      monitorResetVersion: 1,
-      transported: false,
-    }))
+    routeMocks.fetchDrivingDistances.mockResolvedValue(
+      Array.from({ length: 18 }, () => 1000),
+    )
+    const { result, rerender } = renderHook(
+      ({ transported }: { transported: boolean }) => useReceivingHospitalRouting({
+        dispatchRoute: {
+          ...DEFAULT_DISPATCH_ROUTE,
+          destinationAddress: 'Incident scene',
+          destination: { lat: 45.45, lng: -73.75 },
+          status: 'ready',
+        },
+        dispatchRunId: 'run-reroute',
+        incidentAddress: 'Incident scene',
+        monitorResetVersion: 1,
+        transported,
+      }),
+      { initialProps: { transported: false } },
+    )
 
+    act(() => result.current.openDirectory())
     act(() => result.current.selectHospital('chum'))
     await waitFor(() => expect(result.current.mapState.selectedHospitalId).toBe('chum'))
     act(() => result.current.startTransport(1_000))
+    rerender({ transported: true })
     nowSpy.mockReturnValue(2_000)
     act(() => result.current.selectHospital('montreal-general'))
 

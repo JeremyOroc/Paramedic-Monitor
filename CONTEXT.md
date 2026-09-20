@@ -13,7 +13,7 @@ The MacBook or desktop monitor that ordinarily presents the Instructor Console; 
 _Avoid_: Training display, dev display
 
 **Saved scenario**:
-A named instructor-authored clinical and dispatch snapshot stored as either a Personal scenario or a Template scenario.
+A named instructor-authored clinical, dispatch, and prepared Trend snapshot stored as either a Personal scenario or a Template scenario. It never contains an Active Trend's elapsed progress.
 _Avoid_: Preset
 
 **Account**:
@@ -239,6 +239,34 @@ _Avoid_: Active model, selected monitor
 The instructor-approved vital values, channel states, rhythm, patient category, and energy setting available to the trainee during an attempt.
 _Avoid_: Draft vitals, admin inputs
 
+**Trend**:
+An instructor-approved, time-bounded change from one or more current numeric vital values to their Trend targets. Save stages the instruction; Send begins it from each participating vital's then-current value, and every participating vital shares one Trend duration.
+_Avoid_: Vital preset, rate adjustment, automatic vital
+
+**Trend target**:
+The final numeric value that one participating vital must reach when a Trend completes. It is an absolute value rather than a rate or signed change; blank means the vital does not participate, while zero is an explicit target.
+_Avoid_: Trend rate, Trend delta, destination vital
+
+**Trend duration**:
+The single elapsed time over which every participating vital moves linearly to its Trend target.
+_Avoid_: Dispatch countdown, SNS measurement countdown, per-vital timer
+
+**Trend participation**:
+Inclusion of a numeric vital in a Trend because it has a valid Trend target when the instruction is sent. Participation is independent of the vital's On/Off channel state, while an Automatic FC lock prevents FC from participating.
+_Avoid_: Active channel, enabled Trend
+
+**Active Trend**:
+A sent Trend that is still progressing in elapsed real time. It has no paused state, survives navigation, reload, and monitor power changes, and is replaced only for the vitals affected by a newer instructor instruction; monitor reset or New Attempt ends it entirely.
+_Avoid_: Paused Trend, Saved scenario progress, queued Trend
+
+**Trend completion**:
+The moment an Active Trend reaches its duration with at least one participating vital remaining. The Evaluation record captures one completion entry containing the final values that reached their Trend targets.
+_Avoid_: Per-second Trend entry, Trend Send, Instructor change
+
+**Trend cancellation**:
+The end of an Active Trend, or one vital's participation in it, before the Trend duration elapses. Cancellation does not create a Trend completion entry; cancelling the last participating vital ends the countdown as Cancelled.
+_Avoid_: Trend completion, paused Trend
+
 **Waveform continuity**:
 The trainee's live ECG, SpO₂, EtCO₂, and CPR compression traces remain part of the same patient-time
 sequence while the monitor is temporarily not visible, including browser backgrounding and every
@@ -253,7 +281,9 @@ _Avoid_: Hidden rendering, ECG restart, paused waveform
 **Automatic FC lock**:
 A rhythm-controlled clinical state in which FC is forced On and its rate is determined by the selected
 ECG rhythm. The Instructor cannot edit the FC number or turn FC Off while the lock applies; leaving
-the locked rhythm restores the prior manual FC value and channel state.
+the locked rhythm restores the prior manual FC value and channel state. Entering the lock cancels FC's
+Trend participation at its current intermediate value, disables its retained Trend target, and never
+resumes that participation automatically.
 _Avoid_: Disabled FC, fixed alarm, monitor-only rate
 
 **CPR interval**:

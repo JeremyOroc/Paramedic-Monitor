@@ -8,6 +8,7 @@ import type {
   Spo2Waveform,
   VitalActiveState,
 } from '@/types/vitals'
+import type { VitalTrendConfiguration } from '@/types/vitalTrend'
 
 export type ScenarioVitalsDraft = {
   hr: number
@@ -29,6 +30,7 @@ export type ScenarioSnapshotV1 = {
     draftVitalActive: VitalActiveState
     lastRhythm: Exclude<Rhythm, 'off'>
   }
+  trend?: VitalTrendConfiguration
   callerInfo: CallerInfo
   dispatch: {
     minutes: number

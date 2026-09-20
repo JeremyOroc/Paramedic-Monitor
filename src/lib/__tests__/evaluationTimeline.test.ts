@@ -760,6 +760,48 @@ describe('buildEvaluationTimeline', () => {
     expect(afterVitals.behindBy).toBe(1)
   })
 
+  it('hides a Trend-only Send and records one final Trend completion', () => {
+    const runningTrend = {
+      id: 'trend-1',
+      status: 'running',
+      startsAt: Date.parse(at(10)),
+      endsAt: Date.parse(at(40)),
+      participants: { hr: { start: 88, target: 150 } },
+    }
+    const completedTrend = {
+      ...runningTrend,
+      status: 'complete',
+      completionPublished: true,
+    }
+    const { rows } = build({
+      stateHistory: [
+        makeState(1, 0, sharedState({})),
+        makeState(2, 10, sharedState({}, {}, { activeVitalTrend: runningTrend })),
+        makeState(
+          3,
+          40,
+          sharedState(
+            { hr: 150 },
+            {},
+            {
+              activeVitalTrend: completedTrend,
+              instructorOnly: {
+                stateUpdateKind: 'trend-completion',
+                trendCompletionId: 'trend-1',
+              },
+            },
+          ),
+        ),
+      ],
+    })
+
+    expect(instructorRows(rows).map((row) => row.version)).toEqual([1, 3])
+    expect(instructorRows(rows)[1]).toMatchObject({
+      changeKind: 'trend-completion',
+      changes: ['HR 88 → 150'],
+    })
+  })
+
   it('carries the scenario name onto the opening row', () => {
     const { rows } = build({
       stateHistory: [makeState(1, 0, sharedState({}, {}, { scenarioTitleConfirmed: 'Fall from ladder' }))],
