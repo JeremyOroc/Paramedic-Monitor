@@ -26,6 +26,10 @@ describe('DefibrillatorPanel', () => {
       'aria-pressed',
       'false',
     )
+    expect(screen.getByRole('button', { name: 'Wagami A' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
   })
 
   it('shows dirty and pending selection states through Save and Send', async () => {
@@ -43,7 +47,7 @@ describe('DefibrillatorPanel', () => {
     expect(wagamiZ).toHaveClass('border-ecg-green', 'bg-ecg-green')
   })
 
-  it('keeps the confirmed model highlighted while both choices are locked', () => {
+  it('keeps the confirmed model highlighted while all choices are locked', () => {
     act(() => {
       const store = useMonitorStore.getState()
       store.setDefibrillatorModelDraft('wagamiZ')
@@ -55,10 +59,26 @@ describe('DefibrillatorPanel', () => {
 
     expect(screen.getByRole('button', { name: 'Wagami X' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Wagami Z' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Wagami A' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Wagami Z' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
     expect(screen.getByRole('button', { name: 'Wagami Z' })).toHaveClass('bg-ecg-green')
+  })
+
+  it('stages Wagami A through the same dirty, pending, and confirmed states', async () => {
+    const user = userEvent.setup()
+    render(<DefibrillatorPanel />)
+
+    const wagamiA = screen.getByRole('button', { name: 'Wagami A' })
+    await user.click(wagamiA)
+    expect(wagamiA).toHaveClass('border-cyan-bp', 'text-cyan-bp')
+
+    act(() => useMonitorStore.getState().save())
+    expect(wagamiA).toHaveClass('border-pending-amber', 'text-pending-amber')
+
+    act(() => useMonitorStore.getState().send())
+    expect(wagamiA).toHaveClass('border-ecg-green', 'bg-ecg-green')
   })
 })

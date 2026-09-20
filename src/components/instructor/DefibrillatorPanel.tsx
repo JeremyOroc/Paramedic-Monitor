@@ -12,6 +12,7 @@ type DefibrillatorPanelProps = {
 const OPTIONS: ReadonlyArray<{ value: DefibrillatorModel; label: string }> = [
   { value: 'wagamiX', label: 'Wagami X' },
   { value: 'wagamiZ', label: 'Wagami Z' },
+  { value: 'wagamiA', label: 'Wagami A' },
 ]
 
 export function DefibrillatorPanel({ disabled = false }: DefibrillatorPanelProps) {
@@ -33,7 +34,7 @@ export function DefibrillatorPanel({ disabled = false }: DefibrillatorPanelProps
       >
         Defibrillator model
       </h2>
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-3 gap-3">
         {OPTIONS.map((option) => {
           const selected = option.value === selectedModel
           return (

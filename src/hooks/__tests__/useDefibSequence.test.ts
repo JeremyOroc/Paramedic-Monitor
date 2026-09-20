@@ -172,6 +172,56 @@ describe('useDefibSequence', () => {
     expect(result.current.canShock).toBe(true)
   })
 
+  it('A advice requires Charge, delays the Shock cue, then delivers once into CPR', () => {
+    const { result } = renderHook(() => useDefibSequence({
+      patientMode: 'adult', rhythm: 'vf', shockRequiresCharge: true,
+    }))
+    act(() => result.current.onAnalyse())
+    act(() => vi.advanceTimersByTime(5000))
+    expect(result.current.state).toBe('shock_advised')
+    expect(result.current.canCharge).toBe(true)
+    expect(result.current.canShock).toBe(false)
+    expect(audioMocks.playSystemAudio).not.toHaveBeenCalledWith('press_shock.mp3')
+
+    act(() => result.current.onShock())
+    expect(result.current.shockCount).toBe(0)
+    act(() => result.current.onCharge())
+    expect(result.current.state).toBe('charging')
+    act(() => vi.advanceTimersByTime(3999))
+    expect(result.current.canShock).toBe(false)
+    act(() => vi.advanceTimersByTime(1))
+    expect(result.current.state).toBe('charged')
+    expect(result.current.canShock).toBe(true)
+    expect(audioMocks.playSystemAudio).toHaveBeenCalledWith('press_shock.mp3')
+
+    act(() => result.current.onShock())
+    expect(result.current.shockCount).toBe(1)
+    expect(result.current.state).toBe('cpr')
+    expect(result.current.lastDeliveredJoules).toBe(120)
+    expect(audioMocks.playCprAudioSequence).toHaveBeenCalledOnce()
+  })
+
+  it('A direct manual charge retains delivered state and reset cancels charging', () => {
+    const { result } = renderHook(() => useDefibSequence({
+      patientMode: 'adult', shockRequiresCharge: true,
+    }))
+    act(() => result.current.onCharge())
+    expect(result.current.state).toBe('charge_prompt')
+    act(() => result.current.onCharge())
+    expect(result.current.state).toBe('charging')
+    act(() => result.current.reset())
+    act(() => vi.advanceTimersByTime(4000))
+    expect(result.current.state).toBe('idle')
+    expect(result.current.phaseEndsAt).toBeNull()
+
+    act(() => result.current.onCharge())
+    act(() => result.current.onCharge())
+    act(() => vi.advanceTimersByTime(4000))
+    act(() => result.current.onShock())
+    expect(result.current.state).toBe('delivered')
+    expect(audioMocks.playCprAudioSequence).not.toHaveBeenCalled()
+  })
+
   it('SHOCK increments counter and returns to delivered', () => {
     const { result } = renderHook(() =>
       useDefibSequence({

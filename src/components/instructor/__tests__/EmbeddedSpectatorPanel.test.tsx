@@ -472,6 +472,17 @@ describe('EmbeddedSpectatorPanel', () => {
     )
   })
 
+  it('labels an A projection explicitly instead of calling it Wagami X', async () => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
+      projection: { updatedAt: new Date().toISOString(), projection: { model: 'wagamiA' } },
+    }), { status: 200 }))
+    render(<EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />)
+
+    expect(await screen.findByText('Wagami A')).toBeInTheDocument()
+  })
+
   it('keeps the final frame and shows its timestamp after the room ends', async () => {
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       session: { status: 'ended', active_attempt_version: 1 },

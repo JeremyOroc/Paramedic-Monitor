@@ -8,7 +8,7 @@ import {
   getSpo2Waveform,
 } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
-import { COLORS } from '@/lib/constants'
+import { COLORS, WAGAMI_A_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { Etco2Waveform, Spo2Waveform } from '@/types/vitals'
 import { DisconnectedWaveform } from './DisconnectedWaveform'
@@ -35,6 +35,7 @@ type SecondaryChannelProps = {
   showLabels?: boolean
   occluded?: boolean
   onReady?: () => void
+  palette?: 'wagamiX' | 'wagamiA'
 }
 
 function LiveSecondaryCanvas({
@@ -46,6 +47,7 @@ function LiveSecondaryCanvas({
   etco2Waveform,
   occluded = false,
   onReady,
+  palette,
 }: Pick<
   SecondaryChannelProps,
   | 'channel'
@@ -56,8 +58,12 @@ function LiveSecondaryCanvas({
   | 'etco2Waveform'
   | 'occluded'
   | 'onReady'
+  | 'palette'
 >) {
   const isEtco2 = channel === 'etco2'
+  const color = palette === 'wagamiA'
+    ? isEtco2 ? WAGAMI_A_COLORS.etco2 : WAGAMI_A_COLORS.spo2
+    : isEtco2 ? COLORS.purpleEtCO2 : COLORS.yellowSpO2
   const canvasRef = useWaveformRenderer(
     { channel, hr, spo2, etco2, spo2Waveform, etco2Waveform },
     (get) => {
@@ -66,7 +72,8 @@ function LiveSecondaryCanvas({
           ? getEtco2Waveform(get().etco2Waveform, get().etco2)
           : getSpo2Waveform(get().spo2Waveform, get().spo2)
       return {
-        color: isEtco2 ? COLORS.purpleEtCO2 : COLORS.yellowSpO2,
+        color,
+        background: palette === 'wagamiA' ? WAGAMI_A_COLORS.screen : COLORS.bg,
         sweepMs: isEtco2 ? ETCO2_SWEEP_MS : SPO2_SWEEP_MS,
         synchronizeSweep: !isEtco2,
         amplitude: isEtco2 ? 0.95 : 0.85,
@@ -85,7 +92,7 @@ function LiveSecondaryCanvas({
         },
       }
     },
-    [isEtco2],
+    [isEtco2, color],
     { occluded, onReady },
   )
 
@@ -94,6 +101,7 @@ function LiveSecondaryCanvas({
       ref={canvasRef}
       data-testid={`${channel}-waveform-canvas`}
       data-heart-rate={isEtco2 ? undefined : hr}
+      data-palette={palette ?? 'wagamiX'}
       className="block h-full w-full"
     />
   )
@@ -114,6 +122,7 @@ export function SecondaryChannel({
   showLabels = true,
   occluded = false,
   onReady,
+  palette = 'wagamiX',
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
 
@@ -141,7 +150,9 @@ export function SecondaryChannel({
           <span>0</span>
         </div>
       )}
-      {isEtco2 && loading ? (
+      {isEtco2 && loading && palette === 'wagamiA' ? (
+        <div data-testid="etco2-loading-trace" className="grid h-full w-full place-items-center bg-wagami-a-screen text-sm text-wagami-a-etco2">EtCO₂ en calibration</div>
+      ) : isEtco2 && loading ? (
         <div
           data-testid="etco2-loading-trace"
           className="absolute inset-0 overflow-hidden bg-black"
@@ -162,7 +173,12 @@ export function SecondaryChannel({
           etco2Waveform={etco2Waveform}
           occluded={occluded}
           onReady={onReady}
+          palette={palette}
         />
+      ) : palette === 'wagamiA' ? (
+        <div data-testid="disconnected-waveform" data-channel={channel} className="grid h-full w-full place-items-center bg-wagami-a-screen">
+          <span className={cn('w-[94%] border-t-2 border-dashed', isEtco2 ? 'border-wagami-a-etco2/60' : 'border-wagami-a-spo2/60')} />
+        </div>
       ) : (
         <DisconnectedWaveform
           channel={channel}

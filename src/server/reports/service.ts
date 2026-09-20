@@ -17,7 +17,7 @@ export type EvaluationReportSummary = {
   attempt_version: number
   attempt_label: string
   scenario_name: string
-  defibrillator_model: 'wagamiX' | 'wagamiZ' | null
+  defibrillator_model: 'wagamiX' | 'wagamiZ' | 'wagamiA' | null
   student_names: string[]
   status: ReportStatus
   completion_method: ReportCompletionMethod | null
@@ -105,7 +105,7 @@ function nullableString(record: Record<string, unknown>, key: string): string | 
 
 function parseSummary(value: unknown): EvaluationReportSummary {
   if (!isRecord(value)) throw new ReportError('Unable to read reports', 500)
-  const model = value.defibrillator_model === 'wagamiX' || value.defibrillator_model === 'wagamiZ'
+  const model = value.defibrillator_model === 'wagamiX' || value.defibrillator_model === 'wagamiZ' || value.defibrillator_model === 'wagamiA'
     ? value.defibrillator_model
     : null
   const status: ReportStatus = value.status === 'complete' ? 'complete' : 'incomplete'

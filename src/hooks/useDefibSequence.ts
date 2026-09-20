@@ -29,13 +29,30 @@ export type { DefibState }
 type Options = {
   patientMode: PatientMode
   rhythm?: Rhythm
+  shockRequiresCharge?: boolean
   onAnalyzeResult?: (result: 'shock' | 'no_shock') => void
+  playPrompt?: (prompt: DefibPrompt) => void
+  playCprPrompt?: (onEnded?: () => void) => void
+}
+
+export type DefibPrompt = 'standClear' | 'pressShock' | 'shockNotAdvised'
+
+function playDefaultPrompt(prompt: DefibPrompt): void {
+  const filenames: Record<DefibPrompt, string> = {
+    standClear: 'stand_clear.mp3',
+    pressShock: 'press_shock.mp3',
+    shockNotAdvised: 'shock_not_advised.mp3',
+  }
+  playSystemAudio(filenames[prompt])
 }
 
 export function useDefibSequence({
   patientMode,
   rhythm = 'nsr',
+  shockRequiresCharge = false,
   onAnalyzeResult,
+  playPrompt = playDefaultPrompt,
+  playCprPrompt = playCprAudioSequence,
 }: Options) {
   const [state, setState] = useState<DefibState>('idle')
   const [energyState, setEnergyState] = useState<EnergyState>(() => ({
@@ -57,14 +74,19 @@ export function useDefibSequence({
   const durationRef = useRef<number>(0)
   // Capture rhythm at analyze time so mid-analyze changes don't affect the result
   const rhythmAtAnalyzeRef = useRef<Rhythm>(rhythm)
+  const advisedChargeRef = useRef(false)
   // Always up-to-date callback ref — avoids stale closures inside timed phases.
   // Assigned in an effect rather than during render: mutating a ref while
   // rendering is not safe under concurrent rendering, and the ref is only ever
   // read from timers and effects, which run after commit.
   const onAnalyzeResultRef = useRef(onAnalyzeResult)
+  const playPromptRef = useRef(playPrompt)
+  const playCprPromptRef = useRef(playCprPrompt)
   useEffect(() => {
     onAnalyzeResultRef.current = onAnalyzeResult
-  }, [onAnalyzeResult])
+    playPromptRef.current = playPrompt
+    playCprPromptRef.current = playCprPrompt
+  }, [onAnalyzeResult, playCprPrompt, playPrompt])
 
   const energy = resolveEnergy(energyState, patientMode)
 
@@ -138,51 +160,58 @@ export function useDefibSequence({
       () => startCprInterval(scheduledStartTime),
       PERFORM_CPR_DURATION_MS,
     )
-    playCprAudioSequence(() => {
+    playCprPromptRef.current(() => {
       startCprInterval(Math.min(Date.now(), scheduledStartTime))
     })
   }, [cancelPendingCprStart])
 
   const onAnalyse = useCallback(() => {
     if (!canAnalyseIn(state)) return
+    advisedChargeRef.current = false
     cancelPendingCprStart()
     rhythmAtAnalyzeRef.current = rhythm
     setState('analyzing_ecg')
     setCprStartTime(null)
     setLastDeliveredJoules(null)
-    playSystemAudio('stand_clear.mp3')
+    playPromptRef.current('standClear')
     runTimedPhase(ANALYZE_ECG_MS, () => {
       setState('analyzing_clear')
       runTimedPhase(ANALYZE_CLEAR_MS, () => {
         if (isShockable(rhythmAtAnalyzeRef.current)) {
           setState('shock_advised')
           onAnalyzeResultRef.current?.('shock')
-          playSystemAudio('press_shock.mp3')
+          if (!shockRequiresCharge) playPromptRef.current('pressShock')
         } else {
           setState('analyzing_result')
           onAnalyzeResultRef.current?.('no_shock')
-          playSystemAudio('shock_not_advised.mp3')
+          playPromptRef.current('shockNotAdvised')
           runTimedPhase(ANALYZE_RESULT_MS, () => {
             enterCpr()
           })
         }
       })
     })
-  }, [state, rhythm, runTimedPhase, cancelPendingCprStart, enterCpr])
+  }, [state, rhythm, shockRequiresCharge, runTimedPhase, cancelPendingCprStart, enterCpr])
 
   const onCharge = useCallback(() => {
-    const next = chargeTransition(state)
+    const next = chargeTransition(state, shockRequiresCharge)
     if (next === 'charging') {
+      advisedChargeRef.current = shockRequiresCharge && state === 'shock_advised'
       cancelPendingCprStart()
       setState('charging')
-      runTimedPhase(CHARGE_DURATION_MS, () => setState('charged'))
+      runTimedPhase(CHARGE_DURATION_MS, () => {
+        setState('charged')
+        if (advisedChargeRef.current) playPromptRef.current('pressShock')
+      })
     } else if (next === 'charge_prompt') {
+      advisedChargeRef.current = false
       cancelPendingCprStart()
       setState('charge_prompt')
     }
-  }, [state, runTimedPhase, cancelPendingCprStart])
+  }, [state, shockRequiresCharge, runTimedPhase, cancelPendingCprStart])
 
   const onShock = useCallback(() => {
+    if (shockRequiresCharge && state !== 'charged') return
     const action = shockTransition(state)
     if (action === 'advised') {
       const joulesDelivered = resolveEnergy(energyState, patientMode)
@@ -194,11 +223,18 @@ export function useDefibSequence({
     }
     if (action !== 'charged') return
     setShockCount((n) => n + 1)
+    if (advisedChargeRef.current) {
+      advisedChargeRef.current = false
+      setLastDeliveredJoules(resolveEnergy(energyState, patientMode))
+      enterCpr()
+      setProgress(0)
+      return
+    }
     setState('delivered')
     setProgress(0)
     setPhaseStartedAt(null)
     setPhaseEndsAt(null)
-  }, [state, energyState, patientMode, enterCpr])
+  }, [state, energyState, patientMode, shockRequiresCharge, enterCpr])
 
   const onEnergyUp = useCallback(() => {
     if (!canAdjustEnergyIn(state)) return
@@ -211,16 +247,19 @@ export function useDefibSequence({
   }, [state, patientMode])
 
   const canAnalyse = canAnalyseIn(state)
-  const canCharge = canChargeIn(state)
-  const canShock = canShockIn(state)
+  const canCharge = canChargeIn(state) || (shockRequiresCharge && state === 'shock_advised')
+  const canShock = shockRequiresCharge ? state === 'charged' : canShockIn(state)
   const canAdjustEnergy = canAdjustEnergyIn(state)
 
   const reset = useCallback(() => {
     clearTimers()
     cancelPendingCprStart()
+    advisedChargeRef.current = false
     setState('idle')
     setShockCount(0)
     setProgress(0)
+    setPhaseStartedAt(null)
+    setPhaseEndsAt(null)
     setCprStartTime(null)
     setLastDeliveredJoules(null)
   }, [clearTimers, cancelPendingCprStart])

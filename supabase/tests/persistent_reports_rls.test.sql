@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(40);
+select plan(42);
 
 select has_table('public', 'evaluation_reports', 'durable Evaluation reports have their own table');
 select has_table('public', 'evaluation_report_audit_log', 'report mutations have a protected audit table');
@@ -10,6 +10,22 @@ select col_is_fk('public', 'evaluation_reports', 'owner_user_id', 'report owners
 select col_not_null('public', 'evaluation_reports', 'scenario_snapshot', 'every report stores a scenario snapshot');
 select has_index('public', 'evaluation_reports', 'evaluation_reports_owner_started_idx', 'owner and newest-first reads are indexed');
 select has_index('public', 'evaluation_reports', 'evaluation_reports_owner_status_started_idx', 'status-filtered owner reads are indexed');
+select ok(
+  position('wagamiA' in pg_get_constraintdef((
+    select oid from pg_constraint
+    where conrelid = 'public.evaluation_reports'::regclass
+      and conname = 'evaluation_reports_defibrillator_model_check'
+  ))) > 0,
+  'persistent report model constraint recognizes Wagami A'
+);
+select ok(
+  position('wagamiZ' in pg_get_constraintdef((
+    select oid from pg_constraint
+    where conrelid = 'public.evaluation_reports'::regclass
+      and conname = 'evaluation_reports_defibrillator_model_check'
+  ))) > 0,
+  'persistent report model constraint retains Wagami Z'
+);
 select is(
   (select relrowsecurity from pg_class where oid = 'public.evaluation_reports'::regclass),
   true,

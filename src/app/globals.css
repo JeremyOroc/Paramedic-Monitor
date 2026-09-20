@@ -51,6 +51,20 @@
   --color-wagami-z-charge-gray: #8a8e95;
   --color-wagami-z-knob: #17191c;
   --color-wagami-z-readiness: #102b31;
+  /* Wagami A Precision Graphite v2 — keep in sync with WAGAMI_A_COLORS. */
+  --color-wagami-a-screen: #081014;
+  --color-wagami-a-surface: #0D1B20;
+  --color-wagami-a-surface-raised: #14272F;
+  --color-wagami-a-text: #F3F8FB;
+  --color-wagami-a-muted-text: #B9CAD1;
+  --color-wagami-a-border: #517380;
+  --color-wagami-a-ecg: #65E5D9;
+  --color-wagami-a-spo2: #FFE082;
+  --color-wagami-a-pni: #C6ECFF;
+  --color-wagami-a-etco2: #AAA6FF;
+  --color-wagami-a-alarm: #FF5656;
+  --color-wagami-a-pending: #E6B55C;
+  --color-wagami-a-shock-shell: #D62B2B;
   /* 12-lead Capture printout (warm tan/salmon ECG paper, dark ink) + acquire bar */
   --color-print-paper: #f4dcc6;
   --color-print-grid: #e0b193;
@@ -660,4 +674,58 @@ body.monitor-viewport-lock {
   .spectator-mode-floating[data-spectator-drag-state='snapping'] {
     transition: none;
   }
+}
+
+/* Wagami A Precision Graphite shell: code-native housing and controls, no X/Z key anatomy. */
+.wagami-a-shell { filter: drop-shadow(0 18px 28px color-mix(in srgb, black 65%, transparent)); }
+.wagami-a-shell-inner {
+  clip-path: polygon(5% 0, 11% 0, 13% 2%, 87% 2%, 89% 0, 94% 0, 99% 6%, 100% 17%, 100% 84%, 96% 98%, 85% 100%, 66% 100%, 63% 96%, 37% 96%, 34% 100%, 15% 100%, 4% 98%, 0 87%, 0 13%);
+  background: radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--color-wagami-a-border) 35%, var(--color-wagami-a-surface-raised)), transparent 75%), linear-gradient(160deg, color-mix(in srgb, var(--color-wagami-a-surface-raised) 78%, black), color-mix(in srgb, var(--color-wagami-a-surface) 83%, black));
+  border: 2px solid var(--color-wagami-a-border);
+  box-shadow: inset 0 0 0 8px color-mix(in srgb, var(--color-wagami-a-screen) 74%, transparent), inset 0 0 20px black, inset 0 16px 28px color-mix(in srgb, var(--color-wagami-a-text) 8%, transparent);
+}
+.wagami-a-shell-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image: repeating-linear-gradient(12deg, transparent 0 3px, color-mix(in srgb, var(--color-wagami-a-text) 10%, transparent) 3px 4px);
+  pointer-events: none;
+}
+.wagami-a-shell-grip {
+  background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--color-wagami-a-border) 45%, black) 0 3px, var(--color-wagami-a-surface) 3px 7px);
+  border-radius: 5px;
+}
+.wagami-a-charge-button { box-shadow: inset 0 2px 2px color-mix(in srgb, var(--color-wagami-a-text) 45%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-wagami-a-screen) 78%, transparent); }
+.wagami-a-shock-guard {
+  clip-path: polygon(12% 0, 88% 0, 100% 11%, 100% 89%, 88% 100%, 12% 100%, 0 89%, 0 11%);
+  background: var(--color-wagami-a-screen);
+  border: 2px solid var(--color-wagami-a-border);
+}
+.wagami-a-shock-button { box-shadow: inset 0 3px 3px color-mix(in srgb, var(--color-wagami-a-text) 20%, transparent), 0 0 0 2px var(--color-wagami-a-screen); }
+.wagami-a-navigation-button { box-shadow: inset 0 2px 5px color-mix(in srgb, black 55%, transparent), 0 2px 5px color-mix(in srgb, black 65%, transparent), 0 0 0 3px color-mix(in srgb, var(--color-wagami-a-screen) 65%, transparent); }
+.wagami-a-shell-led {
+  background: var(--color-wagami-a-text);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--color-wagami-a-text) 65%, transparent);
+}
+.wagami-a-shell-led[data-alarming='true'] {
+  animation: wagami-a-alarm-led 900ms ease-out 1 forwards;
+}
+@keyframes wagami-a-alarm-led {
+  0%, 38% { background: var(--color-wagami-a-text); box-shadow: 0 0 9px color-mix(in srgb, var(--color-wagami-a-text) 65%, transparent); }
+  55%, 100% { background: var(--color-wagami-a-alarm); box-shadow: 0 0 13px var(--color-wagami-a-alarm); }
+}
+.wagami-a-shell-led[data-enabled='false'] { animation: none; background: var(--color-wagami-a-screen); box-shadow: inset 0 0 0 2px var(--color-wagami-a-border); }
+.wagami-a-grid-overlay {
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--color-wagami-a-border) 17%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in srgb, var(--color-wagami-a-border) 17%, transparent) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+.wagami-a-charge-progress { appearance: none; border: 1px solid var(--color-wagami-a-border); border-radius: 999px; overflow: hidden; }
+.wagami-a-charge-progress::-webkit-progress-bar { background: var(--color-wagami-a-surface-raised); }
+.wagami-a-charge-progress::-webkit-progress-value { background: var(--color-wagami-a-pni); }
+.wagami-a-charge-progress::-moz-progress-bar { background: var(--color-wagami-a-pni); }
+@media (prefers-reduced-motion: reduce) {
+  .wagami-a-shell-led[data-alarming='true'] { animation: none; background: var(--color-wagami-a-alarm); }
 }

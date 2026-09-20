@@ -3,6 +3,10 @@
 ## UI Conventions
 
 ### Color constants (use these, never hardcode hex elsewhere)
+The legacy `COLORS` below governs Wagami X. Wagami Z retains `WAGAMI_Z_COLORS`.
+Wagami A uses the separately approved `WAGAMI_A_COLORS` Precision Graphite palette
+in `src/lib/constants.ts`, mirrored by `--color-wagami-a-*` Tailwind tokens in
+`src/app/globals.css`. Do not substitute X/Z palette tokens in A components.
 ```typescript
 // src/lib/constants.ts  (UI Agent creates this)
 export const COLORS = {
@@ -19,6 +23,9 @@ export const COLORS = {
 ```
 
 ### Layout rules
+These X-era monitor rules apply to Wagami X. Wagami A's distinct shell, right-side
+task dock, and card/workspace grid follow `PLAN.md` and its accepted design spec;
+the A viewport still stays full-screen without scrollbars.
 - Monitor is **always full-screen**: `w-screen h-screen overflow-hidden`
 - Desktop-only: apply `min-w-[1024px]` at root layout
 - No scrollbars on the monitor page ever

@@ -12,6 +12,7 @@ import type { HospitalMapState } from '@/types/receivingHospital'
 import type { PatientInfo, PatientSex } from '@/types/patientInfo'
 import type { MonitorSelection } from '@/types/monitorSelection'
 import type { AlarmChannel, VitalActiveState } from '@/types/vitals'
+import type { WagamiAProjectionState } from '@/types/wagamiA'
 import type { DispatchState, Vitals } from '@/store/monitorStore'
 
 export const MONITOR_PROJECTION_VERSION = 1 as const
@@ -76,6 +77,7 @@ export type MonitorProjection = {
   }
   mergedEventLog: EventLogEntry[]
   vitalLog: VitalLogEntry[]
+  wagamiA?: WagamiAProjectionState
 }
 
 export type MonitorProjectionEnvelope = {

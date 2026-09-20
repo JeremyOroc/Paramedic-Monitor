@@ -78,7 +78,7 @@ export function isMonitorProjection(value: unknown): value is MonitorProjection 
   return (
     projection.version === MONITOR_PROJECTION_VERSION &&
     typeof projection.capturedAt === 'string' &&
-    (projection.model === 'wagamiX' || projection.model === 'wagamiZ') &&
+    (projection.model === 'wagamiX' || projection.model === 'wagamiZ' || projection.model === 'wagamiA') &&
     (projection.surface === 'dispatch' || projection.surface === 'monitor') &&
     isRecord(projection.controller) &&
     isRecord(projection.confirmed) &&
@@ -95,7 +95,8 @@ export function isMonitorProjection(value: unknown): value is MonitorProjection 
     isRecord(projection.defib) &&
     Array.isArray(projection.alarms) &&
     Array.isArray(projection.mergedEventLog) &&
-    Array.isArray(projection.vitalLog)
+    Array.isArray(projection.vitalLog) &&
+    (projection.wagamiA === undefined || isRecord(projection.wagamiA))
   )
 }
 

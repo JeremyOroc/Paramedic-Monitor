@@ -318,6 +318,43 @@ _Avoid_: Respiratory strength
 The established Wagami defibrillator model whose controls provide the simulator's existing physical-button interactions.
 _Avoid_: Old monitor, legacy monitor
 
+**Wagami A**:
+A new Wagami defibrillator model that coexists with Wagami X and Wagami Z. It presents the same
+instructor-confirmed clinical scenario through a distinct device-like interaction design rather
+than replacing Wagami X.
+_Avoid_: Wagami X replacement, generic Wagami X
+
+**Wagami A shell control**:
+A physical-style action button on Wagami A's outer housing, distinct from a touchscreen action
+or task launcher within its display.
+_Avoid_: Soft key, touchscreen button
+
+**Device Patient mode**:
+The Adult, Pediatric, or Neonate operating category chosen on one Scenario device. It is
+distinct from the Instructor-confirmed patient category in Confirmed clinical state.
+_Avoid_: Confirmed patient category, patient age
+
+**Wagami A full-display view**:
+A secondary Wagami A view that fills the device's inner display while its outer shell remains
+visible and operable.
+_Avoid_: Browser fullscreen, shell-free page
+
+**Vital Log**:
+The Scenario device's time-ordered history of monitored vital measurements during an Attempt.
+It is distinct from the medication Event Log and from a captured or printed 12-lead.
+_Avoid_: Print/Capture log, medication Event Log, 12-lead printout
+
+**Call Info destination**:
+The Wagami A live-screen task that leads to the trainee's Assignment dashboard and caller
+information. It is distinct from the medication Event Log.
+_Avoid_: Events destination, Event Log tile
+
+**Device language**:
+The French or English Wagami A interface presentation selected on one Scenario device and mirrored
+by its Spectator view for the current Attempt. It does not change instructor-confirmed clinical
+state or the language of other Scenario devices.
+_Avoid_: Scenario language, instructor language, Account language
+
 **Resting vital layout**:
 The Wagami X main-view placement used after power-on and before the first accepted physical Analyze or Charge action. FC, PNI, EtCO2, and SpO2 occupy four equal cells in the fixed bottom region; collapsing that region temporarily uses the defib vital layout.
 _Avoid_: Apply Electrodes screen, default status bar

@@ -10,6 +10,7 @@ import { DispatchRouteMap } from '@/components/monitor/DispatchRouteMap'
 import { cn } from '@/lib/utils'
 import type { DispatchRoute } from '@/types/dispatchRoute'
 import type { HospitalMapState } from '@/types/receivingHospital'
+import type { WagamiALocale } from '@/types/wagamiA'
 
 export type CallerEventKey = 'acknowledge' | 'arrival' | 'transport'
 export type CallerInfoVariant = 'classic' | 'assignment'
@@ -47,6 +48,69 @@ type CallerInfoModalProps = {
   onMapFullscreenChange?: (fullscreen: boolean) => void
   onSelectHospital?: (hospitalId: string) => void
   alertFlash?: boolean
+  locale?: WagamiALocale
+}
+
+type CallerCopy = {
+  callerInfo: string
+  back: string
+  empty: string
+  connected: string
+  unit: string
+  newAssignment: string
+  responseTimer: string
+  callAssignment: string
+  lightsSirens: string
+  location: string
+  awaitingRoute: string
+  distance: string
+  unitStatus: string
+  currentStatus: string
+  available: string
+  goToMonitor: string
+  goToMonitorAria: string
+  acknowledge: string
+  arrival: string
+  transport: string
+  priorityPending: string
+  fields: Partial<Record<CallerInfoField, string>>
+}
+
+const CALLER_COPY: Record<WagamiALocale, CallerCopy> = {
+  en: {
+    callerInfo: 'Caller Info', back: 'Back', empty: 'No call information.', connected: 'Connected',
+    unit: 'Unit', newAssignment: 'New Assignment', responseTimer: 'Response Timer',
+    callAssignment: 'Call Assignment', lightsSirens: 'Lights & Sirens', location: 'Location',
+    awaitingRoute: 'Awaiting route', distance: 'Distance', unitStatus: 'Unit Status',
+    currentStatus: 'Current Status:', available: 'Available', goToMonitor: 'Go to Monitor', goToMonitorAria: 'Go to Monitor',
+    acknowledge: 'Acknowledge', arrival: 'Arrival', transport: 'Transport', priorityPending: 'Priority Pending',
+    fields: { callNumber: 'Call #', priority: 'Priority', mpdsCode: 'MPDS Code', address: 'Address', problem: 'Nature of Call', time: 'Call Received', information: 'Caller Info', update: 'Updates', extra1: 'Notes', extra2: 'Hazards / Alerts', extra3: 'Additional Info' },
+  },
+  fr: {
+    callerInfo: 'Information d’appel', back: 'Retour', empty: 'Aucune information d’appel.', connected: 'Connecté',
+    unit: 'Unité', newAssignment: 'Nouvelle affectation', responseTimer: 'Temps de réponse',
+    callAssignment: 'Affectation', lightsSirens: 'Feux et sirène', location: 'Emplacement',
+    awaitingRoute: 'Itinéraire en attente', distance: 'Distance', unitStatus: 'État de l’unité',
+    currentStatus: 'État actuel :', available: 'Disponible', goToMonitor: 'Accéder au moniteur', goToMonitorAria: 'Accéder au moniteur',
+    acknowledge: 'Accuser réception', arrival: 'Arrivée', transport: 'Transport', priorityPending: 'Priorité en attente',
+    fields: { callNumber: 'Appel no', priority: 'Priorité', mpdsCode: 'Code MPDS', address: 'Adresse', problem: 'Nature de l’appel', time: 'Appel reçu', information: 'Information appelant', update: 'Mises à jour', extra1: 'Notes', extra2: 'Dangers / alertes', extra3: 'Information supplémentaire' },
+  },
+}
+
+const LEGACY_CALLER_COPY: CallerCopy = {
+  ...CALLER_COPY.en,
+  empty: 'Aucune information d’appel.',
+  goToMonitorAria: 'Go to monitor',
+  fields: {
+    callNumber: 'Call #', priority: 'Priority', mpdsCode: 'MPDS Code', address: 'Adresse',
+    problem: 'Probleme', information: 'Information', update: 'Mise a jour', time: 'Heure',
+    extra1: 'Extra 1', extra2: 'Extra 2', extra3: 'Extra 3',
+  },
+}
+
+function callerFieldLabel(copy: CallerCopy, field: CallerInfoField): string | undefined {
+  const fields: Partial<Record<CallerInfoField, string>> = copy.fields
+  return fields[field]
 }
 
 const CALLER_EVENT_BUTTONS: {
@@ -153,6 +217,7 @@ export function CallerInfoModal({
   onMapFullscreenChange,
   onSelectHospital,
   alertFlash = false,
+  locale,
 }: CallerInfoModalProps) {
   if (!open) return null
 
@@ -166,6 +231,7 @@ export function CallerInfoModal({
   // to edge rather than sitting as a 4:3 tablet on a beige wall. The classic
   // variant keeps the tablet-on-a-wall framing.
   const assignmentFullBleed = fullScreen && variant === 'assignment'
+  const copy = locale ? CALLER_COPY[locale] : LEGACY_CALLER_COPY
 
   return (
     <section
@@ -182,11 +248,11 @@ export function CallerInfoModal({
       {fullScreen && onBack && (
         <button
           type="button"
-          aria-label="Back to monitor"
+          aria-label={locale ? copy.back : 'Back to monitor'}
           onClick={onBack}
           className="absolute left-5 top-5 z-50 rounded-md border border-dispatch-line bg-dispatch-paper px-4 py-2 text-sm font-black uppercase text-dispatch-ink shadow-lg enabled:active:translate-y-px"
         >
-          Back
+          {copy.back}
         </button>
       )}
       <div
@@ -228,6 +294,9 @@ export function CallerInfoModal({
               onEnterMonitor={onEnterMonitor}
               canEnterMonitor={canEnterMonitor}
               route={route}
+              copy={copy}
+              localized={locale !== undefined}
+              locale={locale}
             />
           ) : (
             <AssignmentCallerInfoContent
@@ -251,6 +320,9 @@ export function CallerInfoModal({
               onCloseHospitalDirectory={onCloseHospitalDirectory}
               onMapFullscreenChange={onMapFullscreenChange}
               onSelectHospital={onSelectHospital}
+              copy={copy}
+              localized={locale !== undefined}
+              locale={locale}
             />
           )}
           {alertFlash && (
@@ -289,6 +361,9 @@ type CallerInfoContentProps = {
   onCloseHospitalDirectory?: () => void
   onMapFullscreenChange?: (fullscreen: boolean) => void
   onSelectHospital?: (hospitalId: string) => void
+  copy: CallerCopy
+  localized: boolean
+  locale?: WagamiALocale
 }
 
 function ClassicCallerInfoContent({
@@ -301,6 +376,8 @@ function ClassicCallerInfoContent({
   onCallerEvent,
   onEnterMonitor,
   canEnterMonitor = false,
+  copy,
+  localized,
 }: CallerInfoContentProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-neutral-900 bg-dispatch-paper text-dispatch-ink">
@@ -311,7 +388,7 @@ function ClassicCallerInfoContent({
               Dispatch Tablet
             </p>
             <h2 className="mt-1 text-2xl font-black leading-none tracking-normal">
-              Caller Info
+              {copy.callerInfo}
             </h2>
           </div>
         </div>
@@ -338,7 +415,7 @@ function ClassicCallerInfoContent({
                 className="grid grid-cols-[minmax(110px,0.82fr)_minmax(0,1.18fr)] overflow-hidden rounded-md border border-dispatch-line bg-dispatch-field"
               >
                 <span className="border-r border-dispatch-line px-3 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-dispatch-muted">
-                  {labelField && info[labelField].trim() !== '' ? info[labelField] : label}
+                  {labelField && info[labelField].trim() !== '' ? info[labelField] : localized ? callerFieldLabel(copy, field) ?? label : label}
                 </span>
                 <span className="flex min-w-0 items-center px-3 py-2 text-sm font-bold leading-tight text-dispatch-ink">
                   {info[field] || '-'}
@@ -348,7 +425,7 @@ function ClassicCallerInfoContent({
           </ul>
         ) : (
           <p className="text-sm font-bold text-dispatch-muted">
-            Aucune information d&apos;appel.
+            {copy.empty}
           </p>
         )}
         {onEnterMonitor && (
@@ -356,6 +433,7 @@ function ClassicCallerInfoContent({
             onEnterMonitor={onEnterMonitor}
             canEnterMonitor={canEnterMonitor}
             className="mt-4"
+            copy={copy}
           />
         )}
       </div>
@@ -363,6 +441,7 @@ function ClassicCallerInfoContent({
         variant="classic"
         buttonState={buttonState}
         onCallerEvent={onCallerEvent}
+        copy={copy}
       />
     </div>
   )
@@ -389,8 +468,11 @@ function AssignmentCallerInfoContent({
   onCloseHospitalDirectory,
   onMapFullscreenChange,
   onSelectHospital,
+  copy,
+  localized,
+  locale,
 }: CallerInfoContentProps) {
-  const priority = info.priority.trim() || 'Priority Pending'
+  const priority = info.priority.trim() || copy.priorityPending
   const assignmentDisplayFields = displayFields.filter(({ field }) => field !== 'priority')
   const hasExtraFields = assignmentDisplayFields.some(({ field }) => field.startsWith('extra'))
   const location = info.address.trim() || '-'
@@ -406,24 +488,24 @@ function AssignmentCallerInfoContent({
           <span className="grid h-5 w-5 place-items-center">
             <AssignmentSignalIcon />
           </span>
-          <span>Connected</span>
+          <span>{copy.connected}</span>
         </div>
         <div className="border-r border-neutral-700 px-4 py-2 text-neutral-300">
           <span className="font-mono normal-case tabular-nums">{receivedTime}</span>
         </div>
         <div className="px-4 py-2 text-neutral-300">
-          Unit <span className="text-dispatch-blue">421</span>
+          {copy.unit} <span className="text-dispatch-blue">421</span>
         </div>
       </header>
       <div className="grid shrink-0 grid-cols-[1fr_minmax(190px,0.78fr)] border-b border-neutral-700">
         <div className="flex items-center px-4 py-3" data-testid="assignment-title">
           <h2 className="text-xl font-black uppercase leading-none tracking-normal">
-            New Assignment
+            {copy.newAssignment}
           </h2>
         </div>
         <div aria-label="Response timer" className="border-l border-neutral-700 px-4 py-3">
           <p className="text-[10px] font-black uppercase tracking-[0.14em] text-white">
-            Response Timer
+            {copy.responseTimer}
           </p>
           <p className="font-mono text-2xl font-black tabular-nums text-white">
             {responseFormatted}
@@ -435,14 +517,14 @@ function AssignmentCallerInfoContent({
           <div className="mb-2 grid grid-cols-[1fr_auto] gap-4 border-b border-neutral-700 pb-3">
             <div>
               <p className="text-lg font-black text-white">
-                Call Assignment
+                {copy.callAssignment}
               </p>
             </div>
             <div className="border-l border-neutral-600 pl-4">
               <p className="text-lg font-black uppercase leading-tight text-white">
                 {priority}
               </p>
-              <p className="text-xs font-bold text-white">Lights & Sirens</p>
+              <p className="text-xs font-bold text-white">{copy.lightsSirens}</p>
             </div>
           </div>
           {hasInfo ? (
@@ -452,7 +534,7 @@ function AssignmentCallerInfoContent({
                 const resolvedLabel =
                   labelField && info[labelField].trim() !== ''
                     ? info[labelField]
-                    : meta?.label ?? label
+                    : localized ? callerFieldLabel(copy, field) ?? meta?.label ?? label : meta?.label ?? label
                 return (
                   <li
                     key={field}
@@ -486,13 +568,13 @@ function AssignmentCallerInfoContent({
             </ul>
           ) : (
             <p className="text-sm font-bold text-neutral-400">
-              Aucune information d&apos;appel.
+              {copy.empty}
             </p>
           )}
         </div>
         <div className="min-h-0 px-4 py-3">
           <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-dispatch-blue">
-            Location
+            {copy.location}
           </p>
           <div className="h-[58%] min-h-[140px]">
             {route ? (
@@ -507,6 +589,7 @@ function AssignmentCallerInfoContent({
                 onCloseDirectory={onCloseHospitalDirectory}
                 onFullscreenChange={onMapFullscreenChange}
                 onSelectHospital={onSelectHospital}
+                locale={locale}
               />
             ) : (
               <div className="flex h-full min-h-0 flex-col justify-between rounded-md border border-neutral-700 bg-dispatch-panel-soft p-4">
@@ -516,13 +599,13 @@ function AssignmentCallerInfoContent({
                   </span>
                   <div>
                     <p className="text-sm font-black text-neutral-100">{location}</p>
-                    <p className="mt-1 text-xs font-bold text-neutral-400">Awaiting route</p>
+                    <p className="mt-1 text-xs font-bold text-neutral-400">{copy.awaitingRoute}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 border-t border-neutral-700 pt-3">
                   <div>
                     <p className="text-[10px] font-black uppercase text-dispatch-blue">
-                      Distance
+                      {copy.distance}
                     </p>
                     <p className="text-sm font-black text-white">-- km</p>
                   </div>
@@ -538,16 +621,17 @@ function AssignmentCallerInfoContent({
           </div>
           <div className="mt-3 rounded-md border border-neutral-700 bg-black/25 p-4">
             <p className="text-[11px] font-black uppercase tracking-[0.16em] text-dispatch-blue">
-              Unit Status
+              {copy.unitStatus}
             </p>
-            <p className="mt-2 text-xs font-bold text-neutral-300">Current Status:</p>
-            <p className="text-lg font-black uppercase text-dispatch-green">Available</p>
+            <p className="mt-2 text-xs font-bold text-neutral-300">{copy.currentStatus}</p>
+            <p className="text-lg font-black uppercase text-dispatch-green">{copy.available}</p>
           </div>
           {onEnterMonitor && (
             <EnterMonitorButton
               onEnterMonitor={onEnterMonitor}
               canEnterMonitor={canEnterMonitor}
               className="mt-3"
+              copy={copy}
             />
           )}
         </div>
@@ -556,6 +640,7 @@ function AssignmentCallerInfoContent({
         variant="assignment"
         buttonState={buttonState}
         onCallerEvent={onCallerEvent}
+        copy={copy}
       />
     </div>
   )
@@ -565,15 +650,17 @@ function EnterMonitorButton({
   onEnterMonitor,
   canEnterMonitor,
   className,
+  copy,
 }: {
   onEnterMonitor: () => void
   canEnterMonitor: boolean
   className?: string
+  copy: CallerCopy
 }) {
   return (
     <button
       type="button"
-      aria-label="Go to monitor"
+      aria-label={copy.goToMonitorAria}
       disabled={!canEnterMonitor}
       onClick={onEnterMonitor}
       className={cn(
@@ -582,7 +669,7 @@ function EnterMonitorButton({
         className,
       )}
     >
-      Go to Monitor
+      {copy.goToMonitor}
     </button>
   )
 }
@@ -591,11 +678,18 @@ function CallerEventButtons({
   variant,
   buttonState,
   onCallerEvent,
+  copy,
 }: {
   variant: CallerInfoVariant
   buttonState: Record<CallerEventKey, { disabled: boolean }>
   onCallerEvent: (key: CallerEventKey) => void
+  copy: CallerCopy
 }) {
+  const eventLabels: Record<CallerEventKey, string> = {
+    acknowledge: copy.acknowledge,
+    arrival: copy.arrival,
+    transport: copy.transport,
+  }
   return (
     <div
       className={cn(
@@ -605,11 +699,11 @@ function CallerEventButtons({
           : 'border-t border-neutral-700 bg-dispatch-panel',
       )}
     >
-      {CALLER_EVENT_BUTTONS.map(({ key, label, assignmentClassName }) => (
+      {CALLER_EVENT_BUTTONS.map(({ key, assignmentClassName }) => (
         <button
           key={key}
           type="button"
-          aria-label={label}
+          aria-label={eventLabels[key]}
           disabled={buttonState[key].disabled}
           onClick={() => onCallerEvent(key)}
           className={cn(
@@ -620,7 +714,7 @@ function CallerEventButtons({
             'disabled:border-neutral-600 disabled:bg-neutral-700 disabled:text-neutral-300 disabled:opacity-85 disabled:saturate-0',
           )}
         >
-          {label}
+          {eventLabels[key]}
         </button>
       ))}
     </div>

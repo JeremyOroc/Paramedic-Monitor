@@ -2,12 +2,513 @@
 
 > Desktop-first cardiac monitor simulator for paramedic training.
 > Instructor controls vitals/rhythm in real time; Trainees operate one or more joined Scenario devices.
-> Based on: Zoll X Series UI. Stack: Next.js (App Router), React, Tailwind CSS, Supabase Realtime.
+> Wagami X was historically based on the Zoll X Series UI; Wagami A is a new, distinct model rather
+> than a pixel-accurate continuation of that reference. Stack: Next.js (App Router), React, Tailwind
+> CSS, Supabase Realtime.
 
 ---
 
 ## Current Requirement Updates
 
+- 2026-09-15 Wagami A A4 shock-advice clarification — **programmer-approved before A4 code**.
+  A shockable Analyze result on A advises a shock but does not enable the guarded Shock key.
+  One Charge press starts the established four-second timed charge; Shock becomes enabled only
+  in `charged` and delivers with one press. The `press_shock` voice cue occurs when A is ready,
+  not while Charge is still required. An advised shock followed by delivery enters the existing
+  CPR sequence; a manual charge retains its existing delivered-state behavior. Power-off
+  cancels the active sequence and resets the lock. This A-only policy leaves X/Z's existing
+  `shock_advised` delivery path unchanged. No separate Cancel key is added in A4.
+
+- 2026-09-15 Wagami A shell-control revision — **functional decisions, Precision Graphite
+  shell-controls v3 visual direction, and A3.1 rendered implementation accepted; A4 reserved for handoff**. The programmer approved a vertically
+  centered right-shell Analyze → Charge → Shock group, with Power remaining isolated at the
+  upper-right. Shock retains a visible protective guard. The left shell gains
+  top-area sound-mute and Patient mode controls plus a lower blood-pressure reading control;
+  the supplied cuff/gauge icon is a visual reference only and must not be reused as an asset.
+  The lower shell gains Left / Enter / Right circular navigation across clickable screen
+  options, explicitly including the six task launchers. The Print/Capture launcher becomes a
+  Vital Log launcher, provisionally labeled `Journal des signes vitaux` in French. This
+  revision supersedes the earlier A3 placement assumptions for Analyze, Charge, mute, and PNI
+  reading, and the former Print/Capture launcher function. **Resolved guard:** Patient mode changes are unavailable
+  from Analyze or Charge start through shock delivery or cancellation, including shock-ready
+  states; the button must visibly convey its disabled state rather than silently changing
+  pending shock energy. This A-only safety guard leaves X/Z behavior unchanged.
+  **Resolved Patient mode action:** the left-shell
+  button is the sole mode changer and cycles Adult → Pediatric → Neonate → Adult on each
+  permitted press, without a selection dialog. The current Device Patient mode is legibly
+  shown on both shell and live screen; Configure displays it read-only rather than offering
+  a second mode selector. This setting is distinct from Instructor-confirmed patient category
+  and retains the A-only active-defib lock above. **Resolved destination:** the permanent
+  launcher currently showing
+  Print/Capture becomes a real `Journal des signes vitaux` / Vital Log, displaying timestamped
+  FC, accepted cuff BP readings, SpO2, and EtCO2 history. Existing 12-lead capture and printing
+  remain reachable inside the 12-lead workflow; there is no standalone Print/Capture launcher.
+  Vital Log starts with X's five-elapsed-monitor-minute immutable snapshots, eight rows per
+  page, and history clearing on power-off or refresh, rather than one row for every cuff action.
+  Accepted cuff BP values appear in subsequent snapshots. The isolated `/?dev=3` preview
+  shows an honest empty history until a real monitor timer exists, never invented log entries.
+  A3 is the completed historical baseline; A3.1 supersedes its control positions and fifth tile.
+  **Resolved presentation boundary:** Wagami A's outer shell and physical-style controls remain
+  visible and operable around every secondary destination, including 12-lead and Call Info.
+  Their `full-screen` content fills the inner display aperture, not the entire browser viewport;
+  it cannot silently interrupt an active clinical process. This is an A-specific presentation
+  change; the existing X/Z outer layouts are unaffected.
+  **Resolved action ownership:** Analyze, all-device-cues mute, and BP reading are shell-only
+  actions on Wagami A. Remove the inner-screen Analyze button, waveform-header mute button,
+  and PNI-card click action when implementing this revision; keep the defibrillation status
+  and PNI card as visible, read-only displays. Their functions and safety guards remain intact,
+  but no second touchscreen route may create a duplicate action/event.
+  **Resolved navigation:** the lower-shell Left/Enter/Right controls navigate enabled
+  inner-display actions only. On the live screen, Left/Right wrap through the six 2×3 task
+  launchers in visual row order, then touchscreen energy −/+, with visible selection; Enter
+  activates once. Read-only vital cards, disabled/guarded controls, and outer-shell actions
+  (especially Shock) are excluded. Touch activation synchronizes the selected control. In
+  secondary views, navigation wraps through that view's enabled actions; returning to the
+  live screen restores its prior selection. Navigation must not cancel analysis, charging,
+  shock readiness, capture, or other active clinical processes.
+  **Revised visual gate:** preserve the approved Precision Graphite palette and core vital/
+  waveform/dock hierarchy while fitting the new asymmetric side and lower-shell controls.
+  Use an original outlined cuff/gauge BP icon informed by the supplied image's concept but
+  not copied from it; render accessible safety-critical labels/states in default French now,
+  with full bilingual localization in A5. The updated concept and A3.1 shell/navigation
+  amendment are approved and implemented. A4 clinical wiring and A5 destinations are reserved
+  for the subsequent programmer/developer handoff. Real-iPad fit and qualified IP review remain A6 gates.
+  The non-destructive candidate is
+  `docs/design/wagami-a-concepts/precision-graphite-shell-controls-v3.png` with a review spec;
+  the programmer approved it as the A3.1 visual direction on 2026-09-15 and accepted the flatter
+  code-native A3.1 render as complete before handoff. Its illustrative values and controls do not
+  establish actual iPad fit or legal distinctness. The added right-side physical stack requires
+  renewed X/Z side-by-side review because Wagami Z also has a broad right-hardware motif.
+
+- 2026-09-15 Wagami A A1 design sign-off (**historical; its PNI/audio placements are superseded
+  by the A3.1 revision above**) — Precision Graphite v2 is the selected concept. The
+  programmer approved the exact A-only palette in
+  `docs/design/wagami-a-concepts/precision-graphite-spec.md`, the PNI vital card as a one-tap
+  reading action, and a persistent labeled all-device-cues mute target in the waveform header
+  immediately left of the six-task right dock (with equivalent access in secondary views).
+  The five-criterion concept-level scorecard is complete; rendered/iPad and qualified IP
+  reviews remain later gates. A2 contracts/isolated preview may begin, with no live A model
+  selection, A Attempts, or production database deployment in this phase.
+
+- 2026-09-15 Wagami A destination correction (**historical six-tile list; Print/Capture was
+  replaced by Vital Log in A3.1**) — the tile labeled `Events` in the A1 concept
+  images is actually the `Call Info` destination. The six Wagami A live-screen launchers are
+  12-lead, EtCO2, Medications, Call Info, Print/Capture, and Configure. Call Info opens the
+  trainee's existing Assignment dashboard/caller-information workflow, not an Event Log.
+  The medication Event Log remains available within the Medications workflow; it is not a
+  seventh permanent task tile. The six v2 images are intentionally unchanged and their
+  `ÉVÉNEMENTS` pixels are superseded by this documentation. This is a destination/function
+  correction, not a change to the accepted right-side grid or clinical process timing.
+
+- 2026-09-15 Wagami A design clarification (**historical destination names; A3.1 replaced
+  Print/Capture with Vital Log**) — all six secondary destinations (12-lead, EtCO2,
+  Medications, Call Info, Print/Capture, Configure) must be simultaneously visible as one-tap
+  touchscreen launchers on the live screen. The three first-pass A1 images showed only a small
+  menu entry point, hiding those destinations behind at least two taps; none met this requirement.
+  Their selection was paused, and the two-step menu assumption must not be implemented. The programmer
+  approved a 2×3 grid of labeled touch launchers in the upper-right INSIDE the display, with a
+  compact, always-visible defibrillation status panel below. This avoids X's left-key bank,
+  retains the center waveform workspace, and keeps shell-only Shock separate at lower-right.
+  This changes access behavior, not clinical state/timing contracts. Validate the
+  resulting touch-target size, spacing, and landscape-iPad screen fit.
+
+- 2026-09-15 requirement update — Wagami A model and redesign boundary: add Wagami A as a third
+  selectable defibrillator model alongside Wagami X and Wagami Z. Do not delete Wagami X or change
+  its existing behavior as part of the Wagami A redesign. Wagami A retains the existing simulator's
+  clinical functions and safety-critical feedback while adopting a distinct device-like visual and
+  interaction design; it is not a recolor, pixel-accurate copy, or mere relabeling of Wagami X or a
+  copy of Wagami Z. Wagami A may place other controls on its touchscreen, but its Power, Charge, and
+  Shock actions must remain physical-style buttons on its outer shell. Wagami A uses a rugged
+  field-tablet silhouette: an almost edge-to-edge screen, asymmetric protective corners, and a
+  matte charcoal body rather than Wagami X/Z's rounded blue housing. Its live screen places vital
+  cards in a top strip over a large waveform workspace and separates defibrillation state from
+  those clinical displays. Order the top cards FC, SpO2, PNI, EtCO2; make ECG the large primary
+  trace, place smaller SpO2 and EtCO2 traces below, and omit a blank PNI waveform row. Put
+  analysis/energy/charge/shock-readiness/CPR status in a narrow right-side state panel, not a
+  right-side vital stack; place the approved upper-right 2×3 task launcher grid above this compact
+  always-visible panel, keeping touchscreen Analyze and energy actions there, with physical Charge
+  and Shock on the shell. Urgent touch actions stay visible; secondary measurements, records,
+  and settings must be immediately accessible through the visible right-side grid; the earlier
+  two-step contextual-menu assumption is rejected. Avoid a permanent seven-key physical
+  bank or Z-style top/bottom touchscreen ribbons. The six separate destinations are 12-lead, EtCO2,
+  Medications, Call Info, Vital Log, and Configure. Configure includes Patient mode, PNI settings,
+  and an A-only Language toggle; A defaults to French and offers English as a Scenario-device-local
+  presentation choice mirrored by Spectator. Configure also includes an on/off toggle for the shell
+  alarm LED. LED Off suppresses only the shell light, not the on-screen alarm warning or audio.
+  Device language and LED choice survive menus, power cycles, and reloads within the same Attempt,
+  then reset to French and LED On for New Attempt or a new Room. Power is isolated and
+  recessed at the top-right edge; Charge sits on the left shoulder; Shock is prominent at the
+  lower-right corner. These three remain physical-style
+  outer-shell buttons, not touch actions. The live touchscreen keeps Analyze, energy selection,
+  PNI reading, and device-audio mute one tap away; 12-lead, EtCO2 calibration, medication log, records,
+  and settings use the approved immediately accessible touchscreen launchers. Every displayed control must be functional by
+  public release, even if implementation is phased. Omit X's currently inert Brightness, Snapshot,
+  Pacer, and alarm-acknowledge controls from A's release interface until each has a separately
+  defined, tested training behavior. Keep the top vital cards fixed through analysis, charging,
+  shock readiness, and CPR; show analysis result, selected energy, charge progress, shock readiness,
+  and CPR timing in a dedicated changing defibrillation panel instead of relocating vitals. Use a
+  new high-contrast channel palette on a dark-slate screen, reserving red for alarms and Shock;
+  use the approved exact A-only colors in the A1 design specification, separately from X/Z.
+  Preserve X's working boot, charge, PNI, EtCO2,
+  12-lead, and CPR timing/state rules and scenario outcomes while changing how users invoke them.
+  Target the established supported landscape iPad and desktop training-display contract for A's
+  first release, with real-iPad shell/touch-target validation before broader support. Canada is the
+  initial public-release and qualified IP-review market; additional markets require their own
+  review. Wagami X and Wagami Z remain available for now; whether either is removed from public
+  availability is a later decision, likely at the public-release gate, and neither is to be deleted
+  by assumption. A's redesign scope includes its trainee device, 12-lead, menus, logs, and
+  device-specific overlays; dispatch and Instructor Console behavior stay intact except for A
+  model selection. Preserve X's active-process timing and state guards if trainees navigate or
+  open menus during analysis, charge, capture, or transmission; conflicting actions are blocked
+  rather than silently cancelling the process. A compact alarm indicator and device-audio mute
+  action remain available across A views, with existing thresholds and X's all-cues global mute
+  behavior retained under honest French/English labels. Put a small physical-style alarm LED on
+  the upper-left shell, apart from Power, and pair it with persistent on-screen alarm text/icon.
+  The LED is steady white when ready, briefly pulses red on alarm onset, then remains red while an
+  alarm is active even when audio is muted. Respect the display's reduced-motion preference by
+  showing a steady LED instead of the onset pulse; the Configure LED On/Off switch remains separate.
+  Provide a no-flash presentation and test the pulse for
+  accessibility; alarm meaning cannot rely on color or LED alone. Keep 12-lead full-display
+  within A's persistent shell, while
+  EtCO2, Medications, Vital Log, and Configure use contained panels/sheets with alarm
+  status and safe navigation still available. Call Info opens the existing full-display Assignment
+  dashboard/caller-information workflow; its return to the monitor preserves active clinical
+  processes. The medication Event Log remains within Medications, not behind a separate Events
+  launcher. Shock keeps X's
+  charged-state guard and single-press action, without an extra confirmation dialog, while its
+  outer-shell button is visibly protected and separated from ordinary controls. Review three
+  original A field-tablet variants against X and Z before selecting exact visual details. Exact
+  palette values, post-release model defaults, and release timing remain open
+  decisions. Translate all fixed Wagami A UI text and scripted clinical voice prompts into the
+  selected Device language, rendering fixed event/report labels from stable meaning rather than
+  storing language-dependent copies. Do not automatically translate Instructor-authored notes,
+  names, or Receiving Hospital Directory entries. Audit existing audio/assets for language and
+  provenance before reuse. Use original A 12-lead artwork, icons, and newly authored bilingual
+  clinical prompts unless reuse rights are documented; do not change X/Z assets as part of A's
+  concept phase. Keep tracked ZOLL photos as private planning references for now; before any
+  public source-code distribution, document permission or exclude them from that distributable
+  version without deleting Wagami X/Z. Keep incomplete Wagami A out of live Instructor model selection and
+  Attempts, but provide the direct `/?dev=3` base-link preview shortcut parallel to the existing
+  X/Z dev shortcuts. It bypasses dispatch, opens A powered on, visibly labels it `PREVIEW`, and does
+  not join a Room; the direct link remains available during construction. Keep Wagami X as the
+  default model during development. A must not automatically become the default on completion or
+  release: that is a separate explicit future decision by the product team. Existing X/Z Saved
+  scenarios retain their selected model. Wagami A must be explicitly recognized in version-1 Saved scenario
+  snapshots without changing old X/Z snapshots or bumping the snapshot version merely for a model
+  identifier. Missing legacy model fields continue to normalize to X. Widen the persistent
+  Evaluation report model constraint and generated/report types before any A Attempt starts.
+  Select among three original field-tablet mockups that vary corner/edge geometry, physical-button
+  treatment, secondary materials, typography, and channel accents without changing the accepted
+  control locations or data hierarchy. Use the same clinical-readability, one-tap usability,
+  physical-button clarity, iPad fit, and X/Z visual-distinctness scorecard; reject any concept that
+  fails readability or button clarity, regardless of appearance. User concept
+  approval and qualified IP review are separate gates. Before implementation, compare original
+  concepts against Wagami X and Wagami Z, record accepted decisions, and obtain qualified IP
+  clearance before public distribution; visual
+  redesign alone is not legal clearance. Preserve existing saved-scenario and Attempt model
+  semantics while adding the model, with compatibility behavior to be specified before coding.
+
+### Testing — Wagami A planning and future implementation
+
+- At each implementation phase, add tests beside every new or changed component, hook, utility, and
+  route, plus integration coverage for model selection, saved-scenario compatibility, trainee and
+  Spectator presentation, clinical-function parity, and physical Power/Charge/Shock placement.
+- Review rendered Wagami A at supported training and development displays and compare its overall
+  composition against both Wagami X and Wagami Z, not just isolated colors or labels. Record
+  distinctness review and any external IP clearance separately from automated tests.
+- Cover the accepted shell silhouette, outer-shell physical control placement, top vital-card strip,
+  dominant waveform workspace, separate defibrillation-state presentation, six visible right-side task launchers,
+  visible urgent actions, and absence of acknowledged-but-inert release controls.
+- Cover fixed vital-card placement across analysis, charge, shock-ready, and CPR states; touchscreen
+  quick actions and right-side task destinations; omitted inert legacy controls; existing timing and
+  scenario-event parity; alarm/channel contrast; and real-device touch-target and shell containment.
+- Cover six distinct visible destinations including Call Info rather than an Events tile, French default and English Language toggle,
+  state-preserving menu navigation during critical processes, conflicting-action guards, global
+  alarm visibility and all-cues mute on A-specific views, and charged-state-only one-press Shock
+  behavior.
+- Cover the separate shell LED and on-screen text/icon, ready/alarm/muted states, brief pulse and
+  no-flash behavior, Configure LED on/off control, device-local language with Spectator parity,
+  12-lead full-screen versus contained secondary sheets, and view-level alarm continuity.
+- Explicitly accept Wagami A as a third model in scenario normalization, Instructor selection,
+  trainee routing, Spectator projection validation/rendering, and immutable Evaluation reporting;
+  do not let an unknown-model fallback silently render A as X. Preserve legacy version-1 Saved
+  scenarios that default to X, and plan the report database constraint/type migration before A
+  Attempts are allowed to start.
+- Cover LED Off preserving screen/audio warnings, per-Attempt Device language/LED persistence through
+  reload and power cycles plus New Attempt/Room defaults, French/English fixed UI and scripted prompt
+  parity, locale-neutral event/report meaning, and unchanged instructor-authored content.
+- Cover `/?dev=3` preview routing without live Instructor model selection before the release gate,
+  version-1 Saved scenario A round-trip and legacy X fallback, report migration/typing, and
+  three-concept review evidence against the accepted scorecard.
+- Before A-specific UI code, define its new palette centrally and update the repository's X-era
+  color convention so the two models' rules do not contradict each other.
+
+## Wagami A Phased Redesign — Accepted Roadmap (2026-09-15)
+
+This roadmap is a sequence of gated phases, not permission to implement unresolved design details.
+Do not expose incomplete A in Instructor-led Attempts. Record each completed phase in `STATUS.md`
+and `CHANGELOG.md`; update this plan before any requirement changes. The existing Wagami X and Z
+models remain available until a separate explicit product decision changes that.
+
+### A0 — Requirement, Asset, and IP Inventory (COMPLETE 2026-09-15)
+
+Inventory X/Z visual similarities, tracked reference media, production assets, audio/copy provenance,
+existing clinical workflows, model/report contracts, and A's distinctness/release constraints.
+Separate design review from qualified Canadian IP advice; neither a mockup nor a scorecard is a
+legal clearance. Keep the existing X/Z models and media untouched; A uses newly authored visual/
+voice assets unless reuse rights are recorded. The tracked ZOLL photos remain private planning
+references until their distributable-repository status is explicitly resolved. Confirm the
+remaining concept-brief decisions before A UI code.
+
+#### Testing
+
+Verify the inventory against repository paths and current behavior, including references tracked
+in Git versus assets served from `public/`; document provenance gaps rather than guessing.
+
+**Milestone complete (2026-09-15):** The repository inventory records tracked X references,
+ignored Z research, reference-derived code-native shells, served media, missing per-asset rights
+records, working X clinical workflows, and third-model/report contracts. The programmer accepted
+the original-A-asset policy and the A1 concept brief. No asset was removed, and the inventory is
+not legal clearance. See `docs/research/wagami-a-phase0-inventory.md`.
+
+### A1 — Three Original Concepts and Selection (CONCEPT GATE COMPLETE 2026-09-15)
+
+Three field-tablet mockups are saved in `docs/design/wagami-a-concepts/`: Field Slate, Rescue Neutral,
+and Precision Graphite. They vary shell geometry, material treatment, typography, and channel
+accents within the accepted shell, button, and clinical-layout boundaries. Compare
+each with Wagami X and Z using the accepted five-criterion scorecard. The first-pass images hide
+the six secondary destinations. The user approved a 2×3
+upper-right touchscreen grid of labeled one-tap launchers, with the compact always-visible defib
+status panel below and the physical Shock on the lower-right shell. Three versioned v2 images now
+depict this arrangement without overwriting the first-pass versions. On 2026-09-15 the programmer
+selected **Precision Graphite v2** as the visual direction from the three revised concepts; Field
+Slate and Rescue Neutral remain reviewed alternatives, not deleted assets. Preserve Precision's
+faceted graphite shell, crisp card outlines, restrained technical typography, and distinctly
+separated physical Power/Charge/Shock controls. Its illustrated `ÉVÉNEMENTS` tile means Call Info
+per the later destination correction, not a new Events task. The programmer approved the exact
+A-only palette and the two quick-action placements (PNI card starts a reading; global-audio mute
+sits in the waveform header immediately left of the task dock and persists in secondary views).
+The five-criterion concept-level scorecard is complete in the linked design specification;
+rendered touch-target/iPad validation is scheduled for A3/A6 once code exists. A1 concept gate
+is complete, while generated tiny labels and illustrative monitor states are not
+clinical acceptance criteria.
+
+#### Testing
+
+Review readability, urgent-action visibility, physical-button clarity, and landscape-iPad fit in
+each mockup; reject concepts that fail safety/readability even if visually preferred.
+V2 bitmap review checks that six task tiles and defibrillation status are visibly present, but
+cannot prove actual 44×44 CSS-pixel touch targets, accessible names, one-tap behavior, or real-iPad
+fit. The separate PNI-read/global-audio-mute quick actions are still required even though the v2
+bitmap revisions do not depict them.
+
+**Milestone complete (2026-09-15):** Precision Graphite v2, exact A palette, PNI/audio quick-action
+locations, and concept-level X/Z side-by-side scorecard were approved. Carry actual rendered/iPad
+target validation forward to A3/A6. The programmer approved the staged A1→A2 scope; A2 must not
+enable live A Instructor selection
+or A Attempts just because the isolated preview and model contracts exist.
+The approved palette, concept-to-code deviations, completed concept-level five-criterion review, and A2
+implementation inventory are recorded in
+`docs/design/wagami-a-concepts/precision-graphite-spec.md`. Bitmap review is not rendered/device proof.
+The A1 PNI-card/touch-mute placements are historical and must not be reintroduced after A3.1.
+
+### A2 — Third-Model Contracts and Isolated Preview
+
+**Status:** Local implementation COMPLETE on 2026-09-15; no production migration or live A
+Instructor selection. The focused A2 suites pass. The full app suite retains three independently
+reproduced Room-ownership/Patient-Info baseline failures, and the report pgTAP suite retains two
+local-audit-row baseline failures; the two new A constraint assertions pass transactionally.
+Rendered preview checks at 1024×768 and 1366×768 confirm containment only, not A3 fidelity.
+
+Add explicit Wagami A model recognition to types, version-1 scenario normalization, projection,
+and report contracts; widen the persistent-report constraint before enabling A Attempts. Add the
+powered-on, dispatch-bypassing `/?dev=3` route with a visible `PREVIEW` label and no Room join, but
+keep A out of live Instructor model selection. Define a centralized A palette and update X-era
+agent/UI color guidance without changing X/Z styling.
+
+#### Testing
+
+Cover A and legacy X/Z scenario round-trips, unknown-model fallback, report database checks and
+types, preview routing, and absence of live A selection. Run focused type, schema, and route suites.
+
+### A3 — Original Shell and Live Display
+
+This completed historical baseline was amended by A3.1. Its former touch quick actions and
+left-Charge placement are not the current Wagami A design.
+
+Build the chosen rugged shell, top vital cards, dominant waveform workspace, separate defib panel,
+upper-left alarm LED, outer-shell Power/Charge/Shock, and visible touchscreen quick actions. Reuse
+patient-state and waveform mechanisms without copying X/Z visual anatomy.
+
+#### Testing
+
+Test every new component and action affordance, fixed vital geometry, shell/button placement,
+live confirmed channels, waveform continuity, alarm text/icon, LED and reduced-motion presentation,
+and landscape display containment.
+
+### A3.1 — Approved Shell-Control and Navigation Amendment (COMPLETE 2026-09-15)
+
+With programmer acceptance of the updated Precision Graphite v3 direction, reposition the original
+A shell controls: isolated upper-right Power, vertically centered right Analyze/Charge/guarded
+Shock, upper-left-side mute and Patient mode, lower-left BP reading, and lower-center
+Left/Enter/Right navigation. Remove the duplicate touch Analyze/mute/PNI-reading actions while
+keeping fixed vital cards and defib status read-only. Add a pure enabled-action focus model for
+the six right-dock launchers, touchscreen energy, and contextual secondary-view actions, with
+visible cyclic selection and Enter activation. Keep unsupported clinical actions disabled until
+A4/A5 and keep X/Z intact. The `/?dev=3` preview stays Room-free.
+
+#### Testing
+
+Test shell-button order/placement, Shock separation, original icon provenance, no duplicate
+touch actions, read-only PNI/defib displays, focus wrap/order/skip-disabled behavior, Enter
+single activation, secondary-view selection restoration, interaction guards, default French
+labels, and 1024px landscape fit. Full bilingual localization and its tests belong to A5.
+Rendered concept approval is a prerequisite, not a code test. A3.1 focused tests and
+rendered desktop QA pass. The programmer accepted A3 as done, including its A3.1 amendment,
+and instructed that A4 be left for a collaborator on another device. This is rendered design
+acceptance, not real-iPad validation or qualified IP clearance.
+
+### A4 — Functional Clinical Core (COMPLETE 2026-09-15)
+
+The collaborator handoff now includes a device-specific Codex plugin/skill checklist.
+Build Web Apps skills are recommended for React/rendered UI QA; Supabase skills become
+relevant for later data/Realtime/migration work. Optional plugins are not an A4 scope or
+approval prerequisite. The complete A3.1 working tree and explicit A4 plan approval remain
+required before implementation.
+
+Connect Power, shell-only Analyze/Charge/Shock/BP reading/all-cues mute/Patient mode,
+touchscreen energy,
+alarms, and CPR to the existing working state rules and timing. Keep PNI card and defibrillation
+status visible but non-clickable. Preserve conflicting-action guards during navigation. No
+displayed release control may remain inert.
+For A's approved charged-only Shock policy, shockable Analyze advice enables Charge rather
+than Shock. One Charge press starts the existing four-second timed phase, then enables the
+one-press Shock guard. Advised delivery enters CPR; direct manual Charge retains the existing
+delivered state. Power-off cancels and resets the process. The isolated preview remains
+Room-free and emits no live Attempt events; A5 owns task destinations and A6 owns live A
+integration.
+
+#### Testing
+
+Test defibrillation guard/timer/event parity, PNI cycle and alarm suppression, all-cues mute,
+shell-only action ownership and absence of duplicate touchscreen events, three-mode circular
+Patient mode order, legible shell/screen mode state, and Configure read-only mode presentation,
+Patient mode shell-button lock during Analyze/Charge/shock-ready through delivery/cancellation,
+charged-state-only one-press Shock, CPR timing, critical-process navigation, and inactive/disabled
+feedback. Run clinical integration suites and rendered device QA.
+Include A-only charge-after-advice and spoken-cue timing, advised-shock CPR, manual-charge
+parity, cancellation on power-off, and explicit X/Z default-policy regression tests.
+
+**Milestone complete (2026-09-15):** After programmer approval, the Room-free A preview now
+uses the established defib, NIBP, alarm, audio, and CPR hooks through an A clinical adapter.
+Shell-only actions and touchscreen energy function with the approved A-only lock and
+charged-only Shock policy; A5 launchers remain visibly disabled. Focused A4 tests pass
+(53 across 10 files), TypeScript and affected-file ESLint pass, Webpack production build
+passes, and a rendered 1280×720 preview pass checked control states, Power/mute cycling,
+manual Charge/Shock, cuff feedback, Pediatric label fit, and no visible page overflow.
+The full Windows Vitest run has 1,484 passing, one skipped, and 11 unrelated failures:
+the handoff's three baseline failures, seven operations-script tests requiring Bash not on
+this shell's PATH, and one LF-only config assertion against a CRLF checkout. Real-iPad
+testing remained A6; at the A4 milestone, live A Attempts, six destinations, preferences,
+and localization were still A5/A6 gates.
+
+### A5 — Six Destinations, Bilingual Interface, and Preferences (COMPLETE 2026-09-16)
+
+Implement 12-lead, EtCO2, Medications, Call Info, Vital Log, and Configure. Each destination
+occupies the inner A display while the outer shell and its controls remain visible/operable.
+Call Info opens the existing trainee Assignment dashboard/caller-information workflow; the
+medication Event Log remains reachable from Medications without its own permanent task tile.
+Vital Log presents five-minute timestamped FC, accepted cuff BP, SpO2, and EtCO2 snapshots,
+eight rows per page, and resets on power-off/refresh. The direct Room-free preview has no
+invented history. 12-lead capture/printing stays inside the 12-lead workflow. Localize fixed A UI,
+scripted prompts, and fixed event/report labels without rewriting instructor-authored content.
+Persist Device language and shell-LED choice through one Attempt, then reset at New Attempt or new
+Room; mirror the choice in Spectator projection.
+
+#### Testing
+
+Test every secondary component/hook, all six launcher destinations including Call Info versus
+the separate medication Event Log and Vital Log versus 12-lead capture/printing, five-minute
+sampling/accepted-BP snapshot semantics, eight-row pagination, power-off/refresh cleanup,
+honest empty preview, French and
+English paths, spoken prompt selection, locale-neutral event rendering, 12-lead full-display
+versus contained sheets, persistent outer shell/control guard behavior across every destination,
+alarm visibility, safe navigation, preference persistence/reset, and trainee/Spectator parity.
+
+**Milestone complete (2026-09-16):** After programmer approval, the Room-free A preview now
+opens all six destinations inside the persistent shell. It includes timed 12-lead capture with
+print/transmit subflows, EtCO₂ calibration, medication recording with a nested Event Log, the
+existing Assignment dashboard, honest empty/shared-snapshot Vital Log pagination, and Configure
+with read-only Patient mode plus PNI settings. Typed French-default/English localization covers
+fixed A and contained route-map copy; English recorded prompts and French `fr-CA` speech share
+locale-neutral semantic events. Device language and shell-LED choice persist by supplied
+Room/Attempt scope, and optional semantic A projection state renders the same choice in Spectator
+without enabling live A Attempts. The shell LED pulses once then stays red for an active alarm;
+turning it off never suppresses the on-screen alarm.
+
+The focused A/shared suite passes 114 tests across 24 files. TypeScript, full source ESLint
+(0 errors; 12 established warnings), and the Webpack production build pass. Rendered 1280×720 QA
+covered all six destinations, capture persistence across navigation, nested medication history,
+French/English settings, LED-off persistence, automatic PNI interval selection, and exact
+viewport fit with no page overflow and clean hydration/console behavior. The complete Windows suite has 1,504 passing, one skipped,
+and the same 11 unrelated failures: seven Bash operations-script checks, two Room-ownership
+baselines, one PatientInfoPanel class expectation, and one LF-only config assertion on CRLF.
+Live publication of A projection/snapshots, New Attempt/new Room scope wiring, and real-iPad QA
+remain A6 work.
+
+### A6 — Live Integration, Device QA, and Release Decision (IN PROGRESS — LIVE CODE COMPLETE 2026-09-17)
+
+Only after A's visible controls and screens function, enable Instructor model selection and
+end-to-end Attempts. Verify saved scenarios, Spectator, immutable Evaluation reports, and real
+landscape-iPad touch/fit. Obtain qualified IP review for A and make an explicit decision about X/Z
+public availability and any A default change; neither decision is automatic.
+
+#### Testing
+
+Run focused and complete automated suites, TypeScript, ESLint, production build, database checks,
+real-iPad and desktop workflow QA, side-by-side visual review, and report readback. Record known
+baseline failures separately; finish only after phase evidence and required sign-offs are logged.
+
+**Implementation milestone complete (2026-09-17):** After programmer approval, Wagami A is now
+available through the normal Instructor draft/save/send model flow, Saved scenarios, live trainee
+Attempts, semantic student events, shared five-minute Vital Log, Room/participant/Attempt-scoped
+preferences, version-1 projection publication, Spectator rendering, and Evaluation report model
+readback. The live A surface uses the established monitor controller, defibrillation, NIBP, alarm,
+CPR, dispatch, accepted-BP, and power state instead of a parallel clinical state machine. X and Z
+remain available and X remains the default. A contained Leaflet transition race found during rapid
+Call Info navigation was fixed by disabling map transitions in contained views and stopping map
+activity before teardown.
+
+The A6 focused integration set passes 151 tests across 15 files. TypeScript, full source ESLint
+(0 errors; 12 established warnings), and the Webpack production build pass. The complete Windows
+suite has 1,509 passing, one skipped, and the same 11 unrelated environment/baseline failures:
+seven Bash operations-script checks, two Room-ownership baselines, one PatientInfoPanel class
+expectation, and one LF-only config assertion on this CRLF checkout. Rendered 1280×720 and
+1024×768 desktop QA verified all six destinations, French/English preferences, shell-LED state,
+rapid navigation with no console errors, persistent shell presence, and exact viewport fit.
+The report-widening migration and pgTAP assertions have source-level contract coverage, but this
+machine has no Supabase CLI, PostgreSQL client, or Docker runtime, so the disposable local database
+run remains open; production was not contacted or changed.
+
+A6 remains open for controlled database execution, report readback against that controlled
+environment, real landscape-iPad touch/fit evidence, renewed side-by-side A-versus-X/Z
+distinctness review, qualified IP advice, and the programmer's release/default/public-availability
+decisions. These external gates are not implied by the completed local integration.
+
+**Handoff audit (2026-09-19):** No later phase or external gate was started. A fresh fetch confirmed
+that local HEAD and `origin/wagami-a` both remain at `d03cd3f`; the complete A4–A6 result is still
+present only as 38 modified tracked files plus 17 untracked files in this working tree. A selected
+15-file A6 integration rerun passed 147 tests. The full suite reproduced 1,509 passing, one skipped,
+and the same 11 known Windows/baseline failures; sequential TypeScript, full source ESLint (zero
+errors, 12 warnings), and the Webpack production build passed. The next collaborator must receive
+the exact working tree, inspect the implementation and evidence, and present a concrete plan for
+programmer approval before further code, database, device, release, commit, or push work.
+
+**Git transfer complete (2026-09-20):** The programmer selected the branch-transfer option.
+Commit `069f611` contains the complete audited A4–A6 implementation and its 55-path transfer set
+and was pushed to `origin/wagami-a`. A collaborator can now fetch the branch, verify that commit is
+an ancestor of a clean checkout, read the handoff, and present a concrete plan for approval. This
+transfer does not close any database, physical-device, distinctness, IP, or release gate.
 - 2026-09-19 requirement refinement — timer-box countdown presentation: use muted `MIN` and `SEC`
   placeholders inside empty Trend Timer inputs and hide each placeholder whenever that box contains a
   number. Before Send, the boxes remain editable with ordinary white numbers. During an Active Trend,

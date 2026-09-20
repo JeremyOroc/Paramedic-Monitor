@@ -32,6 +32,7 @@ function fakeCtx() {
 
 function makeCanvas() {
   const canvas = document.createElement('canvas')
+  const ctx = fakeCtx()
   Object.defineProperty(canvas, 'getBoundingClientRect', {
     value: () => ({
       width: 400,
@@ -46,7 +47,7 @@ function makeCanvas() {
     }),
   })
   vi.spyOn(canvas, 'getContext').mockImplementation(
-    () => fakeCtx() as unknown as CanvasRenderingContext2D | null,
+    () => ctx as unknown as CanvasRenderingContext2D | null,
   )
   return canvas
 }
@@ -96,6 +97,22 @@ describe('startRenderer', () => {
     expect(rafCalls.length).toBeGreaterThan(0)
     stop()
     expect(rafCancelled.length).toBeGreaterThan(0)
+  })
+
+  it('clears a model-specific canvas with its supplied background', () => {
+    const canvas = makeCanvas()
+    const ctx = canvas.getContext('2d')
+    const stop = startRenderer({
+      canvas,
+      color: '#65E5D9',
+      background: '#081014',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 750,
+    })
+
+    expect(ctx?.fillStyle).toBe('#081014')
+    expect(ctx?.fillRect).toHaveBeenCalled()
+    stop()
   })
 
   it('no-ops when 2d context is unavailable', () => {

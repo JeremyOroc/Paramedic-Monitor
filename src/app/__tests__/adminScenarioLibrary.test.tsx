@@ -81,7 +81,7 @@ describe('AdminPage scenario library integration', () => {
 
   it('loads all four authoring areas, stages only, and saves a manual FC edit', async () => {
     const stored = savedScenario()
-    stored.snapshot.defibrillatorModel = 'wagamiZ'
+    stored.snapshot.defibrillatorModel = 'wagamiA'
     const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
       const url = String(input)
       const method = init?.method ?? 'GET'
@@ -126,7 +126,7 @@ describe('AdminPage scenario library integration', () => {
     expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeDisabled()
     expect(useMonitorStore.getState().draft.hr).toBe(145)
     expect(useMonitorStore.getState().confirmed.hr).toBe(0)
-    expect(useMonitorStore.getState().defibrillatorModelDraft).toBe('wagamiZ')
+    expect(useMonitorStore.getState().defibrillatorModelDraft).toBe('wagamiA')
 
     const title = screen.getByLabelText('Change scenario title')
     await user.type(title, ' edited')
@@ -170,7 +170,7 @@ describe('AdminPage scenario library integration', () => {
       expect(patchCall).toBeDefined()
       const body = JSON.parse(String(patchCall?.[1]?.body))
       expect(body.snapshot.monitor.draft.hr).toBe(160)
-      expect(body.snapshot.defibrillatorModel).toBe('wagamiZ')
+      expect(body.snapshot.defibrillatorModel).toBe('wagamiA')
     })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeDisabled())
     expect(useMonitorStore.getState().confirmed.hr).toBe(0)

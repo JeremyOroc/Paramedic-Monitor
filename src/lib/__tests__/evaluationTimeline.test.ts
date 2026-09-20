@@ -357,6 +357,12 @@ describe('diffStates — the instructor\'s other inputs (PLAN 15a)', () => {
     ])
   })
 
+  it('retains Wagami A as its own report timeline label', () => {
+    expect(diffStates(base, with_({ defibrillatorModelConfirmed: 'wagamiA' }))).toEqual([
+      expect.objectContaining({ group: 'device', summary: 'defibrillator Wagami X → Wagami A' }),
+    ])
+  })
+
   it('reports a response time change as minutes and seconds', () => {
     expect(diffStates(base, with_({ dispatchConfirmedSeconds: 372 }))).toEqual([
       expect.objectContaining({ group: 'timing', summary: 'response time 4:00 → 6:12' }),

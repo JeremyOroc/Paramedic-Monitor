@@ -81,6 +81,17 @@ describe('persistent report service', () => {
     serviceClient = serviceStub.client
   })
 
+  it('parses a Wagami A report summary explicitly', async () => {
+    authClient = {
+      rpc: vi.fn().mockResolvedValue({
+        data: { items: [{ ...SUMMARY, defibrillator_model: 'wagamiA' }], total: 1 },
+        error: null,
+      }),
+    }
+    const result = await listEvaluationReports(ACCOUNT, { page: 1 })
+    expect(result.items[0]?.defibrillator_model).toBe('wagamiA')
+  })
+
   it('trims names, removes blanks, preserves capitalization, and allows duplicates', () => {
     expect(normalizeStudentNames([' Alice ', '', 'Alice', ' bob '])).toEqual(['Alice', 'Alice', 'bob'])
     expect(() => normalizeStudentNames(Array.from({ length: 101 }, () => 'A'))).toThrow(/No more than 100/)

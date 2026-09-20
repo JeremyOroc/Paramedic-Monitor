@@ -62,7 +62,7 @@ export type Database = {
           attempt_version: number
           attempt_label: string
           scenario_name: string
-          defibrillator_model: 'wagamiX' | 'wagamiZ' | null
+          defibrillator_model: 'wagamiX' | 'wagamiZ' | 'wagamiA' | null
           scenario_snapshot: unknown
           participants: unknown
           participant_attempts: unknown
@@ -84,7 +84,7 @@ export type Database = {
           attempt_version: number
           attempt_label?: string
           scenario_name?: string
-          defibrillator_model?: 'wagamiX' | 'wagamiZ' | null
+          defibrillator_model?: 'wagamiX' | 'wagamiZ' | 'wagamiA' | null
           scenario_snapshot?: unknown
           participants?: unknown
           participant_attempts?: unknown

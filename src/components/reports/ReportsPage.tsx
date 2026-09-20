@@ -383,7 +383,7 @@ export function ReportsPage() {
                       </div>
                       <p className="mt-2 text-neutral-300">{selected.scenario_name}</p>
                       <p className="mt-1 font-mono text-xs text-neutral-600">Room {selected.source_room_code} · {formatToronto(selected.started_at)}</p>
-                      <p className="mt-1 font-mono text-xs text-neutral-600">Defibrillator {selected.defibrillator_model === 'wagamiZ' ? 'Wagami Z' : selected.defibrillator_model === 'wagamiX' ? 'Wagami X' : 'not recorded'}</p>
+                      <p className="mt-1 font-mono text-xs text-neutral-600">Defibrillator {selected.defibrillator_model === 'wagamiZ' ? 'Wagami Z' : selected.defibrillator_model === 'wagamiX' ? 'Wagami X' : selected.defibrillator_model === 'wagamiA' ? 'Wagami A' : 'not recorded'}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {selected.status === 'incomplete' ? <button type="button" onClick={() => void markComplete()} disabled={busy || deleteMode} className="border border-ecg-green px-3 py-2 font-mono text-xs font-black uppercase tracking-wider text-ecg-green disabled:opacity-40">Mark complete</button> : null}
