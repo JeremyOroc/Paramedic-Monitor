@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-09-20] [planning/git] — Publish the complete Wagami A A4–A6 handoff branch
+
+- On the programmer's explicit selection of the Git branch transfer, committed the audited 55-file
+  A4/A5/A6 working tree as `069f611` (`[realtime] complete Wagami A A4-A6 integration`) and pushed
+  it successfully from `d03cd3f` to `origin/wagami-a`. The commit includes all 38 previously
+  modified tracked paths and all 17 previously untracked required paths; `.env.local` remained
+  ignored and was not staged.
+- Updated the handoff, plan, and status records with fetch/verification instructions. The transfer
+  publishes the locally verified development state only; controlled database execution, physical
+  iPad QA, distinctness/IP review, post-implementation acceptance, and release/default/X/Z
+  decisions remain open and no deployment or migration was performed.
+
 ## [2026-09-19] [planning/handoff] — Audit and package the uncommitted A4–A6 handoff
 
 - Audited repository instructions, the A0–A6 plan and status ledger, ADRs 0023–0030, domain terms,

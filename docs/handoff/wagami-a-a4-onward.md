@@ -1,38 +1,37 @@
-# Wagami A — A4–A6 working-tree handoff
+# Wagami A — published A4–A6 handoff
 
-**Audit date:** 2026-09-19
+**Audit date:** 2026-09-20
 
 **Branch:** `wagami-a`
 
-**Local HEAD and fetched `origin/wagami-a`:** `d03cd3ff526fd21a0b7cfb8b4bb1256fd41ee7bc` (`A3-A3.1`)
-**Purpose:** transfer the verified local state and prepare a later plan. This brief does not
-authorize another implementation phase, a database operation, a release, a commit, or a push.
+**Published implementation commit:** `069f6119911294b0e4aa14c2434d169068e8fdc9`
 
-## Transfer gate
+**Purpose:** verify the published state and prepare a later plan. The authorized handoff commit
+and push are complete; this brief does not authorize another implementation phase, database
+operation, release, deployment, or unrelated Git change.
 
-The remote contains the accepted A0–A3.1 history through `d03cd3f`. The complete A4 clinical
-core, A5 destinations/localization/preferences, A6 live integration, their tests, and the current
-planning/handoff records exist only in this working tree. A fetch on 2026-09-19 confirmed that
-local HEAD and `origin/wagami-a` have zero commits of divergence, but the checkout has **38 modified
-tracked files and 17 untracked files**. The remote has older versions of the 38 tracked files and
-does not contain the 17 untracked files; none of the complete 55-path local state is recoverable
-from the remote alone.
+## Transfer result
 
-Transfer the entire working tree, excluding ignored dependencies, build output, and secrets. In
-particular, do not transfer or commit `.env.local`. A recipient has the complete checkout only when
-`git rev-parse HEAD` returns the hash above and `git status --short` reproduces the inventory below.
-Committed HEAD by itself is insufficient.
+The programmer selected the Git branch transfer on 2026-09-20. Commit `069f611` contains the
+complete A4 clinical core, A5 destinations/localization/preferences, A6 live integration, their
+tests, and the 2026-09-19 planning/handoff audit. It was pushed successfully from `d03cd3f` to
+`origin/wagami-a`. The 38 modified tracked files and 17 formerly untracked files from the audit are
+all present in that commit.
+
+A recipient can now run `git fetch origin` and check out `origin/wagami-a`. Verify that
+`git merge-base --is-ancestor 069f611 HEAD` succeeds, the required files below exist, and
+`git status --short` is clean before planning more work. A checkout ending at `d03cd3f` is
+incomplete. Supply environment variables separately; `.env.local` was ignored and was not committed.
 
 ## What changed since the previous handoff
 
-The handoff committed at `d03cd3f` stopped before A4. Since that committed boundary, the local
-working tree gained the approved A4 clinical core, A5 workspace/localization/preferences, and A6
-live integration, plus their tests and completion records. The 2026-09-17 continuation update
-recorded the local A6 result and its open external gates. This 2026-09-19 audit changed only the
-plan/status/changelog/handoff records, refreshed `origin`, and reran verification; it did not alter
-application or test code or begin a remaining gate.
+The handoff committed at `d03cd3f` stopped before A4. Commit `069f611` now adds the approved A4
+clinical core, A5 workspace/localization/preferences, A6 live integration, their tests, completion
+records, exact validation evidence, and the transfer inventory. The subsequent documentation
+commit records that publication. No remaining database, device, distinctness, IP, or release gate
+was started.
 
-### Modified tracked files (38)
+### Files modified by implementation commit (38)
 
 ```text
 CHANGELOG.md
@@ -75,7 +74,7 @@ src/server/sessions/service.ts
 src/types/monitorProjection.ts
 ```
 
-### Untracked required files (17)
+### Files added by implementation commit (17)
 
 ```text
 src/components/monitor/WagamiAWorkspace.tsx
@@ -105,7 +104,7 @@ src/types/wagamiA.ts
    phase block in `STATUS.md` and the 2026-09-15 through 2026-09-19 `CHANGELOG.md` entries.
 3. Read ADRs 0023–0030 and `CONTEXT.md` definitions for Wagami A, Device Patient mode,
    Wagami A full-display view, Attempt, projection, and Evaluation record.
-4. Inspect the entire uncommitted diff and the untracked files before trusting a phase label.
+4. Inspect `git show --stat 069f611` and the implementation itself before trusting a phase label.
 5. Before any later Next.js code work, read the relevant Next 16.3 guide under
    `node_modules/next/dist/docs/` as required by `AGENTS.md`.
 
@@ -161,7 +160,8 @@ gate, the newer approved amendment and implemented behavior below take precedenc
 - No decision has been made to make A the default or to remove/restrict X or Z.
 - No post-A6 implementation phase is approved. The next agent must propose a concrete plan and
   wait for the programmer's approval before changing code or acting on an external gate.
-- No commit or push contains A4, A5, A6, or this current handoff state.
+- A4, A5, A6, tests, and the audited handoff state are published in `069f611` on
+  `origin/wagami-a`; publication does not imply release acceptance.
 
 ## Superseded decisions and still-active records
 
@@ -239,15 +239,13 @@ not grant database, deployment, or release authorization.
 
 ## Open decisions for the programmer
 
-1. How the 55-file working tree will be transferred: an explicitly authorized commit/push,
-   another exact filesystem transfer, or a separately approved patch/archive workflow.
-2. Whether the locally verified A4–A6 result is accepted as the development baseline after the
+1. Whether the locally verified A4–A6 result is accepted as the development baseline after the
    recipient verifies the complete checkout.
-3. Whether to authorize a disposable/controlled database plan for migration, pgTAP, and report
+2. Whether to authorize a disposable/controlled database plan for migration, pgTAP, and report
    readback. Production is outside the current authorization.
-4. When and where to run the physical landscape-iPad QA and final side-by-side distinctness review.
-5. How to obtain and record qualified IP advice.
-6. After those gates, whether A should be released or become the default, and whether X/Z public
+3. When and where to run the physical landscape-iPad QA and final side-by-side distinctness review.
+4. How to obtain and record qualified IP advice.
+5. After those gates, whether A should be released or become the default, and whether X/Z public
    availability should change.
 
 ## Copy-ready prompt for the next agent
@@ -256,18 +254,19 @@ not grant database, deployment, or release authorization.
 Prepare to continue Wagami A in this Paramedic Monitor checkout, but do not implement anything yet.
 This is a verification-and-plan task only. First read AGENTS.md and
 docs/handoff/wagami-a-a4-onward.md, then inspect PLAN.md, STATUS.md, CHANGELOG.md, CONTEXT.md,
-ADRs 0023–0030, the actual code/tests, and the complete Git diff. Read the relevant installed
+ADRs 0023–0030, the actual code/tests, and `git show 069f611`. Read the relevant installed
 Next.js 16.3 documentation before proposing any later Next.js change.
 
-Verify the checkout before relying on the handoff. Branch wagami-a must have local HEAD and the
-freshly fetched origin/wagami-a at d03cd3ff526fd21a0b7cfb8b4bb1256fd41ee7bc, with zero commit
-divergence plus exactly 38 modified tracked files and 17 untracked files listed in the handoff.
+Verify the checkout before relying on the handoff. Fetch origin, check out branch wagami-a from
+origin/wagami-a, and verify that commit 069f6119911294b0e4aa14c2434d169068e8fdc9 is an ancestor of
+HEAD and that git status --short is clean. The handoff lists the 38 modified and 17 added paths
+contained by that implementation commit.
 Confirm at minimum that src/hooks/useWagamiAClinicalCore.ts,
 src/hooks/useWagamiAWorkspace.ts, src/components/monitor/WagamiAWorkspace.tsx,
 src/components/monitor/__tests__/WagamiALiveMonitor.test.tsx,
 src/server/reports/__tests__/wagamiAReportMigration.test.ts, and ADRs 0028–0030 exist. If the hash,
-status counts, inventory, or required files differ, stop and tell me exactly what is missing;
-remote commit d03cd3f alone contains only A0–A3.1 and is insufficient.
+commit, inventory, or required files differ, stop and tell me exactly what is missing. A checkout
+ending at d03cd3f contains only A0–A3.1 and is insufficient.
 
 Treat A4, A5, and the A6 live code as locally implemented and tested under approved plans, while
 independently checking those claims against the code; do not infer post-implementation or release

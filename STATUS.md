@@ -10,22 +10,20 @@
 **A3.1 shell/navigation — COMPLETE AND PROGRAMMER-ACCEPTED; A4 clinical core — COMPLETE
 (2026-09-15); A5 destinations/localization/preferences — COMPLETE (2026-09-16); A6 live
 integration — COMPLETE LOCALLY (2026-09-17), with external release gates still open.**
-**2026-09-19 handoff audit — COMPLETE; no next phase or external gate started.** A fresh fetch
-confirmed local HEAD and `origin/wagami-a` at `d03cd3f` with zero commit divergence. The complete
-A4/A5/A6 state remains local in 38 modified tracked files and 17 untracked files. The remote has
-only older versions of the tracked paths and none of the untracked files. Transfer the exact working tree described in
-`docs/handoff/wagami-a-a4-onward.md` before another agent relies on this status.
+**2026-09-20 Git handoff — COMPLETE; no next phase or external gate started.** The programmer chose
+the branch-transfer option. Commit `069f611` contains the complete A4/A5/A6 implementation, all 38
+previously modified paths, all 17 previously untracked paths, tests, and the handoff audit, and was
+pushed successfully to `origin/wagami-a`. Another coder can fetch that branch and verify the commit
+and clean checkout using `docs/handoff/wagami-a-a4-onward.md`.
 The A4, A5, and A6 plans were approved before implementation. The repository record does not show
 a separate post-implementation acceptance of the combined A4–A6 working tree, and local completion
 does not imply release acceptance.
 The programmer approved the concrete A6 plan after accepting A3/A3.1 and completing A4/A5.
-A3.1 and the
-original handoff are committed at `d03cd3f` on `wagami-a`; the subsequent A4/A5 changes
-and the A6 implementation remain uncommitted in this working tree. The rendered design,
+A3.1 and the original handoff are committed at `d03cd3f`; A4/A5/A6 and their audited handoff are
+published from `069f611` on `origin/wagami-a`. The rendered design,
 destination, and local live-integration gates are closed. Controlled database execution and
 report readback, production migration authorization, real-iPad QA, renewed distinctness review,
-qualified IP advice, and release/default/public-availability decisions remain A6 gates. Any later device must receive this complete working tree or an approved
-commit/transfer before relying on A4/A5/A6 integration completion. See
+qualified IP advice, and release/default/public-availability decisions remain A6 gates. See
 `docs/handoff/wagami-a-a4-onward.md` for the current boundary.
 The Room-free `/?dev=3` preview runs the approved A clinical core and all six A5
 destinations inside the persistent shell: 12-lead capture/print/transmit, EtCO₂

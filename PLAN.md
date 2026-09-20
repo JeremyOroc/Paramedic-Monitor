@@ -504,6 +504,12 @@ errors, 12 warnings), and the Webpack production build passed. The next collabor
 the exact working tree, inspect the implementation and evidence, and present a concrete plan for
 programmer approval before further code, database, device, release, commit, or push work.
 
+**Git transfer complete (2026-09-20):** The programmer selected the branch-transfer option.
+Commit `069f611` contains the complete audited A4–A6 implementation and its 55-path transfer set
+and was pushed to `origin/wagami-a`. A collaborator can now fetch the branch, verify that commit is
+an ancestor of a clean checkout, read the handoff, and present a concrete plan for approval. This
+transfer does not close any database, physical-device, distinctness, IP, or release gate.
+
 - 2026-09-13 requirement update — compact Saved scenario rows and safe page-scoped report deletion:
   reduce each Saved scenario row from its current two-tier card to an approximately 44–48px compact
   row. At ordinary Instructor Console widths, order the controls as drag handle, truncating title,
