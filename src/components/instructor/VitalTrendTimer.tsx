@@ -16,14 +16,41 @@ export function VitalTrendTimer() {
   )
   const minutes = Math.floor(durationSeconds / 60)
   const seconds = durationSeconds % 60
+  const running = activeTrend?.status === 'running'
+  const complete = activeTrend?.status === 'complete'
+  const cancelled = activeTrend?.status === 'cancelled'
+  const cancelledSeconds = cancelled
+    ? Math.max(
+        0,
+        Math.ceil(
+          (activeTrend.endsAt - (activeTrend.completedAt ?? activeTrend.startsAt)) / 1000,
+        ),
+      )
+    : 0
+  const displayedDurationSeconds = running
+    ? countdown.secondsLeft
+    : complete
+      ? 0
+      : cancelled
+        ? cancelledSeconds
+        : durationSeconds
+  const displayedMinutes = Math.floor(displayedDurationSeconds / 60)
+  const displayedSeconds = displayedDurationSeconds % 60
+  const showTerminalOrLiveValues = running || complete || cancelled
   const status =
-    activeTrend?.status === 'running'
+    running
       ? `Running ${countdown.formatted}`
-      : activeTrend?.status === 'complete'
-        ? 'Complete 00:00'
-        : activeTrend?.status === 'cancelled'
+      : complete
+        ? 'Complete'
+        : cancelled
           ? 'Cancelled'
           : 'Ready'
+  const valueClass = cn(
+    running && 'text-pending-amber',
+    complete && 'text-ecg-green',
+    cancelled && 'text-alarm-red',
+    !activeTrend && 'text-white',
+  )
 
   return (
     <div
@@ -34,50 +61,53 @@ export function VitalTrendTimer() {
         Timer
       </span>
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
-        <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+        <label>
           <input
             type="number"
             inputMode="numeric"
             min={0}
-            value={minutes === 0 ? '' : minutes}
-            placeholder="0"
+            value={showTerminalOrLiveValues ? displayedMinutes : minutes === 0 ? '' : minutes}
+            placeholder="MIN"
             aria-label="Trend minutes"
-            onChange={(event) => setMinutes(Number(event.target.value))}
+            readOnly={running}
+            onChange={(event) => {
+              if (!running) setMinutes(Number(event.target.value))
+            }}
             className={cn(
-              'h-7 w-12 border border-neutral-700 bg-black px-1 text-right font-mono text-sm text-white outline-none',
-              'focus:border-cyan-bp [appearance:textfield] placeholder:text-neutral-700',
+              'h-7 w-16 border border-neutral-700 bg-black px-1 text-center font-mono text-sm outline-none',
+              'focus:border-cyan-bp [appearance:textfield] placeholder:text-neutral-600',
+              'read-only:cursor-default',
               '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+              valueClass,
             )}
           />
-          min
         </label>
-        <label className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+        <label>
           <input
             type="number"
             inputMode="numeric"
             min={0}
             max={59}
-            value={seconds === 0 ? '' : seconds}
-            placeholder="0"
+            value={showTerminalOrLiveValues ? displayedSeconds : seconds === 0 ? '' : seconds}
+            placeholder="SEC"
             aria-label="Trend seconds"
-            onChange={(event) => setSeconds(Number(event.target.value))}
+            readOnly={running}
+            onChange={(event) => {
+              if (!running) setSeconds(Number(event.target.value))
+            }}
             className={cn(
-              'h-7 w-12 border border-neutral-700 bg-black px-1 text-right font-mono text-sm text-white outline-none',
-              'focus:border-cyan-bp [appearance:textfield] placeholder:text-neutral-700',
+              'h-7 w-16 border border-neutral-700 bg-black px-1 text-center font-mono text-sm outline-none',
+              'focus:border-cyan-bp [appearance:textfield] placeholder:text-neutral-600',
+              'read-only:cursor-default',
               '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+              valueClass,
             )}
           />
-          sec
         </label>
         <output
           aria-label="Trend status"
-          className={cn(
-            'min-w-[6.75rem] shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider',
-            activeTrend?.status === 'running' && 'text-pending-amber',
-            activeTrend?.status === 'complete' && 'text-ecg-green',
-            activeTrend?.status === 'cancelled' && 'text-alarm-red',
-            !activeTrend && 'text-neutral-600',
-          )}
+          aria-live="polite"
+          className="sr-only"
         >
           {status}
         </output>

@@ -6,6 +6,14 @@
 ---
 
 ## Current Phase
+**Timer-box countdown presentation — COMPLETE (2026-09-19).**
+Muted `MIN`/`SEC` placeholders now sit inside empty Trend Timer boxes and disappear for numeric values.
+The boxes become read-only and display the live remaining time in amber while running, then editable
+green zeroes at completion; cancelled remaining values use alarm red. The separate visible status/
+countdown string is removed while an `aria-live` status remains. All 25 focused tests, TypeScript,
+ESLint with zero errors and the same 12 unrelated warnings, and the Webpack production build pass.
+Rendered QA confirmed the placeholder, amber countdown, and green completion states without clipping.
+
 **Compact EtCO2/Trend timer row — COMPLETE (2026-09-19).**
 The Instructor EtCO2 calibration indicator and complete Trend Timer now share one non-wrapping row
 beneath the numeric vitals. The row precedes CPR/timed-vitals utilities when stacked and spans both

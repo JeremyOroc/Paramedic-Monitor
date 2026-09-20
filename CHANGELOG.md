@@ -5,6 +5,28 @@
 
 ---
 
+## [2026-09-19] [instructor/ui] — Move Trend countdown state into the timer boxes
+
+- Replaced the external `MIN`/`SEC` labels with muted in-box placeholders that disappear whenever an
+  instructor-entered or live numeric value is present.
+- Made the timer boxes show the absolute live countdown as read-only amber values while running, green
+  zeroes at completion, and red remaining values after cancellation; completed boxes remain editable so
+  the next timer edit clears the terminal state as before.
+- Removed the visible Ready/Running/Complete countdown string while retaining an `aria-live`, screen-reader-
+  only status announcement.
+- Added placeholder, editable-value, running, completion, cancellation, and visibility regressions. All
+  25 focused tests, TypeScript, ESLint with zero errors and the same 12 unrelated warnings, and the Webpack
+  production build pass. Rendered QA confirmed the muted, amber, and green states without clipping.
+
+## [2026-09-19] [planning/instructor] — Refine Trend timer box presentation
+
+- Confirmed muted `MIN`/`SEC` placeholders inside empty timer boxes, disappearing whenever a numeric
+  value is present.
+- Defined editable white draft values, read-only amber live countdown values, green completion zeroes,
+  red cancellation, removal of the separate visible countdown/status string, and retention of an
+  accessibility-only announcement.
+- Added the implementation and regression-testing contract; implementation is in progress.
+
 ## [2026-09-19] [instructor/ui] — Place EtCO2 calibration and Trend timer on one row
 
 - Moved the EtCO2 calibration indicator and complete Trend Timer into one non-wrapping responsive row
