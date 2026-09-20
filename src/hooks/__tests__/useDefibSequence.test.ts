@@ -172,26 +172,28 @@ describe('useDefibSequence', () => {
     expect(result.current.canShock).toBe(true)
   })
 
-  it('A advice requires Charge, delays the Shock cue, then delivers once into CPR', () => {
+  it('Wagami A automatically charges a shockable rhythm and enters CPR after shock', () => {
     const { result } = renderHook(() => useDefibSequence({
-      patientMode: 'adult', rhythm: 'vf', shockRequiresCharge: true,
+      patientMode: 'adult', rhythm: 'vf', chargePolicy: 'wagamiA',
     }))
     act(() => result.current.onAnalyse())
     act(() => vi.advanceTimersByTime(5000))
-    expect(result.current.state).toBe('shock_advised')
-    expect(result.current.canCharge).toBe(true)
+    expect(result.current.state).toBe('charging')
+    expect(result.current.chargeOrigin).toBe('automatic_advised')
+    expect(result.current.chargeProgress).toBe(0)
+    expect(result.current.canCharge).toBe(false)
     expect(result.current.canShock).toBe(false)
     expect(audioMocks.playSystemAudio).not.toHaveBeenCalledWith('press_shock.mp3')
 
     act(() => result.current.onShock())
     expect(result.current.shockCount).toBe(0)
-    act(() => result.current.onCharge())
-    expect(result.current.state).toBe('charging')
     act(() => vi.advanceTimersByTime(3999))
     expect(result.current.canShock).toBe(false)
     act(() => vi.advanceTimersByTime(1))
     expect(result.current.state).toBe('charged')
+    expect(result.current.chargeProgress).toBe(1)
     expect(result.current.canShock).toBe(true)
+    expect(result.current.canAdjustEnergy).toBe(false)
     expect(audioMocks.playSystemAudio).toHaveBeenCalledWith('press_shock.mp3')
 
     act(() => result.current.onShock())
@@ -201,25 +203,51 @@ describe('useDefibSequence', () => {
     expect(audioMocks.playCprAudioSequence).toHaveBeenCalledOnce()
   })
 
-  it('A direct manual charge retains delivered state and reset cancels charging', () => {
+  it('Wagami A one-press manual charge retains delivered state and reset cancels charging', () => {
     const { result } = renderHook(() => useDefibSequence({
-      patientMode: 'adult', shockRequiresCharge: true,
+      patientMode: 'adult', chargePolicy: 'wagamiA',
     }))
     act(() => result.current.onCharge())
-    expect(result.current.state).toBe('charge_prompt')
-    act(() => result.current.onCharge())
     expect(result.current.state).toBe('charging')
+    expect(result.current.chargeOrigin).toBe('manual')
     act(() => result.current.reset())
     act(() => vi.advanceTimersByTime(4000))
     expect(result.current.state).toBe('idle')
     expect(result.current.phaseEndsAt).toBeNull()
 
     act(() => result.current.onCharge())
-    act(() => result.current.onCharge())
     act(() => vi.advanceTimersByTime(4000))
     act(() => result.current.onShock())
     expect(result.current.state).toBe('delivered')
     expect(audioMocks.playCprAudioSequence).not.toHaveBeenCalled()
+  })
+
+  it('keeps Wagami A charge progress at zero during no-shock analysis and CPR', () => {
+    const { result } = renderHook(() => useDefibSequence({
+      patientMode: 'adult', rhythm: 'nsr', chargePolicy: 'wagamiA',
+    }))
+    act(() => result.current.onAnalyse())
+    act(() => vi.advanceTimersByTime(2499))
+    expect(result.current.progress).toBeGreaterThan(0)
+    expect(result.current.chargeProgress).toBe(0)
+    act(() => vi.advanceTimersByTime(6501))
+    expect(result.current.state).toBe('cpr')
+    expect(result.current.chargeProgress).toBe(0)
+  })
+
+  it('reports the rhythm captured when Analyze starts', () => {
+    const onAnalyzeResult = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ rhythm }: { rhythm: 'vf' | 'nsr' }) => useDefibSequence({
+        patientMode: 'adult', rhythm, chargePolicy: 'wagamiA', onAnalyzeResult,
+      }),
+      { initialProps: { rhythm: 'vf' as const } as { rhythm: 'vf' | 'nsr' } },
+    )
+    act(() => result.current.onAnalyse())
+    rerender({ rhythm: 'nsr' })
+    act(() => vi.advanceTimersByTime(5000))
+    expect(onAnalyzeResult).toHaveBeenCalledWith('shock', 'vf')
+    expect(result.current.state).toBe('charging')
   })
 
   it('SHOCK increments counter and returns to delivered', () => {

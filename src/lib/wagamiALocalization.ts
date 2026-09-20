@@ -1,4 +1,4 @@
-import type { DefibState } from '@/hooks/useDefibSequence'
+import type { DefibChargeOrigin, DefibState } from '@/hooks/useDefibSequence'
 import type { WagamiALocale } from '@/types/wagamiA'
 
 const COPY = {
@@ -9,17 +9,16 @@ const COPY = {
     left: 'Gauche', right: 'Droite', enter: 'Entrée',
     power: 'Alimentation WAGAMI A', powerOff: 'ALIMENTATION COUPÉE',
     mute: 'Couper tous les sons', unmute: 'Réactiver tous les sons',
-    patientMode: 'Changer le mode patient', patientModeLocked: 'Mode verrouillé pendant la défibrillation',
+    patientMode: 'Changer le mode patient', currentMode: 'mode actuel', patientModeLocked: 'Mode verrouillé pendant la défibrillation',
     bpRead: 'Mesurer la pression artérielle', bpCancel: 'Annuler la mesure de pression artérielle',
     analyze: 'Analyser WAGAMI A', charge: 'Charge WAGAMI A', shock: 'Choc WAGAMI A',
     taskTwelveLead: '12 dérivations', taskEtco2: 'EtCO₂', taskMedications: 'Médicaments',
     taskCallInfo: 'Info appel', taskVitalLog: 'Journal des signes vitaux', taskConfigure: 'Configurer',
     adult: 'ADULTE', pediatric: 'PÉDIATRIQUE', neonate: 'NÉONATAL',
     pleaseWait: 'Veuillez patienter', measuring: 'Mesure en cours', lastReading: 'Dernière mesure',
-    mode: 'MODE', preview: 'PREVIEW', live: 'EN DIRECT', simulatedData: 'DONNÉES SIMULÉES', confirmedData: 'DONNÉES CONFIRMÉES',
-    noAlarm: 'AUCUNE ALARME', alarm: 'ALARME', ledNormal: 'Voyant alarme normal', ledActive: 'Voyant alarme actif', ledDisabled: 'Voyant alarme désactivé',
+    mode: 'MODE', alarm: 'ALARME', alarmHr: 'FC', alarmSpo2: 'SpO₂', alarmBp: 'PNI', ledNormal: 'Voyant alarme normal', ledActive: 'Voyant alarme actif', ledDisabled: 'Voyant alarme désactivé',
     defibrillation: 'DÉFIBRILLATION', energy: 'ÉNERGIE (J)', energyDown: 'Diminuer l’énergie', energyUp: 'Augmenter l’énergie',
-    chargeProgress: 'CHARGE', shockReady: 'PRÊT À CHOC', ready: 'PRÊT', notReady: 'NON PRÊT', cprTime: 'TEMPS RCP',
+    chargeProgress: 'CHARGE', cprTime: 'TEMPS RCP',
     back: 'Retour', capture: 'Acquérir', print: 'Imprimer', transmit: 'Transmettre', close: 'Fermer',
     twelveLeadTitle: 'ECG 12 dérivations', acquiring: 'ACQUISITION EN COURS', printPreview: 'Aperçu imprimé',
     etco2Title: 'Étalonnage EtCO₂', etco2Idle: 'Capteur non étalonné', etco2Calibrating: 'Étalonnage en cours', etco2Calibrated: 'Capteur étalonné', calibrate: 'Étalonner', cancel: 'Annuler',
@@ -39,17 +38,16 @@ const COPY = {
     left: 'Left', right: 'Right', enter: 'Enter',
     power: 'WAGAMI A power', powerOff: 'POWER OFF',
     mute: 'Mute all audio', unmute: 'Restore all audio',
-    patientMode: 'Change patient mode', patientModeLocked: 'Mode locked during defibrillation',
+    patientMode: 'Change patient mode', currentMode: 'current mode', patientModeLocked: 'Mode locked during defibrillation',
     bpRead: 'Measure blood pressure', bpCancel: 'Cancel blood pressure measurement',
     analyze: 'Analyze WAGAMI A', charge: 'Charge WAGAMI A', shock: 'Shock WAGAMI A',
     taskTwelveLead: '12-lead', taskEtco2: 'EtCO₂', taskMedications: 'Medications',
     taskCallInfo: 'Call Info', taskVitalLog: 'Vital Log', taskConfigure: 'Configure',
     adult: 'ADULT', pediatric: 'PEDIATRIC', neonate: 'NEONATAL',
     pleaseWait: 'Please wait', measuring: 'Measurement in progress', lastReading: 'Last reading',
-    mode: 'MODE', preview: 'PREVIEW', live: 'LIVE', simulatedData: 'SIMULATED DATA', confirmedData: 'CONFIRMED DATA',
-    noAlarm: 'NO ACTIVE ALARM', alarm: 'ALARM', ledNormal: 'Alarm LED normal', ledActive: 'Alarm LED active', ledDisabled: 'Alarm LED disabled',
+    mode: 'MODE', alarm: 'ALARM', alarmHr: 'HR', alarmSpo2: 'SpO₂', alarmBp: 'NIBP', ledNormal: 'Alarm LED normal', ledActive: 'Alarm LED active', ledDisabled: 'Alarm LED disabled',
     defibrillation: 'DEFIBRILLATION', energy: 'ENERGY (J)', energyDown: 'Decrease energy', energyUp: 'Increase energy',
-    chargeProgress: 'CHARGE', shockReady: 'SHOCK READY', ready: 'READY', notReady: 'NOT READY', cprTime: 'CPR TIME',
+    chargeProgress: 'CHARGE', cprTime: 'CPR TIME',
     back: 'Back', capture: 'Acquire', print: 'Print', transmit: 'Transmit', close: 'Close',
     twelveLeadTitle: '12-lead ECG', acquiring: 'ACQUIRING', printPreview: 'Print preview',
     etco2Title: 'EtCO₂ calibration', etco2Idle: 'Sensor not calibrated', etco2Calibrating: 'Calibration in progress', etco2Calibrated: 'Sensor calibrated', calibrate: 'Calibrate', cancel: 'Cancel',
@@ -85,6 +83,9 @@ const DEFIB_COPY: Record<WagamiALocale, Record<DefibState, string>> = {
   },
 }
 
-export function getWagamiADefibLabel(locale: WagamiALocale, state: DefibState): string {
+export function getWagamiADefibLabel(locale: WagamiALocale, state: DefibState, chargeOrigin: DefibChargeOrigin = null): string {
+  if (state === 'charging' && chargeOrigin === 'automatic_advised') {
+    return locale === 'fr' ? 'CHOC CONSEILLÉ · CHARGE EN COURS' : 'SHOCK ADVISED · CHARGING'
+  }
   return DEFIB_COPY[locale][state]
 }

@@ -1,5 +1,5 @@
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
-import type { DefibState } from '@/hooks/useDefibSequence'
+import type { DefibChargeOrigin, DefibState } from '@/hooks/useDefibSequence'
 import type { NibpPhase } from '@/hooks/useNibpReading'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
 import type { WagamiALocale } from '@/types/wagamiA'
@@ -13,7 +13,8 @@ type WagamiAScreenProps = {
   display: WagamiADisplayState
   energy: number
   defibState?: DefibState
-  defibProgress?: number
+  chargeProgress?: number
+  chargeOrigin?: DefibChargeOrigin
   cprTime?: string
   cprOverride?: boolean
   nibpPhase?: NibpPhase
@@ -25,34 +26,29 @@ type WagamiAScreenProps = {
   onEnergyDown?: () => void
   onEnergyUp?: () => void
   locale?: WagamiALocale
-  displayMode?: 'preview' | 'live'
 }
 
-export function WagamiAScreen({ display, energy, defibState = 'idle', defibProgress = 0, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp, locale = 'fr', displayMode = 'preview' }: WagamiAScreenProps) {
+export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp, locale = 'fr' }: WagamiAScreenProps) {
   const text = getWagamiAText(locale)
-  const patientModeLabel = { adult: text.adult, pediatric: text.pediatric, neonate: text.neonate } as const
-  const { vitals, active, alarms, simulated } = display
+  const { vitals, active, alarms } = display
   const pniValue = active.bp_sys && active.bp_dia ? `${vitals.bp_sys}/${vitals.bp_dia}` : '--/--'
   const pniDetail = nibpPhase === 'please_wait' ? text.pleaseWait :
     nibpPhase === 'reading' ? text.measuring :
     nibpPhase === 'counting' ? `${text.measuring} · ${nibpDisplayValue}` : text.lastReading
   return (
     <section aria-label="Wagami A live display" className="grid h-full min-h-0 w-full grid-cols-[minmax(0,1fr)_minmax(183px,21.5%)] gap-[clamp(5px,0.85cqw,13px)] overflow-hidden bg-wagami-a-screen p-[clamp(5px,0.85cqw,13px)] text-wagami-a-text">
-      <div className="grid min-h-0 grid-rows-[clamp(82px,11.4cqw,160px)_minmax(0,1fr)_clamp(22px,2.5cqw,36px)] gap-[clamp(4px,0.65cqw,10px)]">
+      <div data-testid="wagami-a-main-clinical-column" className="grid min-h-0 grid-rows-[clamp(82px,11.4cqw,160px)_minmax(0,1fr)] gap-[clamp(4px,0.65cqw,10px)]">
         <div aria-label="Fixed A vital card strip" className="grid min-h-0 grid-cols-4 gap-[clamp(4px,0.65cqw,10px)]">
           <WagamiAVitalCard channel="fc" label="FC" value={active.hr ? String(vitals.hr) : '--'} unit="bpm" />
           <WagamiAVitalCard channel="spo2" label="SpO₂" value={active.spo2 ? String(vitals.spo2) : '--'} unit="%" />
           <WagamiAVitalCard channel="pni" label="PNI" value={pniValue} unit="mmHg" detail={pniDetail} />
           <WagamiAVitalCard channel="etco2" label="EtCO₂" value={active.etco2 ? String(vitals.etco2) : '--'} unit="mmHg" />
         </div>
-        <WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={alarms} cprOverride={cprOverride} locale={locale} />
-        <div className="flex min-w-0 items-center justify-between gap-3 rounded-[4px] border border-wagami-a-border bg-wagami-a-surface px-[clamp(6px,0.8cqw,12px)] font-mono text-[clamp(9px,0.9cqw,13px)] text-wagami-a-muted-text">
-          <span>{text.mode} {patientModeLabel[patientMode]}</span><span className="truncate">{displayMode === 'live' ? text.live : text.preview} · {simulated ? text.simulatedData : text.confirmedData}</span>
-        </div>
+        <WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={alarms} patientMode={patientMode} cprOverride={cprOverride} locale={locale} />
       </div>
       <aside aria-label="Wagami A right-side task and defib rail" className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-[clamp(4px,0.65cqw,10px)]">
         <WagamiATaskDock onTask={onTask} selectedAction={selectedAction} locale={locale} />
-        <WagamiADefibPanel state={defibState} energy={energy} progress={defibProgress} cprTime={cprTime} canAdjustEnergy={canAdjustEnergy} onEnergyDown={onEnergyDown} onEnergyUp={onEnergyUp} selectedAction={selectedAction} locale={locale} />
+        <WagamiADefibPanel state={defibState} energy={energy} chargeProgress={chargeProgress} chargeOrigin={chargeOrigin} cprTime={cprTime} canAdjustEnergy={canAdjustEnergy} onEnergyDown={onEnergyDown} onEnergyUp={onEnergyUp} selectedAction={selectedAction} locale={locale} />
       </aside>
     </section>
   )

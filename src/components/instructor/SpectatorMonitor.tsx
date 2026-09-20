@@ -68,6 +68,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
   const controller = projection.controller
   const defib = projection.defib
   const defibProgress = useProjectedDefibProgress(defib)
+  const wagamiAChargeProgress = defib.state === 'charged' ? 1 : defib.state === 'charging' ? defibProgress : 0
   const cprTimer = useCPRTimer(defib.state === 'cpr' ? defib.cprStartTime : null)
   if (projection.model === 'wagamiA') {
     const state = projection.wagamiA
@@ -134,7 +135,8 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
           display={display}
           energy={defib.energy}
           defibState={defib.state}
-          defibProgress={defibProgress}
+          chargeProgress={wagamiAChargeProgress}
+          chargeOrigin={defib.chargeOrigin ?? null}
           poweredOn={projection.powerState === 'on'}
           onPowerToggle={noop}
           patientMode={state.patientMode}
@@ -162,7 +164,8 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
               display={display}
               energy={defib.energy}
               defibState={defib.state}
-              defibProgress={defibProgress}
+              chargeProgress={wagamiAChargeProgress}
+              chargeOrigin={defib.chargeOrigin ?? null}
               cprTime={defib.state === 'cpr' ? cprTimer.formatted : '--:--'}
               cprOverride={projection.cprOverrideActive}
               nibpPhase={projection.nibp.phase}
@@ -173,7 +176,6 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
               onEnergyUp={noop}
               callerInfo={projection.callerInfo}
               dispatchRoute={projection.dispatchRoute}
-              displayMode="live"
             />
           }
         />

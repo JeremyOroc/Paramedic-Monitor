@@ -6,6 +6,53 @@
 ---
 
 ## Current Phase
+**Wagami A clinical status-line consolidation — COMPLETE LOCALLY (2026-09-20).** The main bottom
+source/mode strip and preview/live metadata are removed, and the waveform workspace uses the recovered
+height. A fixed shared line now shows dynamic Device Patient mode plus only active localized alarms in
+FC/HR → SpO₂ → PNI/NIBP order on the monitor and every secondary header, including Call Info. The
+physical mode key now always reads `MODE` while its accessible name announces the current mode; its
+cycle, defibrillation lock, Configure readout, alarm LED, and X/Z behavior are preserved. The 112-test
+Wagami A/Spectator/X/Z focused suite, TypeScript, ESLint with zero errors and 12 existing warnings,
+1280×720 rendered main/secondary/Call Info review, and the Next.js 16.3 Webpack production build pass.
+The verified work is prepared on `wagami-a-v2` for integration into `main`.
+
+**Wagami A CPR metronome unmute recovery — COMPLETE LOCALLY (2026-09-20).** Unmuting Wagami A now
+resumes the metronome when CPR is active, its clock has started, and the timer remains above `0:00`.
+It does not replay the spoken CPR instruction or restart after completion. Preview and live trainee
+paths share the rule; X/Z remain unchanged. The expanded 103-test focused suite, TypeScript, ESLint
+with zero errors and 12 existing warnings, and the Next.js 16.3 Webpack production build pass.
+
+**Wagami A CPR timer audio completion — COMPLETE LOCALLY (2026-09-20).** Wagami A now stops its
+CPR voice/metronome sequence when the active two-minute timer reaches `0:00`, while leaving the
+display at `0:00`, alarms available, and X/Z unchanged. The same completion guard is wired into
+Preview and live trainee use. The expanded 57-test Wagami A focused suite, TypeScript, ESLint with
+zero errors and 12 existing warnings, and the Next.js 16.3 Webpack production build pass.
+
+**Wagami A automatic advised-charge refinement — COMPLETE LOCALLY (2026-09-20).** The A-only
+clinical amendment is implemented on `wagami-a-v2`: shockable Analyze results start the existing
+four-second charge automatically, one physical Charge press starts manual charging, charge progress
+is separated from generic analysis progress, and the defibrillation panel places a large CPR timer
+in its center with the charge meter anchored at the bottom. The permanent ready/not-ready row is
+removed while contextual charged status remains. Preview, live trainee, and Spectator share charge
+origin and semantic progress; X/Z remain unchanged. The requirement, glossary, and ADR are recorded.
+The 45-test focused suite passes, TypeScript passes, full ESLint has zero errors and the same 12
+existing warnings, and the Next.js 16.3 Webpack production build passes. The complete suite reports
+1,556 passing, one skipped, and three unrelated existing failures in Room ownership and
+PatientInfoPanel styling; no Wagami A test fails.
+
+**Wagami A rolling UI refinement — AUTHORIZED (2026-09-20).** Wagami A was merged to `main` in
+`bd13ffc`, and `wagami-a-v2` now starts from that same commit with a clean working tree. The
+programmer authorized an ongoing, non-phased UI workstream for a collaborator: clear Wagami A UI
+requests may be implemented, tested, committed, and pushed to `wagami-a-v2` without creating or
+approving a numbered phase. Clinical behavior, database/schema work, production/release settings,
+model defaults or availability, X/Z removal, and merges to `main` remain separate decisions. The
+active collaborator brief is `docs/handoff/wagami-a-ui-updates.md`; the A4–A6 handoff is historical.
+
+The production Supabase migration ledger includes `20260915160205_widen_wagami_a_report_model`,
+and the validated `evaluation_reports_defibrillator_model_check` constraint accepts `wagamiX`,
+`wagamiZ`, and `wagamiA`. Physical landscape-iPad QA and qualified distinctness/IP review remain
+pre-public-release evidence, not blockers to internal UI development on `wagami-a-v2`.
+
 **Wagami A/main merge reconciliation — COMPLETE (2026-09-20).** Both independent documentation
 histories and all three shared Monitor hooks are retained. The merged state passes 511 focused tests
 across 16 files, TypeScript, full source ESLint with zero errors and 12 existing warnings, and the
@@ -15,21 +62,20 @@ Next.js 16.3 Webpack production build.
 **A3.1 shell/navigation — COMPLETE AND PROGRAMMER-ACCEPTED; A4 clinical core — COMPLETE
 (2026-09-15); A5 destinations/localization/preferences — COMPLETE (2026-09-16); A6 live
 integration — COMPLETE LOCALLY (2026-09-17), with external release gates still open.**
-**2026-09-20 Git handoff — COMPLETE; no next phase or external gate started.** The programmer chose
+**2026-09-20 historical Git handoff — COMPLETE and superseded by the rolling UI brief.** The programmer chose
 the branch-transfer option. Commit `069f611` contains the complete A4/A5/A6 implementation, all 38
 previously modified paths, all 17 previously untracked paths, tests, and the handoff audit, and was
-pushed successfully to `origin/wagami-a`. Another coder can fetch that branch and verify the commit
-and clean checkout using `docs/handoff/wagami-a-a4-onward.md`.
+pushed successfully to `origin/wagami-a`. That transfer record remains historical; current UI work
+starts from `origin/wagami-a-v2` using `docs/handoff/wagami-a-ui-updates.md`.
 The A4, A5, and A6 plans were approved before implementation. The repository record does not show
 a separate post-implementation acceptance of the combined A4–A6 working tree, and local completion
 does not imply release acceptance.
 The programmer approved the concrete A6 plan after accepting A3/A3.1 and completing A4/A5.
-A3.1 and the original handoff are committed at `d03cd3f`; A4/A5/A6 and their audited handoff are
-published from `069f611` on `origin/wagami-a`. The rendered design,
-destination, and local live-integration gates are closed. Controlled database execution and
-report readback, production migration authorization, real-iPad QA, renewed distinctness review,
-qualified IP advice, and release/default/public-availability decisions remain A6 gates. See
-`docs/handoff/wagami-a-a4-onward.md` for the current boundary.
+A3.1 and the original handoff are committed at `d03cd3f`; A4/A5/A6 and their audited handoff were
+published from `069f611` on `origin/wagami-a` and are now contained by `main` and `wagami-a-v2` at
+`bd13ffc`. The rendered design, destination, local live-integration, and production report-model
+constraint gates are closed. Real-iPad QA, renewed distinctness review, qualified IP advice, and
+release/default/public-availability decisions remain external release gates.
 The Room-free `/?dev=3` preview runs the approved A clinical core and all six A5
 destinations inside the persistent shell: 12-lead capture/print/transmit, EtCO₂
 calibration, Medications with nested Event Log, the existing Assignment dashboard, Vital
@@ -54,9 +100,9 @@ rapid contained-map navigation, and exact viewport fit without page overflow or 
 Full Windows Vitest has 1,509 passing, one skipped, and the same 11 unrelated
 failures: seven operations-script tests requiring Bash absent on PATH, two Room-ownership
 baselines, one PatientInfoPanel class expectation, and one LF-only config assertion against
-this CRLF checkout. No A4/A5/A6 test fails. The A report migration and pgTAP assertions have
-source-level contract tests; this machine has no Supabase CLI, PostgreSQL client, or Docker, so
-the disposable local database run remains pending and no remote database was touched.
+this CRLF checkout. No A4/A5/A6 test fails. At the A6 implementation milestone, the A report
+migration and pgTAP assertions had source-level coverage only; the migration was subsequently
+applied and its live constraint was validated as recorded at the top of this status ledger.
 For the 2026-09-19 handoff audit, a fresh selected 15-file A6 run passed 147 tests and the full
 suite again reported 1,509 passing, one skipped, and the same 11 failures. Sequential
 `npx tsc --noEmit`, full source ESLint (zero errors, 12 warnings), and the Webpack build passed.
@@ -129,8 +175,8 @@ preview uses code-native A tokens, shows all six future right-side destinations 
 and never enters Room routing. At that historical gate Instructor offered only X/Z, imported A
 drafts could not be Sent, and the server rejected A before live state/history writes; the approved
 A6 implementation supersedes those restrictions. A local forward report-check migration was
-created and transactionally tested; it has **not** been applied to production, where the existing
-report capture trigger therefore still limits live creation to X/Z. Focused
+created and transactionally tested at A2; it has since been applied to production, and the live
+validated constraint accepts X, Z, and A report models. Focused
 A2 app suites pass; TypeScript, ESLint (zero errors, 12 pre-existing warnings), and Webpack
 production build pass. The full Vitest run reports three independently reproduced unrelated
 Room-ownership/Patient-Info baseline failures, while the local 42-assertion report pgTAP run

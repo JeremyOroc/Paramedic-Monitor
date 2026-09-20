@@ -1,4 +1,9 @@
-# Wagami A — published A4–A6 handoff
+# Wagami A — historical A4–A6 handoff (superseded)
+
+> **Historical record:** Wagami A was merged to `main` in `bd13ffc`. This document's old
+> verification-only restrictions, `wagami-a` checkout instructions, and prohibition on later work
+> no longer govern UI development. Active collaborators must use
+> `docs/handoff/wagami-a-ui-updates.md` and `origin/wagami-a-v2`.
 
 **Audit date:** 2026-09-20
 
@@ -6,9 +11,8 @@
 
 **Published implementation commit:** `069f6119911294b0e4aa14c2434d169068e8fdc9`
 
-**Purpose:** verify the published state and prepare a later plan. The authorized handoff commit
-and push are complete; this brief does not authorize another implementation phase, database
-operation, release, deployment, or unrelated Git change.
+**Historical purpose:** record the original A4–A6 transfer before its merge to `main`. Current UI
+authorization and Git instructions live in `docs/handoff/wagami-a-ui-updates.md`.
 
 ## Transfer result
 
@@ -145,21 +149,19 @@ gate, the newer approved amendment and implemented behavior below take precedenc
 
 ### Partial or awaiting evidence
 
-- `supabase/migrations/20260915160205_widen_wagami_a_report_model.sql` and the existing pgTAP SQL
-  recognize `wagamiA`; source-level migration contract tests pass. The migration has not been run
-  against a disposable or controlled PostgreSQL/Supabase environment, and report readback has not
-  been demonstrated against such a database.
+- At this historical audit, the Wagami A report migration had only source-level coverage. It has
+  since been applied to production; the live validated report-model constraint accepts X, Z, and A.
 - Desktop emulation does not satisfy the required physical landscape-iPad touch/fit gate.
 - The A-versus-X/Z distinctness review must be renewed against the final A3.1/A5/A6 surface.
 - Qualified Canadian IP advice has not been obtained or recorded. Internal design review is not
   legal clearance.
 
-### Not started or not authorized
+### Historical authorization boundary at the time of transfer
 
-- No production migration, deployment, or release action has started.
+- At the time of this handoff, no production migration, deployment, or release action had started.
 - No decision has been made to make A the default or to remove/restrict X or Z.
-- No post-A6 implementation phase is approved. The next agent must propose a concrete plan and
-  wait for the programmer's approval before changing code or acting on an external gate.
+- This former verification-only boundary is superseded for UI work by the rolling authorization in
+  `docs/handoff/wagami-a-ui-updates.md`.
 - A4, A5, A6, tests, and the audited handoff state are published in `069f611` on
   `origin/wagami-a`; publication does not imply release acceptance.
 
@@ -237,48 +239,14 @@ the supported landscape iPad and a way to open the locally served application. B
 can supplement that device pass but cannot replace it. Plugins are optional; availability does
 not grant database, deployment, or release authorization.
 
-## Open decisions for the programmer
+## Open decisions at the time of the historical transfer
 
-1. Whether the locally verified A4–A6 result is accepted as the development baseline after the
-   recipient verifies the complete checkout.
-2. Whether to authorize a disposable/controlled database plan for migration, pgTAP, and report
-   readback. Production is outside the current authorization.
-3. When and where to run the physical landscape-iPad QA and final side-by-side distinctness review.
-4. How to obtain and record qualified IP advice.
-5. After those gates, whether A should be released or become the default, and whether X/Z public
-   availability should change.
+The development-baseline transfer and production report-model migration were subsequently
+completed. Physical landscape-iPad QA, final side-by-side distinctness review, qualified IP advice,
+and the release/default/X/Z-availability decisions remain separate from the authorized rolling UI
+workstream.
 
-## Copy-ready prompt for the next agent
+## Superseded collaborator prompt
 
-```text
-Prepare to continue Wagami A in this Paramedic Monitor checkout, but do not implement anything yet.
-This is a verification-and-plan task only. First read AGENTS.md and
-docs/handoff/wagami-a-a4-onward.md, then inspect PLAN.md, STATUS.md, CHANGELOG.md, CONTEXT.md,
-ADRs 0023–0030, the actual code/tests, and `git show 069f611`. Read the relevant installed
-Next.js 16.3 documentation before proposing any later Next.js change.
-
-Verify the checkout before relying on the handoff. Fetch origin, check out branch wagami-a from
-origin/wagami-a, and verify that commit 069f6119911294b0e4aa14c2434d169068e8fdc9 is an ancestor of
-HEAD and that git status --short is clean. The handoff lists the 38 modified and 17 added paths
-contained by that implementation commit.
-Confirm at minimum that src/hooks/useWagamiAClinicalCore.ts,
-src/hooks/useWagamiAWorkspace.ts, src/components/monitor/WagamiAWorkspace.tsx,
-src/components/monitor/__tests__/WagamiALiveMonitor.test.tsx,
-src/server/reports/__tests__/wagamiAReportMigration.test.ts, and ADRs 0028–0030 exist. If the hash,
-commit, inventory, or required files differ, stop and tell me exactly what is missing. A checkout
-ending at d03cd3f contains only A0–A3.1 and is insufficient.
-
-Treat A4, A5, and the A6 live code as locally implemented and tested under approved plans, while
-independently checking those claims against the code; do not infer post-implementation or release
-acceptance. Keep the remaining A6 items separate: controlled database
-migration/pgTAP/report readback, physical landscape-iPad QA, final A-versus-X/Z distinctness review,
-qualified IP advice, and my release/default/X/Z-availability decisions. Note that ADR 0027's
-preview-only restriction and ADR 0024's Print/Capture launcher are superseded as described in the
-handoff. X/Z remain available and X remains the default.
-
-After the audit, present a concrete plan for my approval. Identify the exact scope, tests,
-environment, database/device access, risks, documentation updates, and decision points. Wait for
-my explicit approval before changing code, running a migration, using a remote database, performing
-release work, committing, or pushing. Do not deploy, alter production data, change defaults or
-public availability, delete X/Z, or claim legal clearance.
-```
+Do not reuse the former verification-only prompt. The current copy-ready prompt and authorization
+boundary are maintained in `docs/handoff/wagami-a-ui-updates.md`.

@@ -5,6 +5,99 @@
 
 ---
 
+## [2026-09-20] [ui/localization/testing] — Complete Wagami A clinical status-line consolidation
+
+- Replaced the main bottom mode/source strip with a fixed shared clinical status above the waveforms,
+  recovering the removed height and eliminating preview/live plus simulated/confirmed metadata.
+- Showed dynamic Adult/Pediatric/Neonatal Device Patient mode with a blank normal-alarm portion and
+  red, fixed-order localized FC/HR → SpO₂ → PNI/NIBP alarms. Reused the same status at the right of
+  every secondary header, including Call Info, instead of a floating alarm badge.
+- Made the physical patient-mode key visually stable as human icon plus `MODE` while keeping its cycle,
+  defibrillation lock, and dynamic bilingual accessible name. Configure, alarm LED behavior, and X/Z
+  remain unchanged.
+- Added component and integration regression coverage. The 112-test Wagami A/Spectator/X/Z focused
+  suite, TypeScript, ESLint with zero errors and 12 existing warnings, a 1280×720 rendered
+  main/secondary/Call Info review, and the Next.js 16.3 Webpack production build pass.
+
+## [2026-09-20] [planning/ui/domain] — Approve Wagami A clinical status-line consolidation
+
+- Completed a grill-with-docs design interview and defined the Wagami A clinical status line as the
+  fixed-height presentation of current Device Patient mode followed only by active localized alarms.
+- Approved removing the main bottom mode/source strip and preview/live source metadata, expanding
+  waveforms into the recovered space, integrating status into secondary headers, and making the
+  physical mode-control face static while preserving its cycle, accessibility, safety lock, and LED.
+- Recorded the canonical glossary term. No ADR was added because this is a reversible presentation
+  decision without architectural lock-in. Runtime implementation and verification are in progress.
+
+## [2026-09-20] [clinical/audio/testing] — Resume active Wagami A CPR metronome on unmute
+
+- Made Wagami A resume the metronome when unmuted during active CPR after the timer has started and
+  while time remains, without replaying the spoken CPR instruction.
+- Kept completed CPR silent at `0:00`, preserved Preview/live parity, and left X/Z unchanged.
+- Added mute/unmute and completed-timer regression coverage. The expanded 103-test focused suite,
+  TypeScript, ESLint with zero errors and 12 existing warnings, and the Next.js 16.3 Webpack
+  production build pass.
+
+## [2026-09-20] [planning/clinical/audio] — Approve Wagami A CPR metronome unmute recovery
+
+- Approved resuming the Wagami A CPR metronome on unmute only while CPR remains active above
+  `0:00`, without replaying the spoken CPR instruction or changing X/Z behavior.
+- Required active/completed timer coverage and Preview/live parity before completion.
+
+## [2026-09-20] [clinical/audio/testing] — Stop Wagami A CPR audio at timer completion
+
+- Stopped only Wagami A's CPR voice/metronome sequence when its active two-minute timer reaches
+  `0:00`; the completed timer remains visible and alarm/other device audio is not globally silenced.
+- Applied the completion rule to both Preview and live trainee paths without changing X/Z behavior.
+- Added exact-boundary coverage proving the CPR audio is not stopped before completion. The expanded
+  57-test Wagami A suite, TypeScript, ESLint with zero errors and 12 existing warnings, and the
+  Next.js 16.3 Webpack production build pass.
+
+## [2026-09-20] [planning/clinical/audio] — Approve Wagami A CPR timer audio completion
+
+- Approved an A-only rule that stops the CPR voice/metronome sequence exactly when the active
+  two-minute CPR timer reaches `0:00`, while leaving alarms and other device audio unchanged.
+- Required Preview/live parity and explicit timer-boundary coverage before completion.
+
+## [2026-09-20] [clinical/ui/testing] — Complete Wagami A automatic advised charging
+
+- Made a captured shockable Analyze result begin Wagami A's four-second charge automatically, while
+  keeping non-shockable analysis charge-free and making one physical Charge press start a distinct
+  manual charge from Idle, CPR, or Delivered. Automatic and manual shocks retain their CPR and
+  Delivered outcomes respectively; charged energy is locked and X/Z behavior is unchanged.
+- Added explicit charge origin and capacitor-only progress through live projection, Preview, and
+  Spectator, preserved captured-rhythm evaluation payloads, and kept automatic device charging out
+  of trainee Charge-event attribution.
+- Rebuilt the fixed defibrillation panel around a large central CPR timer and bottom charge meter,
+  removed the permanent ready/not-ready row, and added the approved French/English advised-charging
+  state while preserving contextual ready feedback.
+- Added state-machine, hook, clinical-event, localization, panel, workspace, and Spectator coverage.
+  The focused 45-test suite, TypeScript, and Webpack production build pass; full ESLint has zero
+  errors and 12 existing warnings. The full suite has 1,556 passing, one skipped, and three unrelated
+  existing failures in Room ownership and PatientInfoPanel styling.
+
+## [2026-09-20] [planning/clinical/ui] — Approve Wagami A automatic advised charging
+
+- Replaced A's post-advice Charge-button wait with an approved A-only automatic four-second charge
+  after a captured shockable Analyze result; retained no-charge CPR for non-shockable results and
+  made one physical Charge press start a distinct manual charge. X/Z behavior remains unchanged.
+- Defined capacitor-only charge progress, energy locking while charging/charged, existing reset
+  boundaries, trainee-event attribution, and captured-rhythm evaluation semantics across Preview,
+  live trainee, and Spectator surfaces.
+- Approved the fixed defibrillation-panel hierarchy with a large central CPR timer, bottom charge
+  meter, and removal of the redundant permanent readiness row while retaining contextual ready
+  feedback. Runtime implementation and verification are in progress on `wagami-a-v2`.
+
+## [2026-09-20] [planning/ui] — Authorize rolling Wagami A UI refinement
+
+- Recorded `bd13ffc` as the shared `main`/`wagami-a-v2` baseline after the Wagami A merge and
+  replaced the old phase-gated collaborator boundary with an authorized rolling UI workstream.
+- Clear programmer UI requests may now be implemented, tested, committed, and pushed to
+  `wagami-a-v2` without creating a numbered phase. Separate approval remains required for clinical,
+  database, release/default/availability, X/Z-removal, and `main`-merge scope.
+- Added the active UI handoff, marked the A4–A6 transfer brief historical, and corrected the status
+  ledger to record the applied production Wagami A report migration and validated model constraint.
+
 ## [2026-09-20] [git/testing] — Reconcile Wagami A and main feature histories
 
 - Resolved the branch merge by preserving both independent planning/status/changelog histories and

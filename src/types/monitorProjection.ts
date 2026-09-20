@@ -2,7 +2,7 @@ import type { EventLogEntry } from '@/components/monitor/EventLogModal'
 import type { CallerInfoVariant } from '@/components/monitor/CallerInfoModal'
 import type { PowerState } from '@/components/monitor/DeviceShell'
 import type { MonitorControllerState } from '@/hooks/useMonitorController'
-import type { DefibState } from '@/hooks/useDefibSequence'
+import type { DefibChargeOrigin, DefibState } from '@/hooks/useDefibSequence'
 import type { NibpPhase } from '@/hooks/useNibpReading'
 import type { VitalLogEntry } from '@/hooks/useVitalLog'
 import type { CallerInfo } from '@/types/callerInfo'
@@ -66,6 +66,7 @@ export type MonitorProjection = {
     energy: number
     shockCount: number
     progress: number
+    chargeOrigin?: DefibChargeOrigin
     phaseStartedAt: number | null
     phaseEndsAt: number | null
     cprStartTime: number | null

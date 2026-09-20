@@ -34,7 +34,8 @@ describe('Wagami A live Attempt integration', () => {
     expect(screen.getByTestId('wagami-a-screen-off')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
-    expect(screen.getByText('EN DIRECT · DONNÉES CONFIRMÉES')).toBeInTheDocument()
+    expect(screen.getByText('MODE ADULTE')).toBeInTheDocument()
+    expect(screen.queryByText(/EN DIRECT|DONNÉES CONFIRMÉES/)).not.toBeInTheDocument()
     expect(events).toContainEqual({ kind: 'power_on', label: 'Power On' })
 
     fireEvent.click(screen.getByRole('button', { name: 'Médicaments' }))

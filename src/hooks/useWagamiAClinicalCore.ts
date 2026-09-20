@@ -7,13 +7,18 @@ import { useCPRTimer } from '@/hooks/useCPRTimer'
 import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useNibpReading, type NibpSnapshot } from '@/hooks/useNibpReading'
-import { setAudioMuted, stopAllAudio } from '@/lib/audio'
+import {
+  playCprMetronome,
+  setAudioMuted,
+  stopAllAudio,
+  stopCprAudioSequence,
+} from '@/lib/audio'
 import { energyDown, energyUp } from '@/lib/defib/defibMachine'
 import { isWagamiAPatientModeLocked, nextWagamiAPatientMode } from '@/lib/wagamiAPatientMode'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
 import { playWagamiACprPrompt, playWagamiADefibPrompt } from '@/lib/wagamiAVoice'
 import type { WagamiALocale } from '@/types/wagamiA'
-import { getCprHeartRate, type CprMode, type PatientMode, type Rhythm } from '@/types/vitals'
+import { getCprHeartRate, type CprMode, type PatientMode } from '@/types/vitals'
 
 export type WagamiAClinicalEvent = {
   kind: string
@@ -42,20 +47,20 @@ export function useWagamiAClinicalCore({
   const [muted, setMuted] = useState(false)
   const [acceptedBp, setAcceptedBp] = useState<NibpSnapshot | null>(null)
   const shockPressedRef = useRef(false)
-  const rhythmAtAnalyzeRef = useRef<Rhythm>(sourceDisplay.vitals.rhythm)
+  const wasMutedRef = useRef(muted)
   const cprHeartRate = getCprHeartRate(cprMode)
 
   const defib = useDefibSequence({
     patientMode,
     rhythm: sourceDisplay.vitals.rhythm,
-    shockRequiresCharge: true,
+    chargePolicy: 'wagamiA',
     playPrompt: (prompt) => playWagamiADefibPrompt(locale, prompt),
     playCprPrompt: (onEnded) => playWagamiACprPrompt(locale, onEnded),
-    onAnalyzeResult(result) {
+    onAnalyzeResult(result, analyzedRhythm) {
       onStudentEvent?.({
         kind: 'analyze',
         label: result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock',
-        payload: { result, rhythm: rhythmAtAnalyzeRef.current },
+        payload: { result, rhythm: analyzedRhythm },
       })
     },
   })
@@ -108,6 +113,24 @@ export function useWagamiAClinicalCore({
   const canReadBP = sourceDisplay.active.bp_sys || sourceDisplay.active.bp_dia ||
     !!acceptedBp?.active.bp_sys || !!acceptedBp?.active.bp_dia
 
+  useEffect(() => {
+    if (defib.state === 'cpr' && cprTimer.isDone) stopCprAudioSequence()
+  }, [cprTimer.isDone, defib.state])
+
+  useEffect(() => {
+    const wasMuted = wasMutedRef.current
+    wasMutedRef.current = muted
+    if (
+      wasMuted &&
+      !muted &&
+      defib.state === 'cpr' &&
+      defib.cprStartTime !== null &&
+      !cprTimer.isDone
+    ) {
+      playCprMetronome()
+    }
+  }, [cprTimer.isDone, defib.cprStartTime, defib.state, muted])
+
   useEffect(() => () => {
     stopAllAudio()
     setAudioMuted(false)
@@ -132,7 +155,6 @@ export function useWagamiAClinicalCore({
 
   function onAnalyse() {
     if (!poweredOn || !defib.canAnalyse) return
-    rhythmAtAnalyzeRef.current = sourceDisplay.vitals.rhythm
     defib.onAnalyse()
   }
 

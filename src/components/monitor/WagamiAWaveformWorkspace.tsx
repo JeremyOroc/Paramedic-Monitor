@@ -1,28 +1,23 @@
 import type { Vitals } from '@/store/monitorStore'
-import type { AlarmChannel, VitalActiveState } from '@/types/vitals'
-import { getWagamiAText } from '@/lib/wagamiALocalization'
 import type { WagamiALocale } from '@/types/wagamiA'
+import type { AlarmChannel, PatientMode, VitalActiveState } from '@/types/vitals'
 import { ECGCanvas } from './ECGCanvas'
 import { SecondaryChannel } from './SecondaryChannel'
+import { WagamiAClinicalStatusLine } from './WagamiAClinicalStatusLine'
 
 type WagamiAWaveformWorkspaceProps = {
   vitals: Vitals
   active: VitalActiveState
   alarms: AlarmChannel[]
+  patientMode?: PatientMode
   cprOverride?: boolean
   locale?: WagamiALocale
 }
 
-const ALARM_LABELS: Record<AlarmChannel, string> = { hr: 'FC', bp: 'PNI', spo2: 'SpO₂' }
-
-export function WagamiAWaveformWorkspace({ vitals, active, alarms, cprOverride = false, locale = 'fr' }: WagamiAWaveformWorkspaceProps) {
-  const text = getWagamiAText(locale)
-  const alarmText = alarms.length > 0 ? `${text.alarm} · ${alarms.map((channel) => ALARM_LABELS[channel]).join(' / ')}` : text.noAlarm
+export function WagamiAWaveformWorkspace({ vitals, active, alarms, patientMode = 'adult', cprOverride = false, locale = 'fr' }: WagamiAWaveformWorkspaceProps) {
   return (
     <section aria-label="Wagami A waveform workspace" className="grid min-h-0 grid-rows-[clamp(28px,3.3cqw,46px)_minmax(0,1fr)]">
-      <div className="grid grid-cols-1 items-center gap-1.5 pr-1 font-sans text-[clamp(10px,1cqw,15px)]">
-        <span role="status" className={alarms.length > 0 ? 'font-semibold text-wagami-a-alarm' : 'text-wagami-a-muted-text'}>{alarmText}</span>
-      </div>
+      <WagamiAClinicalStatusLine patientMode={patientMode} alarms={alarms} locale={locale} className="pr-1" />
       <div className="grid min-h-0 grid-rows-[minmax(0,1.9fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] gap-[clamp(3px,0.55cqw,9px)]">
         <div className="relative min-h-0 overflow-hidden rounded-[5px] border border-wagami-a-border bg-wagami-a-screen">
           <ECGCanvas rhythm={vitals.rhythm} hr={vitals.hr} connected={active.hr && vitals.rhythm !== 'off'} cprOverride={cprOverride} palette="wagamiA" className="h-full w-full" />

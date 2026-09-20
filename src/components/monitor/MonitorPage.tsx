@@ -55,7 +55,13 @@ import { useVitalTrendClock } from '@/hooks/useVitalTrendClock'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
-import { playCallerInfoAlert, setAudioMuted, stopAllAudio } from '@/lib/audio'
+import {
+  playCprMetronome,
+  playCallerInfoAlert,
+  setAudioMuted,
+  stopAllAudio,
+  stopCprAudioSequence,
+} from '@/lib/audio'
 import { isWagamiAPatientModeLocked, nextWagamiAPatientMode } from '@/lib/wagamiAPatientMode'
 import { playWagamiACprPrompt, playWagamiADefibPrompt } from '@/lib/wagamiAVoice'
 import { SessionLandingPage } from '@/components/session/SessionLandingPage'
@@ -335,7 +341,7 @@ export function MonitorPage({
   const defib = useDefibSequence({
     patientMode: controller.patientMode,
     rhythm: confirmed.rhythm,
-    shockRequiresCharge: isWagamiA,
+    chargePolicy: isWagamiA ? 'wagamiA' : 'default',
     playPrompt: isWagamiA
       ? (prompt) => playWagamiADefibPrompt(wagamiAPreferenceState.preferences.locale, prompt)
       : undefined,
@@ -345,17 +351,39 @@ export function MonitorPage({
           onEnded,
         )
       : undefined,
-    onAnalyzeResult(result) {
+    onAnalyzeResult(result, analyzedRhythm) {
       controller.onAnalyzeResult(result, createEventLogStamp())
       onStudentEvent?.({
         kind: 'analyze',
         label: result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock',
-        payload: { result, rhythm: confirmed.rhythm },
+        payload: { result, rhythm: analyzedRhythm },
       })
     },
   })
   const cprTimer = useCPRTimer(defib.state === 'cpr' ? defib.cprStartTime : null)
   const wagamiAShockPressedRef = useRef(false)
+  const wagamiAWasMutedRef = useRef(controller.isMuted)
+
+  useEffect(() => {
+    if (isWagamiA && defib.state === 'cpr' && cprTimer.isDone) {
+      stopCprAudioSequence()
+    }
+  }, [cprTimer.isDone, defib.state, isWagamiA])
+
+  useEffect(() => {
+    const wasMuted = wagamiAWasMutedRef.current
+    wagamiAWasMutedRef.current = controller.isMuted
+    if (
+      isWagamiA &&
+      wasMuted &&
+      !controller.isMuted &&
+      defib.state === 'cpr' &&
+      defib.cprStartTime !== null &&
+      !cprTimer.isDone
+    ) {
+      playCprMetronome()
+    }
+  }, [controller.isMuted, cprTimer.isDone, defib.cprStartTime, defib.state, isWagamiA])
 
   useEffect(() => {
     if (defib.state !== 'charged') wagamiAShockPressedRef.current = false
@@ -646,6 +674,7 @@ export function MonitorPage({
         energy: defib.energy,
         shockCount: defib.shockCount,
         progress: projectionDefibProgress,
+        chargeOrigin: defib.chargeOrigin,
         phaseStartedAt: defib.phaseStartedAt,
         phaseEndsAt: defib.phaseEndsAt,
         cprStartTime: defib.cprStartTime,
@@ -702,6 +731,7 @@ export function MonitorPage({
       defib.canAnalyse,
       defib.canCharge,
       defib.canShock,
+      defib.chargeOrigin,
       defib.cprStartTime,
       defib.energy,
       defib.lastDeliveredJoules,
@@ -1023,7 +1053,8 @@ export function MonitorPage({
             display={wagamiADisplay}
             energy={defib.energy}
             defibState={defib.state}
-            defibProgress={defib.progress}
+            chargeProgress={defib.chargeProgress}
+            chargeOrigin={defib.chargeOrigin}
             cprTime={defib.state === 'cpr' ? cprTimer.formatted : '--:--'}
             cprOverride={cprOverrideActive}
             nibpPhase={nibpPhase}
@@ -1064,7 +1095,8 @@ export function MonitorPage({
                 display={wagamiADisplay}
                 energy={defib.energy}
                 defibState={defib.state}
-                defibProgress={defib.progress}
+                chargeProgress={defib.chargeProgress}
+                chargeOrigin={defib.chargeOrigin}
                 cprTime={defib.state === 'cpr' ? cprTimer.formatted : '--:--'}
                 cprOverride={cprOverrideActive}
                 nibpPhase={nibpPhase}
@@ -1076,7 +1108,6 @@ export function MonitorPage({
                 callerInfo={callerInfoConfirmed}
                 dispatchRoute={hospitalRouting.effectiveRoute}
                 selectedAction={selectedAction}
-                displayMode="live"
               />
             )}
             locale={wagamiAWorkspace.preferences.locale}
