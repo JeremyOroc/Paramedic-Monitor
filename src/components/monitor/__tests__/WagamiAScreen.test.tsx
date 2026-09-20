@@ -18,7 +18,8 @@ const display: WagamiADisplayState = {
 
 describe('Wagami A fixed live display', () => {
   it('locks FC/SpO₂/PNI/EtCO₂ order above the dominant waveform area', () => {
-    render(<WagamiAScreen display={display} energy={120} />)
+    const onOpenNibpSettings = vi.fn()
+    render(<WagamiAScreen display={display} energy={120} onOpenNibpSettings={onOpenNibpSettings} />)
     const strip = screen.getByLabelText('Fixed A vital card strip')
     const labels = within(strip).getAllByText(/^(FC|SpO₂|PNI|EtCO₂)$/)
 
@@ -26,7 +27,9 @@ describe('Wagami A fixed live display', () => {
     expect(screen.getByTestId('a-waveform-workspace')).toBeInTheDocument()
     expect(screen.queryByText(/DONNÉES SIMULÉES|PREVIEW/)).not.toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-main-clinical-column')).toHaveClass('grid-rows-[clamp(82px,11.4cqw,160px)_minmax(0,1fr)]')
-    expect(screen.getByTestId('wagami-a-vital-pni').tagName).toBe('DIV')
+    expect(screen.getByTestId('wagami-a-vital-pni').tagName).toBe('BUTTON')
+    screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }).click()
+    expect(onOpenNibpSettings).toHaveBeenCalledOnce()
     expect(screen.queryByRole('button', { name: 'ANALYSER' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Démarrer une mesure PNI' })).not.toBeInTheDocument()
   })
@@ -43,10 +46,35 @@ describe('Wagami A fixed live display', () => {
 
   it('shows active cuff, charge and CPR states without another touch Analyze or BP action', () => {
     render(<WagamiAScreen display={display} energy={120} defibState="charging" chargeProgress={0.5} nibpPhase="counting" nibpDisplayValue={72} cprTime="1:42" />)
-    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('Mesure en cours · 72')
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('72')
+    expect(screen.getByTestId('wagami-a-vital-pni')).not.toHaveTextContent('164/92')
+    expect(screen.getByTestId('wagami-a-vital-pni')).not.toHaveTextContent(/mesure|patient|reading/i)
+    expect(screen.getByText('72')).toHaveAttribute('data-value-layout', 'single')
     expect(screen.getByRole('status')).toHaveTextContent('CHARGE EN COURS')
     expect(screen.getByRole('progressbar', { name: 'Charge progress' })).toHaveValue(50)
     expect(screen.getByTestId('wagami-a-cpr-timer')).toHaveTextContent('--:--')
     expect(screen.queryByRole('button', { name: 'Analyser WAGAMI A' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the complete accepted PNI pair visible when either BP channel is active', () => {
+    const partialBp = {
+      ...display,
+      active: { ...display.active, bp_sys: false, bp_dia: true },
+    }
+
+    render(<WagamiAScreen display={partialBp} energy={120} />)
+
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('120/80')
+  })
+
+  it('keeps settings available with PNI off and localizes the action in English', () => {
+    const inactiveBp = {
+      ...display,
+      active: { ...display.active, bp_sys: false, bp_dia: false },
+    }
+
+    render(<WagamiAScreen display={inactiveBp} energy={120} locale="en" onOpenNibpSettings={() => {}} />)
+
+    expect(screen.getByRole('button', { name: 'Open NIBP settings' })).toHaveTextContent('--/--')
   })
 })

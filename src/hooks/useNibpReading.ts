@@ -13,17 +13,15 @@ export type NibpSnapshot = {
   }
 }
 
-const PLEASE_WAIT_MS = 3000
-const READING_MS = 500
 const COUNTING_MS = 8000
 const STEP_INTERVAL_MS = 333
+const PEAK_HOLD_MS = 100
 
 /** Pre-generate the full ascending sequence from 0 → target in actualSteps entries. */
-function buildCountingSequence(target: number): { sequence: number[]; intervalMs: number } {
+function buildCountingSequence(target: number): number[] {
   const maxSteps = Math.floor(COUNTING_MS / STEP_INTERVAL_MS) // ~24
-  // Ensure at least 2 entries (0 and target). Cap at maxSteps for timing.
+  // Ensure at least 2 entries (0 and target). Cap at maxSteps for cadence.
   const actualSteps = Math.max(Math.min(maxSteps, target + 1), 2)
-  const intervalMs = Math.round(COUNTING_MS / actualSteps)
 
   const numTransitions = actualSteps - 1
   // Distribute target evenly across transitions: each step is baseStep or baseStep+1
@@ -51,7 +49,14 @@ function buildCountingSequence(target: number): { sequence: number[]; intervalMs
   // Floating-point guard: force exact target at the end
   sequence[sequence.length - 1] = target
 
-  return { sequence, intervalMs }
+  return sequence
+}
+
+function getSequenceIndex(elapsedMs: number, sequenceLength: number): number {
+  if (elapsedMs <= 0 || sequenceLength <= 1) return 0
+  const transitions = sequenceLength - 1
+  // The exact peak is owned by the deadline callback, never an early interval tick.
+  return Math.min(transitions - 1, Math.ceil((elapsedMs / COUNTING_MS) * transitions))
 }
 
 function normalizeSnapshot(pending: number | NibpSnapshot): NibpSnapshot {
@@ -97,41 +102,32 @@ export function useNibpReading(
   const startReading = useCallback((snapshot: NibpSnapshot) => {
     clearTimers()
     pendingRef.current = snapshot
+    const target = snapshot.bpSys + 30
+    const sequence = buildCountingSequence(target)
+    const startedAt = Date.now()
 
-    setPhase('please_wait')
-    setDisplayValue('Please Wait')
+    setPhase('counting')
+    setDisplayValue(sequence[0])
+
+    intervalRef.current = setInterval(() => {
+      const elapsedMs = Math.max(0, Date.now() - startedAt)
+      setDisplayValue(sequence[getSequenceIndex(elapsedMs, sequence.length)])
+    }, STEP_INTERVAL_MS)
 
     timerRef.current = setTimeout(() => {
-      setPhase('reading')
-      setDisplayValue('Reading in Progress')
-
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      setDisplayValue(target)
+      // Keep the inflation peak perceptible before revealing the accepted result.
       timerRef.current = setTimeout(() => {
-        const target = snapshot.bpSys + 30
-        const { sequence, intervalMs } = buildCountingSequence(target)
-        let stepIndex = 0
-
-        setPhase('counting')
-        setDisplayValue(sequence[0])
-
-        intervalRef.current = setInterval(() => {
-          stepIndex++
-          if (stepIndex < sequence.length) {
-            setDisplayValue(sequence[stepIndex])
-          }
-          if (stepIndex >= sequence.length - 1) {
-            clearInterval(intervalRef.current!)
-            intervalRef.current = null
-            // Target value is now visible; after a brief pause drop to settled bpSys
-            timerRef.current = setTimeout(() => {
-              const isActive = snapshot.active.bp_sys || snapshot.active.bp_dia
-              setPhase(isActive ? 'settled' : 'idle')
-              setDisplayValue(isActive ? snapshot.bpSys : '')
-              onCompleteRef.current?.(snapshot)
-            }, 100)
-          }
-        }, intervalMs)
-      }, READING_MS)
-    }, PLEASE_WAIT_MS)
+        const isActive = snapshot.active.bp_sys || snapshot.active.bp_dia
+        setPhase(isActive ? 'settled' : 'idle')
+        setDisplayValue(isActive ? snapshot.bpSys : '')
+        onCompleteRef.current?.(snapshot)
+      }, PEAK_HOLD_MS)
+    }, COUNTING_MS)
   }, [clearTimers])
 
   const cancelReading = useCallback(() => {

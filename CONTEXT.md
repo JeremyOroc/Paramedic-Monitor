@@ -349,6 +349,17 @@ The compact line that begins with the current Device Patient mode and appends ac
 When no alarm is active, its alarm portion is blank rather than announcing a normal state.
 _Avoid_: Bottom status bar, no-alarm message, live-data badge
 
+**Cuff-pressure count-up**:
+The rising single pressure value shown while Wagami A or Wagami X is actively taking a non-invasive
+blood-pressure reading. It is distinct from the accepted systolic/diastolic result shown afterward.
+_Avoid_: Blood-pressure result, measured systolic, loading message
+
+**Wagami A PNI settings**:
+The Scenario-device controls for choosing Wagami A's manual or automatic blood-pressure measurement
+mode and automatic interval. They are distinct from the physical PNI shell control that takes or
+cancels a reading.
+_Avoid_: PNI measurement button, Configure option, cuff control
+
 **Device Patient mode**:
 The Adult, Pediatric, or Neonate operating category chosen on one Scenario device. It is
 distinct from the Instructor-confirmed patient category in Confirmed clinical state.

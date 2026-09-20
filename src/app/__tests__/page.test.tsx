@@ -698,7 +698,8 @@ describe('MonitorPage', () => {
     expect(screen.getByText('disconnected-ecg')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+    expect(within(screen.getByText('PNI').closest('[data-alarming]')!).getByTestId('vital-value')).toHaveTextContent('0')
+    act(() => { vi.advanceTimersByTime(8000 + 100) })
 
     expect(screen.getByText('110')).toBeInTheDocument()
     expect(screen.getByText('70')).toBeInTheDocument()
@@ -751,11 +752,11 @@ describe('MonitorPage', () => {
     expect(screen.queryByRole('dialog', { name: 'NIBP settings' })).toBeNull()
 
     act(() => { vi.advanceTimersByTime(59_999) })
-    expect(screen.queryByText('Please Wait')).toBeNull()
+    expect(screen.queryByText('0')).toBeNull()
     act(() => { vi.advanceTimersByTime(1) })
-    expect(screen.getByText('Please Wait')).toBeInTheDocument()
+    expect(within(screen.getByText('PNI').closest('[data-alarming]')!).getByTestId('vital-value')).toHaveTextContent('0')
 
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+    act(() => { vi.advanceTimersByTime(8000 + 100) })
     expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 110, bp_dia: 70 })
     expect(screen.getByText('110')).toBeInTheDocument()
     expect(screen.getByText('70')).toBeInTheDocument()
@@ -971,7 +972,7 @@ describe('MonitorPage', () => {
     render(<MonitorPage />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+    act(() => { vi.advanceTimersByTime(8000 + 100) })
 
     expect(screen.getByText('130')).toBeInTheDocument()
     expect(screen.getByText('85')).toBeInTheDocument()
@@ -1159,7 +1160,7 @@ describe('MonitorPage', () => {
     expect(screen.getByText('80')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+    act(() => { vi.advanceTimersByTime(8000 + 100) })
 
     expect(useMonitorStore.getState().acceptedBpActive).toEqual({ bp_sys: false, bp_dia: false })
     const vitalValues = screen.getAllByTestId('vital-value').map((node) => node.textContent)
@@ -1188,7 +1189,7 @@ describe('MonitorPage', () => {
       useMonitorStore.getState().setDraft('bp_dia', 110)
       useMonitorStore.getState().save()
       useMonitorStore.getState().send()
-      vi.advanceTimersByTime(3000 + 500 + 8000 + 100)
+      vi.advanceTimersByTime(8000 + 100)
     })
 
     expect(useMonitorStore.getState().acceptedBp).toEqual({ bp_sys: 150, bp_dia: 90 })
@@ -1235,11 +1236,12 @@ describe('MonitorPage', () => {
     vi.mocked(pauseAlarm).mockClear()
     fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
 
-    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveTextContent('0')
     expect(pauseAlarm).toHaveBeenCalled()
     expect(playAlarm).not.toHaveBeenCalled()
 
-    act(() => { vi.advanceTimersByTime(3000 + 500) })
+    act(() => { vi.advanceTimersByTime(3500) })
     expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
 
     vi.mocked(playAlarm).mockClear()
@@ -1267,9 +1269,10 @@ describe('MonitorPage', () => {
 
     render(<MonitorPage />)
     fireEvent.click(screen.getByRole('button', { name: 'Patient event' }))
-    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveTextContent('0')
 
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+    act(() => { vi.advanceTimersByTime(8000 + 100) })
 
     expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
     expect(playAlarm).toHaveBeenCalled()
@@ -1299,7 +1302,8 @@ describe('MonitorPage', () => {
 
     expect(screen.getByText('FC').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
     expect(screen.getByText('SpO2').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'true')
-    expect(screen.getByText('PNI').closest('[data-alarming]')).toBeNull()
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByText('PNI').closest('[data-alarming]')).toHaveTextContent('0')
     expect(pauseAlarm).not.toHaveBeenCalled()
     vi.useRealTimers()
   })

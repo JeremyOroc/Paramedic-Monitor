@@ -10,8 +10,12 @@ import type { WagamiATask } from '../WagamiATaskDock'
 import { WagamiAWorkspace } from '../WagamiAWorkspace'
 
 vi.mock('../WagamiAScreen', () => ({
-  WagamiAScreen: ({ onTask }: { onTask?: (task: WagamiATask) => void }) => (
-    <button type="button" onClick={() => onTask?.('vitalLog')}>Open vital log</button>
+  WagamiAScreen: ({ onTask, onOpenNibpSettings }: { onTask?: (task: WagamiATask) => void; onOpenNibpSettings?: () => void }) => (
+    <>
+      <button type="button" onClick={() => onTask?.('vitalLog')}>Open vital log</button>
+      <button type="button" onClick={() => onTask?.('configure')}>Open configure</button>
+      {onOpenNibpSettings ? <button type="button" onClick={onOpenNibpSettings}>Open PNI settings</button> : null}
+    </>
   ),
 }))
 
@@ -62,6 +66,20 @@ function Harness({ vitalLog }: { vitalLog: VitalLogEntry[] }) {
 }
 
 describe('WagamiAWorkspace', () => {
+  it('opens PNI settings from the monitor card, removes the Configure route, and returns to monitor', () => {
+    render(<Harness vitalLog={[]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open configure' }))
+    expect(screen.getByRole('heading', { name: 'Configuration' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Réglages PNI/ })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open PNI settings' }))
+    expect(screen.getByRole('heading', { name: 'Réglages PNI' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    expect(screen.getByRole('button', { name: 'Open PNI settings' })).toBeInTheDocument()
+  })
+
   it('paginates the Vital Log after eight rows and places the clinical status in its header', () => {
     render(<Harness vitalLog={makeLog(9)} />)
     fireEvent.click(screen.getByRole('button', { name: 'Open vital log' }))

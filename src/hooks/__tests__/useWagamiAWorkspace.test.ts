@@ -38,6 +38,16 @@ describe('useWagamiAWorkspace', () => {
     expect(result.current.medicationEvents[0]).toMatchObject({ medication: 'Epi', time: '14:00:00' })
   })
 
+  it('returns directly from PNI settings to the monitor', () => {
+    const { result } = renderHook(() => useWagamiAWorkspace({ scope: 'preview', rhythm: 'nsr', hr: 80 }))
+
+    act(() => result.current.setView('nibpSettings'))
+    expect(result.current.view).toBe('nibpSettings')
+
+    act(() => result.current.goBack())
+    expect(result.current.view).toBe('monitor')
+  })
+
   it('keeps print and transmission inside the 12-lead workflow', () => {
     const { result } = renderHook(() => useWagamiAWorkspace({ scope: 'preview', rhythm: 'nsr', hr: 80 }))
     act(() => {

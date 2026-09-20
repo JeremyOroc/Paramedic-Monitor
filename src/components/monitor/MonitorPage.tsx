@@ -533,23 +533,26 @@ export function MonitorPage({
   /**
    * The BP button press, logged separately from the reading it produces.
    * The evaluator grades ordering, so *when the trainee reached for it* is the
-   * fact that matters -- the result lands ~11s later, after the cuff cycle.
+   * fact that matters -- the result lands ~8s later, after the cuff cycle.
    */
   const handleBpButtonPress = useCallback(() => {
-    onStudentEvent?.({
-      kind: 'nibp_start',
-      label: 'NIBP Start',
-      payload: {
-        mode: activeNibpMode,
-        intervalMinutes:
-          activeNibpMode === 'automatic' ? activeNibpAutoInterval : null,
-      },
-    })
+    if (!isNibpReadingActive) {
+      onStudentEvent?.({
+        kind: 'nibp_start',
+        label: 'NIBP Start',
+        payload: {
+          mode: activeNibpMode,
+          intervalMinutes:
+            activeNibpMode === 'automatic' ? activeNibpAutoInterval : null,
+        },
+      })
+    }
     handleScheduledPatientEvent()
   }, [
     activeNibpAutoInterval,
     activeNibpMode,
     handleScheduledPatientEvent,
+    isNibpReadingActive,
     onStudentEvent,
   ])
   const vitalLogTotalPages = Math.max(

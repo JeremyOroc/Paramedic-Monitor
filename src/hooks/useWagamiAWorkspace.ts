@@ -119,7 +119,6 @@ function useWagamiAWorkspaceState({
 
   function goBack() {
     if (view === 'medicationLog') setView('medications')
-    else if (view === 'nibpSettings') setView('configure')
     else setView('monitor')
   }
 

@@ -18,34 +18,28 @@ describe('useNibpReading', () => {
     expect(result.current.displayValue).toBe('')
   })
 
-  it('idle → please_wait on button press', () => {
+  it('starts counting at 0 immediately on button press', () => {
     const { result } = renderHook(() => useNibpReading(110))
     act(() => result.current.handlePatientEvent())
-    expect(result.current.phase).toBe('please_wait')
-    expect(result.current.displayValue).toBe('Please Wait')
-  })
-
-  it('please_wait → reading after 3000ms', () => {
-    const { result } = renderHook(() => useNibpReading(110))
-    act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000) })
-    expect(result.current.phase).toBe('reading')
-    expect(result.current.displayValue).toBe('Reading in Progress')
-  })
-
-  it('reading → counting after 500ms', () => {
-    const { result } = renderHook(() => useNibpReading(110))
-    act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000) })
-    act(() => { vi.advanceTimersByTime(500) })
     expect(result.current.phase).toBe('counting')
     expect(result.current.displayValue).toBe(0)
   })
 
-  it('counting → settled after 8000ms, displayValue becomes bpSys', () => {
+  it('begins rising during the first count-up interval', () => {
     const { result } = renderHook(() => useNibpReading(110))
     act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 500) })
+    act(() => { vi.advanceTimersByTime(333) })
+    expect(result.current.phase).toBe('counting')
+    expect(result.current.displayValue).toBeGreaterThan(0)
+  })
+
+  it('holds the exact peak at 8000ms, then settles to bpSys after 100ms', () => {
+    const { result } = renderHook(() => useNibpReading(110))
+    act(() => result.current.handlePatientEvent())
+    act(() => { vi.advanceTimersByTime(8000) })
+    expect(result.current.phase).toBe('counting')
+    expect(result.current.displayValue).toBe(140)
+    act(() => { vi.advanceTimersByTime(100) })
     expect(result.current.phase).toBe('settled')
     expect(result.current.displayValue).toBe(110)
   })
@@ -60,35 +54,18 @@ describe('useNibpReading', () => {
     const { result } = renderHook(() => useNibpReading(pending, onComplete))
 
     act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 7000) })
+    act(() => { vi.advanceTimersByTime(8000) })
     expect(onComplete).not.toHaveBeenCalled()
 
-    act(() => { vi.advanceTimersByTime(2000) })
+    act(() => { vi.advanceTimersByTime(100) })
     expect(onComplete).toHaveBeenCalledWith(pending)
-  })
-
-  it('cancel during please_wait returns to idle', () => {
-    const { result } = renderHook(() => useNibpReading(110))
-    act(() => result.current.handlePatientEvent())
-    expect(result.current.phase).toBe('please_wait')
-    act(() => result.current.handlePatientEvent())
-    expect(result.current.phase).toBe('idle')
-  })
-
-  it('cancel during reading returns to idle', () => {
-    const { result } = renderHook(() => useNibpReading(110))
-    act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000) })
-    expect(result.current.phase).toBe('reading')
-    act(() => result.current.handlePatientEvent())
-    expect(result.current.phase).toBe('idle')
   })
 
   it('cancel during counting returns to idle', () => {
     const onComplete = vi.fn()
     const { result } = renderHook(() => useNibpReading(110, onComplete))
     act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 1000) })
+    act(() => { vi.advanceTimersByTime(1000) })
     expect(result.current.phase).toBe('counting')
     act(() => result.current.handlePatientEvent())
     expect(result.current.phase).toBe('idle')
@@ -100,7 +77,7 @@ describe('useNibpReading', () => {
     const { result } = renderHook(() => useNibpReading(110, onComplete))
 
     act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 1000) })
+    act(() => { vi.advanceTimersByTime(1000) })
     act(() => result.current.cancelReading())
     act(() => { vi.advanceTimersByTime(10_000) })
 
@@ -123,7 +100,7 @@ describe('useNibpReading', () => {
     )
 
     act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 100) })
+    act(() => { vi.advanceTimersByTime(8000 + 100) })
 
     expect(result.current.phase).toBe('idle')
     expect(result.current.displayValue).toBe('')
@@ -137,30 +114,41 @@ describe('useNibpReading', () => {
   it('pressing after settled starts a new reading (not idle)', () => {
     const { result } = renderHook(() => useNibpReading(110))
     act(() => result.current.handlePatientEvent())
-    act(() => { vi.advanceTimersByTime(3000 + 500 + 8000 + 500) })
+    act(() => { vi.advanceTimersByTime(8000 + 100) })
     expect(result.current.phase).toBe('settled')
     act(() => result.current.handlePatientEvent())
-    expect(result.current.phase).toBe('please_wait')
+    expect(result.current.phase).toBe('counting')
+    expect(result.current.displayValue).toBe(0)
+  })
+
+  it('catches up from elapsed time after interval ticks are delayed', () => {
+    const { result } = renderHook(() => useNibpReading(110))
+    const startedAt = Date.now()
+    act(() => result.current.handlePatientEvent())
+    act(() => {
+      vi.setSystemTime(startedAt + 7000)
+      vi.advanceTimersByTime(333)
+    })
+    expect(result.current.displayValue).toBeGreaterThan(100)
+    expect(result.current.displayValue).toBeLessThan(140)
   })
 
   describe('buildCountingSequence correctness', () => {
     function captureSequence(bpSys: number): number[] {
       const { result } = renderHook(() => useNibpReading(bpSys))
       act(() => result.current.handlePatientEvent())
-      act(() => { vi.advanceTimersByTime(3000 + 500) }) // enter counting phase
       expect(result.current.phase).toBe('counting')
 
       const target = bpSys + 30
-      const maxSteps = Math.floor(8000 / 333)
-      const actualSteps = Math.max(Math.min(maxSteps, target + 1), 2)
-      const intervalMs = Math.round(8000 / actualSteps)
-
-      // Collect: initial value + (actualSteps - 1) interval ticks
       const collected: number[] = [result.current.displayValue as number]
-      for (let i = 1; i < actualSteps; i++) {
-        act(() => { vi.advanceTimersByTime(intervalMs) })
-        collected.push(result.current.displayValue as number)
+      for (let elapsed = 333; elapsed < 8000; elapsed += 333) {
+        act(() => { vi.advanceTimersByTime(333) })
+        const value = result.current.displayValue as number
+        if (value !== collected.at(-1)) collected.push(value)
       }
+      act(() => { vi.advanceTimersByTime(8) })
+      collected.push(result.current.displayValue as number)
+      expect(result.current.displayValue).toBe(target)
       return collected
     }
 
