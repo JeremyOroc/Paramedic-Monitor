@@ -12,7 +12,8 @@ describe('Wagami A Room-free clinical preview', () => {
     render(<WagamiAPreview />)
 
     expect(screen.getByTestId('wagami-a-preview')).toBeInTheDocument()
-    expect(screen.getByText('PREVIEW · DONNÉES SIMULÉES')).toBeInTheDocument()
+    expect(screen.getByText('MODE ADULTE')).toBeInTheDocument()
+    expect(screen.queryByText(/PREVIEW|DONNÉES SIMULÉES/)).not.toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-vital-fc')).toHaveTextContent('80')
     expect(screen.getByText('Info appel')).toBeInTheDocument()
     const dock = screen.getByRole('navigation', { name: 'Wagami A task dock' })
@@ -40,6 +41,7 @@ describe('Wagami A Room-free clinical preview', () => {
       fireEvent.click(screen.getByRole('button', { name: task }))
       expect(screen.getByTestId('wagami-a-shell')).toBeInTheDocument()
       expect(screen.getByText(heading)).toBeInTheDocument()
+      expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE')
       fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     }
   })
@@ -89,8 +91,8 @@ describe('Wagami A Room-free clinical preview', () => {
   it('cycles Patient mode and uses the energy ring without activating guarded Shock', () => {
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
-    fireEvent.click(screen.getByRole('button', { name: 'Changer le mode patient' }))
-    expect(screen.getByRole('button', { name: 'Changer le mode patient' })).toHaveTextContent('PÉDIATRIQUE')
+    fireEvent.click(screen.getByRole('button', { name: /Changer le mode patient/ }))
+    expect(screen.getByRole('button', { name: 'Changer le mode patient, mode actuel PÉDIATRIQUE' })).toHaveTextContent('MODE')
     expect(screen.getByText('MODE PÉDIATRIQUE')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('50')
     for (let index = 0; index < 7; index += 1) {
@@ -106,12 +108,12 @@ describe('Wagami A Room-free clinical preview', () => {
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
     fireEvent.click(screen.getByRole('button', { name: 'Analyser WAGAMI A' }))
-    expect(screen.getByRole('button', { name: 'Changer le mode patient' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Changer le mode patient/ })).toBeDisabled()
     expect(within(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).getByRole('status')).toHaveTextContent('ANALYSE ECG')
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
     expect(screen.getByTestId('wagami-a-screen-off')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
     expect(screen.getByRole('region', { name: 'Wagami A live display' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Changer le mode patient' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Changer le mode patient/ })).toBeEnabled()
   })
 })

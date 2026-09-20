@@ -324,10 +324,30 @@ instructor-confirmed clinical scenario through a distinct device-like interactio
 than replacing Wagami X.
 _Avoid_: Wagami X replacement, generic Wagami X
 
+**Wagami A automatic advised charge**:
+The timed charge that begins automatically when Wagami A finishes analyzing a shockable rhythm.
+It is distinct from a physical Charge-button action and does not occur after a non-shockable result.
+_Avoid_: Automatic shock, advised manual charge, analysis progress
+
+**Wagami A manual charge**:
+The timed charge started directly by one accepted press of Wagami A's physical Charge shell control,
+without requiring a preceding shockable Analyze result.
+_Avoid_: Charge prompt, automatic advised charge, second Charge press
+
+**Wagami A charge progress**:
+The capacitor-charge percentage shown only while Wagami A is actually charging or charged. Analyze,
+stand-clear, no-shock, and CPR phase progress never contributes to it.
+_Avoid_: Analysis progress, phase progress, CPR progress
+
 **Wagami A shell control**:
 A physical-style action button on Wagami A's outer housing, distinct from a touchscreen action
 or task launcher within its display.
 _Avoid_: Soft key, touchscreen button
+
+**Wagami A clinical status line**:
+The compact line that begins with the current Device Patient mode and appends active alarm channels.
+When no alarm is active, its alarm portion is blank rather than announcing a normal state.
+_Avoid_: Bottom status bar, no-alarm message, live-data badge
 
 **Device Patient mode**:
 The Adult, Pediatric, or Neonate operating category chosen on one Scenario device. It is

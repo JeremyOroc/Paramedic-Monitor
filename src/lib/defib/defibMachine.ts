@@ -53,11 +53,12 @@ export function canShock(state: DefibState): boolean {
   return state === 'charged' || state === 'shock_advised'
 }
 
-export function canAdjustEnergy(state: DefibState): boolean {
+export function canAdjustEnergy(state: DefibState, lockWhileCharged = false): boolean {
   return (
     !state.startsWith('analyzing') &&
     state !== 'charging' &&
-    state !== 'shock_advised'
+    state !== 'shock_advised' &&
+    (!lockWhileCharged || state !== 'charged')
   )
 }
 
@@ -87,21 +88,16 @@ export function energyDown(state: EnergyState, patientMode: PatientMode): Energy
 
 // --- Button transitions ------------------------------------------------------
 
-/** CHARGE press: A advice starts a timed charge; the default X/Z policy is unchanged. */
+/** CHARGE press: direct manual charge is A-only; the default X/Z two-step policy is unchanged. */
 export function chargeTransition(
   state: DefibState,
-  shockRequiresCharge = false,
+  directManualCharge = false,
 ): 'charging' | 'charge_prompt' | null {
-  if (shockRequiresCharge && state === 'shock_advised') return 'charging'
-  if (state === 'charge_prompt') return 'charging'
-  if (
-    state === 'cpr' ||
-    state === 'idle' ||
-    state === 'analyzing_result' ||
-    state === 'delivered'
-  ) {
-    return 'charge_prompt'
+  if (state === 'charge_prompt') return directManualCharge ? null : 'charging'
+  if (state === 'cpr' || state === 'idle' || state === 'delivered') {
+    return directManualCharge ? 'charging' : 'charge_prompt'
   }
+  if (state === 'analyzing_result') return directManualCharge ? null : 'charge_prompt'
   return null
 }
 

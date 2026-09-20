@@ -39,7 +39,8 @@ export function WagamiAPreview() {
       display={clinical.display}
       energy={clinical.defib.energy}
       defibState={clinical.defib.state}
-      defibProgress={clinical.defib.state === 'charging' || clinical.defib.state === 'charged' ? clinical.defib.progress : 0}
+      chargeProgress={clinical.defib.chargeProgress}
+      chargeOrigin={clinical.defib.chargeOrigin}
       cprTime={clinical.cprTime}
       cprOverride={clinical.cprOverride}
       nibpPhase={clinical.nibpPhase}
@@ -65,7 +66,8 @@ export function WagamiAPreview() {
           display={clinical.display}
           energy={clinical.defib.energy}
           defibState={clinical.defib.state}
-          defibProgress={clinical.defib.state === 'charging' || clinical.defib.state === 'charged' ? clinical.defib.progress : 0}
+          chargeProgress={clinical.defib.chargeProgress}
+          chargeOrigin={clinical.defib.chargeOrigin}
           cprTime={clinical.cprTime}
           cprOverride={clinical.cprOverride}
           nibpPhase={clinical.nibpPhase}

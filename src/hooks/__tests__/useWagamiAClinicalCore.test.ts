@@ -8,6 +8,7 @@ import { useWagamiAClinicalCore } from '../useWagamiAClinicalCore'
 const audio = vi.hoisted(() => ({
   playSystemAudio: vi.fn(),
   playCprAudioSequence: vi.fn((onEnded?: () => void) => void onEnded),
+  stopCprAudioSequence: vi.fn(),
   playCprMetronome: vi.fn(),
   playAlarm: vi.fn(),
   pauseAlarm: vi.fn(),
@@ -68,7 +69,7 @@ describe('Wagami A Room-free clinical core', () => {
     expect(result.current.poweredOn).toBe(true)
   })
 
-  it('charges after advice and emits only one guarded Shock event', () => {
+  it('automatically charges after advice without emitting a Charge event', () => {
     const onStudentEvent = vi.fn()
     const shockable = { ...normal, vitals: { ...normal.vitals, rhythm: 'vf' as const } }
     const { result } = renderHook(() => useWagamiAClinicalCore({
@@ -76,14 +77,12 @@ describe('Wagami A Room-free clinical core', () => {
     }))
     act(() => result.current.onAnalyse())
     act(() => vi.advanceTimersByTime(5000))
-    expect(result.current.defib.state).toBe('shock_advised')
+    expect(result.current.defib.state).toBe('charging')
+    expect(result.current.defib.chargeOrigin).toBe('automatic_advised')
     expect(result.current.patientModeLocked).toBe(true)
     expect(result.current.defib.canShock).toBe(false)
     act(() => result.current.onShock())
     expect(onStudentEvent).not.toHaveBeenCalledWith(expect.objectContaining({ kind: 'shock' }))
-
-    act(() => result.current.onCharge())
-    expect(result.current.defib.state).toBe('charging')
     act(() => vi.advanceTimersByTime(4000))
     expect(result.current.defib.state).toBe('charged')
     expect(result.current.patientModeLocked).toBe(true)
@@ -95,8 +94,68 @@ describe('Wagami A Room-free clinical core', () => {
     expect(result.current.defib.state).toBe('cpr')
     expect(result.current.defib.shockCount).toBe(1)
     expect(onStudentEvent.mock.calls.filter(([event]) => event.kind === 'shock')).toHaveLength(1)
-    expect(onStudentEvent.mock.calls.filter(([event]) => event.kind === 'charge')).toHaveLength(1)
+    expect(onStudentEvent.mock.calls.filter(([event]) => event.kind === 'charge')).toHaveLength(0)
     expect(onStudentEvent.mock.calls.filter(([event]) => event.kind === 'analyze')).toHaveLength(1)
+  })
+
+  it('records a physical Charge press and manually charges in one press', () => {
+    const onStudentEvent = vi.fn()
+    const { result } = renderHook(() => useWagamiAClinicalCore({
+      sourceDisplay: normal, cprMode: 'off', onStudentEvent,
+    }))
+    act(() => result.current.onCharge())
+    expect(result.current.defib.state).toBe('charging')
+    expect(result.current.defib.chargeOrigin).toBe('manual')
+    expect(onStudentEvent.mock.calls.filter(([event]) => event.kind === 'charge')).toHaveLength(1)
+  })
+
+  it('stops only the CPR audio sequence when the two-minute timer reaches zero', () => {
+    const shockable = { ...normal, vitals: { ...normal.vitals, rhythm: 'vf' as const } }
+    const { result } = renderHook(() => useWagamiAClinicalCore({
+      sourceDisplay: shockable, cprMode: 'off',
+    }))
+
+    act(() => result.current.onAnalyse())
+    act(() => vi.advanceTimersByTime(5000 + 4000))
+    act(() => result.current.onShock())
+    expect(result.current.cprTime).toBe('2:00')
+    expect(audio.stopCprAudioSequence).not.toHaveBeenCalled()
+
+    act(() => vi.advanceTimersByTime(119_999))
+    expect(audio.stopCprAudioSequence).not.toHaveBeenCalled()
+    act(() => vi.advanceTimersByTime(1))
+
+    expect(result.current.cprTime).toBe('0:00')
+    expect(audio.stopCprAudioSequence).toHaveBeenCalledOnce()
+    expect(audio.stopAllAudio).not.toHaveBeenCalled()
+  })
+
+  it('resumes the active CPR metronome on unmute without replaying the voice prompt', () => {
+    const shockable = { ...normal, vitals: { ...normal.vitals, rhythm: 'vf' as const } }
+    const { result } = renderHook(() => useWagamiAClinicalCore({
+      sourceDisplay: shockable, cprMode: 'off', locale: 'en',
+    }))
+
+    act(() => result.current.onAnalyse())
+    act(() => vi.advanceTimersByTime(5000 + 4000))
+    act(() => result.current.onShock())
+    expect(audio.playCprAudioSequence).toHaveBeenCalledOnce()
+    act(() => vi.advanceTimersByTime(1752))
+    expect(result.current.cprTime).toBe('2:00')
+
+    act(() => result.current.onMute())
+    expect(result.current.muted).toBe(true)
+    act(() => result.current.onMute())
+    expect(result.current.muted).toBe(false)
+    expect(audio.playCprMetronome).toHaveBeenCalledOnce()
+    expect(audio.playCprAudioSequence).toHaveBeenCalledOnce()
+
+    act(() => vi.advanceTimersByTime(120_000))
+    expect(result.current.cprTime).toBe('0:00')
+    act(() => result.current.onMute())
+    act(() => result.current.onMute())
+    expect(audio.playCprMetronome).toHaveBeenCalledOnce()
+    expect(audio.playCprAudioSequence).toHaveBeenCalledOnce()
   })
 
   it('accepts BP only after the cuff cycle and suppresses its alarm while reading', () => {

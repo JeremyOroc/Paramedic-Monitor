@@ -29,13 +29,15 @@ export type { DefibState }
 type Options = {
   patientMode: PatientMode
   rhythm?: Rhythm
-  shockRequiresCharge?: boolean
-  onAnalyzeResult?: (result: 'shock' | 'no_shock') => void
+  chargePolicy?: DefibChargePolicy
+  onAnalyzeResult?: (result: 'shock' | 'no_shock', rhythm: Rhythm) => void
   playPrompt?: (prompt: DefibPrompt) => void
   playCprPrompt?: (onEnded?: () => void) => void
 }
 
 export type DefibPrompt = 'standClear' | 'pressShock' | 'shockNotAdvised'
+export type DefibChargePolicy = 'default' | 'wagamiA'
+export type DefibChargeOrigin = 'automatic_advised' | 'manual' | null
 
 function playDefaultPrompt(prompt: DefibPrompt): void {
   const filenames: Record<DefibPrompt, string> = {
@@ -49,7 +51,7 @@ function playDefaultPrompt(prompt: DefibPrompt): void {
 export function useDefibSequence({
   patientMode,
   rhythm = 'nsr',
-  shockRequiresCharge = false,
+  chargePolicy = 'default',
   onAnalyzeResult,
   playPrompt = playDefaultPrompt,
   playCprPrompt = playCprAudioSequence,
@@ -65,6 +67,7 @@ export function useDefibSequence({
   const [phaseEndsAt, setPhaseEndsAt] = useState<number | null>(null)
   const [cprStartTime, setCprStartTime] = useState<number | null>(null)
   const [lastDeliveredJoules, setLastDeliveredJoules] = useState<number | null>(null)
+  const [chargeOrigin, setChargeOrigin] = useState<DefibChargeOrigin>(null)
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rafRef = useRef<number | null>(null)
@@ -89,6 +92,7 @@ export function useDefibSequence({
   }, [onAnalyzeResult, playCprPrompt, playPrompt])
 
   const energy = resolveEnergy(energyState, patientMode)
+  const usesWagamiAChargePolicy = chargePolicy === 'wagamiA'
 
   const clearTimers = useCallback(() => {
     if (timerRef.current !== null) {
@@ -165,9 +169,21 @@ export function useDefibSequence({
     })
   }, [cancelPendingCprStart])
 
+  const startTimedCharge = useCallback((origin: Exclude<DefibChargeOrigin, null>) => {
+    advisedChargeRef.current = origin === 'automatic_advised'
+    setChargeOrigin(origin)
+    cancelPendingCprStart()
+    setState('charging')
+    runTimedPhase(CHARGE_DURATION_MS, () => {
+      setState('charged')
+      if (origin === 'automatic_advised') playPromptRef.current('pressShock')
+    })
+  }, [cancelPendingCprStart, runTimedPhase])
+
   const onAnalyse = useCallback(() => {
     if (!canAnalyseIn(state)) return
     advisedChargeRef.current = false
+    setChargeOrigin(null)
     cancelPendingCprStart()
     rhythmAtAnalyzeRef.current = rhythm
     setState('analyzing_ecg')
@@ -177,13 +193,18 @@ export function useDefibSequence({
     runTimedPhase(ANALYZE_ECG_MS, () => {
       setState('analyzing_clear')
       runTimedPhase(ANALYZE_CLEAR_MS, () => {
-        if (isShockable(rhythmAtAnalyzeRef.current)) {
-          setState('shock_advised')
-          onAnalyzeResultRef.current?.('shock')
-          if (!shockRequiresCharge) playPromptRef.current('pressShock')
+        const analyzedRhythm = rhythmAtAnalyzeRef.current
+        if (isShockable(analyzedRhythm)) {
+          onAnalyzeResultRef.current?.('shock', analyzedRhythm)
+          if (usesWagamiAChargePolicy) {
+            startTimedCharge('automatic_advised')
+          } else {
+            setState('shock_advised')
+            playPromptRef.current('pressShock')
+          }
         } else {
           setState('analyzing_result')
-          onAnalyzeResultRef.current?.('no_shock')
+          onAnalyzeResultRef.current?.('no_shock', analyzedRhythm)
           playPromptRef.current('shockNotAdvised')
           runTimedPhase(ANALYZE_RESULT_MS, () => {
             enterCpr()
@@ -191,32 +212,28 @@ export function useDefibSequence({
         }
       })
     })
-  }, [state, rhythm, shockRequiresCharge, runTimedPhase, cancelPendingCprStart, enterCpr])
+  }, [state, rhythm, usesWagamiAChargePolicy, runTimedPhase, cancelPendingCprStart, enterCpr, startTimedCharge])
 
   const onCharge = useCallback(() => {
-    const next = chargeTransition(state, shockRequiresCharge)
+    const next = chargeTransition(state, usesWagamiAChargePolicy)
     if (next === 'charging') {
-      advisedChargeRef.current = shockRequiresCharge && state === 'shock_advised'
-      cancelPendingCprStart()
-      setState('charging')
-      runTimedPhase(CHARGE_DURATION_MS, () => {
-        setState('charged')
-        if (advisedChargeRef.current) playPromptRef.current('pressShock')
-      })
+      startTimedCharge('manual')
     } else if (next === 'charge_prompt') {
       advisedChargeRef.current = false
+      setChargeOrigin(null)
       cancelPendingCprStart()
       setState('charge_prompt')
     }
-  }, [state, shockRequiresCharge, runTimedPhase, cancelPendingCprStart])
+  }, [state, usesWagamiAChargePolicy, startTimedCharge, cancelPendingCprStart])
 
   const onShock = useCallback(() => {
-    if (shockRequiresCharge && state !== 'charged') return
+    if (usesWagamiAChargePolicy && state !== 'charged') return
     const action = shockTransition(state)
     if (action === 'advised') {
       const joulesDelivered = resolveEnergy(energyState, patientMode)
       setShockCount((n) => n + 1)
       setLastDeliveredJoules(joulesDelivered)
+      setChargeOrigin(null)
       enterCpr()
       setProgress(0)
       return
@@ -225,36 +242,42 @@ export function useDefibSequence({
     setShockCount((n) => n + 1)
     if (advisedChargeRef.current) {
       advisedChargeRef.current = false
+      setChargeOrigin(null)
       setLastDeliveredJoules(resolveEnergy(energyState, patientMode))
       enterCpr()
       setProgress(0)
       return
     }
+    setChargeOrigin(null)
     setState('delivered')
     setProgress(0)
     setPhaseStartedAt(null)
     setPhaseEndsAt(null)
-  }, [state, energyState, patientMode, shockRequiresCharge, enterCpr])
+  }, [state, energyState, patientMode, usesWagamiAChargePolicy, enterCpr])
 
   const onEnergyUp = useCallback(() => {
-    if (!canAdjustEnergyIn(state)) return
+    if (!canAdjustEnergyIn(state, usesWagamiAChargePolicy)) return
     setEnergyState((current) => energyUp(current, patientMode))
-  }, [state, patientMode])
+  }, [state, patientMode, usesWagamiAChargePolicy])
 
   const onEnergyDown = useCallback(() => {
-    if (!canAdjustEnergyIn(state)) return
+    if (!canAdjustEnergyIn(state, usesWagamiAChargePolicy)) return
     setEnergyState((current) => energyDown(current, patientMode))
-  }, [state, patientMode])
+  }, [state, patientMode, usesWagamiAChargePolicy])
 
   const canAnalyse = canAnalyseIn(state)
-  const canCharge = canChargeIn(state) || (shockRequiresCharge && state === 'shock_advised')
-  const canShock = shockRequiresCharge ? state === 'charged' : canShockIn(state)
-  const canAdjustEnergy = canAdjustEnergyIn(state)
+  const canCharge = usesWagamiAChargePolicy
+    ? state === 'idle' || state === 'cpr' || state === 'delivered'
+    : canChargeIn(state)
+  const canShock = usesWagamiAChargePolicy ? state === 'charged' : canShockIn(state)
+  const canAdjustEnergy = canAdjustEnergyIn(state, usesWagamiAChargePolicy)
+  const chargeProgress = state === 'charged' ? 1 : state === 'charging' ? progress : 0
 
   const reset = useCallback(() => {
     clearTimers()
     cancelPendingCprStart()
     advisedChargeRef.current = false
+    setChargeOrigin(null)
     setState('idle')
     setShockCount(0)
     setProgress(0)
@@ -269,6 +292,8 @@ export function useDefibSequence({
     energy,
     shockCount,
     progress,
+    chargeProgress,
+    chargeOrigin,
     phaseStartedAt,
     phaseEndsAt,
     cprStartTime,

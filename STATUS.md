@@ -6,6 +6,40 @@
 ---
 
 ## Current Phase
+**Wagami A clinical status-line consolidation — COMPLETE LOCALLY (2026-09-20).** The main bottom
+source/mode strip and preview/live metadata are removed, and the waveform workspace uses the recovered
+height. A fixed shared line now shows dynamic Device Patient mode plus only active localized alarms in
+FC/HR → SpO₂ → PNI/NIBP order on the monitor and every secondary header, including Call Info. The
+physical mode key now always reads `MODE` while its accessible name announces the current mode; its
+cycle, defibrillation lock, Configure readout, alarm LED, and X/Z behavior are preserved. The 112-test
+Wagami A/Spectator/X/Z focused suite, TypeScript, ESLint with zero errors and 12 existing warnings,
+1280×720 rendered main/secondary/Call Info review, and the Next.js 16.3 Webpack production build pass.
+The verified work is prepared on `wagami-a-v2` for integration into `main`.
+
+**Wagami A CPR metronome unmute recovery — COMPLETE LOCALLY (2026-09-20).** Unmuting Wagami A now
+resumes the metronome when CPR is active, its clock has started, and the timer remains above `0:00`.
+It does not replay the spoken CPR instruction or restart after completion. Preview and live trainee
+paths share the rule; X/Z remain unchanged. The expanded 103-test focused suite, TypeScript, ESLint
+with zero errors and 12 existing warnings, and the Next.js 16.3 Webpack production build pass.
+
+**Wagami A CPR timer audio completion — COMPLETE LOCALLY (2026-09-20).** Wagami A now stops its
+CPR voice/metronome sequence when the active two-minute timer reaches `0:00`, while leaving the
+display at `0:00`, alarms available, and X/Z unchanged. The same completion guard is wired into
+Preview and live trainee use. The expanded 57-test Wagami A focused suite, TypeScript, ESLint with
+zero errors and 12 existing warnings, and the Next.js 16.3 Webpack production build pass.
+
+**Wagami A automatic advised-charge refinement — COMPLETE LOCALLY (2026-09-20).** The A-only
+clinical amendment is implemented on `wagami-a-v2`: shockable Analyze results start the existing
+four-second charge automatically, one physical Charge press starts manual charging, charge progress
+is separated from generic analysis progress, and the defibrillation panel places a large CPR timer
+in its center with the charge meter anchored at the bottom. The permanent ready/not-ready row is
+removed while contextual charged status remains. Preview, live trainee, and Spectator share charge
+origin and semantic progress; X/Z remain unchanged. The requirement, glossary, and ADR are recorded.
+The 45-test focused suite passes, TypeScript passes, full ESLint has zero errors and the same 12
+existing warnings, and the Next.js 16.3 Webpack production build passes. The complete suite reports
+1,556 passing, one skipped, and three unrelated existing failures in Room ownership and
+PatientInfoPanel styling; no Wagami A test fails.
+
 **Wagami A rolling UI refinement — AUTHORIZED (2026-09-20).** Wagami A was merged to `main` in
 `bd13ffc`, and `wagami-a-v2` now starts from that same commit with a clean working tree. The
 programmer authorized an ongoing, non-phased UI workstream for a collaborator: clear Wagami A UI

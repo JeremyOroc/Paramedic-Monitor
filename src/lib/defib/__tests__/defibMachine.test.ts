@@ -49,6 +49,7 @@ describe('guards', () => {
       const blocked = s.startsWith('analyzing') || s === 'charging' || s === 'shock_advised'
       expect(canAdjustEnergy(s)).toBe(!blocked)
     }
+    expect(canAdjustEnergy('charged', true)).toBe(false)
   })
 })
 
@@ -103,9 +104,13 @@ describe('chargeTransition', () => {
     }
   })
 
-  it('charges directly after shock advice only under A policy', () => {
-    expect(chargeTransition('shock_advised')).toBeNull()
-    expect(chargeTransition('shock_advised', true)).toBe('charging')
+  it('starts a one-press manual charge from eligible states under the Wagami A policy', () => {
+    for (const s of ['idle', 'cpr', 'delivered'] as DefibState[]) {
+      expect(chargeTransition(s, true)).toBe('charging')
+    }
+    expect(chargeTransition('analyzing_result', true)).toBeNull()
+    expect(chargeTransition('charge_prompt', true)).toBeNull()
+    expect(chargeTransition('shock_advised', true)).toBeNull()
   })
 })
 

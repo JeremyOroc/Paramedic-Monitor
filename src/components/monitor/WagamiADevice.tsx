@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react'
 
 import { useWagamiANavigation } from '@/hooks/useWagamiANavigation'
-import type { DefibState } from '@/hooks/useDefibSequence'
+import type { DefibChargeOrigin, DefibState } from '@/hooks/useDefibSequence'
 import type { NibpPhase } from '@/hooks/useNibpReading'
 import { WAGAMI_A_MONITOR_ACTION_ORDER, type WagamiANavigationAction } from '@/lib/wagamiANavigation'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
@@ -16,7 +16,8 @@ type WagamiADeviceProps = {
   display: WagamiADisplayState
   energy: number
   defibState?: DefibState
-  defibProgress?: number
+  chargeProgress?: number
+  chargeOrigin?: DefibChargeOrigin
   cprTime?: string
   cprOverride?: boolean
   nibpPhase?: NibpPhase
@@ -64,9 +65,10 @@ function ShellIcon({ kind }: { kind: 'power' | 'analyze' | 'shock' | 'sound' | '
   return <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[45%] w-[45%] fill-current"><path d={kind === 'left' ? 'M16 3 5 12l11 9z' : 'M8 3v18l11-9z'} /></svg>
 }
 
-export function WagamiADevice({ display, energy, defibState = 'idle', defibProgress = 0, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', bpReadingActive = false, poweredOn, onPowerToggle, patientMode = 'adult', patientModeLocked = false, muted = false, canAnalyse = false, canCharge = false, canShock = false, canReadBP = false, canAdjustEnergy = false, onAnalyse, onCharge, onShock, onMute, onPatientModeCycle, onReadBP, onEnergyDown, onEnergyUp, onTask, navigationView = 'monitor', secondaryActions, screenContent, locale = 'fr', shellAlarmLedEnabled = true }: WagamiADeviceProps) {
+export function WagamiADevice({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', bpReadingActive = false, poweredOn, onPowerToggle, patientMode = 'adult', patientModeLocked = false, muted = false, canAnalyse = false, canCharge = false, canShock = false, canReadBP = false, canAdjustEnergy = false, onAnalyse, onCharge, onShock, onMute, onPatientModeCycle, onReadBP, onEnergyDown, onEnergyUp, onTask, navigationView = 'monitor', secondaryActions, screenContent, locale = 'fr', shellAlarmLedEnabled = true }: WagamiADeviceProps) {
   const text = getWagamiAText(locale)
   const patientModeLabel = { adult: text.adult, pediatric: text.pediatric, neonate: text.neonate } as const
+  const patientModeAccessibleLabel = `${text.patientMode}, ${text.currentMode} ${patientModeLabel[patientMode]}`
   const alarming = display.alarms.length > 0 && poweredOn && shellAlarmLedEnabled
   const monitorActions: WagamiANavigationAction[] = WAGAMI_A_MONITOR_ACTION_ORDER.map((id) => {
     if (id === 'energyDown') return { id, enabled: poweredOn && canAdjustEnergy && !!onEnergyDown, activate: () => onEnergyDown?.() }
@@ -85,11 +87,11 @@ export function WagamiADevice({ display, energy, defibState = 'idle', defibProgr
       <span data-testid="wagami-a-shell-led" data-enabled={shellAlarmLedEnabled ? 'true' : 'false'} data-alarming={alarming ? 'true' : 'false'} aria-label={!shellAlarmLedEnabled ? text.ledDisabled : alarming ? text.ledActive : text.ledNormal} className="wagami-a-shell-led absolute left-[7.4%] top-[4%] z-10 h-[clamp(10px,1.35cqw,19px)] w-[clamp(10px,1.35cqw,19px)] rounded-full" />
       <div className="absolute left-[14%] top-[2.7%] z-10 font-sans text-[clamp(19px,2.35cqw,36px)] font-bold tracking-[0.1em]">WAGAMI A</div>
       <div className="absolute bottom-[10.6%] left-[6.9%] right-[6.9%] top-[10.5%] overflow-hidden rounded-[12px] border-[clamp(3px,0.4cqw,7px)] border-wagami-a-border bg-wagami-a-screen shadow-inner">
-        {poweredOn ? (resolvedScreenContent ?? <WagamiAScreen display={display} energy={energy} defibState={defibState} defibProgress={defibProgress} cprTime={cprTime} cprOverride={cprOverride} nibpPhase={nibpPhase} nibpDisplayValue={nibpDisplayValue} patientMode={patientMode} selectedAction={navigation.selectedId} canAdjustEnergy={canAdjustEnergy} onTask={onTask ? navigation.touch : undefined} onEnergyDown={onEnergyDown ? () => navigation.touch('energyDown') : undefined} onEnergyUp={onEnergyUp ? () => navigation.touch('energyUp') : undefined} locale={locale} />) : <div data-testid="wagami-a-screen-off" className="grid h-full w-full place-items-center bg-wagami-a-screen font-mono text-[clamp(12px,1.2cqw,18px)] tracking-widest text-wagami-a-muted-text">{text.powerOff}</div>}
+        {poweredOn ? (resolvedScreenContent ?? <WagamiAScreen display={display} energy={energy} defibState={defibState} chargeProgress={chargeProgress} chargeOrigin={chargeOrigin} cprTime={cprTime} cprOverride={cprOverride} nibpPhase={nibpPhase} nibpDisplayValue={nibpDisplayValue} patientMode={patientMode} selectedAction={navigation.selectedId} canAdjustEnergy={canAdjustEnergy} onTask={onTask ? navigation.touch : undefined} onEnergyDown={onEnergyDown ? () => navigation.touch('energyDown') : undefined} onEnergyUp={onEnergyUp ? () => navigation.touch('energyUp') : undefined} locale={locale} />) : <div data-testid="wagami-a-screen-off" className="grid h-full w-full place-items-center bg-wagami-a-screen font-mono text-[clamp(12px,1.2cqw,18px)] tracking-widest text-wagami-a-muted-text">{text.powerOff}</div>}
       </div>
       <button type="button" aria-label={text.power} aria-pressed={poweredOn} onClick={onPowerToggle} className="wagami-a-power-button absolute right-[3.2%] top-[2.4%] z-20 grid h-[6.4%] w-[5%] min-h-[44px] min-w-[44px] place-items-center rounded-[9px] border-2 border-wagami-a-border bg-wagami-a-surface-raised text-wagami-a-text enabled:hover:brightness-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wagami-a-pni"><ShellIcon kind="power" /></button>
       <button type="button" aria-label={muted ? text.unmute : text.mute} aria-pressed={muted} disabled={!poweredOn || !onMute} onClick={onMute} className={`${SIDE_KEY} left-[1.4%] top-[18%] h-[10%]`}><ShellIcon kind="sound" /></button>
-      <button type="button" aria-label={text.patientMode} aria-describedby="wagami-a-patient-mode-label" disabled={!poweredOn || patientModeLocked || !onPatientModeCycle} title={patientModeLocked ? text.patientModeLocked : undefined} onClick={onPatientModeCycle} className={`${SIDE_KEY} left-[1.4%] top-[30%] h-[11%]`}><ShellIcon kind="patient" /><span id="wagami-a-patient-mode-label" className="max-w-full break-all px-0.5 text-center text-[clamp(8px,0.8cqw,12px)]">{patientModeLabel[patientMode]}</span></button>
+      <button type="button" aria-label={patientModeAccessibleLabel} disabled={!poweredOn || patientModeLocked || !onPatientModeCycle} title={patientModeLocked ? text.patientModeLocked : undefined} onClick={onPatientModeCycle} className={`${SIDE_KEY} left-[1.4%] top-[30%] h-[11%]`}><ShellIcon kind="patient" /><span className="max-w-full break-all px-0.5 text-center text-[clamp(8px,0.8cqw,12px)]">MODE</span></button>
       <button type="button" aria-label={bpReadingActive ? text.bpCancel : text.bpRead} disabled={!poweredOn || !canReadBP || !onReadBP} onClick={onReadBP} className={`${SIDE_KEY} bottom-[15.3%] left-[1.4%] h-[11%]`}><ShellIcon kind="bp" /><span>PNI</span></button>
       <div aria-label="Wagami A right clinical shell controls" className="contents">
         <button type="button" aria-label={text.analyze} disabled={!poweredOn || !canAnalyse || !onAnalyse} onClick={onAnalyse} className={`${SIDE_KEY} right-[1.4%] top-[27%] h-[12%]`}><ShellIcon kind="analyze" /><span>{locale === 'fr' ? 'ANALYSE' : 'ANALYZE'}</span></button>

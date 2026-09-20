@@ -10,6 +10,105 @@
 
 ## Current Requirement Updates
 
+- 2026-09-20 Wagami A clinical status-line consolidation — **programmer-approved after a complete
+  grill-with-docs design interview**. Remove the main screen's bottom mode/source strip and delete
+  both `EN DIRECT · DONNÉES CONFIRMÉES` and `PREVIEW · DONNÉES SIMULÉES`. Move the current Device
+  Patient mode into the existing alarm area above the waveforms, with a fixed-height line that shows
+  only `MODE {current mode}` when no alarm is active. When alarms are active, append a red localized
+  alarm segment in fixed heart-rate → SpO₂ → blood-pressure order: French uses `ALARME · FC / SpO₂ /
+  PNI`; English uses `ALARM · HR / SpO₂ / NIBP`. Keep mode text muted/light blue and prevent layout
+  movement as alarms appear or clear. Expand the waveform workspace into the removed strip's height;
+  leave vital-card and right-rail geometry unchanged.
+  The physical Device Patient mode shell control retains its existing Adult → Pediatric → Neonatal
+  cycle and defibrillation lock, but its visible face becomes permanently the existing human icon
+  plus `MODE`; its accessible label includes the current mode. On secondary destinations, replace
+  the floating alarm badge with the same clinical status information on the right of the existing
+  header. Configure retains its read-only Patient mode setting. Shell alarm-LED behavior and X/Z
+  remain unchanged.
+
+  #### Testing
+
+  Cover dynamic mode labels in French and English, blank normal-alarm content, localized fixed alarm
+  ordering and color separation, stable main-row geometry, removal of source metadata, waveform
+  height recovery, static shell-button text with dynamic accessible naming, retained mode cycling and
+  lock guards, integrated secondary headers, Configure duplication, Preview/live/Spectator parity,
+  and X/Z isolation.
+
+  **Implementation completed locally on 2026-09-20.** A shared clinical-status component now owns
+  dynamic Device Patient mode plus ordered localized alarms on the monitor and all secondary headers.
+  The main source strip and floating secondary badge are removed, the waveform workspace uses the
+  recovered height, and the physical mode key keeps a static `MODE` face with dynamic accessible
+  naming. The 112-test Wagami A/Spectator/X/Z focused suite, TypeScript, ESLint with zero errors and
+  12 existing warnings, a 1280×720 rendered main/secondary/Call Info review, and the Next.js 16.3
+  Webpack production build pass.
+
+- 2026-09-20 Wagami A CPR metronome unmute recovery — **programmer-approved before
+  implementation**. Muting Wagami A continues to silence the active CPR metronome. When the device
+  is unmuted while CPR is active and its timer remains above `0:00`, resume the metronome immediately
+  without replaying the spoken CPR instruction. Do not resume it after timer completion, and do not
+  change X/Z behavior. Apply the rule to Preview and live trainee use.
+
+  #### Testing
+
+  Cover mute-to-unmute recovery during active CPR, no spoken-prompt replay, no metronome restart at
+  `0:00`, and Preview/live parity.
+
+  **Implementation completed locally on 2026-09-20.** Both Wagami A paths track the mute transition
+  and resume only the metronome when CPR is active, its timer has started, and time remains. The
+  expanded 103-test focused suite, TypeScript, ESLint, and the Webpack production build pass.
+
+- 2026-09-20 Wagami A CPR timer audio completion — **programmer-approved before implementation**.
+  When Wagami A's active two-minute CPR timer reaches `0:00`, stop the CPR audio sequence and
+  metronome immediately while leaving the timer displayed at `0:00`. Do not silence alarms or other
+  device audio, and do not change X/Z behavior. Apply the same rule to Preview and live trainee use.
+
+  #### Testing
+
+  Cover the exact timer boundary, verify that CPR audio is not stopped early, and retain Preview/live
+  parity without routing the behavior through the all-device audio stop.
+
+  **Implementation completed locally on 2026-09-20.** Preview and live use the same `0:00`
+  completion condition to stop only the CPR sequence. Exact-boundary coverage passes as part of the
+  57-test focused Wagami A suite, together with TypeScript, ESLint, and the Webpack production build.
+
+- 2026-09-20 Wagami A automatic advised charge and defibrillation-panel hierarchy —
+  **programmer-approved before implementation; supersedes the 2026-09-15 A4 shock-advice
+  clarification for Wagami A only**. Analyze captures the rhythm when pressed. After the existing
+  Analyze and stand-clear phases, a shockable result (the existing VF/VT/Torsades classification)
+  immediately starts the established four-second timed charge without a Charge-button press; a
+  non-shockable result never charges and continues through the existing no-shock-to-CPR sequence.
+  One accepted physical Charge press from Idle, CPR, or Delivered starts a manual four-second
+  charge directly, replacing A's two-press Charge Prompt path. An advised charged shock enters CPR;
+  a manually charged shock retains the Delivered outcome. Energy is adjustable before charge and
+  locked throughout Charging and Charged. Power-off, monitor reset, New Attempt, and existing
+  cancellation boundaries clear either charge and disable Shock; no new automatic-disarm timer is
+  introduced. X and Z behavior is unchanged.
+  Wagami A charge progress is semantic capacitor progress, not generic timed-phase progress: it is
+  `0%` during Analyze, stand-clear, no-shock, and CPR; advances only during automatic or manual
+  charging; remains `100%` while charged; and resets after Shock or cancellation. The fixed panel
+  order is heading, energy, contextual state, a large central CPR timer, then an always-visible
+  charge label/percentage/meter at the bottom. Outside CPR the timer reserves its footprint with a
+  muted `--:--`; during CPR it becomes the panel's dominant light-blue number. Remove the permanent
+  `PRÊT À CHOC — PRÊT/NON PRÊT` / `SHOCK READY — READY/NOT READY` row, while retaining contextual
+  `PRÊT À CHOC` / `READY TO SHOCK` only when charged. Automatic charging reports `CHOC CONSEILLÉ ·
+  CHARGE EN COURS` / `SHOCK ADVISED · CHARGING`, uses the charge cue, then the existing ready cue and
+  Shock prompt. It does not record a trainee Charge action; a physical manual Charge press still
+  does. Analyze evaluation data names the captured start rhythm that determined the result. Preview,
+  live trainee, and Spectator surfaces share this behavior and bilingual presentation.
+
+  #### Testing
+
+  Cover A-only automatic shockable charging, no charge for non-shockable rhythms, one-press manual
+  charging from each permitted state, advised-versus-manual post-shock outcomes, energy locking,
+  charge/reset/cancellation guards, captured-rhythm event accuracy, cue timing, non-attribution of
+  automatic Charge actions, semantic charge progress across every state, fixed panel hierarchy,
+  bilingual labels, and Preview/live/Spectator parity. Retain explicit X/Z regression coverage.
+
+  **Implementation completed locally on 2026-09-20.** Focused state-machine, hook, clinical-event,
+  localization, panel, workspace, and Spectator coverage passes together with TypeScript and the
+  Webpack production build. The full suite's three remaining failures are unrelated established
+  Room-ownership and PatientInfoPanel baselines; no Wagami A test fails.
+
 - 2026-09-15 Wagami A A4 shock-advice clarification — **programmer-approved before A4 code**.
   A shockable Analyze result on A advises a shock but does not enable the guarded Shock key.
   One Charge press starts the established four-second timed charge; Shock becomes enabled only

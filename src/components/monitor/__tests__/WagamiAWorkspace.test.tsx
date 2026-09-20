@@ -47,7 +47,7 @@ function Harness({ vitalLog }: { vitalLog: VitalLogEntry[] }) {
       display={display}
       energy={120}
       defibState="idle"
-      defibProgress={0}
+      chargeProgress={0}
       cprTime="--:--"
       cprOverride={false}
       nibpPhase="idle"
@@ -62,14 +62,16 @@ function Harness({ vitalLog }: { vitalLog: VitalLogEntry[] }) {
 }
 
 describe('WagamiAWorkspace', () => {
-  it('paginates the Vital Log after eight rows and retains the alarm badge', () => {
+  it('paginates the Vital Log after eight rows and places the clinical status in its header', () => {
     render(<Harness vitalLog={makeLog(9)} />)
     fireEvent.click(screen.getByRole('button', { name: 'Open vital log' }))
 
     expect(screen.getByText('Page 1 sur 2')).toBeInTheDocument()
     expect(screen.getByText('00:40:00')).toBeInTheDocument()
     expect(screen.queryByText('00:45:00')).not.toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent('ALARME · HR')
+    const clinicalStatus = screen.getByTestId('wagami-a-clinical-status-line')
+    expect(clinicalStatus).toHaveTextContent('MODE ADULTE · ALARME · FC')
+    expect(clinicalStatus).toHaveClass('ml-auto')
 
     fireEvent.click(screen.getByRole('button', { name: /Suivant/ }))
     expect(screen.getByText('Page 2 sur 2')).toBeInTheDocument()

@@ -24,7 +24,8 @@ describe('Wagami A fixed live display', () => {
 
     expect(labels.map((label) => label.textContent)).toEqual(['FC', 'SpO₂', 'PNI', 'EtCO₂'])
     expect(screen.getByTestId('a-waveform-workspace')).toBeInTheDocument()
-    expect(screen.getByText('DONNÉES SIMULÉES', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByText(/DONNÉES SIMULÉES|PREVIEW/)).not.toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-main-clinical-column')).toHaveClass('grid-rows-[clamp(82px,11.4cqw,160px)_minmax(0,1fr)]')
     expect(screen.getByTestId('wagami-a-vital-pni').tagName).toBe('DIV')
     expect(screen.queryByRole('button', { name: 'ANALYSER' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Démarrer une mesure PNI' })).not.toBeInTheDocument()
@@ -36,16 +37,16 @@ describe('Wagami A fixed live display', () => {
 
     expect(screen.getByTestId('wagami-a-vital-fc')).toHaveTextContent('142')
     expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveTextContent('88')
-    expect(screen.getByText('DONNÉES CONFIRMÉES', { exact: false })).toBeInTheDocument()
+    expect(screen.queryByText(/DONNÉES CONFIRMÉES|EN DIRECT/)).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('200')
   })
 
   it('shows active cuff, charge and CPR states without another touch Analyze or BP action', () => {
-    render(<WagamiAScreen display={display} energy={120} defibState="charging" defibProgress={0.5} nibpPhase="counting" nibpDisplayValue={72} cprTime="1:42" />)
+    render(<WagamiAScreen display={display} energy={120} defibState="charging" chargeProgress={0.5} nibpPhase="counting" nibpDisplayValue={72} cprTime="1:42" />)
     expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('Mesure en cours · 72')
     expect(screen.getByRole('status')).toHaveTextContent('CHARGE EN COURS')
     expect(screen.getByRole('progressbar', { name: 'Charge progress' })).toHaveValue(50)
-    expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('1:42')
+    expect(screen.getByTestId('wagami-a-cpr-timer')).toHaveTextContent('--:--')
     expect(screen.queryByRole('button', { name: 'Analyser WAGAMI A' })).not.toBeInTheDocument()
   })
 })
