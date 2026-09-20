@@ -508,7 +508,35 @@ programmer approval before further code, database, device, release, commit, or p
 Commit `069f611` contains the complete audited A4–A6 implementation and its 55-path transfer set
 and was pushed to `origin/wagami-a`. A collaborator can now fetch the branch, verify that commit is
 an ancestor of a clean checkout, read the handoff, and present a concrete plan for approval. This
-transfer does not close any database, physical-device, distinctness, IP, or release gate.
+was the transfer-era boundary. It is superseded for UI work by the rolling authorization below;
+physical-device, distinctness, IP, and public-release gates remain separate.
+
+### Wagami A rolling UI refinement — AUTHORIZED 2026-09-20
+
+After Wagami A was merged to `main` in `bd13ffc`, the programmer authorized continuing visual and
+interaction refinements on `wagami-a-v2` as a rolling workstream rather than another numbered phase.
+The collaborator may explore and iterate freely within Wagami A's UI: layout, sizing, spacing,
+typography, color-token use, component composition, responsive fit, visual states, accessibility,
+and code-native shell/screen presentation. A clear UI request from the programmer authorizes that
+batch; a short execution summary is enough and no separate phase proposal is required.
+
+Preserve the accepted functional contract unless the programmer explicitly changes it: X remains
+the default, X/Z remain available, all six Wagami A destinations and shell controls remain
+functional, French remains the A default with English selectable, and Wagami A continues to use its
+own Precision Graphite tokens rather than X/Z styling. UI work may refactor components when behavior
+and public contracts remain equivalent. Changes to clinical timing/guards, data or migrations,
+production/release configuration, model defaults/availability, X/Z removal, or merging into `main`
+remain separate decisions.
+
+#### Testing
+
+Use proportionate tests for each UI batch: update affected component/interaction tests, run focused
+Vitest coverage, TypeScript, affected-file ESLint, and rendered browser QA at the relevant supported
+landscape sizes. Run the production build for shared layout, routing, configuration, or integration
+changes. Record meaningful requirement changes in this plan, completed work in `STATUS.md`, and a new
+top `CHANGELOG.md` entry. The collaborator may commit and push a completed batch to
+`wagami-a-v2` after these checks; no additional phase-completion ceremony is required.
+
 - 2026-09-19 requirement refinement — timer-box countdown presentation: use muted `MIN` and `SEC`
   placeholders inside empty Trend Timer inputs and hide each placeholder whenever that box contains a
   number. Before Send, the boxes remain editable with ordinary white numbers. During an Active Trend,

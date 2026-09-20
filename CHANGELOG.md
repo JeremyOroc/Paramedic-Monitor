@@ -5,6 +5,16 @@
 
 ---
 
+## [2026-09-20] [planning/ui] — Authorize rolling Wagami A UI refinement
+
+- Recorded `bd13ffc` as the shared `main`/`wagami-a-v2` baseline after the Wagami A merge and
+  replaced the old phase-gated collaborator boundary with an authorized rolling UI workstream.
+- Clear programmer UI requests may now be implemented, tested, committed, and pushed to
+  `wagami-a-v2` without creating a numbered phase. Separate approval remains required for clinical,
+  database, release/default/availability, X/Z-removal, and `main`-merge scope.
+- Added the active UI handoff, marked the A4–A6 transfer brief historical, and corrected the status
+  ledger to record the applied production Wagami A report migration and validated model constraint.
+
 ## [2026-09-20] [git/testing] — Reconcile Wagami A and main feature histories
 
 - Resolved the branch merge by preserving both independent planning/status/changelog histories and

@@ -115,6 +115,15 @@ Before writing any code in an autonomous/agent session:
 
 This rule prevents wasted work and diverging implementations across team members.
 
+#### Wagami A rolling UI authorization
+Wagami A UI refinement on `wagami-a-v2` is an approved rolling workstream. A direct, clear UI
+request from the programmer counts as the required implementation-plan confirmation; the agent may
+summarize its intended edits and proceed without inventing a numbered phase or requesting a second
+approval. The agent may commit and push completed, tested UI batches to `wagami-a-v2`. Ask before
+proceeding only when the request is ambiguous or expands into clinical behavior, data/schema work,
+production/release settings, model defaults or availability, deletion of X/Z, or a merge to `main`.
+Follow `docs/handoff/wagami-a-ui-updates.md` for this workstream.
+
 ---
 
 ## Reference Files
