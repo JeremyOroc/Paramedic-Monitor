@@ -6,6 +6,13 @@
 ---
 
 ## Current Phase
+**Instructor fused-vital layout refinement — COMPLETE LOCALLY (2026-09-22).** ECG is restored to the
+top of the right column above CPR and timed-vital controls. The shared timer now sits above FC in the
+left column and visibly reads `Trend`; compact fused inputs are shortened to their prior widths, and
+EtCO2 calibration is beneath EtCO2. Functional Trend, ECG, CPR, timed-vital, Save/Send, and
+calibration behavior is unchanged. All 67 focused tests, TypeScript, affected-file ESLint, the
+Next.js 16.3 Webpack production build, and rendered 1280×720 desktop QA pass.
+
 **Instructor fused vital/Trend authoring — COMPLETE LOCALLY (2026-09-22).** Each numeric vital now
 uses one widened Fused vital input. Blank/zero timer Sends apply staged values immediately; positive
 timer Sends interpolate every changed value from its live Send-time value under one shared deadline.

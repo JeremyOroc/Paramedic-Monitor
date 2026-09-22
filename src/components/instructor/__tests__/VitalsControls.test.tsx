@@ -136,12 +136,14 @@ describe('VitalsControls', () => {
     expect(bpDia.compareDocumentPosition(etco2)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
-  it('places ECG above FC and keeps CPR/timed controls in a separate utility column', () => {
+  it('places Trend above FC and ECG above the right-side CPR/timed controls', () => {
     render(<VitalsControls autoSortText="" />)
 
     const vitalsColumn = screen.getByTestId('admin-vitals-column')
     const ecgColumn = screen.getByTestId('admin-ecg-column')
     const utilityColumn = screen.getByTestId('admin-utility-column')
+    const trendRow = screen.getByTestId('admin-trend-timer-row')
+    const trendTimer = screen.getByTestId('vital-trend-timer')
     const fcRow = screen.getByTestId('admin-vital-row-fc')
     const ecgRow = screen.getByTestId('admin-graph-row-ecg')
     const spo2Row = screen.getByTestId('admin-vital-row-spo2')
@@ -152,20 +154,24 @@ describe('VitalsControls', () => {
     expect(vitalsColumn).toHaveClass('flex', 'flex-col', 'gap-2', 'min-w-0')
     expect(vitalsColumn).toHaveClass(
       'xl:[@media(min-height:800px)]:mx-auto',
-      'xl:[@media(min-height:800px)]:max-w-[25rem]',
+      'xl:[@media(min-height:800px)]:max-w-[18rem]',
     )
-    expect(utilityColumn).toHaveClass(
+    expect(ecgColumn).toHaveClass(
       'self-start',
       'xl:[@media(min-height:800px)]:mx-auto',
       'xl:[@media(min-height:800px)]:max-w-[24rem]',
     )
+    expect(vitalsColumn).toContainElement(trendRow)
+    expect(trendRow).toContainElement(trendTimer)
     expect(vitalsColumn).toContainElement(fcRow)
     expect(vitalsColumn).toContainElement(spo2Row)
     expect(vitalsColumn).toContainElement(bpSysRow)
     expect(vitalsColumn).toContainElement(bpDiaRow)
     expect(vitalsColumn).toContainElement(etco2Row)
     expect(ecgColumn).toContainElement(ecgRow)
-    expect(ecgRow.compareDocumentPosition(fcRow)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(ecgColumn).toContainElement(utilityColumn)
+    expect(trendRow.compareDocumentPosition(fcRow)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(ecgRow.compareDocumentPosition(utilityColumn)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(within(fcRow).getByLabelText('FC')).toBeInTheDocument()
     expect(within(ecgRow).getByRole('heading', { name: 'ECG' })).toBeInTheDocument()
     expect(within(ecgRow).getByRole('heading', { name: 'ECG' }).closest('section')).not.toHaveClass(
@@ -184,7 +190,7 @@ describe('VitalsControls', () => {
       expect(screen.getAllByLabelText(label)).toHaveLength(1)
       expect(screen.queryByLabelText(`${label} trend target`)).not.toBeInTheDocument()
     }
-    expect(screen.queryByText('Trend')).not.toBeInTheDocument()
+    expect(screen.getByText('Trend')).toBeVisible()
     expect(screen.getByLabelText('Trend minutes')).toHaveAttribute('min', '0')
     expect(screen.getByLabelText('Trend minutes')).toHaveAttribute('placeholder', 'MIN')
     expect(screen.getByLabelText('Trend seconds')).toHaveAttribute('max', '59')
@@ -193,28 +199,26 @@ describe('VitalsControls', () => {
     expect(screen.getByLabelText('Trend status')).toHaveClass('sr-only')
   })
 
-  it('keeps the EtCO2 calibration indicator and complete Trend timer on one row', () => {
+  it('keeps the Trend timer above FC and EtCO2 calibration beneath EtCO2', () => {
     render(<VitalsControls autoSortText="" />)
 
-    const row = screen.getByTestId('admin-etco2-trend-timer-row')
+    const vitalsColumn = screen.getByTestId('admin-vitals-column')
+    const timerRow = screen.getByTestId('admin-trend-timer-row')
+    const fcRow = screen.getByTestId('admin-vital-row-fc')
+    const etco2Row = screen.getByTestId('admin-vital-row-etco2')
     const indicator = screen.getByTestId('admin-etco2-calibration-indicator')
     const timer = screen.getByTestId('vital-trend-timer')
-    const utilityColumn = screen.getByTestId('admin-utility-column')
 
-    expect(row).toHaveClass(
-      'flex',
-      'items-center',
-      'order-2',
-      'sm:order-3',
-      'sm:col-span-2',
-    )
-    expect(row).toContainElement(indicator)
-    expect(row).toContainElement(timer)
+    expect(vitalsColumn).toContainElement(timerRow)
+    expect(vitalsColumn).toContainElement(indicator)
+    expect(timerRow).toContainElement(timer)
     expect(timer).toHaveClass('flex', 'flex-1', 'items-center')
     expect(within(timer).getByLabelText('Trend minutes')).toBeInTheDocument()
     expect(within(timer).getByLabelText('Trend seconds')).toBeInTheDocument()
     expect(within(timer).getByLabelText('Trend status')).toBeInTheDocument()
-    expect(utilityColumn).toHaveClass('order-3', 'sm:order-2')
+    expect(timerRow.compareDocumentPosition(fcRow)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(etco2Row.compareDocumentPosition(indicator)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(indicator).toHaveClass('ml-14')
   })
 
   it('uses MIN and SEC as empty-box placeholders that yield to entered values', async () => {
