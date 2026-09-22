@@ -12,7 +12,6 @@ import {
 } from '@/lib/automaticHeartRate'
 
 import { OnOffToggle } from './OnOffToggle'
-import { VitalTrendInput } from './VitalTrendInput'
 
 type VitalInputProps = {
   compact?: boolean
@@ -21,7 +20,6 @@ type VitalInputProps = {
   unit?: string
   min?: number
   max?: number
-  showTrend?: boolean
 }
 
 const STATUS_CLASS: Record<'clean' | 'dirty' | 'pending', string> = {
@@ -39,13 +37,10 @@ export function VitalInput({
   unit,
   min,
   max,
-  showTrend = false,
 }: VitalInputProps) {
   const draft = useMonitorStore((s) => s.draft)
   const saved = useMonitorStore((s) => s.saved)
   const confirmed = useMonitorStore((s) => s.confirmedAuthored)
-  const liveConfirmed = useMonitorStore((s) => s.confirmed)
-  const activeVitalTrend = useMonitorStore((s) => s.activeVitalTrend)
   const draftVitalActive = useMonitorStore((s) => s.draftVitalActive)
   const savedVitalActive = useMonitorStore((s) => s.savedVitalActive)
   const confirmedVitalActive = useMonitorStore((s) => s.confirmedVitalActive)
@@ -62,14 +57,7 @@ export function VitalInput({
     savedVitalActive,
     confirmedVitalActive,
   )
-  const hasAuthoredEdit =
-    draft[field] !== saved[field] || saved[field] !== confirmed[field]
-  const value =
-    activeVitalTrend?.status === 'running' &&
-    activeVitalTrend.participants[field] &&
-    !hasAuthoredEdit
-      ? liveConfirmed[field]
-      : draft[field]
+  const value = draft[field]
   const active = draftVitalActive[field]
   const automaticHeartRate = field === 'hr' && isAutomaticHeartRateRhythm(rhythm)
   const heartRateToggleLocked =
@@ -83,9 +71,9 @@ export function VitalInput({
     : null
   const automaticRangeDisplay = automaticDisplay?.startsWith('AUTO ') ?? false
 
-  // Local text mirrors what's typed so the field can sit empty mid-edit instead of
-  // snapping back to a leading "0" (which made entries read like "020"). The store
-  // stays numeric; an empty field is treated as 0.
+  // Local text can sit empty while the instructor types. The store retains the
+  // last staged value until a number is entered, so clearing and leaving the
+  // field cannot silently turn a fused value or Trend target into zero.
   const [text, setText] = useState(() => String(value))
 
   // Resync when the store value changes from outside this input (save/send/reset,
@@ -105,7 +93,7 @@ export function VitalInput({
       <div
         className={cn(
           'group relative flex shrink-0 items-center border border-b',
-          compact ? 'w-20 xl:[@media(min-height:800px)]:w-24' : 'w-24',
+          compact ? 'w-28' : 'w-28',
           automaticRangeDisplay && (compact ? 'w-28 xl:[@media(min-height:800px)]:w-32' : 'w-32'),
           'transition-[border-color,box-shadow,background-color] duration-150',
           'focus-within:border-transparent focus-within:border-b-cyan-bp focus-within:bg-cyan-bp/5',
@@ -128,7 +116,7 @@ export function VitalInput({
             // Strip leading zeros ("020" → "20") but keep a single "0"; allow empty.
             const raw = e.target.value.replace(/^0+(?=\d)/, '')
             setText(raw)
-            setDraft(field, parseVital(raw) as never)
+            if (raw !== '') setDraft(field, parseVital(raw) as never)
           }}
           onBlur={() => setText(String(value))}
           aria-label={label}
@@ -152,14 +140,6 @@ export function VitalInput({
           </span>
         )}
       </div>
-      {showTrend ? (
-        <VitalTrendInput
-          field={field}
-          label={label}
-          min={min ?? 0}
-          max={max ?? Number.MAX_SAFE_INTEGER}
-        />
-      ) : null}
       <OnOffToggle
         active={active}
         compact={compact}
@@ -173,7 +153,7 @@ export function VitalInput({
   )
 }
 
-// Empty input counts as 0; anything non-numeric falls back to 0 too.
+// Empty text is handled before this parser; anything non-numeric falls back to 0.
 function parseVital(text: string): number {
   if (text === '') return 0
   const n = Number(text)

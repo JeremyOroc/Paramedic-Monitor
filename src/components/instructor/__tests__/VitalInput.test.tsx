@@ -38,7 +38,7 @@ describe('VitalInput', () => {
     const shell = screen.getByTestId('vital-input-shell-hr')
 
     expect(input).toHaveClass('text-right')
-    expect(shell).toHaveClass('w-24')
+    expect(shell).toHaveClass('w-28')
     expect(shell).toHaveClass('bg-transparent')
     expect(shell).toContainElement(input)
     expect(shell).toContainElement(screen.getByText('bpm'))
@@ -51,10 +51,7 @@ describe('VitalInput', () => {
     const shell = screen.getByTestId('vital-input-shell-hr')
     const toggle = screen.getByRole('button', { name: 'FC off' })
 
-    expect(shell).toHaveClass(
-      'w-20',
-      'xl:[@media(min-height:800px)]:w-24',
-    )
+    expect(shell).toHaveClass('w-28')
     expect(input).toHaveClass(
       'h-7',
       'xl:[@media(min-height:800px)]:h-9',
@@ -220,6 +217,27 @@ describe('VitalInput', () => {
     },
   )
 
+  it('restores the prior fused value when a non-zero field is cleared and blurred', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 120)
+      store.save()
+      store.send()
+    })
+    render(<VitalInput field="hr" label="FC" />)
+    const input = screen.getByLabelText('FC') as HTMLInputElement
+
+    await user.clear(input)
+    expect(input).toHaveValue(null)
+    expect(useMonitorStore.getState().draft.hr).toBe(120)
+    await user.tab()
+
+    expect(input).toHaveValue(120)
+    expect(useMonitorStore.getState().draft.hr).toBe(120)
+    expect(screen.getByTestId('status-hr')).toHaveAttribute('data-status', 'clean')
+  })
+
   it.each(VITAL_FIELDS)(
     'types into a cleared $label field without keeping the leading zero',
     async ({ field, label, nonZero }) => {
@@ -300,14 +318,14 @@ describe('VitalInput', () => {
     expect(screen.getByTestId('status-hr')).toHaveAttribute('data-status', 'clean')
   })
 
-  it('shows the live intermediate Trend value until the instructor edits it', async () => {
+  it('keeps the authored Trend target visible while the live value progresses', async () => {
     const user = userEvent.setup()
     act(() => {
       const store = useMonitorStore.getState()
       store.setDraft('hr', 120)
       store.save()
       store.send()
-      store.setVitalTrendTarget('hr', 150)
+      store.setDraft('hr', 150)
       store.setVitalTrendSeconds(30)
       store.save()
       store.send()
@@ -317,7 +335,8 @@ describe('VitalInput', () => {
     })
     render(<VitalInput field="hr" label="FC" />)
     const input = screen.getByLabelText('FC')
-    expect(input).toHaveValue(135)
+    expect(input).toHaveValue(150)
+    expect(useMonitorStore.getState().confirmed.hr).toBe(135)
 
     await user.clear(input)
     await user.type(input, '80')

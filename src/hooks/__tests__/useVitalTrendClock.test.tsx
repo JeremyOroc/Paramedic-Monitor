@@ -13,7 +13,7 @@ describe('useVitalTrendClock', () => {
     store.setDraft('hr', 120)
     store.save()
     store.send()
-    store.setVitalTrendTarget('hr', 150)
+    store.setDraft('hr', 150)
     store.setVitalTrendSeconds(30)
     store.save()
     store.send()

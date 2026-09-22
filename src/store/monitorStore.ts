@@ -50,9 +50,13 @@ import {
   buildVitalTrendParticipants,
   createEmptyVitalTrendConfiguration,
   deriveVitalTrendValues,
+  fusedVitalTrendConfiguration,
+  isValidFusedVitalValues,
   isValidVitalTrendConfiguration,
   normalizeActiveVitalTrend,
   normalizeVitalTrendConfiguration,
+  projectLegacyVitalTrendTargets,
+  vitalTrendTargetsFromValues,
   VITAL_TREND_FIELDS,
 } from '@/lib/vitalTrend'
 import type {
@@ -308,7 +312,7 @@ export type MonitorState = {
   draft: Vitals
   saved: Vitals
   confirmed: Vitals
-  /** Last numeric/non-waveform values explicitly sent, separate from time-derived Trend values. */
+  /** Last fused numeric targets/non-waveform values sent, separate from live Trend values. */
   confirmedAuthored: Vitals
   draftVitalsActive: boolean
   savedVitalsActive: boolean
@@ -350,7 +354,6 @@ export type MonitorState = {
   setTimedDraftVitals: (vitals: TimedDraftVitals) => void
   setDraftVitalValues: (vitals: DraftVitalValues) => void
   setDraftVitalActive: (field: NumericVitalField, active: boolean) => void
-  setVitalTrendTarget: (field: NumericVitalField, target: number | null) => void
   setVitalTrendMinutes: (minutes: number) => void
   setVitalTrendSeconds: (seconds: number) => void
   setCallerInfoDraft: (field: CallerInfoField, value: string) => void
@@ -531,19 +534,6 @@ export const useMonitorStore = create<MonitorState>()(
             draftVitalsActive: anyVitalActive(draftVitalActive),
           }
         }),
-      setVitalTrendTarget: (field, target) =>
-        set((s) => {
-          if (s.vitalTrendDraft.targets[field] === target) return s
-          return {
-            vitalTrendDraft: {
-              ...s.vitalTrendDraft,
-              targets: { ...s.vitalTrendDraft.targets, [field]: target },
-            },
-            vitalTrendDraftRevision: s.vitalTrendDraftRevision + 1,
-            activeVitalTrend:
-              s.activeVitalTrend?.status === 'running' ? s.activeVitalTrend : null,
-          }
-        }),
       setVitalTrendMinutes: (minutes) =>
         set((s) => {
           const normalized = Math.max(0, Math.floor(minutes) || 0)
@@ -623,7 +613,13 @@ export const useMonitorStore = create<MonitorState>()(
         ),
       applyScenarioDraft: (snapshot) =>
         set((s) => {
-          const draft = normalizeVitals(snapshot.monitor.draft)
+          const legacyVitalTrend = normalizeVitalTrendConfiguration(snapshot.trend)
+          const draft = normalizeVitals(
+            projectLegacyVitalTrendTargets(
+              snapshot.monitor.draft,
+              legacyVitalTrend,
+            ),
+          )
           const draftVitalActive = normalizeVitalActive(
             snapshot.monitor.draftVitalActive,
             undefined,
@@ -634,7 +630,7 @@ export const useMonitorStore = create<MonitorState>()(
           const wasToggleLocked = isHeartRateToggleLockedRhythm(s.draft.rhythm)
           if (isAutomatic) draftVitalActive.hr = true
           const originAddress = snapshot.dispatch.originAddress.trim() || JOHN_ABBOTT_ADDRESS
-          const vitalTrendDraft = normalizeVitalTrendConfiguration(snapshot.trend)
+          const vitalTrendDraft = fusedVitalTrendConfiguration(legacyVitalTrend)
 
           return {
             defibrillatorModelDraft: normalizeDefibrillatorModel(
@@ -762,21 +758,20 @@ export const useMonitorStore = create<MonitorState>()(
             return changed ? { confirmed } : s
           }
 
-          const draft = { ...s.draft }
-          const saved = { ...s.saved }
-          const confirmedAuthored = { ...s.confirmedAuthored }
-          for (const field of VITAL_TREND_FIELDS) {
-            const participant = trend.participants[field]
-            if (!participant) continue
-            if (draft[field] === participant.start) draft[field] = participant.target
-            if (saved[field] === participant.start) saved[field] = participant.target
-            confirmedAuthored[field] = participant.target
-          }
+          const disarmedRevision =
+            Math.max(
+              s.vitalTrendDraftRevision,
+              s.vitalTrendSavedRevision,
+              s.vitalTrendConsumedRevision,
+            ) + 1
+          const disarmedTrend = createEmptyVitalTrendConfiguration()
           return {
             confirmed,
-            confirmedAuthored,
-            draft,
-            saved,
+            vitalTrendDraft: disarmedTrend,
+            vitalTrendSaved: createEmptyVitalTrendConfiguration(),
+            vitalTrendDraftRevision: disarmedRevision,
+            vitalTrendSavedRevision: disarmedRevision,
+            vitalTrendConsumedRevision: disarmedRevision,
             activeVitalTrend: {
               ...trend,
               status: 'complete',
@@ -844,7 +839,8 @@ export const useMonitorStore = create<MonitorState>()(
         }),
       save: () =>
         set((s) =>
-          !isValidVitalTrendConfiguration(s.vitalTrendDraft)
+          !isValidVitalTrendConfiguration(s.vitalTrendDraft) ||
+          !isValidFusedVitalValues(s.draft)
             ? s
             : {
                 defibrillatorModelSaved: s.defibrillatorModelDraft,
@@ -856,10 +852,7 @@ export const useMonitorStore = create<MonitorState>()(
                 dispatchSavedSeconds: s.dispatch.countdownLocked
                   ? s.dispatchConfirmedSeconds
                   : dispatchCountdownSeconds(s.dispatchMinutes, s.dispatchSeconds),
-                vitalTrendSaved: {
-                  ...s.vitalTrendDraft,
-                  targets: { ...s.vitalTrendDraft.targets },
-                },
+                vitalTrendSaved: fusedVitalTrendConfiguration(s.vitalTrendDraft),
                 vitalTrendSavedRevision: s.vitalTrendDraftRevision,
               },
         ),
@@ -903,13 +896,30 @@ export const useMonitorStore = create<MonitorState>()(
               ? deriveVitalTrendValues(s.activeVitalTrend, now)
               : {}),
           }
-          const directVitalFields = new Set<NumericVitalField>(
-            VITAL_TREND_FIELDS.filter(
-              (field) => s.saved[field] !== s.confirmedAuthored[field],
-            ),
+          const rhythmChanged = s.saved.rhythm !== s.confirmedAuthored.rhythm
+          const automaticHeartRateTransition =
+            rhythmChanged &&
+            (isAutomaticHeartRateRhythm(s.saved.rhythm) ||
+              isAutomaticHeartRateRhythm(s.confirmedAuthored.rhythm))
+          const nextRhythmOwnsHeartRate = isAutomaticHeartRateRhythm(s.saved.rhythm)
+          const changedFusedVitalFields = VITAL_TREND_FIELDS.filter(
+            (field) =>
+              s.saved[field] !== s.confirmedAuthored[field] &&
+              !(field === 'hr' && automaticHeartRateTransition),
           )
-          const nextRhythmLocksHeartRate = isHeartRateToggleLockedRhythm(s.saved.rhythm)
-          if (nextRhythmLocksHeartRate) directVitalFields.add('hr')
+          const hasNewTimerCommand =
+            s.vitalTrendSavedRevision !== s.vitalTrendConsumedRevision
+          const hasNewFusedVitalCommand =
+            changedFusedVitalFields.length > 0 || hasNewTimerCommand
+          const sendsImmediately =
+            hasNewFusedVitalCommand && s.vitalTrendSaved.durationSeconds === 0
+          const directVitalFields = new Set<NumericVitalField>()
+          if (sendsImmediately) {
+            for (const field of VITAL_TREND_FIELDS) directVitalFields.add(field)
+          }
+          if (automaticHeartRateTransition || nextRhythmOwnsHeartRate) {
+            directVitalFields.add('hr')
+          }
 
           let confirmed: Vitals = {
             ...currentConfirmed,
@@ -928,74 +938,87 @@ export const useMonitorStore = create<MonitorState>()(
           }
           let manualHrBeforeAuto = s.manualHrBeforeAuto
           if (
-            nextRhythmLocksHeartRate &&
+            nextRhythmOwnsHeartRate &&
             s.activeVitalTrend?.status === 'running' &&
             s.activeVitalTrend.participants.hr
           ) {
             manualHrBeforeAuto = currentConfirmed.hr
           }
-          let draft = s.draft
-          let saved = s.saved
           for (const field of directVitalFields) confirmedAuthored[field] = confirmed[field]
 
-          const hasNewTrendCommand =
-            s.vitalTrendSavedRevision !== s.vitalTrendConsumedRevision
           let activeVitalTrend = s.activeVitalTrend
+          let vitalTrendDraft = s.vitalTrendDraft
+          let vitalTrendSaved = s.vitalTrendSaved
+          let vitalTrendDraftRevision = s.vitalTrendDraftRevision
+          let vitalTrendSavedRevision = s.vitalTrendSavedRevision
+          let vitalTrendConsumedRevision = hasNewTimerCommand
+            ? s.vitalTrendSavedRevision
+            : s.vitalTrendConsumedRevision
 
-          if (hasNewTrendCommand) {
-            const excluded = nextRhythmLocksHeartRate
-              ? new Set<NumericVitalField>(['hr'])
-              : new Set<NumericVitalField>()
-            const participants = buildVitalTrendParticipants(
-              s.vitalTrendSaved.targets,
-              {
-                hr: confirmed.hr,
-                spo2: confirmed.spo2,
-                bp_sys: confirmed.bp_sys,
-                bp_dia: confirmed.bp_dia,
-                etco2: confirmed.etco2,
-              },
-              excluded,
-            )
-            const participantCount = Object.keys(participants).length
-            if (participantCount > 0) {
-              const endsAt = now + s.vitalTrendSaved.durationSeconds * 1000
+          if (hasNewFusedVitalCommand) {
+            for (const field of VITAL_TREND_FIELDS) {
+              confirmedAuthored[field] =
+                field === 'hr' && nextRhythmOwnsHeartRate
+                  ? confirmed.hr
+                  : s.saved[field]
+            }
+
+            if (sendsImmediately) {
               activeVitalTrend = {
                 id: nanoid(),
-                participants,
+                participants: {},
                 startsAt: now,
-                endsAt,
-                status: s.vitalTrendSaved.durationSeconds === 0 ? 'complete' : 'running',
-                completedAt: s.vitalTrendSaved.durationSeconds === 0 ? now : null,
-                completionPublished: false,
-              }
-              if (s.vitalTrendSaved.durationSeconds === 0) {
-                confirmed = { ...confirmed, ...deriveVitalTrendValues(activeVitalTrend, now) }
-                draft = { ...s.draft }
-                saved = { ...s.saved }
-                for (const field of VITAL_TREND_FIELDS) {
-                  const participant = participants[field]
-                  if (!participant) continue
-                  if (draft[field] === saved[field]) draft[field] = participant.target
-                  saved[field] = participant.target
-                  confirmedAuthored[field] = participant.target
-                }
+                endsAt: now,
+                status: 'immediate',
+                completedAt: now,
+                completionPublished: true,
               }
             } else {
-              activeVitalTrend =
-                s.activeVitalTrend?.status === 'running'
-                  ? {
-                      ...s.activeVitalTrend,
-                      participants: {},
-                      status: 'cancelled',
-                      completedAt: now,
-                      completionPublished: true,
-                    }
-                  : null
+              const excluded = nextRhythmOwnsHeartRate
+                ? new Set<NumericVitalField>(['hr'])
+                : new Set<NumericVitalField>()
+              const participants = buildVitalTrendParticipants(
+                vitalTrendTargetsFromValues(s.saved),
+                {
+                  hr: currentConfirmed.hr,
+                  spo2: currentConfirmed.spo2,
+                  bp_sys: currentConfirmed.bp_sys,
+                  bp_dia: currentConfirmed.bp_dia,
+                  etco2: currentConfirmed.etco2,
+                },
+                excluded,
+              )
+              if (Object.keys(participants).length > 0) {
+                activeVitalTrend = {
+                  id: nanoid(),
+                  participants,
+                  startsAt: now,
+                  endsAt: now + s.vitalTrendSaved.durationSeconds * 1000,
+                  status: 'running',
+                  completedAt: null,
+                  completionPublished: false,
+                }
+              } else {
+                const disarmedRevision =
+                  Math.max(
+                    s.vitalTrendDraftRevision,
+                    s.vitalTrendSavedRevision,
+                    s.vitalTrendConsumedRevision,
+                  ) + 1
+                activeVitalTrend = null
+                vitalTrendDraft = createEmptyVitalTrendConfiguration()
+                vitalTrendSaved = createEmptyVitalTrendConfiguration()
+                vitalTrendDraftRevision = disarmedRevision
+                vitalTrendSavedRevision = disarmedRevision
+                vitalTrendConsumedRevision = disarmedRevision
+              }
             }
-          } else if (s.activeVitalTrend?.status === 'running') {
+          } else if (
+            s.activeVitalTrend?.status === 'running' &&
+            (automaticHeartRateTransition || nextRhythmOwnsHeartRate)
+          ) {
             const participants = { ...s.activeVitalTrend.participants }
-            for (const field of directVitalFields) delete participants[field]
+            delete participants.hr
             const remaining = Object.keys(participants).length
             activeVitalTrend =
               remaining > 0
@@ -1039,17 +1062,19 @@ export const useMonitorStore = create<MonitorState>()(
             confirmed,
             confirmedAuthored,
             manualHrBeforeAuto,
-            draft,
-            saved,
+            draft: s.draft,
+            saved: s.saved,
             confirmedVitalActive: { ...s.savedVitalActive },
             confirmedVitalsActive: anyVitalActive(s.savedVitalActive),
             callerInfoConfirmed: { ...s.callerInfoSaved },
             dispatchRouteConfirmed,
             dispatchConfirmedSeconds: dispatchDurationSeconds,
             activeVitalTrend,
-            vitalTrendConsumedRevision: hasNewTrendCommand
-              ? s.vitalTrendSavedRevision
-              : s.vitalTrendConsumedRevision,
+            vitalTrendDraft,
+            vitalTrendSaved,
+            vitalTrendDraftRevision,
+            vitalTrendSavedRevision,
+            vitalTrendConsumedRevision,
             ...(s.dispatch.countdownLocked
               ? {
                   dispatchMinutes: Math.floor(dispatchDurationSeconds / 60),
@@ -1278,7 +1303,7 @@ export const useMonitorStore = create<MonitorState>()(
     }),
     {
       name: STORAGE_KEY,
-      version: 13,
+      version: 14,
       storage: createJSONStorage(() => localStorage),
       skipHydration: true,
       // A migrate fn must exist for older persisted versions, otherwise persist
@@ -1293,8 +1318,24 @@ export const useMonitorStore = create<MonitorState>()(
           cprOverrideActive: legacyCprOverrideActive,
           ...persistedWithoutLegacyCpr
         } = persistedState ?? {}
-        const draft = normalizeVitals(persistedState?.draft)
-        const saved = normalizeVitals(persistedState?.saved)
+        const legacyVitalTrendDraft = normalizeVitalTrendConfiguration(
+          persistedState?.vitalTrendDraft,
+        )
+        const legacyVitalTrendSaved = normalizeVitalTrendConfiguration(
+          persistedState?.vitalTrendSaved ?? persistedState?.vitalTrendDraft,
+        )
+        const draft = normalizeVitals(
+          projectLegacyVitalTrendTargets(
+            normalizeVitals(persistedState?.draft),
+            legacyVitalTrendDraft,
+          ),
+        )
+        const saved = normalizeVitals(
+          projectLegacyVitalTrendTargets(
+            normalizeVitals(persistedState?.saved),
+            legacyVitalTrendSaved,
+          ),
+        )
         const draftVitalActive = normalizeVitalActive(
           persistedState?.draftVitalActive,
           persistedState?.draftVitalsActive,
@@ -1308,18 +1349,47 @@ export const useMonitorStore = create<MonitorState>()(
           persistedState?.confirmedVitalsActive,
         )
         const confirmed = normalizeVitals(persistedState?.confirmed)
-        const confirmedAuthored = normalizeVitals(
+        let confirmedAuthored = normalizeVitals(
           persistedState?.confirmedAuthored ?? persistedState?.confirmed,
         )
-        const vitalTrendDraft = normalizeVitalTrendConfiguration(
-          persistedState?.vitalTrendDraft,
-        )
-        const vitalTrendSaved = normalizeVitalTrendConfiguration(
-          persistedState?.vitalTrendSaved ?? persistedState?.vitalTrendDraft,
-        )
+        let vitalTrendDraft = fusedVitalTrendConfiguration(legacyVitalTrendDraft)
+        let vitalTrendSaved = fusedVitalTrendConfiguration(legacyVitalTrendSaved)
+        let vitalTrendDraftRevision =
+          typeof persistedState?.vitalTrendDraftRevision === 'number'
+            ? persistedState.vitalTrendDraftRevision
+            : 0
+        let vitalTrendSavedRevision =
+          typeof persistedState?.vitalTrendSavedRevision === 'number'
+            ? persistedState.vitalTrendSavedRevision
+            : 0
+        let vitalTrendConsumedRevision =
+          typeof persistedState?.vitalTrendConsumedRevision === 'number'
+            ? persistedState.vitalTrendConsumedRevision
+            : 0
+        if (vitalTrendSavedRevision === vitalTrendConsumedRevision) {
+          confirmedAuthored = normalizeVitals(
+            projectLegacyVitalTrendTargets(
+              confirmedAuthored,
+              legacyVitalTrendSaved,
+            ),
+          )
+        }
         const activeVitalTrend = normalizeActiveVitalTrend(
           persistedState?.activeVitalTrend,
         )
+        if (activeVitalTrend?.status === 'complete') {
+          const disarmedRevision =
+            Math.max(
+              vitalTrendDraftRevision,
+              vitalTrendSavedRevision,
+              vitalTrendConsumedRevision,
+            ) + 1
+          vitalTrendDraft = createEmptyVitalTrendConfiguration()
+          vitalTrendSaved = createEmptyVitalTrendConfiguration()
+          vitalTrendDraftRevision = disarmedRevision
+          vitalTrendSavedRevision = disarmedRevision
+          vitalTrendConsumedRevision = disarmedRevision
+        }
         if (isHeartRateToggleLockedRhythm(draft.rhythm)) draftVitalActive.hr = true
         if (isHeartRateToggleLockedRhythm(saved.rhythm)) savedVitalActive.hr = true
         if (isHeartRateToggleLockedRhythm(confirmed.rhythm)) confirmedVitalActive.hr = true
@@ -1413,18 +1483,9 @@ export const useMonitorStore = create<MonitorState>()(
           ),
           vitalTrendDraft,
           vitalTrendSaved,
-          vitalTrendDraftRevision:
-            typeof persistedState?.vitalTrendDraftRevision === 'number'
-              ? persistedState.vitalTrendDraftRevision
-              : 0,
-          vitalTrendSavedRevision:
-            typeof persistedState?.vitalTrendSavedRevision === 'number'
-              ? persistedState.vitalTrendSavedRevision
-              : 0,
-          vitalTrendConsumedRevision:
-            typeof persistedState?.vitalTrendConsumedRevision === 'number'
-              ? persistedState.vitalTrendConsumedRevision
-              : 0,
+          vitalTrendDraftRevision,
+          vitalTrendSavedRevision,
+          vitalTrendConsumedRevision,
           activeVitalTrend,
         }
       },

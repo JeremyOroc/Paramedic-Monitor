@@ -10,6 +10,69 @@
 
 ## Current Requirement Updates
 
+- 2026-09-20 Instructor fused vital/Trend authoring — **implemented locally after the completed
+  grill-with-docs design interview and programmer confirmation**. Replace each numeric row's separate current-value
+  and Trend-target controls with one Fused vital input and remove the `Trend` column heading. A blank
+  or `00:00` shared timer makes Save + Send apply all staged numeric values immediately; a positive
+  timer makes those same values absolute Trend targets. Changed values move linearly from their live
+  Send-time values over one shared duration, while unchanged values do not participate. On/Off,
+  rhythm, waveform, dispatch, and other nonnumeric changes apply immediately and cannot restart or
+  cancel an Active Trend unless a newly edited numeric value or timer is saved and sent.
+
+  During an Active Trend, each Fused vital input retains its authored target while trainee, Instructor
+  clinical state, Spectator, alarms, waveforms, Vital Log, and PNI consumers receive the timestamp-
+  derived live values. The timer normally shows the amber countdown; focusing it enters a proposed-
+  replacement edit mode while the current Trend continues, and abandoning the edit restores the live
+  countdown. A newly sent positive duration replaces the instruction for all applicable values from
+  their then-current live values. A newly sent blank/zero duration applies all staged values
+  immediately, ends the Trend, and shows ordinary white zeroes rather than a red cancellation. A
+  deadline shows green `00:00`, keeps the target values visible, and disarms the duration so later
+  Sends are immediate until another duration is entered. A positive no-op instruction starts no
+  countdown and is likewise consumed/disarmed.
+
+  Fused inputs may appear empty only while typing; blur restores the prior staged value, and an
+  explicit `0` remains valid. Preserve whole-number ranges FC/BP `0–300`, SpO₂ `0–100`, EtCO₂
+  `0–150`, nonnegative integer minutes, and integer seconds `0–59`; invalid data blocks Save. Off
+  channels continue progressing invisibly, BP systolic/diastolic remain independent, and PNI samples
+  live BP at reading start. Automatic FC rhythms lock and exclude FC consistently—including VF and
+  VT—while other participants continue. Navigation, power changes, and reload preserve absolute-time
+  progress; Monitor Reset and New Attempt cancel it.
+
+  Save stages an immutable snapshot and Send starts from live confirmed values. Saved scenarios retain
+  fused values plus a prepared duration but never active progress. On legacy scenario load, each
+  nonblank legacy target replaces that field's fused value when the legacy duration is positive;
+  fields without targets retain their saved direct values. Evaluation hides the Trend-only start,
+  records final changed vital values once at the deadline without a separate `Trend completed` row or
+  message, and records nothing for unfinished participation. Preserve cyan unsaved, amber saved-but-
+  unsent, and neutral sent styling. Keep ECG, CPR, timed-vital buttons, EtCO₂ calibration, timer row,
+  and On/Off layout otherwise unchanged. This supersedes the separate direct/target command model and
+  is recorded by accepted ADR 0032.
+
+  #### Testing
+
+  Replace separate-target component/store coverage with dual-mode Fused vital input coverage for
+  immediate and timed Save/Send, Send-time baselines, all-vital shared timing, no-op consumption,
+  unrelated-Send stability, Active-Trend replacement, intentional immediate interruption, editable
+  replacement duration, terminal disarming/colors, input restoration/validation, dirty/pending/sent
+  styling, Off channels, independent BP/PNI sampling, CPR priority, consistent Automatic FC locking,
+  reset/navigation/power/reload behavior, Room/Spectator timestamp parity, scenario round-trip and
+  legacy migration, and completion-only Evaluation values without a visible completion row. Run the
+  focused Instructor/store/Trend/scenario/evaluation/clinical-consumer suites, TypeScript, ESLint,
+  the complete Vitest suite, the Webpack production build, and rendered Instructor layout/interaction
+  QA at supported desktop sizes.
+
+  **Implementation completed locally on 2026-09-22.** The separate target component and heading are
+  removed; each widened vital input now retains its authored value and uses the saved timer to select
+  immediate or timestamp-derived delivery. Store version 14 projects legacy targets into fused
+  values, completion and no-op commands disarm their duration, a deliberate immediate interruption
+  renders white zeroes, and the running timer supports an Escape-cancellable replacement editor.
+  VF/VT now exclude FC consistently without restarting other participants. Completion history keeps
+  its idempotent write but renders as an ordinary Instructor vital change. All 376 focused tests,
+  TypeScript, ESLint with zero errors and the same 12 unrelated warnings, the Next.js 16.3 Webpack
+  production build, and rendered 1024×768 Instructor-panel QA pass. The complete suite reports 1,581
+  passing, one skipped, and the same three unrelated Room-ownership/PatientInfoPanel baseline
+  failures.
+
 - 2026-09-20 Wagami A direct PNI-settings entry — **implemented locally after the completed
   grill-with-docs design interview and programmer confirmation**. Move `Réglages PNI` / `NIBP settings` out of Configure
   and make the complete on-screen PNI vital card its sole settings entry point on Wagami A. The card
@@ -845,6 +908,10 @@ production build pass. The complete suite records 1,468 passing tests and one sk
 established unrelated failures. Rendered 1280×720 QA verified the control geometry and a live FC 120→150
 run ending exactly at `Complete 00:00`; the default Turbopack build remains blocked by the host's worker-
 port restriction.
+
+**Superseded 2026-09-22:** ADR 0032 and the fused-authoring requirement at the top of this plan replace
+the separate current-value/Trend-target controls and their partial direct-cancellation semantics. The
+ECG-first order, shared timestamp interpolation, and clinical propagation remain in force.
 
 - 2026-09-13 requirement update — compact Saved scenario rows and safe page-scoped report deletion:
   reduce each Saved scenario row from its current two-tier card to an approximately 44–48px compact

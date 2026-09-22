@@ -20,7 +20,9 @@ import type {
 import type { Rhythm, VitalActiveState } from '@/types/vitals'
 import {
   createEmptyVitalTrendConfiguration,
+  fusedVitalTrendConfiguration,
   normalizeVitalTrendConfiguration,
+  projectLegacyVitalTrendTargets,
 } from '@/lib/vitalTrend'
 
 const VALID_RHYTHMS = new Set<Rhythm>([
@@ -145,7 +147,11 @@ export function createEmptyScenarioSnapshot(): ScenarioSnapshotV1 {
 }
 
 export function createScenarioSnapshot(input: ScenarioSnapshotInput): ScenarioSnapshotV1 {
-  const draft = { ...input.monitor.draft }
+  const normalizedTrend = normalizeVitalTrendConfiguration(input.trend)
+  const draft = projectLegacyVitalTrendTargets(
+    input.monitor.draft,
+    normalizedTrend,
+  )
   const draftVitalActive = { ...input.monitor.draftVitalActive }
   const automaticHeartRate = getAutomaticHeartRate(draft.rhythm)
   if (automaticHeartRate !== null) draft.hr = automaticHeartRate
@@ -160,7 +166,7 @@ export function createScenarioSnapshot(input: ScenarioSnapshotInput): ScenarioSn
       draftVitalActive,
       lastRhythm: input.monitor.lastRhythm,
     },
-    trend: normalizeVitalTrendConfiguration(input.trend),
+    trend: fusedVitalTrendConfiguration(normalizedTrend),
     callerInfo: { ...input.callerInfo },
     dispatch: { ...input.dispatch },
     patientInformation: {

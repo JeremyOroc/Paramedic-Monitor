@@ -5,6 +5,30 @@
 
 ---
 
+## [2026-09-22] [instructor/domain/testing] — Implement fused vital and Trend authoring
+
+- Removed the separate Trend target column and made each widened vital value the immediate value for
+  blank/zero duration or the absolute target for a positive shared duration.
+- Added Send-time baselines, all-applicable replacement, intentional immediate interruption, timer
+  replacement editing, terminal/no-op disarming, VF/VT FC exclusion, and version-14 projection of
+  legacy scenario/persisted targets into fused values.
+- Kept timestamp synchronization and idempotent completion recording while presenting final values as
+  an ordinary Instructor change. Accepted ADR 0032 and updated the glossary and implementation plan.
+- All 376 focused tests, TypeScript, ESLint with zero errors and 12 existing warnings, the Webpack
+  production build, and rendered 1024×768 panel QA pass. The full suite reports 1,581 passing, one
+  skipped, and the same three unrelated Room-ownership/PatientInfoPanel baseline failures.
+
+## [2026-09-20] [planning/instructor/domain] — Complete fused vital/Trend design interview
+
+- Chose one true Fused vital input per numeric vital: blank/zero duration sends immediate values,
+  while a positive shared duration turns changed staged values into absolute Trend targets.
+- Closed active replacement/interruption, timer editing and disarming, no-op consumption, On/Off,
+  Automatic FC, BP/PNI, persistence, legacy-scenario migration, synchronization, validation, visual
+  status, evaluation, and testing rules without changing adjacent Instructor controls.
+- Updated the domain glossary and recorded proposed ADR 0032 because this deliberately removes the
+  prior ability to send an immediate starting value and a separate timed target in one transaction.
+  Implementation remains gated on final programmer confirmation.
+
 ## [2026-09-20] [ui/navigation/testing] — Move Wagami A PNI settings onto the vital card
 
 - Made the complete Wagami A PNI vital card the localized settings button in Preview and live use,

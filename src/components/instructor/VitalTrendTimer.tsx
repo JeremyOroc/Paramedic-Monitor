@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
+
 import { useCountdown } from '@/hooks/useCountdown'
 import { cn } from '@/lib/utils'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -19,6 +21,18 @@ export function VitalTrendTimer() {
   const running = activeTrend?.status === 'running'
   const complete = activeTrend?.status === 'complete'
   const cancelled = activeTrend?.status === 'cancelled'
+  const immediate = activeTrend?.status === 'immediate'
+  const [editingReplacement, setEditingReplacement] = useState(false)
+  const replacementStartRef = useRef<number | null>(null)
+  const activeTrendId = activeTrend?.id ?? null
+
+  useEffect(() => {
+    // A replacement Send creates a new command. Return its timer to the live
+    // countdown instead of leaving the just-consumed draft editor visible.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setEditingReplacement(false)
+    replacementStartRef.current = null
+  }, [activeTrendId])
   const cancelledSeconds = cancelled
     ? Math.max(
         0,
@@ -27,30 +41,52 @@ export function VitalTrendTimer() {
         ),
       )
     : 0
-  const displayedDurationSeconds = running
+  const showRunningCountdown = running && !editingReplacement
+  const displayedDurationSeconds = showRunningCountdown
     ? countdown.secondsLeft
     : complete
       ? 0
       : cancelled
         ? cancelledSeconds
+        : immediate
+          ? 0
         : durationSeconds
   const displayedMinutes = Math.floor(displayedDurationSeconds / 60)
   const displayedSeconds = displayedDurationSeconds % 60
-  const showTerminalOrLiveValues = running || complete || cancelled
+  const showTerminalOrLiveValues =
+    showRunningCountdown || complete || cancelled || immediate
   const status =
-    running
+    editingReplacement
+      ? 'Editing replacement'
+      : running
       ? `Running ${countdown.formatted}`
       : complete
         ? 'Complete'
         : cancelled
           ? 'Cancelled'
-          : 'Ready'
+          : immediate
+            ? 'Immediate'
+            : 'Ready'
   const valueClass = cn(
-    running && 'text-pending-amber',
+    showRunningCountdown && 'text-pending-amber',
     complete && 'text-ecg-green',
     cancelled && 'text-alarm-red',
-    !activeTrend && 'text-white',
+    (editingReplacement || immediate || !activeTrend) && 'text-white',
   )
+  const beginReplacementEdit = () => {
+    if (!running || editingReplacement) return
+    replacementStartRef.current = durationSeconds
+    setEditingReplacement(true)
+  }
+  const cancelReplacementEdit = () => {
+    const original = replacementStartRef.current
+    if (original !== null) {
+      setMinutes(Math.floor(original / 60))
+      setSeconds(original % 60)
+    }
+    replacementStartRef.current = null
+    setEditingReplacement(false)
+  }
 
   return (
     <div
@@ -69,9 +105,15 @@ export function VitalTrendTimer() {
             value={showTerminalOrLiveValues ? displayedMinutes : minutes === 0 ? '' : minutes}
             placeholder="MIN"
             aria-label="Trend minutes"
-            readOnly={running}
+            readOnly={showRunningCountdown}
+            onFocus={beginReplacementEdit}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape' || !editingReplacement) return
+              cancelReplacementEdit()
+              event.currentTarget.blur()
+            }}
             onChange={(event) => {
-              if (!running) setMinutes(Number(event.target.value))
+              if (!showRunningCountdown) setMinutes(Number(event.target.value))
             }}
             className={cn(
               'h-7 w-16 border border-neutral-700 bg-black px-1 text-center font-mono text-sm outline-none',
@@ -91,9 +133,15 @@ export function VitalTrendTimer() {
             value={showTerminalOrLiveValues ? displayedSeconds : seconds === 0 ? '' : seconds}
             placeholder="SEC"
             aria-label="Trend seconds"
-            readOnly={running}
+            readOnly={showRunningCountdown}
+            onFocus={beginReplacementEdit}
+            onKeyDown={(event) => {
+              if (event.key !== 'Escape' || !editingReplacement) return
+              cancelReplacementEdit()
+              event.currentTarget.blur()
+            }}
             onChange={(event) => {
-              if (!running) setSeconds(Number(event.target.value))
+              if (!showRunningCountdown) setSeconds(Number(event.target.value))
             }}
             className={cn(
               'h-7 w-16 border border-neutral-700 bg-black px-1 text-center font-mono text-sm outline-none',

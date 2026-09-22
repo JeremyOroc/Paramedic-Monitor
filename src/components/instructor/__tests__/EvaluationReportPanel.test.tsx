@@ -159,6 +159,25 @@ describe('EvaluationReportPanel', () => {
     expect(instructorRows[1]).toHaveTextContent('HR 88 → 112')
   })
 
+  it('renders completed Trend values as an ordinary Instructor change', () => {
+    renderPanel({
+      stateHistory: [
+        state(1, 0, {}),
+        state(2, 30, { hr: 150 }, {
+          instructorOnly: {
+            stateUpdateKind: 'trend-completion',
+            trendCompletionId: 'trend-1',
+          },
+        }),
+      ],
+    })
+
+    const completion = screen.getAllByTestId('report-row-instructor')[1]
+    expect(completion).toHaveTextContent('Instructor')
+    expect(completion).toHaveTextContent('HR 88 → 150')
+    expect(completion).not.toHaveTextContent('Trend completed')
+  })
+
   it('places an instructor change between the actions it separates', () => {
     renderPanel({
       stateHistory: [state(1, 0, {}), state(2, 276, { rhythm: 'vf', hr: 112 })],

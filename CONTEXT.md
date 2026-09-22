@@ -240,31 +240,35 @@ The instructor-approved vital values, channel states, rhythm, patient category, 
 _Avoid_: Draft vitals, admin inputs
 
 **Trend**:
-An instructor-approved, time-bounded change from one or more current numeric vital values to their Trend targets. Save stages the instruction; Send begins it from each participating vital's then-current value, and every participating vital shares one Trend duration.
+An instructor-approved, time-bounded change from one or more current numeric vital values to the values staged in the Fused vital inputs. Save stages the instruction; Send begins it from each participating vital's then-current value, and every participating vital shares one Trend duration. A blank or `00:00` duration makes those staged values immediate instead of starting a Trend.
 _Avoid_: Vital preset, rate adjustment, automatic vital
 
+**Fused vital input**:
+The Instructor Console's one numeric authoring control for a vital. Its staged value is an immediate value when the shared Trend duration is blank or `00:00`, and an absolute Trend target when that duration is greater than zero. During an Active Trend it continues to show the authored target rather than the changing intermediate value. It may be empty only while the instructor is typing; leaving it empty restores the previous staged value, while an explicit `0` remains a valid value.
+_Avoid_: Current-value box, Trend box, dual value
+
 **Trend target**:
-The final numeric value that one participating vital must reach when a Trend completes. It is an absolute value rather than a rate or signed change; blank means the vital does not participate, while zero is an explicit target.
+The final numeric value that one participating vital must reach when a Trend completes. It is the value staged in that vital's Fused vital input, expressed as an absolute value rather than a rate or signed change.
 _Avoid_: Trend rate, Trend delta, destination vital
 
 **Trend duration**:
-The single elapsed time over which every participating vital moves linearly to its Trend target.
+The single elapsed time over which every participating vital moves linearly to its Trend target. During an Active Trend, its boxes normally show the amber remaining time; focusing them enters a replacement-edit mode while the current Trend continues, and abandoning that edit returns to the live countdown.
 _Avoid_: Dispatch countdown, SNS measurement countdown, per-vital timer
 
 **Trend participation**:
-Inclusion of a numeric vital in a Trend because it has a valid Trend target when the instruction is sent. Participation is independent of the vital's On/Off channel state, while an Automatic FC lock prevents FC from participating.
+Inclusion of a numeric vital in a Trend because its valid staged value differs from its then-current value when an instruction with a duration greater than zero is sent. An unchanged value remains steady without participating. Participation is independent of the vital's On/Off channel state, while an Automatic FC lock prevents FC from participating.
 _Avoid_: Active channel, enabled Trend
 
 **Active Trend**:
-A sent Trend that is still progressing in elapsed real time. It has no paused state, survives navigation, reload, and monitor power changes, and is replaced only for the vitals affected by a newer instructor instruction; monitor reset or New Attempt ends it entirely.
+A sent Trend that is still progressing in elapsed real time. It has no paused state and survives navigation, reload, and monitor power changes. A newly sent timed instruction replaces it by rebuilding all applicable participation from the then-current live values with one new deadline; a newly sent immediate instruction applies every staged numeric value and cancels it. Monitor reset or New Attempt ends it entirely.
 _Avoid_: Paused Trend, Saved scenario progress, queued Trend
 
 **Trend completion**:
-The moment an Active Trend reaches its duration with at least one participating vital remaining. The Evaluation record captures one completion entry containing the final values that reached their Trend targets.
+The moment an Active Trend reaches its duration with at least one participating vital remaining. The final targets remain in the Fused vital inputs, the timer displays green `00:00`, and its prepared duration is disarmed so a later Send is immediate unless the instructor enters a new duration. The Evaluation record captures the final changed vital values once as an ordinary Instructor change without presenting a special `Trend completed` label or message.
 _Avoid_: Per-second Trend entry, Trend Send, Instructor change
 
 **Trend cancellation**:
-The end of an Active Trend, or one vital's participation in it, before the Trend duration elapses. Cancellation does not create a Trend completion entry; cancelling the last participating vital ends the countdown as Cancelled.
+The end of an Active Trend, or one vital's participation in it, before its duration elapses because it was replaced, reset, or excluded by an Automatic FC lock. Cancelled participation creates no completion record, while unaffected participants may continue to the shared deadline. An intentional immediate instruction ends the whole Active Trend but presents ordinary white `00:00` timer values rather than a red Cancelled state.
 _Avoid_: Trend completion, paused Trend
 
 **Waveform continuity**:

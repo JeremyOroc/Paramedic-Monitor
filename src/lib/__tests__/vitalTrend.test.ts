@@ -4,7 +4,11 @@ import {
   buildVitalTrendParticipants,
   createEmptyVitalTrendConfiguration,
   deriveVitalTrendValues,
+  fusedVitalTrendConfiguration,
+  isValidFusedVitalValues,
   normalizeVitalTrendConfiguration,
+  projectLegacyVitalTrendTargets,
+  vitalTrendTargetsFromValues,
   vitalTrendSecondsLeft,
 } from '@/lib/vitalTrend'
 import type { ActiveVitalTrend, VitalTrendTargets } from '@/types/vitalTrend'
@@ -84,5 +88,30 @@ describe('vital trend', () => {
     expect(normalizeVitalTrendConfiguration(null)).toEqual(
       createEmptyVitalTrendConfiguration(),
     )
+  })
+
+  it('validates fused values and creates targets for every numeric vital', () => {
+    const values = { hr: 150, spo2: 95, bp_sys: 110, bp_dia: 70, etco2: 35 }
+    expect(isValidFusedVitalValues(values)).toBe(true)
+    expect(isValidFusedVitalValues({ ...values, spo2: 101 })).toBe(false)
+    expect(vitalTrendTargetsFromValues(values)).toEqual(values)
+  })
+
+  it('projects legacy targets into fused values and clears the legacy target map', () => {
+    const configuration = normalizeVitalTrendConfiguration({
+      durationSeconds: 30,
+      targets: { hr: 150, bp_sys: 90 },
+    })
+    const values = { hr: 120, spo2: 98, bp_sys: 110, bp_dia: 70, etco2: 35 }
+
+    expect(projectLegacyVitalTrendTargets(values, configuration)).toEqual({
+      ...values,
+      hr: 150,
+      bp_sys: 90,
+    })
+    expect(fusedVitalTrendConfiguration(configuration)).toEqual({
+      ...createEmptyVitalTrendConfiguration(),
+      durationSeconds: 30,
+    })
   })
 })
