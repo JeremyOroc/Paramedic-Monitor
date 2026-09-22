@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { useMonitorStore } from '@/store/monitorStore'
@@ -82,6 +82,10 @@ describe('Wagami A live Attempt integration', () => {
   it('reopens Call Info as a full-page live dispatch workflow and projects the page', async () => {
     const events: StudentEventRecord[] = []
     const projections: MonitorProjection[] = []
+    act(() => useMonitorStore.setState((state) => ({
+      confirmed: { ...state.confirmed, rhythm: 'nsr' },
+      confirmedVitalActive: { ...state.confirmedVitalActive, hr: true },
+    })))
     render(
       <MonitorPage
         transportStorageScope="ABC234.participant-1.1"
@@ -91,10 +95,12 @@ describe('Wagami A live Attempt integration', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    const ecg = screen.getByTestId('live-ecg-canvas')
     fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
 
     expect(screen.getByTestId('wagami-a-call-info-page')).toBeInTheDocument()
-    expect(screen.queryByTestId('wagami-a-shell')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-shell').parentElement).toHaveClass('invisible')
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
     expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
     expect(screen.getByLabelText('Response timer')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Transport' })).toBeEnabled()
@@ -105,6 +111,7 @@ describe('Wagami A live Attempt integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     expect(screen.getByTestId('wagami-a-shell')).toBeInTheDocument()
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
     expect(screen.queryByTestId('wagami-a-call-info-page')).not.toBeInTheDocument()
   })
 
@@ -117,7 +124,7 @@ describe('Wagami A live Attempt integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Call Info' }))
     expect(screen.getByRole('heading', { name: 'Call information' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Acknowledge' })).toBeInTheDocument()
-    expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULT')
+    expect(within(screen.getByTestId('wagami-a-call-info-page')).getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULT')
   })
 
   it('resets device preferences for a new Attempt scope', async () => {

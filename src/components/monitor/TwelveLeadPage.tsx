@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react'
 import type { Rhythm } from '@/types/vitals'
+import type { BeatClock } from '@/lib/ecg/beatClock'
 import type { LeadName } from '@/lib/ecg/rhythms'
 import { LeadCell } from './LeadCell'
 
@@ -10,6 +11,8 @@ type TwelveLeadPageProps = {
   hr: number
   occluded?: boolean
   onReady?: () => void
+  beatClock?: BeatClock
+  readyOnStart?: boolean
 }
 
 const LEADS: ReadonlyArray<readonly [LeadName, LeadName]> = [
@@ -28,6 +31,8 @@ export function TwelveLeadPage({
   hr,
   occluded = false,
   onReady,
+  beatClock,
+  readyOnStart = false,
 }: TwelveLeadPageProps) {
   const [readinessGeneration, setReadinessGeneration] = useState({
     occluded,
@@ -78,6 +83,8 @@ export function TwelveLeadPage({
           hr={hr}
           occluded={occluded}
           onReady={() => reportLeadReady(left)}
+          beatClock={beatClock}
+          readyOnStart={readyOnStart}
         />,
         <LeadCell
           key={right}
@@ -86,6 +93,8 @@ export function TwelveLeadPage({
           hr={hr}
           occluded={occluded}
           onReady={() => reportLeadReady(right)}
+          beatClock={beatClock}
+          readyOnStart={readyOnStart}
         />,
       ])}
     </div>

@@ -6,9 +6,11 @@ import { WagamiAWorkspace } from '@/components/monitor/WagamiAWorkspace'
 import type { CallerInfoVariant } from '@/components/monitor/CallerInfoModal'
 import { useWagamiAClinicalCore } from '@/hooks/useWagamiAClinicalCore'
 import { useWagamiAWorkspace } from '@/hooks/useWagamiAWorkspace'
+import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
 import { resolveWagamiAPreviewState } from '@/lib/wagamiAPreviewState'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
 import { useMonitorStore } from '@/store/monitorStore'
+import { cn } from '@/lib/utils'
 
 type WagamiAPreviewProps = {
   callerInfoVariant?: CallerInfoVariant
@@ -33,6 +35,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
     locale: workspace.preferences.locale,
   })
   const text = getWagamiAText(workspace.preferences.locale)
+  const { showCallInfo, onMonitorReady } = useWagamiACallInfoCover(workspace.view)
 
   function onPowerToggle() {
     if (clinical.poweredOn) workspace.onDevicePowerOff()
@@ -56,6 +59,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
       onEnergyDown={clinical.onEnergyDown}
       onEnergyUp={clinical.onEnergyUp}
       selectedAction={selectedAction}
+      onMonitorReady={onMonitorReady}
     />
   )
 
@@ -65,30 +69,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
         <div className="font-sans text-xl font-semibold">{text.landscapeRequired}</div>
         <p className="mt-3 text-wagami-a-muted-text">{text.landscapeHelp}</p>
       </div>
-      {workspace.view === 'callInfo' ? (
-        <div className="h-full w-full max-[1023px]:hidden">
-          <WagamiACallInfoPage
-            locale={workspace.preferences.locale}
-            patientMode={clinical.patientMode}
-            alarms={clinical.display.alarms}
-            onBack={workspace.goBack}
-            callerInfo={{
-              info: callerInfo,
-              onCallerEvent: () => {},
-              buttonState: {
-                acknowledge: { disabled: true },
-                arrival: { disabled: true },
-                transport: { disabled: true },
-              },
-              responseFormatted: '--:--',
-              variant: callerInfoVariant,
-              route: dispatchRoute,
-              mapReadOnly: true,
-            }}
-          />
-        </div>
-      ) : (
-      <div className="max-[1023px]:hidden">
+      <div aria-hidden={showCallInfo ? true : undefined} className={cn('max-[1023px]:hidden', showCallInfo && 'invisible pointer-events-none')}>
         <WagamiADevice
           display={clinical.display}
           energy={clinical.defib.energy}
@@ -126,7 +107,29 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
           shellAlarmLedEnabled={workspace.preferences.shellAlarmLedEnabled}
         />
       </div>
-      )}
+      {showCallInfo ? (
+        <div className="absolute inset-0 z-30 h-full w-full max-[1023px]:hidden">
+          <WagamiACallInfoPage
+            locale={workspace.preferences.locale}
+            patientMode={clinical.patientMode}
+            alarms={clinical.display.alarms}
+            onBack={workspace.goBack}
+            callerInfo={{
+              info: callerInfo,
+              onCallerEvent: () => {},
+              buttonState: {
+                acknowledge: { disabled: true },
+                arrival: { disabled: true },
+                transport: { disabled: true },
+              },
+              responseFormatted: '--:--',
+              variant: callerInfoVariant,
+              route: dispatchRoute,
+              mapReadOnly: true,
+            }}
+          />
+        </div>
+      ) : null}
     </main>
   )
 }

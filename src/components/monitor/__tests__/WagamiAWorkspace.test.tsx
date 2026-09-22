@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -9,13 +10,18 @@ import type { WagamiATask } from '../WagamiATaskDock'
 import { WagamiAWorkspace } from '../WagamiAWorkspace'
 
 vi.mock('../WagamiAScreen', () => ({
-  WagamiAScreen: ({ onTask, onOpenNibpSettings }: { onTask?: (task: WagamiATask) => void; onOpenNibpSettings?: () => void }) => (
-    <>
-      <button type="button" onClick={() => onTask?.('vitalLog')}>Open vital log</button>
-      <button type="button" onClick={() => onTask?.('configure')}>Open configure</button>
-      {onOpenNibpSettings ? <button type="button" onClick={onOpenNibpSettings}>Open PNI settings</button> : null}
-    </>
-  ),
+  WagamiAScreen: ({ onTask, onOpenNibpSettings, waveformOccluded, onWaveformsReady }: { onTask?: (task: WagamiATask) => void; onOpenNibpSettings?: () => void; waveformOccluded?: boolean; onWaveformsReady?: () => void }) => {
+    useEffect(() => {
+      if (!waveformOccluded) onWaveformsReady?.()
+    }, [onWaveformsReady, waveformOccluded])
+    return (
+      <>
+        <button type="button" onClick={() => onTask?.('vitalLog')}>Open vital log</button>
+        <button type="button" onClick={() => onTask?.('configure')}>Open configure</button>
+        {onOpenNibpSettings ? <button type="button" onClick={onOpenNibpSettings}>Open PNI settings</button> : null}
+      </>
+    )
+  },
 }))
 
 const display: WagamiADisplayState = {

@@ -39,10 +39,46 @@ describe('Wagami A Room-free clinical preview', () => {
     ]) {
       fireEvent.click(screen.getByRole('button', { name: task }))
       expect(screen.getByTestId('wagami-a-shell')).toBeInTheDocument()
-      expect(screen.getByText(heading)).toBeInTheDocument()
-      expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE')
+      expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument()
+      expect(screen.getAllByTestId('wagami-a-clinical-status-line').find((element) => !element.closest('[aria-hidden="true"]'))).toHaveTextContent('MODE ADULTE')
       fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     }
+  })
+
+  it('keeps live and 12-lead canvases mounted across tasks and shell-free Call Info', () => {
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview />)
+
+    const ecg = screen.getByTestId('live-ecg-canvas')
+    const spo2 = screen.getByTestId('spo2-waveform-canvas')
+    const etco2 = screen.getByTestId('etco2-waveform-canvas')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Médicaments' }))
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
+    expect(screen.getByTestId('spo2-waveform-canvas')).toBe(spo2)
+    expect(screen.getByTestId('etco2-waveform-canvas')).toBe(etco2)
+    fireEvent.click(screen.getByRole('button', { name: /Journal des événements/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: '12 dérivations' }))
+    const leadI = screen.getByTestId('lead-canvas-I')
+    const leadV6 = screen.getByTestId('lead-canvas-V6')
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    expect(screen.getByTestId('lead-canvas-I')).toBe(leadI)
+    expect(screen.getByTestId('lead-canvas-V6')).toBe(leadV6)
+    fireEvent.click(screen.getByRole('button', { name: '12 dérivations' }))
+    expect(screen.getByTestId('lead-canvas-I')).toBe(leadI)
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
+    expect(screen.getByTestId('lead-canvas-I')).toBe(leadI)
+    expect(screen.getByTestId('wagami-a-shell').parentElement).toHaveClass('invisible')
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
+    expect(screen.getByTestId('wagami-a-shell').parentElement).not.toHaveClass('invisible')
   })
 
   it('replaces the shell with a full-page Call Info canvas and returns to the monitor', () => {
@@ -51,10 +87,10 @@ describe('Wagami A Room-free clinical preview', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
     expect(screen.getByTestId('wagami-a-call-info-page')).toBeInTheDocument()
-    expect(screen.queryByTestId('wagami-a-shell')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-shell').parentElement).toHaveClass('invisible')
     expect(screen.getByRole('heading', { name: 'Information d’appel' })).toBeInTheDocument()
     expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
-    expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE')
+    expect(within(screen.getByTestId('wagami-a-call-info-page')).getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE')
     expect(screen.getByLabelText('Response timer')).toHaveTextContent('--:--')
     expect(screen.getByRole('button', { name: 'Accuser réception' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Arrivée' })).toBeDisabled()

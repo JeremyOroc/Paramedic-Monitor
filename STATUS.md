@@ -6,6 +6,15 @@
 ---
 
 ## Current Phase
+**Wagami A waveform continuity across navigation — COMPLETE LOCALLY (2026-09-22).** Live ECG,
+SpO₂, EtCO₂, and the first-opened live 12-lead grid retain their canvas and patient-time sweep
+through every temporary view, including shell-free Call Info, in trainee, Preview, and Spectator
+paths. Re-entry reconstructs at final size before reveal; one local beat clock aligns main ECG and
+live-lead timing. Frozen captures, deliberate signal resets, CPR presentation, and disconnected
+channels keep their existing semantics. The 78-test focused suite, TypeScript, affected-file ESLint
+with zero errors and one existing warning, Next.js 16.3 Webpack production build, and rendered
+1280×720 and 1024×768 Preview navigation QA pass.
+
 **Instructor fused-vital layout refinement — COMPLETE LOCALLY (2026-09-22).** ECG is restored to the
 top of the right column above CPR and timed-vital controls. The shared timer now sits above FC in the
 left column and visibly reads `Trend`; compact fused inputs are shortened to their prior widths, and

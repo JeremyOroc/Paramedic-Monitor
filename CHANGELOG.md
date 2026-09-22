@@ -5,6 +5,38 @@
 
 ---
 
+## [2026-09-22] [wagami-a/ui/testing] — Keep live waveforms continuous through navigation
+
+- Retained Wagami A monitor canvases and the first-opened live 12-lead grid through temporary views
+  and shell-free Call Info in trainee, Preview, and Spectator presentations.
+- Added patient-time reconstruction and a shared local ECG beat clock, with a readiness barrier before
+  revealing the three vital traces or all twelve lead canvases. Captured and printed leads remain
+  frozen; established reset, CPR, and disconnection behavior is preserved.
+- Added regression tests. The 78-test focused suite, TypeScript, affected-file ESLint (zero errors;
+  one existing warning), Next.js 16.3 Webpack production build, and rendered 1280×720 and 1024×768
+  Preview navigation review pass without browser console errors.
+
+## [2026-09-22] [planning/wagami-a/domain] — Specify graph continuity implementation and tests
+
+- Closed the CPR, disconnection, and reveal-readiness decisions for Wagami A waveform navigation.
+- Added a documented implementation approach and focused regression plan covering trainee, Preview,
+  Spectator, all temporary destinations, and 12-lead capture overlays. Code remains pending the
+  programmer's final design confirmation.
+
+## [2026-09-22] [planning/wagami-a/domain] — Set graph reset and display boundaries
+
+- Confirmed continuity for Wagami A trainee, Preview, and Spectator views, with local display phases
+  and aligned main-ECG/12-lead beat timing within each display.
+- Retained the established intentional reset events and current 12-lead appearance. Clinical edge
+  cases remain under interview; implementation has not begun.
+
+## [2026-09-22] [planning/wagami-a/domain] — Define graph continuity across navigation
+
+- Confirmed that all temporary Wagami A views preserve live vital and 12-lead patient time, and that
+  returning shows the current reconstructed sweep without a false connection or restart.
+- Distinguished the Live 12-lead grid from frozen 12-lead capture and print records in the glossary.
+  The remaining design boundaries are under interview; implementation has not begun.
+
 ## [2026-09-22] [instructor/ui/testing] — Restore compact two-column vital controls
 
 - Moved ECG back to the top of the right column above CPR and timed-vital controls, and moved the

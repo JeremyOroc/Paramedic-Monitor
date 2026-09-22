@@ -132,6 +132,28 @@ describe('startRenderer', () => {
     expect(() => stop()).not.toThrow()
   })
 
+  it('reconstructs a shared-phase canvas before its first reveal', () => {
+    const canvas = makeCanvas()
+    const onReady = vi.fn()
+    const getPhaseAt = vi.fn(() => 0.25)
+    const stop = startRenderer({
+      canvas,
+      color: '#fff',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 750,
+      getPhaseAt,
+      readyOnStart: true,
+      onReady,
+    })
+
+    expect(onReady).toHaveBeenCalledTimes(1)
+    expect(getPhaseAt).toHaveBeenCalledWith(expect.any(Number), 750)
+    stop.setOccluded(true)
+    stop.setOccluded(false)
+    expect(onReady).toHaveBeenCalledTimes(2)
+    stop()
+  })
+
   it('re-reads getWaveform after a full cycle wraps', () => {
     const canvas = makeCanvas()
     const getWaveform = vi.fn(() => ECG_RHYTHMS.nsr)

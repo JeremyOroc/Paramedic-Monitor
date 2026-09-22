@@ -36,6 +36,7 @@ type SecondaryChannelProps = {
   occluded?: boolean
   onReady?: () => void
   palette?: 'wagamiX' | 'wagamiA'
+  readyOnStart?: boolean
 }
 
 function LiveSecondaryCanvas({
@@ -48,6 +49,7 @@ function LiveSecondaryCanvas({
   occluded = false,
   onReady,
   palette,
+  readyOnStart = false,
 }: Pick<
   SecondaryChannelProps,
   | 'channel'
@@ -59,6 +61,7 @@ function LiveSecondaryCanvas({
   | 'occluded'
   | 'onReady'
   | 'palette'
+  | 'readyOnStart'
 >) {
   const isEtco2 = channel === 'etco2'
   const color = palette === 'wagamiA'
@@ -90,6 +93,7 @@ function LiveSecondaryCanvas({
           if (get().channel === 'etco2') return def.cycleMs ?? RESP_CYCLE_MS
           return def.cycleMs ?? 60000 / Math.max(20, get().hr)
         },
+        readyOnStart,
       }
     },
     [isEtco2, color],
@@ -123,6 +127,7 @@ export function SecondaryChannel({
   occluded = false,
   onReady,
   palette = 'wagamiX',
+  readyOnStart = false,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
 
@@ -174,6 +179,7 @@ export function SecondaryChannel({
           occluded={occluded}
           onReady={onReady}
           palette={palette}
+          readyOnStart={readyOnStart}
         />
       ) : palette === 'wagamiA' ? (
         <div data-testid="disconnected-waveform" data-channel={channel} className="grid h-full w-full place-items-center bg-wagami-a-screen">

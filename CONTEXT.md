@@ -272,15 +272,19 @@ The end of an Active Trend, or one vital's participation in it, before its durat
 _Avoid_: Trend completion, paused Trend
 
 **Waveform continuity**:
-The trainee's live ECG, SpO₂, EtCO₂, and CPR compression traces remain part of the same patient-time
-sequence while the monitor is temporarily not visible, including browser backgrounding and every
-temporary monitor surface. Waveform re-entry is the moment that sequence becomes visible again: the
-current sweep is ready at its final display geometry before the temporary surface leaves, reflects
-elapsed real time, and contains no blank sweep, rewind, or false trace connecting moments that were
-not observed continuously. A new Attempt, monitor reset, power cycle, newly confirmed signal, or
-Off-to-On transition begins a new sequence; navigation does not. Each trainee and Spectator display
-maintains its own continuous sweep phase. A full browser reload is outside this continuity guarantee.
+The live ECG, SpO₂, EtCO₂, CPR compression traces, and Wagami A Live 12-lead grid on each trainee,
+Preview, or Spectator display form one patient-time sequence through temporary views and browser
+backgrounding, with re-entry showing the current sweep at final geometry and no blank, rewind, or
+false connector. Navigation does not begin a new sequence, while New Attempt, monitor reset, power
+cycle, newly confirmed signal, and Off-to-On do; each display has its own phase, and a full browser
+reload is outside the guarantee.
 _Avoid_: Hidden rendering, ECG restart, paused waveform
+
+**Live 12-lead grid**:
+The twelve continuously changing lead traces shown in a Scenario device's 12-lead view. It remains
+live through temporary navigation, shares beat timing with the main ECG trace, and is distinct from
+a frozen captured or printed 12-lead record.
+_Avoid_: 12-lead capture, printout, saved 12-lead
 
 **Automatic FC lock**:
 A rhythm-controlled clinical state in which FC is forced On and its rate is determined by the selected

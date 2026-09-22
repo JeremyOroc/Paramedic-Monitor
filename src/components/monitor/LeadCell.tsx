@@ -3,6 +3,8 @@
 import { ECG_SWEEP_MS, getLeadWaveform, type LeadName } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
 import { COLORS } from '@/lib/constants'
+import { getTorsadesPacketDurationMs } from '@/lib/automaticHeartRate'
+import type { BeatClock } from '@/lib/ecg/beatClock'
 import { cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
 
@@ -13,6 +15,8 @@ type LeadCellProps = {
   className?: string
   occluded?: boolean
   onReady?: () => void
+  beatClock?: BeatClock
+  readyOnStart?: boolean
 }
 
 export function LeadCell({
@@ -22,6 +26,8 @@ export function LeadCell({
   className,
   occluded = false,
   onReady,
+  beatClock,
+  readyOnStart = false,
 }: LeadCellProps) {
   const canvasRef = useWaveformRenderer(
     { rhythm, hr },
@@ -37,10 +43,14 @@ export function LeadCell({
         synchronizeSweep: true,
         getWaveform: pick,
         getSignalKey: () => `${get().rhythm}:${label}`,
-        getCycleMs: () => pick().cycleMs ?? 60000 / Math.max(20, get().hr),
+        getCycleMs: () => beatClock && get().rhythm === 'torsades'
+          ? getTorsadesPacketDurationMs(get().hr)
+          : pick().cycleMs ?? 60000 / Math.max(20, get().hr),
+        getPhaseAt: beatClock ? (nowMs, cycleMs) => beatClock.phase(nowMs, cycleMs) : undefined,
+        readyOnStart,
       }
     },
-    [label],
+    [label, beatClock, readyOnStart],
     { occluded, onReady },
   )
 
