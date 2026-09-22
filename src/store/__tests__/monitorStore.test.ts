@@ -1269,6 +1269,60 @@ describe('persist migration', () => {
     expect(useMonitorStore.getState().cprMode).toBe('regular')
   })
 
+  it('projects version-13 Trend targets into fused values during hydration', async () => {
+    const def = defaultsAsVitals()
+    const legacyTrend = {
+      targets: {
+        hr: 150,
+        spo2: null,
+        bp_sys: 90,
+        bp_dia: null,
+        etco2: null,
+      },
+      durationSeconds: 30,
+    }
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        version: 13,
+        state: {
+          draft: { ...def, hr: 120, bp_sys: 110 },
+          saved: { ...def, hr: 120, bp_sys: 110 },
+          confirmed: { ...def, hr: 120, bp_sys: 110 },
+          confirmedAuthored: { ...def, hr: 120, bp_sys: 110 },
+          vitalTrendDraft: legacyTrend,
+          vitalTrendSaved: legacyTrend,
+          vitalTrendDraftRevision: 1,
+          vitalTrendSavedRevision: 1,
+          vitalTrendConsumedRevision: 0,
+        },
+      }),
+    )
+
+    await useMonitorStore.persist.rehydrate()
+
+    const state = useMonitorStore.getState()
+    expect(state.draft).toMatchObject({ hr: 150, bp_sys: 90 })
+    expect(state.saved).toMatchObject({ hr: 150, bp_sys: 90 })
+    expect(state.confirmedAuthored).toMatchObject({ hr: 120, bp_sys: 110 })
+    expect(state.vitalTrendDraft).toEqual({
+      targets: {
+        hr: null,
+        spo2: null,
+        bp_sys: null,
+        bp_dia: null,
+        etco2: null,
+      },
+      durationSeconds: 30,
+    })
+
+    state.send()
+    expect(useMonitorStore.getState().activeVitalTrend?.participants).toMatchObject({
+      hr: { start: 120, target: 150 },
+      bp_sys: { start: 110, target: 90 },
+    })
+  })
+
   it('defaults legacy persisted state without model fields to Wagami X', async () => {
     localStorage.setItem(
       STORAGE_KEY,

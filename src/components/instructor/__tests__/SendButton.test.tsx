@@ -198,7 +198,7 @@ describe('SendButton', () => {
     render(<SendButton />)
 
     act(() => {
-      useMonitorStore.getState().setVitalTrendTarget('hr', 150)
+      useMonitorStore.getState().setDraft('hr', 150)
       useMonitorStore.getState().setVitalTrendSeconds(30)
     })
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()

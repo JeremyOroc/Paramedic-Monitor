@@ -177,13 +177,14 @@ describe('VitalsControls', () => {
     expect(screen.queryByTestId('admin-graph-row-etco2')).not.toBeInTheDocument()
   })
 
-  it('adds one Trend target per numeric vital and a shared dispatch-format timer', () => {
+  it('uses one fused input per numeric vital and a shared dispatch-format timer', () => {
     render(<VitalsControls autoSortText="" />)
 
     for (const label of ['FC', 'SpO2', 'BP sys', 'BP dia', 'EtCO2']) {
-      expect(screen.getByLabelText(`${label} trend target`)).toBeInTheDocument()
+      expect(screen.getAllByLabelText(label)).toHaveLength(1)
+      expect(screen.queryByLabelText(`${label} trend target`)).not.toBeInTheDocument()
     }
-    expect(screen.getByText('Trend')).toBeInTheDocument()
+    expect(screen.queryByText('Trend')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Trend minutes')).toHaveAttribute('min', '0')
     expect(screen.getByLabelText('Trend minutes')).toHaveAttribute('placeholder', 'MIN')
     expect(screen.getByLabelText('Trend seconds')).toHaveAttribute('max', '59')
@@ -238,7 +239,7 @@ describe('VitalsControls', () => {
       store.setDraft('hr', 120)
       store.save()
       store.send()
-      store.setVitalTrendTarget('hr', 150)
+      store.setDraft('hr', 150)
       store.setVitalTrendSeconds(30)
       store.save()
       store.send()
@@ -270,17 +271,74 @@ describe('VitalsControls', () => {
     expect(screen.getByLabelText('Trend status')).toHaveTextContent('Complete')
   })
 
+  it('edits a replacement duration during a live countdown and Escape restores it', async () => {
+    const user = userEvent.setup()
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 120)
+      store.save()
+      store.send()
+      store.setDraft('hr', 150)
+      store.setVitalTrendSeconds(30)
+      store.save()
+      store.send()
+    })
+    render(<VitalsControls autoSortText="" />)
+
+    const seconds = screen.getByLabelText('Trend seconds')
+    expect(seconds).toHaveAttribute('readonly')
+    await user.click(seconds)
+    expect(seconds).not.toHaveAttribute('readonly')
+    expect(screen.getByLabelText('Trend status')).toHaveTextContent(
+      'Editing replacement',
+    )
+
+    await user.clear(seconds)
+    await user.type(seconds, '20')
+    expect(useMonitorStore.getState().vitalTrendDraft.durationSeconds).toBe(20)
+    await user.keyboard('{Escape}')
+
+    expect(useMonitorStore.getState().vitalTrendDraft.durationSeconds).toBe(30)
+    expect(seconds).toHaveAttribute('readonly')
+    expect(seconds).toHaveClass('text-pending-amber')
+  })
+
+  it('shows an intentional zero-duration override as white zeroes', () => {
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDraft('hr', 120)
+      store.save()
+      store.send()
+      store.setDraft('hr', 150)
+      store.setVitalTrendSeconds(30)
+      store.save()
+      store.send()
+      store.setVitalTrendSeconds(0)
+      store.save()
+      store.send()
+    })
+    render(<VitalsControls autoSortText="" />)
+
+    const minutes = screen.getByLabelText('Trend minutes')
+    const seconds = screen.getByLabelText('Trend seconds')
+    expect(minutes).toHaveValue(0)
+    expect(seconds).toHaveValue(0)
+    expect(minutes).toHaveClass('text-white')
+    expect(seconds).toHaveClass('text-white')
+    expect(screen.getByLabelText('Trend status')).toHaveTextContent('Immediate')
+  })
+
   it('shows the remaining timer values in red when a Trend is cancelled', () => {
     act(() => {
       const store = useMonitorStore.getState()
       store.setDraft('hr', 120)
       store.save()
       store.send()
-      store.setVitalTrendTarget('hr', 150)
+      store.setDraft('hr', 150)
       store.setVitalTrendSeconds(30)
       store.save()
       store.send()
-      store.setDraft('hr', 80)
+      store.setDraft('rhythm', 'asystole')
       store.save()
       store.send()
     })
@@ -293,7 +351,7 @@ describe('VitalsControls', () => {
     expect(screen.getByLabelText('Trend status')).toHaveTextContent('Cancelled')
   })
 
-  it('locks the FC Trend target when the draft rhythm owns FC', async () => {
+  it('locks the fused FC value when the draft rhythm owns FC', async () => {
     const user = userEvent.setup()
     render(<VitalsControls autoSortText="" />)
 
@@ -301,8 +359,8 @@ describe('VitalsControls', () => {
     await user.click(screen.getByRole('button', { name: 'Cardiac Arrest' }))
     await user.click(screen.getByRole('button', { name: 'Asystole' }))
 
-    expect(screen.getByLabelText('FC trend target')).toBeDisabled()
-    expect(screen.getByLabelText('SpO2 trend target')).toBeEnabled()
+    expect(screen.getByLabelText('FC')).toBeDisabled()
+    expect(screen.getByLabelText('SpO2')).toBeEnabled()
   })
 
   it('renders timed vitals buttons under the ECG control', () => {

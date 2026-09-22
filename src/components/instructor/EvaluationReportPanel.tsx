@@ -136,8 +136,6 @@ function toPlainText(
       if (row.kind === 'instructor') {
         const what = row.opening
           ? openingLabel(row.scenarioTitle)
-          : row.changeKind === 'trend-completion'
-            ? `Trend completed — ${row.changes.join(' · ')}`
           : row.changes.length > 0
             ? row.changes.join(' · ')
             : 'sent (no change)'
@@ -390,12 +388,10 @@ export function EvaluationReportPanel({
                     <span className="shrink-0">▸▸</span>
                   )}
                   <span className="truncate">
-                    {row.changeKind === 'trend-completion' ? 'Trend ' : 'Instructor '}
+                    Instructor{' '}
                     <span className="normal-case tracking-normal text-neutral-400">
                       {row.opening
                         ? openingLabel(row.scenarioTitle)
-                        : row.changeKind === 'trend-completion'
-                          ? `completed${row.changes.length > 0 ? ` — ${row.changes.join(' · ')}` : ''}`
                         : row.changes.length > 0
                           ? row.changes.join(' · ')
                           : 'sent (no change)'}

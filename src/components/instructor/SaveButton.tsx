@@ -11,6 +11,7 @@ import {
 } from '@/store/fieldState'
 import { cn } from '@/lib/utils'
 import {
+  isValidFusedVitalValues,
   isValidVitalTrendConfiguration,
   vitalTrendConfigurationsEqual,
 } from '@/lib/vitalTrend'
@@ -34,6 +35,7 @@ export function SaveButton() {
   const vitalTrendSaved = useMonitorStore((s) => s.vitalTrendSaved)
   const save = useMonitorStore((s) => s.save)
   const disabled =
+    !isValidFusedVitalValues(draft) ||
     !isValidVitalTrendConfiguration(vitalTrendDraft) ||
     (!hasDirty(draft, saved) &&
       !hasVitalActiveDirty(draftVitalActive, savedVitalActive) &&

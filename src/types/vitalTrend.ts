@@ -12,7 +12,7 @@ export type VitalTrendParticipant = {
   target: number
 }
 
-export type VitalTrendStatus = 'running' | 'complete' | 'cancelled'
+export type VitalTrendStatus = 'running' | 'complete' | 'cancelled' | 'immediate'
 
 export type ActiveVitalTrend = {
   id: string

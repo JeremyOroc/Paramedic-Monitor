@@ -72,10 +72,7 @@ export function vitalTrendConfigurationsEqual(
   left: VitalTrendConfiguration,
   right: VitalTrendConfiguration,
 ): boolean {
-  return (
-    left.durationSeconds === right.durationSeconds &&
-    VITAL_TREND_FIELDS.every((field) => left.targets[field] === right.targets[field])
-  )
+  return left.durationSeconds === right.durationSeconds
 }
 
 export function isValidVitalTrendTarget(
@@ -90,13 +87,51 @@ export function isValidVitalTrendTarget(
 export function isValidVitalTrendConfiguration(
   configuration: VitalTrendConfiguration,
 ): boolean {
-  return (
-    Number.isInteger(configuration.durationSeconds) &&
-    configuration.durationSeconds >= 0 &&
-    VITAL_TREND_FIELDS.every((field) =>
-      isValidVitalTrendTarget(field, configuration.targets[field]),
-    )
-  )
+  return Number.isInteger(configuration.durationSeconds) && configuration.durationSeconds >= 0
+}
+
+export function isValidFusedVitalValues(
+  values: Record<NumericVitalField, number>,
+): boolean {
+  return VITAL_TREND_FIELDS.every((field) => {
+    const value = values[field]
+    const range = VITAL_TREND_RANGES[field]
+    return Number.isInteger(value) && value >= range.min && value <= range.max
+  })
+}
+
+export function vitalTrendTargetsFromValues(
+  values: Record<NumericVitalField, number>,
+): VitalTrendTargets {
+  return Object.fromEntries(
+    VITAL_TREND_FIELDS.map((field) => [field, values[field]]),
+  ) as VitalTrendTargets
+}
+
+/**
+ * Scenarios and persisted stores from before ADR 0032 can contain a separate
+ * target column. Fold those targets into the one fused authoring value once,
+ * then retain only the shared duration in the current configuration.
+ */
+export function projectLegacyVitalTrendTargets<
+  T extends Record<NumericVitalField, number>,
+>(values: T, configuration: VitalTrendConfiguration): T {
+  if (configuration.durationSeconds <= 0) return { ...values }
+  const projected = { ...values }
+  for (const field of VITAL_TREND_FIELDS) {
+    const target = configuration.targets[field]
+    if (target !== null) projected[field] = target
+  }
+  return projected
+}
+
+export function fusedVitalTrendConfiguration(
+  configuration: VitalTrendConfiguration,
+): VitalTrendConfiguration {
+  return {
+    targets: { ...EMPTY_VITAL_TREND_TARGETS },
+    durationSeconds: configuration.durationSeconds,
+  }
 }
 
 export function buildVitalTrendParticipants(
@@ -159,7 +194,9 @@ export function normalizeActiveVitalTrend(value: unknown): ActiveVitalTrend | nu
     return null
   }
   const status =
-    value.status === 'complete' || value.status === 'cancelled'
+    value.status === 'complete' ||
+    value.status === 'cancelled' ||
+    value.status === 'immediate'
       ? value.status
       : 'running'
   const participants: ActiveVitalTrend['participants'] = {}

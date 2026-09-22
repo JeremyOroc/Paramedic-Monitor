@@ -861,9 +861,11 @@ describe('AdminPage', () => {
       store.setDraft('hr', 120)
       store.save()
       store.send()
-      store.setVitalTrendTarget('hr', 150)
+      store.setDraft('hr', 150)
+      store.setVitalTrendSeconds(1)
       store.save()
       store.send()
+      store.advanceVitalTrend(useMonitorStore.getState().activeVitalTrend?.endsAt)
     })
 
     render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)

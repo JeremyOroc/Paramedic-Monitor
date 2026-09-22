@@ -73,7 +73,7 @@ describe('scenario snapshots', () => {
     expect(snapshot?.patientPhysical).not.toHaveProperty('activeIconGroup')
   })
 
-  it('persists prepared Trend configuration but excludes active progress', () => {
+  it('projects legacy targets into fused values and excludes active progress', () => {
     const input = {
       ...createEmptyScenarioSnapshot(),
       trend: {
@@ -95,7 +95,21 @@ describe('scenario snapshots', () => {
 
     const snapshot = normalizeScenarioSnapshot(input)
 
-    expect(snapshot?.trend).toEqual(input.trend)
+    expect(snapshot?.monitor.draft).toMatchObject({
+      hr: 150,
+      bp_sys: 90,
+      bp_dia: 60,
+    })
+    expect(snapshot?.trend).toEqual({
+      targets: {
+        hr: null,
+        spo2: null,
+        bp_sys: null,
+        bp_dia: null,
+        etco2: null,
+      },
+      durationSeconds: 30,
+    })
     expect(snapshot).not.toHaveProperty('activeVitalTrend')
   })
 

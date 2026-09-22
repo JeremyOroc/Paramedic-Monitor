@@ -6,6 +6,18 @@
 ---
 
 ## Current Phase
+**Instructor fused vital/Trend authoring — COMPLETE LOCALLY (2026-09-22).** Each numeric vital now
+uses one widened Fused vital input. Blank/zero timer Sends apply staged values immediately; positive
+timer Sends interpolate every changed value from its live Send-time value under one shared deadline.
+Unrelated Sends do not restart progress, running targets remain visible, the countdown supports a
+replacement-edit mode, completion/no-op disarms the timer, and an intentional immediate interruption
+shows white zeroes. Store version 14 migrates legacy separate targets. Off-channel progression,
+independent BP/PNI sampling, reset/power/reload behavior, scenario persistence, ordinary final-vital
+evaluation rows, and consistent VF/VT FC exclusion are covered. Accepted ADR 0033 records the
+single-input tradeoff. All 376 focused tests, TypeScript, ESLint with zero errors and 12 existing
+warnings, the Webpack production build, and rendered 1024×768 panel QA pass. The full suite has 1,581
+passing, one skipped, and the same three unrelated Room-ownership/PatientInfoPanel failures.
+
 **Wagami A full-page Call Info — COMPLETE LOCALLY (2026-09-21).** Reopened Call Info now replaces
 the shell with a viewport-filling, live Assignment dashboard and a slim localized header for Back,
 Patient mode, and active alarms. Response/countdown state, dispatch actions, hospital routing and
@@ -23,7 +35,6 @@ shows a speaker with waves when device audio is on and a crossed speaker when mu
 badge, or state-specific color was added; accessible French/English action names, pressed state,
 audio behavior, alarm indication, and X/Z remain unchanged. Seven focused component tests,
 TypeScript, affected-file ESLint, and rendered landscape Preview inspection of both states pass.
-
 **Wagami A direct PNI-settings entry — COMPLETE LOCALLY (2026-09-20).** The complete
 on-screen PNI card is now the sole localized entry to PNI settings on Wagami A, including while
 PNI is Off or a reading is active. The current reading continues unchanged; edits affect later

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useMonitorStore } from '@/store/monitorStore'
+import type { Rhythm } from '@/types/vitals'
 
 function sendVitals(hr = 120, spo2 = 98) {
   const store = useMonitorStore.getState()
@@ -12,35 +13,32 @@ function sendVitals(hr = 120, spo2 = 98) {
   store.send()
 }
 
-function sendTrend(
-  targets: { hr?: number | null; spo2?: number | null },
-  seconds: number,
-) {
+function sendTrend(values: { hr?: number; spo2?: number }, seconds: number) {
   const store = useMonitorStore.getState()
-  if ('hr' in targets) store.setVitalTrendTarget('hr', targets.hr ?? null)
-  if ('spo2' in targets) store.setVitalTrendTarget('spo2', targets.spo2 ?? null)
+  if (values.hr !== undefined) store.setDraft('hr', values.hr)
+  if (values.spo2 !== undefined) store.setDraft('spo2', values.spo2)
   store.setVitalTrendSeconds(seconds)
   store.save()
   store.send()
 }
 
-describe('monitor store vital Trends', () => {
+describe('monitor store fused vital Trends', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-09-19T12:00:00.000Z'))
     useMonitorStore.getState().reset()
   })
 
-  it('stages targets with Save and starts all populated targets with Send', () => {
+  it('uses staged fused values as shared-duration targets after Save and Send', () => {
     sendVitals()
     const store = useMonitorStore.getState()
-    store.setVitalTrendTarget('hr', 150)
-    store.setVitalTrendTarget('spo2', 90)
+    store.setDraft('hr', 150)
+    store.setDraft('spo2', 90)
     store.setVitalTrendSeconds(30)
 
-    expect(useMonitorStore.getState().activeVitalTrend).toBeNull()
+    expect(useMonitorStore.getState().activeVitalTrend?.status).not.toBe('running')
     store.save()
-    expect(useMonitorStore.getState().activeVitalTrend).toBeNull()
+    expect(useMonitorStore.getState().activeVitalTrend?.status).not.toBe('running')
     store.send()
 
     expect(useMonitorStore.getState().activeVitalTrend).toMatchObject({
@@ -50,9 +48,12 @@ describe('monitor store vital Trends', () => {
         spo2: { start: 98, target: 90 },
       },
     })
+    expect(useMonitorStore.getState().draft.hr).toBe(150)
+    expect(useMonitorStore.getState().confirmed.hr).toBe(120)
+    expect(useMonitorStore.getState().confirmedAuthored.hr).toBe(150)
   })
 
-  it('derives synchronized intermediate values and completes at exact targets', () => {
+  it('derives synchronized values, reaches exact targets, and disarms the duration', () => {
     sendVitals()
     sendTrend({ hr: 150, spo2: 90 }, 30)
 
@@ -63,10 +64,14 @@ describe('monitor store vital Trends', () => {
 
     vi.setSystemTime(new Date('2026-09-19T12:00:30.000Z'))
     useMonitorStore.getState().advanceVitalTrend()
-    expect(useMonitorStore.getState().confirmed.hr).toBe(150)
-    expect(useMonitorStore.getState().confirmed.spo2).toBe(90)
-    expect(useMonitorStore.getState().draft.hr).toBe(150)
-    expect(useMonitorStore.getState().activeVitalTrend).toMatchObject({
+    const state = useMonitorStore.getState()
+    expect(state.confirmed.hr).toBe(150)
+    expect(state.confirmed.spo2).toBe(90)
+    expect(state.draft.hr).toBe(150)
+    expect(state.vitalTrendDraft.durationSeconds).toBe(0)
+    expect(state.vitalTrendSaved.durationSeconds).toBe(0)
+    expect(state.vitalTrendDraftRevision).toBe(state.vitalTrendConsumedRevision)
+    expect(state.activeVitalTrend).toMatchObject({
       status: 'complete',
       completionPublished: false,
     })
@@ -86,62 +91,93 @@ describe('monitor store vital Trends', () => {
     expect(useMonitorStore.getState().activeVitalTrend?.startsAt).toBe(first?.startsAt)
   })
 
-  it('replaces a running Trend from its current intermediate value', () => {
+  it('replaces all applicable participation from current live values', () => {
+    sendVitals()
+    sendTrend({ hr: 150, spo2: 90 }, 30)
+    vi.setSystemTime(new Date('2026-09-19T12:00:10.000Z'))
+    useMonitorStore.getState().advanceVitalTrend()
+
+    sendTrend({ hr: 180 }, 20)
+    expect(useMonitorStore.getState().activeVitalTrend?.participants).toEqual({
+      hr: { start: 130, target: 180 },
+      spo2: { start: 95, target: 90 },
+    })
+  })
+
+  it('can replace only the duration while retaining the authored targets', () => {
     sendVitals()
     sendTrend({ hr: 150 }, 30)
     vi.setSystemTime(new Date('2026-09-19T12:00:10.000Z'))
     useMonitorStore.getState().advanceVitalTrend()
 
-    sendTrend({ hr: 180 }, 20)
+    const store = useMonitorStore.getState()
+    store.setVitalTrendSeconds(20)
+    store.save()
+    store.send()
+
     expect(useMonitorStore.getState().activeVitalTrend?.participants.hr).toEqual({
       start: 130,
-      target: 180,
+      target: 150,
     })
   })
 
-  it('a direct sent value cancels only that vital while others continue', () => {
+  it('a zero-duration Send applies every staged value immediately and ends the Trend', () => {
     sendVitals()
     sendTrend({ hr: 150, spo2: 90 }, 30)
     vi.setSystemTime(new Date('2026-09-19T12:00:10.000Z'))
     useMonitorStore.getState().advanceVitalTrend()
 
-    useMonitorStore.getState().setDraft('hr', 80)
-    useMonitorStore.getState().save()
-    useMonitorStore.getState().send()
+    const store = useMonitorStore.getState()
+    store.setDraft('hr', 80)
+    store.setVitalTrendSeconds(0)
+    store.save()
+    store.send()
 
     expect(useMonitorStore.getState().confirmed.hr).toBe(80)
-    expect(useMonitorStore.getState().activeVitalTrend?.participants.hr).toBeUndefined()
-    expect(useMonitorStore.getState().activeVitalTrend?.participants.spo2).toBeDefined()
-  })
-
-  it('Automatic FC lock cancels FC participation without pausing other vitals', () => {
-    sendVitals()
-    sendTrend({ hr: 150, spo2: 90 }, 30)
-    vi.setSystemTime(new Date('2026-09-19T12:00:10.000Z'))
-    useMonitorStore.getState().advanceVitalTrend()
-
-    useMonitorStore.getState().setDraft('rhythm', 'asystole')
-    useMonitorStore.getState().save()
-    useMonitorStore.getState().send()
-
-    expect(useMonitorStore.getState().confirmed.hr).toBe(0)
-    expect(useMonitorStore.getState().activeVitalTrend?.participants.hr).toBeUndefined()
-    expect(useMonitorStore.getState().activeVitalTrend?.participants.spo2).toBeDefined()
-
-    useMonitorStore.getState().setDraft('rhythm', 'nsr')
-    expect(useMonitorStore.getState().draft.hr).toBe(130)
-  })
-
-  it('applies zero-duration targets immediately and leaves a completion to publish', () => {
-    sendVitals()
-    sendTrend({ hr: 150 }, 0)
-
-    expect(useMonitorStore.getState().confirmed.hr).toBe(150)
-    expect(useMonitorStore.getState().draft.hr).toBe(150)
+    expect(useMonitorStore.getState().confirmed.spo2).toBe(90)
     expect(useMonitorStore.getState().activeVitalTrend).toMatchObject({
-      status: 'complete',
-      completionPublished: false,
+      status: 'immediate',
+      participants: {},
+      completionPublished: true,
     })
+  })
+
+  it.each<Rhythm>(['vf', 'vt'])(
+    '%s excludes FC without restarting other participation',
+    (rhythm) => {
+      sendVitals()
+      sendTrend({ hr: 150, spo2: 90 }, 30)
+      vi.setSystemTime(new Date('2026-09-19T12:00:10.000Z'))
+      useMonitorStore.getState().advanceVitalTrend()
+      const originalId = useMonitorStore.getState().activeVitalTrend?.id
+
+      useMonitorStore.getState().setDraft('rhythm', rhythm)
+      useMonitorStore.getState().save()
+      useMonitorStore.getState().send()
+
+      const state = useMonitorStore.getState()
+      expect(state.activeVitalTrend?.id).toBe(originalId)
+      expect(state.activeVitalTrend?.participants.hr).toBeUndefined()
+      expect(state.activeVitalTrend?.participants.spo2).toBeDefined()
+      expect(state.confirmed.hr).toBe(rhythm === 'vf' ? 190 : 220)
+
+      useMonitorStore.getState().setDraft('rhythm', 'nsr')
+      expect(useMonitorStore.getState().draft.hr).toBe(130)
+    },
+  )
+
+  it('consumes and disarms a positive no-op without starting a countdown', () => {
+    sendVitals()
+    const store = useMonitorStore.getState()
+    store.setVitalTrendSeconds(30)
+    store.save()
+    store.send()
+
+    const state = useMonitorStore.getState()
+    expect(state.activeVitalTrend).toBeNull()
+    expect(state.vitalTrendDraft.durationSeconds).toBe(0)
+    expect(state.vitalTrendSaved.durationSeconds).toBe(0)
+    expect(state.vitalTrendSavedRevision).toBe(state.vitalTrendConsumedRevision)
   })
 
   it('shares timestamps so a receiving monitor catches up without interval writes', () => {
@@ -166,6 +202,6 @@ describe('monitor store vital Trends', () => {
     useMonitorStore.getState().resetMonitorVitals()
 
     expect(useMonitorStore.getState().activeVitalTrend).toBeNull()
-    expect(useMonitorStore.getState().vitalTrendDraft.targets.hr).toBeNull()
+    expect(useMonitorStore.getState().vitalTrendDraft.durationSeconds).toBe(0)
   })
 })
