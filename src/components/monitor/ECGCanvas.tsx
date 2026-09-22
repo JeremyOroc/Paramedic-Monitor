@@ -9,6 +9,7 @@ import {
 } from '@/lib/ecg/rhythms'
 import { useWaveformRenderer } from '@/hooks/useWaveformRenderer'
 import { getTorsadesPacketDurationMs } from '@/lib/automaticHeartRate'
+import type { BeatClock } from '@/lib/ecg/beatClock'
 import { COLORS, WAGAMI_A_COLORS } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { Rhythm } from '@/types/vitals'
@@ -23,6 +24,8 @@ type ECGCanvasProps = {
   occluded?: boolean
   onReady?: () => void
   palette?: 'wagamiX' | 'wagamiA'
+  beatClock?: BeatClock
+  readyOnStart?: boolean
 }
 
 function LiveECGCanvas({
@@ -33,6 +36,8 @@ function LiveECGCanvas({
   occluded = false,
   onReady,
   palette = 'wagamiX',
+  beatClock,
+  readyOnStart = false,
 }: Omit<ECGCanvasProps, 'connected'>) {
   const color = palette === 'wagamiA' ? WAGAMI_A_COLORS.ecg : COLORS.ecgGreen
   const canvasRef = useWaveformRenderer(
@@ -43,7 +48,7 @@ function LiveECGCanvas({
       sweepMs: ECG_SWEEP_MS,
       synchronizeSweep: true,
       ampJitter: 0.05,
-      cycleJitter: 0.03,
+      cycleJitter: palette === 'wagamiA' ? 0 : 0.03,
       getWaveform: () =>
         get().cprOverride ? CPR_COMPRESSION_WAVEFORM : getEcgRhythm(get().rhythm),
       getSignalKey: () => (get().cprOverride ? 'cpr-compression' : get().rhythm),
@@ -52,8 +57,10 @@ function LiveECGCanvas({
         if (get().rhythm === 'torsades') return getTorsadesPacketDurationMs(get().hr)
         return ECG_RHYTHMS[get().rhythm].cycleMs ?? 60000 / Math.max(20, get().hr)
       },
+      getPhaseAt: beatClock ? (nowMs, cycleMs) => beatClock.phase(nowMs, cycleMs) : undefined,
+      readyOnStart,
     }),
-    [color],
+    [color, beatClock, palette === 'wagamiA' ? cprOverride : false],
     { occluded, onReady },
   )
 
@@ -79,6 +86,8 @@ export function ECGCanvas({
   occluded = false,
   onReady,
   palette = 'wagamiX',
+  beatClock,
+  readyOnStart = false,
 }: ECGCanvasProps) {
   if (!connected && !cprOverride) {
     if (palette === 'wagamiA') {
@@ -106,6 +115,8 @@ export function ECGCanvas({
       occluded={occluded}
       onReady={onReady}
       palette={palette}
+      beatClock={cprOverride ? undefined : beatClock}
+      readyOnStart={readyOnStart}
     />
   )
 }

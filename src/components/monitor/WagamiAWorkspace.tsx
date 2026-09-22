@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { TwelveLeadPrintout } from '@/components/monitor/TwelveLeadPrintout'
@@ -13,6 +13,8 @@ import { getWagamiAText } from '@/lib/wagamiALocalization'
 import { ALL_MEDICATIONS } from '@/lib/monitor/medications'
 import { isWagamiACallInfoBlocked } from '@/lib/wagamiACallInfo'
 import { TWELVE_LEAD_TRANSMISSION_DESTINATIONS } from '@/lib/twelveLeadTransmission'
+import { createBeatClock } from '@/lib/ecg/beatClock'
+import { cn } from '@/lib/utils'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
 import { NIBP_AUTO_INTERVALS } from '@/types/nibp'
 import type { WagamiALocale } from '@/types/wagamiA'
@@ -37,6 +39,7 @@ type WagamiAWorkspaceProps = {
   onEnergyUp: () => void
   selectedAction?: string | null
   readOnly?: boolean
+  onMonitorReady?: () => void
 }
 
 type ViewFrameProps = {
@@ -79,84 +82,54 @@ export function WagamiAWorkspace({
   onEnergyUp,
   selectedAction,
   readOnly = false,
+  onMonitorReady,
 }: WagamiAWorkspaceProps) {
   const text = getWagamiAText(controller.preferences.locale)
   const [eventPage, setEventPage] = useState(1)
   const [vitalPage, setVitalPage] = useState(1)
   const clinicalStatus = { patientMode, alarms: display.alarms, locale: controller.preferences.locale }
   const callInfoBlocked = isWagamiACallInfoBlocked(defibState)
+  const [beatClock] = useState(() => createBeatClock(Date.now()))
+  const signalKey = `${display.vitals.rhythm}:${display.active.hr ? 'on' : 'off'}`
+  const priorSignalKey = useRef(signalKey)
+  useLayoutEffect(() => {
+    if (priorSignalKey.current === signalKey) return
+    priorSignalKey.current = signalKey
+    beatClock.reset(Date.now())
+  }, [beatClock, signalKey])
 
-  if (controller.view === 'callInfo') return null
+  const [surfaceState, setSurfaceState] = useState(() => ({
+    target: controller.view,
+    revealed: controller.view,
+    twelveLeadMounted: controller.view === 'twelveLead',
+  }))
+  const target = controller.view
+  const currentSurfaceState = surfaceState.target === target
+    ? surfaceState
+    : {
+        target,
+        revealed: target === 'monitor' || target === 'twelveLead' ? surfaceState.revealed : target,
+        twelveLeadMounted: surfaceState.twelveLeadMounted || target === 'twelveLead',
+      }
+  if (surfaceState.target !== target) setSurfaceState(currentSurfaceState)
+  const revealed = currentSurfaceState.revealed
+  const pageView = revealed === 'monitor' || revealed === 'twelveLead' ? target : revealed
+  const monitorOccluded = revealed !== 'monitor' && target !== 'monitor'
+  const twelveLeadCovered = controller.twelveLead.captureState !== 'idle' || controller.twelveLead.printOpen || controller.twelveLead.transmissionOpen
+  const twelveLeadOccluded = (revealed !== 'twelveLead' && target !== 'twelveLead') || (revealed === 'twelveLead' && twelveLeadCovered)
+  const revealMonitor = useCallback(() => {
+    if (target !== 'monitor') return
+    setSurfaceState((current) => current.revealed === 'monitor' ? current : { ...current, revealed: 'monitor' })
+    onMonitorReady?.()
+  }, [onMonitorReady, target])
+  const revealTwelveLead = useCallback(() => {
+    if (target !== 'twelveLead') return
+    setSurfaceState((current) => current.revealed === 'twelveLead' ? current : { ...current, revealed: 'twelveLead' })
+  }, [target])
 
-  if (controller.view === 'monitor') {
-    return (
-      <WagamiAScreen
-        display={display}
-        energy={energy}
-        defibState={defibState}
-        chargeProgress={chargeProgress}
-        chargeOrigin={chargeOrigin}
-        cprTime={cprTime}
-        cprOverride={cprOverride}
-        nibpPhase={nibpPhase}
-        nibpDisplayValue={nibpDisplayValue}
-        patientMode={patientMode}
-        selectedAction={selectedAction}
-        canAdjustEnergy={canAdjustEnergy}
-        onTask={(task) => {
-          if (task === 'callInfo' && callInfoBlocked) return
-          controller.openTask(task)
-        }}
-        onEnergyDown={onEnergyDown}
-        onEnergyUp={onEnergyUp}
-        onOpenNibpSettings={readOnly ? undefined : () => controller.setView('nibpSettings')}
-        locale={controller.preferences.locale}
-        callInfoDisabled={callInfoBlocked}
-      />
-    )
-  }
+  let content: React.ReactNode = null
 
-  let content: React.ReactNode
-
-  if (controller.view === 'twelveLead') {
-    const capture = controller.twelveLead.lastCapture
-    content = (
-      <ViewFrame title={text.twelveLeadTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
-        <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_clamp(52px,6cqw,80px)]">
-          <div className="relative min-h-0">
-            <TwelveLeadPage rhythm={display.vitals.rhythm} hr={display.vitals.hr} />
-            {controller.twelveLead.captureState === 'acquiring' ? (
-              <div role="status" className="absolute inset-0 grid place-items-center bg-wagami-a-screen/90 font-sans text-xl font-bold text-wagami-a-pni">{text.acquiring}</div>
-            ) : null}
-            {controller.twelveLead.captureState === 'result' && capture ? (
-              <div className="absolute inset-0"><TwelveLeadPrintout rhythm={capture.rhythm} hr={capture.hr} /></div>
-            ) : null}
-            {controller.twelveLead.printOpen && capture ? (
-              <div className="absolute inset-0"><TwelveLeadPrintout rhythm={capture.rhythm} hr={capture.hr} /></div>
-            ) : null}
-            {controller.twelveLead.transmissionOpen ? (
-              <div role="dialog" aria-label={text.transmissionTitle} className="absolute inset-0 grid content-center gap-2 bg-wagami-a-screen/95 p-5">
-                <h2 className="font-sans text-lg font-semibold">{text.transmissionTitle}</h2>
-                <div className="grid grid-cols-2 gap-2">
-                  {TWELVE_LEAD_TRANSMISSION_DESTINATIONS.map((destination) => (
-                    <button key={destination} type="button" disabled={controller.twelveLead.sentUntil !== null} onClick={() => controller.sendTwelveLead(destination)} className="min-h-[44px] rounded border border-wagami-a-border bg-wagami-a-surface px-2 text-left text-xs font-semibold hover:bg-wagami-a-surface-raised focus-visible:outline-2 focus-visible:outline-wagami-a-pni disabled:opacity-50">{destination}</button>
-                  ))}
-                </div>
-                {controller.twelveLead.sentDestination ? <p role="status" className="text-center font-bold text-wagami-a-ecg">{text.sent} · {controller.twelveLead.sentDestination}</p> : null}
-                <button type="button" disabled={controller.twelveLead.sentUntil !== null} onClick={controller.closeTwelveLeadOverlay} className="min-h-[44px] rounded border border-wagami-a-border bg-wagami-a-surface-raised px-3 font-semibold disabled:opacity-50">{text.close}</button>
-              </div>
-            ) : null}
-          </div>
-          <div className="grid grid-cols-4 gap-2 border-t border-wagami-a-border bg-wagami-a-surface p-2">
-            <button type="button" disabled={controller.twelveLead.captureState === 'acquiring' || controller.twelveLead.sentUntil !== null} onClick={controller.twelveLead.captureState === 'result' ? controller.closeTwelveLeadResult : controller.startTwelveLeadCapture} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold disabled:opacity-50">{controller.twelveLead.captureState === 'result' ? text.close : text.capture}</button>
-            <button type="button" disabled={!capture || controller.workflowBusy} onClick={controller.openPrint} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold disabled:opacity-50">{text.print}</button>
-            <button type="button" disabled={!capture || controller.workflowBusy} onClick={controller.openTransmission} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold disabled:opacity-50">{text.transmit}</button>
-            <button type="button" disabled={!controller.twelveLead.printOpen} onClick={controller.closeTwelveLeadOverlay} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold disabled:opacity-50">{text.close}</button>
-          </div>
-        </div>
-      </ViewFrame>
-    )
-  } else if (controller.view === 'etco2') {
+  if (pageView === 'etco2') {
     const status = controller.etco2Status === 'idle' ? text.etco2Idle : controller.etco2Status === 'calibrating' ? text.etco2Calibrating : text.etco2Calibrated
     content = (
       <ViewFrame title={text.etco2Title} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
@@ -170,7 +143,7 @@ export function WagamiAWorkspace({
         </div>
       </ViewFrame>
     )
-  } else if (controller.view === 'medications') {
+  } else if (pageView === 'medications') {
     content = (
       <ViewFrame title={text.medicationsTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_56px] gap-2 p-3">
@@ -181,7 +154,7 @@ export function WagamiAWorkspace({
         </div>
       </ViewFrame>
     )
-  } else if (controller.view === 'medicationLog') {
+  } else if (pageView === 'medicationLog') {
     const totalPages = Math.max(1, Math.ceil(controller.medicationEvents.length / PAGE_SIZE))
     const page = Math.min(eventPage, totalPages)
     const entries = controller.medicationEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -193,7 +166,7 @@ export function WagamiAWorkspace({
         </div>
       </ViewFrame>
     )
-  } else if (controller.view === 'vitalLog') {
+  } else if (pageView === 'vitalLog') {
     const totalPages = Math.max(1, Math.ceil(controller.vitalLog.length / PAGE_SIZE))
     const page = Math.min(vitalPage, totalPages)
     const entries = controller.vitalLog.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -209,7 +182,7 @@ export function WagamiAWorkspace({
         </div>
       </ViewFrame>
     )
-  } else if (controller.view === 'configure') {
+  } else if (pageView === 'configure') {
     content = (
       <ViewFrame title={text.configureTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full content-center gap-3 p-6">
@@ -219,7 +192,7 @@ export function WagamiAWorkspace({
         </div>
       </ViewFrame>
     )
-  } else if (controller.view === 'nibpSettings') {
+  } else if (pageView === 'nibpSettings') {
     content = (
       <ViewFrame title={text.pniTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full content-center gap-4 p-8">
@@ -230,7 +203,87 @@ export function WagamiAWorkspace({
     )
   }
 
-  return <div className="relative h-full w-full">{content}</div>
+  const capture = controller.twelveLead.lastCapture
+
+  return (
+    <div className="relative h-full w-full overflow-hidden">
+      <div
+        data-testid="wagami-a-live-layer"
+        aria-hidden={revealed !== 'monitor' ? true : undefined}
+        className={cn('absolute inset-0', revealed !== 'monitor' && 'invisible pointer-events-none')}
+      >
+        <WagamiAScreen
+          display={display}
+          energy={energy}
+          defibState={defibState}
+          chargeProgress={chargeProgress}
+          chargeOrigin={chargeOrigin}
+          cprTime={cprTime}
+          cprOverride={cprOverride}
+          nibpPhase={nibpPhase}
+          nibpDisplayValue={nibpDisplayValue}
+          patientMode={patientMode}
+          selectedAction={selectedAction}
+          canAdjustEnergy={canAdjustEnergy}
+          onTask={(task) => {
+            if (task === 'callInfo' && callInfoBlocked) return
+            controller.openTask(task)
+          }}
+          onEnergyDown={onEnergyDown}
+          onEnergyUp={onEnergyUp}
+          onOpenNibpSettings={readOnly ? undefined : () => controller.setView('nibpSettings')}
+          locale={controller.preferences.locale}
+          callInfoDisabled={callInfoBlocked}
+          waveformOccluded={monitorOccluded}
+          onWaveformsReady={revealMonitor}
+          beatClock={beatClock}
+        />
+      </div>
+      {currentSurfaceState.twelveLeadMounted ? (
+        <div
+          data-testid="wagami-a-twelve-lead-layer"
+          aria-hidden={revealed !== 'twelveLead' ? true : undefined}
+          className={cn('absolute inset-0 z-10', revealed !== 'twelveLead' && 'invisible pointer-events-none')}
+        >
+          <ViewFrame title={text.twelveLeadTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
+            <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_clamp(52px,6cqw,80px)]">
+              <div className="relative min-h-0">
+                <TwelveLeadPage rhythm={display.vitals.rhythm} hr={display.vitals.hr} occluded={twelveLeadOccluded} onReady={revealTwelveLead} beatClock={beatClock} readyOnStart />
+                {controller.twelveLead.captureState === 'acquiring' ? (
+                  <div role="status" className="absolute inset-0 grid place-items-center bg-wagami-a-screen/90 font-sans text-xl font-bold text-wagami-a-pni">{text.acquiring}</div>
+                ) : null}
+                {controller.twelveLead.captureState === 'result' && capture ? (
+                  <div className="absolute inset-0"><TwelveLeadPrintout rhythm={capture.rhythm} hr={capture.hr} /></div>
+                ) : null}
+                {controller.twelveLead.printOpen && capture ? (
+                  <div className="absolute inset-0"><TwelveLeadPrintout rhythm={capture.rhythm} hr={capture.hr} /></div>
+                ) : null}
+                {controller.twelveLead.transmissionOpen ? (
+                  <div role="dialog" aria-label={text.transmissionTitle} className="absolute inset-0 grid content-center gap-2 bg-wagami-a-screen/95 p-5">
+                    <h2 className="font-sans text-lg font-semibold">{text.transmissionTitle}</h2>
+                    <div className="grid grid-cols-2 gap-2">
+                      {TWELVE_LEAD_TRANSMISSION_DESTINATIONS.map((destination) => (
+                        <button key={destination} type="button" disabled={controller.twelveLead.sentUntil !== null} onClick={() => controller.sendTwelveLead(destination)} className="min-h-[44px] rounded border border-wagami-a-border bg-wagami-a-surface px-2 text-left text-xs font-semibold hover:bg-wagami-a-surface-raised focus-visible:outline-2 focus-visible:outline-wagami-a-pni disabled:opacity-50">{destination}</button>
+                      ))}
+                    </div>
+                    {controller.twelveLead.sentDestination ? <p role="status" className="text-center font-bold text-wagami-a-ecg">{text.sent} · {controller.twelveLead.sentDestination}</p> : null}
+                    <button type="button" disabled={controller.twelveLead.sentUntil !== null} onClick={controller.closeTwelveLeadOverlay} className="min-h-[44px] rounded border border-wagami-a-border bg-wagami-a-surface-raised px-3 font-semibold disabled:opacity-50">{text.close}</button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="grid grid-cols-4 gap-2 border-t border-wagami-a-border bg-wagami-a-surface p-2">
+                <button type="button" disabled={controller.twelveLead.captureState === 'acquiring' || controller.twelveLead.sentUntil !== null} onClick={controller.twelveLead.captureState === 'result' ? controller.closeTwelveLeadResult : controller.startTwelveLeadCapture} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold disabled:opacity-50">{controller.twelveLead.captureState === 'result' ? text.close : text.capture}</button>
+                <button type="button" disabled={!capture || controller.workflowBusy} onClick={controller.openPrint} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold disabled:opacity-50">{text.print}</button>
+                <button type="button" disabled={!capture || controller.workflowBusy} onClick={controller.openTransmission} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold disabled:opacity-50">{text.transmit}</button>
+                <button type="button" disabled={!controller.twelveLead.printOpen} onClick={controller.closeTwelveLeadOverlay} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold disabled:opacity-50">{text.close}</button>
+              </div>
+            </div>
+          </ViewFrame>
+        </div>
+      ) : null}
+      {content ? <div className="absolute inset-0 z-20">{content}</div> : null}
+    </div>
+  )
 }
 
 function Toggle({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {

@@ -28,6 +28,8 @@ import { WagamiAWorkspace } from '@/components/monitor/WagamiAWorkspace'
 import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { useCPRTimer } from '@/hooks/useCPRTimer'
+import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
+import { cn } from '@/lib/utils'
 import type { MonitorProjection } from '@/types/monitorProjection'
 import type { WagamiAWorkspaceController } from '@/hooks/useWagamiAWorkspace'
 
@@ -71,6 +73,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
   const defibProgress = useProjectedDefibProgress(defib)
   const wagamiAChargeProgress = defib.state === 'charged' ? 1 : defib.state === 'charging' ? defibProgress : 0
   const cprTimer = useCPRTimer(defib.state === 'cpr' ? defib.cprStartTime : null)
+  const { showCallInfo: showWagamiACallInfo, onMonitorReady: onWagamiAMonitorReady } = useWagamiACallInfoCover(projection.model === 'wagamiA' ? projection.wagamiA?.view ?? 'monitor' : 'monitor')
   if (projection.model === 'wagamiA' && projection.surface === 'dispatch') {
     return (
       <CallerInfoModal
@@ -157,38 +160,9 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
       alarms: projection.alarms,
       simulated: false,
     }
-    if (state.view === 'callInfo') {
-      return (
-        <div className="h-full w-full overflow-hidden bg-wagami-a-screen">
-          <WagamiACallInfoPage
-            locale={state.preferences.locale}
-            patientMode={state.patientMode}
-            alarms={projection.alarms}
-            callerInfo={{
-              info: projection.callerInfo,
-              onCallerEvent: noop,
-              buttonState: {
-                acknowledge: { disabled: true },
-                arrival: { disabled: true },
-                transport: { disabled: true },
-              },
-              showCountdown: projection.dispatch.countdownLocked,
-              countdownFormatted: projection.countdownFormatted,
-              responseFormatted: projection.responseTimer,
-              variant: projection.callerInfoVariant,
-              onEnterMonitor: noop,
-              canEnterMonitor: false,
-              route: projection.dispatchRoute,
-              hospitalMap: projection.hospitalMap,
-              transported: projection.dispatch.transportedAt !== null,
-              mapReadOnly: true,
-            }}
-          />
-        </div>
-      )
-    }
     return (
-      <div className="grid h-full w-full place-items-center overflow-hidden bg-wagami-a-screen">
+      <div className="relative grid h-full w-full place-items-center overflow-hidden bg-wagami-a-screen">
+        <div aria-hidden={showWagamiACallInfo ? true : undefined} className={cn(showWagamiACallInfo && 'invisible pointer-events-none')}>
         <WagamiADevice
           display={display}
           energy={defib.energy}
@@ -233,9 +207,39 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
               canAdjustEnergy={defib.canAdjustEnergy}
               onEnergyDown={noop}
               onEnergyUp={noop}
+              onMonitorReady={onWagamiAMonitorReady}
             />
           }
         />
+        </div>
+        {showWagamiACallInfo ? (
+          <div className="absolute inset-0 z-30 h-full w-full">
+            <WagamiACallInfoPage
+              locale={state.preferences.locale}
+              patientMode={state.patientMode}
+              alarms={projection.alarms}
+              callerInfo={{
+                info: projection.callerInfo,
+                onCallerEvent: noop,
+                buttonState: {
+                  acknowledge: { disabled: true },
+                  arrival: { disabled: true },
+                  transport: { disabled: true },
+                },
+                showCountdown: projection.dispatch.countdownLocked,
+                countdownFormatted: projection.countdownFormatted,
+                responseFormatted: projection.responseTimer,
+                variant: projection.callerInfoVariant,
+                onEnterMonitor: noop,
+                canEnterMonitor: false,
+                route: projection.dispatchRoute,
+                hospitalMap: projection.hospitalMap,
+                transported: projection.dispatch.transportedAt !== null,
+                mapReadOnly: true,
+              }}
+            />
+          </div>
+        ) : null}
       </div>
     )
   }

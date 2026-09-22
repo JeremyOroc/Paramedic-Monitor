@@ -1,14 +1,14 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { DEFAULT_VITALS } from '@/types/vitals'
 import { WagamiAWaveformWorkspace } from '../WagamiAWaveformWorkspace'
 
 vi.mock('../ECGCanvas', () => ({
-  ECGCanvas: ({ palette, rhythm, connected, cprOverride }: { palette: string; rhythm: string; connected: boolean; cprOverride: boolean }) => <div data-testid="a-ecg-mock" data-palette={palette} data-rhythm={rhythm} data-connected={String(connected)} data-cpr-override={String(cprOverride)} />,
+  ECGCanvas: ({ palette, rhythm, connected, cprOverride, onReady, readyOnStart }: { palette: string; rhythm: string; connected: boolean; cprOverride: boolean; onReady?: () => void; readyOnStart?: boolean }) => <div data-testid="a-ecg-mock" data-palette={palette} data-rhythm={rhythm} data-connected={String(connected)} data-cpr-override={String(cprOverride)} data-ready-on-start={String(readyOnStart)}><button type="button" onClick={onReady}>ECG ready</button></div>,
 }))
 vi.mock('../SecondaryChannel', () => ({
-  SecondaryChannel: ({ channel, palette, connected }: { channel: string; palette: string; connected: boolean }) => <div data-testid={`a-${channel}-mock`} data-palette={palette} data-connected={String(connected)} />,
+  SecondaryChannel: ({ channel, palette, connected, onReady, readyOnStart }: { channel: string; palette: string; connected: boolean; onReady?: () => void; readyOnStart?: boolean }) => <div data-testid={`a-${channel}-mock`} data-palette={palette} data-connected={String(connected)} data-ready-on-start={String(readyOnStart)}><button type="button" onClick={onReady}>{channel} ready</button></div>,
 }))
 
 const vitals = { ...DEFAULT_VITALS }
@@ -48,5 +48,34 @@ describe('Wagami A live waveform workspace', () => {
     render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={['bp', 'hr', 'spo2']} patientMode="neonate" locale="en" />)
 
     expect(screen.getByRole('status')).toHaveTextContent('MODE NEONATAL · ALARM · HR / SpO₂ / NIBP')
+  })
+
+  it('waits for every connected channel before revealing each reconstructed sweep', () => {
+    const onReady = vi.fn()
+    const { rerender } = render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={[]} onReady={onReady} />)
+
+    expect(screen.getByTestId('a-ecg-mock')).toHaveAttribute('data-ready-on-start', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'ECG ready' }))
+    fireEvent.click(screen.getByRole('button', { name: 'spo2 ready' }))
+    expect(onReady).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'etco2 ready' }))
+    expect(onReady).toHaveBeenCalledTimes(1)
+
+    rerender(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={[]} occluded onReady={onReady} />)
+    rerender(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={[]} onReady={onReady} />)
+    fireEvent.click(screen.getByRole('button', { name: 'ECG ready' }))
+    fireEvent.click(screen.getByRole('button', { name: 'spo2 ready' }))
+    expect(onReady).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'etco2 ready' }))
+    expect(onReady).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not wait for a disconnected channel', () => {
+    const onReady = vi.fn()
+    render(<WagamiAWaveformWorkspace vitals={vitals} active={{ ...active, spo2: false }} alarms={[]} onReady={onReady} />)
+    fireEvent.click(screen.getByRole('button', { name: 'ECG ready' }))
+    expect(onReady).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'etco2 ready' }))
+    expect(onReady).toHaveBeenCalledTimes(1)
   })
 })

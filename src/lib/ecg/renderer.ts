@@ -21,8 +21,12 @@ export type RendererOptions = {
   ampJitter?: number
   /** Fraction (0..1) — cycleMs varies by ±cycleJitter each cycle wrap. */
   cycleJitter?: number
+  /** Optional shared patient-time cardiac phase for related canvases. */
+  getPhaseAt?: (nowWallMs: number, cycleMs: number) => number
   /** Starts with canvas drawing suspended while patient and sweep time continue. */
   initiallyOccluded?: boolean
+  /** Reconstruct and report readiness before the first reveal. */
+  readyOnStart?: boolean
   /** Runs after an occluded or suspended canvas has rebuilt its current visible sweep. */
   onReady?: () => void
 }
@@ -66,7 +70,9 @@ export function startRenderer(opts: RendererOptions): RendererController {
     fillAlpha = 0.7,
     ampJitter = 0,
     cycleJitter = 0,
+    getPhaseAt,
     initiallyOccluded = false,
+    readyOnStart = false,
     onReady,
   } = opts
 
@@ -79,6 +85,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
       noopOccluded = nextOccluded
       if (restoring) onReady?.()
     }
+    if (readyOnStart && !initiallyOccluded) onReady?.()
     return noop
   }
 
@@ -201,6 +208,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     cycleMul = 1 + (Math.random() - 0.5) * 2 * cycleJitter
   }
   rollJitter()
+  if (getPhaseAt) phase = getPhaseAt(Date.now(), getCycleMs())
 
   const sampleAt = (p: number): number => {
     const data = activeWaveform.data
@@ -225,7 +233,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
 
     activeSignalKey = nextSignalKey
     activeWaveform = getWaveform()
-    phase = 0
+    phase = getPhaseAt?.(Date.now(), getCycleMs()) ?? 0
     rollJitter()
     prevY = yFromValue(sampleAt(0))
     return true
@@ -233,10 +241,13 @@ export function startRenderer(opts: RendererOptions): RendererController {
 
   const advancePhase = (elapsedMs: number) => {
     const cycleMs = Math.max(60, getCycleMs() * cycleMul)
-    const nextPhase = phase + Math.max(0, elapsedMs) / cycleMs
+    const nextPhase = getPhaseAt
+      ? getPhaseAt(Date.now(), cycleMs)
+      : phase + Math.max(0, elapsedMs) / cycleMs
+    const wrapped = getPhaseAt ? nextPhase < phase : nextPhase >= 1
     phase = nextPhase % 1
 
-    if (nextPhase >= 1) {
+    if (wrapped) {
       activeWaveform = getWaveform()
       rollJitter()
     }
@@ -389,7 +400,10 @@ export function startRenderer(opts: RendererOptions): RendererController {
     const cycleMs = Math.max(60, getCycleMs() * cycleMul)
     const dPhase = dt / cycleMs
 
-    const nextPhase = phase + dPhase
+    const previousPhase = phase
+    const nextPhase = getPhaseAt
+      ? getPhaseAt(nowWall, cycleMs)
+      : phase + dPhase
     let nextX: number
     let wrapped: boolean
     if (synchronizeSweep) {
@@ -433,7 +447,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     prevY = y
     phase = nextPhase % 1
 
-    if (nextPhase >= 1) {
+    if (getPhaseAt ? nextPhase < previousPhase : nextPhase >= 1) {
       activeWaveform = getWaveform()
       rollJitter()
     }
@@ -473,6 +487,10 @@ export function startRenderer(opts: RendererOptions): RendererController {
   document.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('pagehide', handlePageHide)
   window.addEventListener('pageshow', handlePageShow)
+
+  if (readyOnStart && !initiallyOccluded && hiddenAtWall === null) {
+    rebaseAfterSuspension(performance.now(), 0, true)
+  }
 
   if (hiddenAtWall === null) {
     rafId = requestAnimationFrame((t) => {

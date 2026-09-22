@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import type { MonitorProjection } from '@/types/monitorProjection'
@@ -42,14 +42,19 @@ describe('SpectatorMonitor A2 model boundary', () => {
       },
     } as unknown as MonitorProjection
 
-    render(<SpectatorMonitor projection={projection} embedded />)
+    const { rerender } = render(<SpectatorMonitor projection={projection} embedded />)
 
     expect(screen.getByTestId('wagami-a-call-info-page')).toBeInTheDocument()
-    expect(screen.queryByTestId('wagami-a-shell')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-shell').parentElement).toHaveClass('invisible')
+    const ecg = screen.getByTestId('live-ecg-canvas')
     expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
-    expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE · ALARME · FC')
+    expect(within(screen.getByTestId('wagami-a-call-info-page')).getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE · ALARME · FC')
     expect(screen.getByRole('button', { name: /Retour/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Transport' })).toBeDisabled()
+
+    rerender(<SpectatorMonitor projection={{ ...projection, wagamiA: { ...projection.wagamiA!, view: 'monitor' } }} embedded />)
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
+    expect(screen.getByTestId('wagami-a-shell').parentElement).not.toHaveClass('invisible')
   })
 
   it('keeps the initial Wagami A dispatch gate shell-free in Spectator', () => {

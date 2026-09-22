@@ -52,10 +52,12 @@ import { useReceivingHospitalRouting } from '@/hooks/useReceivingHospitalRouting
 import { useMonitorViewportLock } from '@/hooks/useMonitorViewportLock'
 import { useWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
 import { useWagamiAWorkspaceWithPreferences } from '@/hooks/useWagamiAWorkspace'
+import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
 import { useVitalTrendClock } from '@/hooks/useVitalTrendClock'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
 import { useStoreHydration } from '@/hooks/useStoreHydration'
+import { cn } from '@/lib/utils'
 import {
   playCprMetronome,
   playCallerInfoAlert,
@@ -518,6 +520,7 @@ export function MonitorPage({
     onStudentEvent,
     preferenceState: wagamiAPreferenceState,
   })
+  const { showCallInfo: showWagamiACallInfo, onMonitorReady: onWagamiAMonitorReady } = useWagamiACallInfoCover(wagamiAWorkspace.view)
   const activeNibpMode = isWagamiA ? wagamiAWorkspace.nibpMode : controller.nibpMode
   const activeNibpAutoInterval = isWagamiA
     ? wagamiAWorkspace.nibpAutoInterval
@@ -1052,37 +1055,7 @@ export function MonitorPage({
               : 'Use a supported iPad in landscape or a display at least 1024 pixels wide.'}
           </p>
         </div>
-        {wagamiAWorkspace.view === 'callInfo' ? (
-          <div className="h-full w-full max-[1023px]:hidden">
-            <WagamiACallInfoPage
-              locale={wagamiAWorkspace.preferences.locale}
-              patientMode={controller.patientMode}
-              alarms={wagamiADisplay.alarms}
-              onBack={wagamiAWorkspace.goBack}
-              callerInfo={{
-                info: callerInfoConfirmed,
-                onCallerEvent,
-                buttonState: callerButtonState,
-                showCountdown: dispatchState.countdownLocked,
-                countdownFormatted: countdown.formatted,
-                responseFormatted: responseTimer.formatted,
-                variant: callerInfoVariant,
-                mapContained: false,
-                canEnterMonitor: true,
-                onEnterMonitor: wagamiAWorkspace.goBack,
-                route: hospitalRouting.effectiveRoute,
-                hospitalMap: hospitalRouting.mapState,
-                transported: dispatchState.transportedAt !== null,
-                atHospital: hospitalRouting.atHospital,
-                onOpenHospitalDirectory: hospitalRouting.openDirectory,
-                onCloseHospitalDirectory: hospitalRouting.closeDirectory,
-                onMapFullscreenChange: hospitalRouting.setFullscreen,
-                onSelectHospital: hospitalRouting.selectHospital,
-              }}
-            />
-          </div>
-        ) : (
-        <div className="max-[1023px]:hidden">
+        <div aria-hidden={showWagamiACallInfo ? true : undefined} className={cn('max-[1023px]:hidden', showWagamiACallInfo && 'invisible pointer-events-none')}>
           <WagamiADevice
             display={wagamiADisplay}
             energy={defib.energy}
@@ -1140,13 +1113,43 @@ export function MonitorPage({
                 onEnergyDown={() => handleWagamiAEnergyChange('down')}
                 onEnergyUp={() => handleWagamiAEnergyChange('up')}
                 selectedAction={selectedAction}
+                onMonitorReady={onWagamiAMonitorReady}
               />
             )}
             locale={wagamiAWorkspace.preferences.locale}
             shellAlarmLedEnabled={wagamiAWorkspace.preferences.shellAlarmLedEnabled}
           />
         </div>
-        )}
+        {showWagamiACallInfo ? (
+          <div className="absolute inset-0 z-30 h-full w-full max-[1023px]:hidden">
+            <WagamiACallInfoPage
+              locale={wagamiAWorkspace.preferences.locale}
+              patientMode={controller.patientMode}
+              alarms={wagamiADisplay.alarms}
+              onBack={wagamiAWorkspace.goBack}
+              callerInfo={{
+                info: callerInfoConfirmed,
+                onCallerEvent,
+                buttonState: callerButtonState,
+                showCountdown: dispatchState.countdownLocked,
+                countdownFormatted: countdown.formatted,
+                responseFormatted: responseTimer.formatted,
+                variant: callerInfoVariant,
+                mapContained: false,
+                canEnterMonitor: true,
+                onEnterMonitor: wagamiAWorkspace.goBack,
+                route: hospitalRouting.effectiveRoute,
+                hospitalMap: hospitalRouting.mapState,
+                transported: dispatchState.transportedAt !== null,
+                atHospital: hospitalRouting.atHospital,
+                onOpenHospitalDirectory: hospitalRouting.openDirectory,
+                onCloseHospitalDirectory: hospitalRouting.closeDirectory,
+                onMapFullscreenChange: hospitalRouting.setFullscreen,
+                onSelectHospital: hospitalRouting.selectHospital,
+              }}
+            />
+          </div>
+        ) : null}
       </main>
     )
   }

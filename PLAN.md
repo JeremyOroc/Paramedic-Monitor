@@ -10,6 +10,53 @@
 
 ## Current Requirement Updates
 
+- 2026-09-22 Wagami A waveform continuity across navigation — **programmer-confirmed and
+  implemented locally**. Every temporary Wagami A destination,
+  including Medications, EtCO₂, Vital Log, Configure, 12-lead, and the shell-free Call Info page,
+  preserves the live ECG, SpO₂, EtCO₂, and CPR waveform timeline. Returning to the live monitor after
+  time away shows the current patient-time sweep, reconstructed without a blank restart, rewind, or
+  false connector across the hidden interval. The Live 12-lead grid follows the same rule when left
+  and reopened; a captured or printed 12-lead remains a frozen record. Apply this to live trainee,
+  room-free Preview, and Spectator presentations, each with its own local sweep phase. When moving
+  between main ECG and live 12-lead, rhythm, rate, and patient-time beat phase must agree. Preserve
+  existing intentional sequence resets for New Attempt, Monitor Reset, power cycle, a newly confirmed
+  signal, and channel Off-to-On; navigation alone never resets a sequence. During CPR override,
+  preserve the main ECG lane's compression trace and the 12-lead grid's underlying rhythm; align
+  cardiac beats when both surfaces show cardiac signals. A channel disconnected while another view
+  is open remains disconnected on return and starts a new trace only when reconnected. Keep the
+  present 12-lead graph colors and layout. Before revealing a destination, rebuild its live traces
+  at final display geometry; entering or re-entering 12-lead waits for all twelve lead canvases.
+  Hidden canvases advance patient time without drawing. Preserve the live grid's progress underneath
+  capture, print, and transmission overlays.
+
+  **Implementation plan:** keep Wagami A's live waveform canvases mounted across inner-screen
+  destinations and shell-free Call Info, mount the 12-lead grid on first use and retain it afterward,
+  coordinate occlusion and readiness with the existing waveform renderer, and establish one local
+  patient-time beat reference for main ECG and the twelve leads. Apply the same composition to live
+  trainee, room-free Preview, and Spectator. Preserve all clinical, capture/print/transmit, navigation,
+  palette, and X/Z behavior outside the specified waveform continuity.
+
+### Testing — Wagami A waveform continuity across navigation
+
+- Verify canvas identity and patient-time progression through Medications, nested Event Log, EtCO₂,
+  Vital Log, Configure, PNI settings, 12-lead, and shell-free Call Info; repeat in trainee, Preview,
+  and Spectator render paths.
+- Verify ECG/SpO₂/EtCO₂ re-entry and all twelve lead canvases reconstruct at final size before reveal,
+  share cardiac beat timing when applicable, and never show a blank sweep or false connecting line.
+- Verify hidden confirmed-rhythm/rate updates, CPR override, disconnection/reconnection, captured
+  and printed 12-lead snapshots, browser backgrounding, and all established true reset boundaries.
+- Run focused waveform, Wagami A, 12-lead, live-monitor, and Spectator tests, TypeScript, affected-file
+  ESLint, production build, and rendered QA at supported landscape sizes.
+
+**Completed locally 2026-09-22.** Wagami A retains the live monitor and the first-opened 12-lead
+grid across temporary views, including shell-free Call Info. Hidden canvases advance by patient time
+and reconstruct before reveal; a shared local beat clock aligns main ECG and live leads. Capture and
+print remain frozen, while true signal boundaries, CPR override, and channel disconnection retain
+their existing behavior. The 78-test focused suite, TypeScript, affected-file ESLint (zero errors;
+one existing warning), and Next.js 16.3 Webpack production build pass. Rendered Preview review at
+1280×720 and 1024×768 confirms canvas persistence, nonblank traces, fitted geometry, and no browser
+console errors through Medications, 12-lead, and Call Info navigation.
+
 - 2026-09-22 Instructor fused-vital layout refinement — **programmer-confirmed and implemented
   locally**.
   Restore the established two-column Instructor composition: place ECG at the top of the right
