@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-09-21] [ui/testing] — Make Wagami A mute state visible on the shell
+
+- Changed only the audio shell icon: speaker with waves when unmuted, crossed speaker when muted.
+  The existing state prop drives both without new local state or audio changes.
+- Added component regressions for both icons, the mute transition, and French/English accessible
+  action names and pressed state. Seven focused tests, TypeScript, affected-file ESLint, and rendered
+  landscape Preview inspection of both states pass.
+
+## [2026-09-21] [planning/ui/domain] — Specify Wagami A mute icon states
+
+- Confirmed speaker-with-waves for audio on and crossed speaker for muted on the shell-only
+  device-audio control. The existing always-crossed icon misleadingly suggested mute when audio
+  was on; no label, badge, or state-specific color is added.
+- Kept clinical alarm indication, accessible action naming, audio behavior, and X/Z outside the
+  visual change. Defined Device-audio mute in the glossary; no ADR is warranted for this reversible
+  icon choice.
+
 ## [2026-09-20] [ui/navigation/testing] — Move Wagami A PNI settings onto the vital card
 
 - Made the complete Wagami A PNI vital card the localized settings button in Preview and live use,

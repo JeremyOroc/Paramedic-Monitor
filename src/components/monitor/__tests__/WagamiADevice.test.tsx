@@ -15,6 +15,38 @@ const display: WagamiADisplayState = {
 }
 
 describe('Wagami A approved v3 shell controls', () => {
+  it('shows sound waves when audio is on and a crossed speaker when muted', () => {
+    const onMute = vi.fn()
+    const props = { display, energy: 120, poweredOn: true, onPowerToggle: vi.fn(), onMute }
+    const { rerender } = render(<WagamiADevice {...props} />)
+
+    const muteButton = screen.getByRole('button', { name: 'Couper tous les sons' })
+    const iconPaths = () => Array.from(muteButton.querySelectorAll('svg path')).map((path) => path.getAttribute('d'))
+    expect(muteButton).toHaveAttribute('aria-pressed', 'false')
+    expect(muteButton).toHaveTextContent('')
+    expect(iconPaths()).toEqual([
+      'M3 9h4l5-4v14l-5-4H3z',
+      'M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11',
+    ])
+
+    fireEvent.click(muteButton)
+    expect(onMute).toHaveBeenCalledOnce()
+    rerender(<WagamiADevice {...props} muted />)
+    expect(screen.getByRole('button', { name: 'Réactiver tous les sons' })).toBe(muteButton)
+    expect(muteButton).toHaveAttribute('aria-pressed', 'true')
+    expect(muteButton).toHaveTextContent('')
+    expect(iconPaths()).toEqual([
+      'M3 9h4l5-4v14l-5-4H3z',
+      'M5 20 20 4',
+    ])
+
+    rerender(<WagamiADevice {...props} locale="en" muted />)
+    expect(screen.getByRole('button', { name: 'Restore all audio' })).toHaveAttribute('aria-pressed', 'true')
+    rerender(<WagamiADevice {...props} locale="en" />)
+    expect(screen.getByRole('button', { name: 'Mute all audio' })).toHaveAttribute('aria-pressed', 'false')
+    expect(iconPaths()[1]).toBe('M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11')
+  })
+
   it('places right Analyze, Charge, Shock, left Mute, Patient mode, BP and lower navigation outside the screen', () => {
     const onPowerToggle = vi.fn()
     render(<WagamiADevice display={display} energy={120} poweredOn onPowerToggle={onPowerToggle} />)

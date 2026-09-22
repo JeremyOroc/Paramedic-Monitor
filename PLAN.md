@@ -10,6 +10,23 @@
 
 ## Current Requirement Updates
 
+- 2026-09-21 Wagami A mute-button visual state — **programmer-confirmed and implemented**. Keep the
+  existing shell-only all-device-cues mute action, but show a speaker with sound waves while
+  audio is on and a crossed speaker while muted. Change only the icon: add no visible label,
+  badge, or state-specific color treatment. Preserve the existing localized accessible action
+  names, pressed state, alarm indicators, audio behavior, and X/Z behavior.
+
+
+### Testing — Wagami A mute-button visual state
+
+Verify both SVG icon states, the state transition, and existing accessible names/pressed state
+in the Wagami A shell component. Run focused component tests, TypeScript, affected-file ESLint,
+and rendered landscape QA for both states.
+
+**Completed 2026-09-21.** The shell icon now follows the existing mute prop, with no other visual
+state changes. Seven focused component tests, TypeScript, affected-file ESLint, and rendered
+landscape Preview inspection of both states pass.
+
 - 2026-09-20 Wagami A direct PNI-settings entry — **implemented locally after the completed
   grill-with-docs design interview and programmer confirmation**. Move `Réglages PNI` / `NIBP settings` out of Configure
   and make the complete on-screen PNI vital card its sole settings entry point on Wagami A. The card

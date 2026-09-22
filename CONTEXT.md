@@ -344,6 +344,11 @@ A physical-style action button on Wagami A's outer housing, distinct from a touc
 or task launcher within its display.
 _Avoid_: Soft key, touchscreen button
 
+**Device-audio mute**:
+The Scenario device's all-cues audio-suppression state. It does not acknowledge a clinical alarm
+or disable Wagami A's on-screen alarm indication or shell alarm LED.
+_Avoid_: Alarm mute, alarm acknowledgement, LED Off
+
 **Wagami A clinical status line**:
 The compact line that begins with the current Device Patient mode and appends active alarm channels.
 When no alarm is active, its alarm portion is blank rather than announcing a normal state.
