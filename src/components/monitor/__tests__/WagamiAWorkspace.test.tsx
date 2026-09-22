@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from 'vitest'
 import { useWagamiAWorkspace } from '@/hooks/useWagamiAWorkspace'
 import type { VitalLogEntry } from '@/hooks/useVitalLog'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
-import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
 import { DEFAULT_VITALS } from '@/types/vitals'
 import type { WagamiATask } from '../WagamiATaskDock'
 import { WagamiAWorkspace } from '../WagamiAWorkspace'
@@ -60,7 +59,6 @@ function Harness({ vitalLog }: { vitalLog: VitalLogEntry[] }) {
       canAdjustEnergy
       onEnergyDown={() => {}}
       onEnergyUp={() => {}}
-      callerInfo={DEFAULT_CALLER_INFO}
     />
   )
 }

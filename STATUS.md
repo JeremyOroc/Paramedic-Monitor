@@ -6,6 +6,18 @@
 ---
 
 ## Current Phase
+**Wagami A full-page Call Info — COMPLETE LOCALLY (2026-09-21).** Reopened Call Info now replaces
+the shell with a viewport-filling, live Assignment dashboard and a slim localized header for Back,
+Patient mode, and active alarms. Response/countdown state, dispatch actions, hospital routing and
+directory are wired like Wagami X; the classic query variant also works. A blocks entry during
+analysis, charging, and charged states through both touch and shell navigation, while X/Z remain
+unchanged. Preview uses a non-live full-page canvas, Spectator mirrors it read-only, and the initial
+dispatch gate stays shell-free. The 71-test focused suite, TypeScript, affected-file ESLint with
+zero errors and one existing warning, and Next.js 16.3 Webpack production build pass. Production
+browser QA at 1280×720 and 1024×768 confirms no shell or scrollbars, classic fit, and Back return.
+The complete suite has 1,594 passing, one skipped, and the same three unrelated existing failures
+in Room ownership and PatientInfoPanel.
+
 **Wagami A mute-button visual state — COMPLETE (2026-09-21).** The shell-only audio button now
 shows a speaker with waves when device audio is on and a crossed speaker when muted. No label,
 badge, or state-specific color was added; accessible French/English action names, pressed state,

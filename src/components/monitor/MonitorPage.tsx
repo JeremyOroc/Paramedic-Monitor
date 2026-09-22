@@ -6,6 +6,7 @@ import { DeviceShell } from '@/components/monitor/DeviceShell'
 import { WagamiZDevice } from '@/components/monitor/WagamiZDevice'
 import { WagamiAPreview } from '@/components/monitor/WagamiAPreview'
 import { WagamiADevice } from '@/components/monitor/WagamiADevice'
+import { WagamiACallInfoPage } from '@/components/monitor/WagamiACallInfoPage'
 import { WagamiAWorkspace } from '@/components/monitor/WagamiAWorkspace'
 import { MonitorLayout } from '@/components/monitor/MonitorLayout'
 import { TopStatusBar } from '@/components/monitor/TopStatusBar'
@@ -1051,6 +1052,36 @@ export function MonitorPage({
               : 'Use a supported iPad in landscape or a display at least 1024 pixels wide.'}
           </p>
         </div>
+        {wagamiAWorkspace.view === 'callInfo' ? (
+          <div className="h-full w-full max-[1023px]:hidden">
+            <WagamiACallInfoPage
+              locale={wagamiAWorkspace.preferences.locale}
+              patientMode={controller.patientMode}
+              alarms={wagamiADisplay.alarms}
+              onBack={wagamiAWorkspace.goBack}
+              callerInfo={{
+                info: callerInfoConfirmed,
+                onCallerEvent,
+                buttonState: callerButtonState,
+                showCountdown: dispatchState.countdownLocked,
+                countdownFormatted: countdown.formatted,
+                responseFormatted: responseTimer.formatted,
+                variant: callerInfoVariant,
+                mapContained: false,
+                canEnterMonitor: true,
+                onEnterMonitor: wagamiAWorkspace.goBack,
+                route: hospitalRouting.effectiveRoute,
+                hospitalMap: hospitalRouting.mapState,
+                transported: dispatchState.transportedAt !== null,
+                atHospital: hospitalRouting.atHospital,
+                onOpenHospitalDirectory: hospitalRouting.openDirectory,
+                onCloseHospitalDirectory: hospitalRouting.closeDirectory,
+                onMapFullscreenChange: hospitalRouting.setFullscreen,
+                onSelectHospital: hospitalRouting.selectHospital,
+              }}
+            />
+          </div>
+        ) : (
         <div className="max-[1023px]:hidden">
           <WagamiADevice
             display={wagamiADisplay}
@@ -1108,8 +1139,6 @@ export function MonitorPage({
                 canAdjustEnergy={defib.canAdjustEnergy}
                 onEnergyDown={() => handleWagamiAEnergyChange('down')}
                 onEnergyUp={() => handleWagamiAEnergyChange('up')}
-                callerInfo={callerInfoConfirmed}
-                dispatchRoute={hospitalRouting.effectiveRoute}
                 selectedAction={selectedAction}
               />
             )}
@@ -1117,6 +1146,7 @@ export function MonitorPage({
             shellAlarmLedEnabled={wagamiAWorkspace.preferences.shellAlarmLedEnabled}
           />
         </div>
+        )}
       </main>
     )
   }
@@ -1348,7 +1378,10 @@ export default function MonitorPageRoute() {
 
 function MonitorPageOrLanding() {
   const searchParams = useSearchParams()
-  if (searchParams.get('dev') === '3') return <WagamiAPreview />
+  if (searchParams.get('dev') === '3') {
+    const callerInfoVariant: CallerInfoVariant = searchParams.get('callerInfoVariant') === 'classic' ? 'classic' : 'assignment'
+    return <WagamiAPreview callerInfoVariant={callerInfoVariant} />
+  }
   if (process.env.NODE_ENV === 'test') return <MonitorPage />
   if (searchParams.get('dev') === '1' || searchParams.get('dev') === '2') {
     return <MonitorPage />

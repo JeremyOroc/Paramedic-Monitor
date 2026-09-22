@@ -6,6 +6,7 @@ import { useWagamiANavigation } from '@/hooks/useWagamiANavigation'
 import type { DefibChargeOrigin, DefibState } from '@/hooks/useDefibSequence'
 import type { NibpPhase } from '@/hooks/useNibpReading'
 import { WAGAMI_A_MONITOR_ACTION_ORDER, type WagamiANavigationAction } from '@/lib/wagamiANavigation'
+import { isWagamiACallInfoBlocked } from '@/lib/wagamiACallInfo'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
 import type { WagamiALocale } from '@/types/wagamiA'
@@ -70,10 +71,15 @@ export function WagamiADevice({ display, energy, defibState = 'idle', chargeProg
   const patientModeLabel = { adult: text.adult, pediatric: text.pediatric, neonate: text.neonate } as const
   const patientModeAccessibleLabel = `${text.patientMode}, ${text.currentMode} ${patientModeLabel[patientMode]}`
   const alarming = display.alarms.length > 0 && poweredOn && shellAlarmLedEnabled
+  const callInfoBlocked = isWagamiACallInfoBlocked(defibState)
+  const activateTask = (task: WagamiATask) => {
+    if (task === 'callInfo' && callInfoBlocked) return
+    onTask?.(task)
+  }
   const monitorActions: WagamiANavigationAction[] = WAGAMI_A_MONITOR_ACTION_ORDER.map((id) => {
     if (id === 'energyDown') return { id, enabled: poweredOn && canAdjustEnergy && !!onEnergyDown, activate: () => onEnergyDown?.() }
     if (id === 'energyUp') return { id, enabled: poweredOn && canAdjustEnergy && !!onEnergyUp, activate: () => onEnergyUp?.() }
-    return { id, enabled: poweredOn && !!onTask, activate: () => onTask?.(id as WagamiATask) }
+    return { id, enabled: poweredOn && !!onTask && !(id === 'callInfo' && callInfoBlocked), activate: () => activateTask(id as WagamiATask) }
   })
   const navigation = useWagamiANavigation(navigationView, navigationView === 'monitor' ? monitorActions : secondaryActions ?? [])
   const resolvedScreenContent = typeof screenContent === 'function'
@@ -87,7 +93,7 @@ export function WagamiADevice({ display, energy, defibState = 'idle', chargeProg
       <span data-testid="wagami-a-shell-led" data-enabled={shellAlarmLedEnabled ? 'true' : 'false'} data-alarming={alarming ? 'true' : 'false'} aria-label={!shellAlarmLedEnabled ? text.ledDisabled : alarming ? text.ledActive : text.ledNormal} className="wagami-a-shell-led absolute left-[7.4%] top-[4%] z-10 h-[clamp(10px,1.35cqw,19px)] w-[clamp(10px,1.35cqw,19px)] rounded-full" />
       <div className="absolute left-[14%] top-[2.7%] z-10 font-sans text-[clamp(19px,2.35cqw,36px)] font-bold tracking-[0.1em]">WAGAMI A</div>
       <div className="absolute bottom-[10.6%] left-[6.9%] right-[6.9%] top-[10.5%] overflow-hidden rounded-[12px] border-[clamp(3px,0.4cqw,7px)] border-wagami-a-border bg-wagami-a-screen shadow-inner">
-        {poweredOn ? (resolvedScreenContent ?? <WagamiAScreen display={display} energy={energy} defibState={defibState} chargeProgress={chargeProgress} chargeOrigin={chargeOrigin} cprTime={cprTime} cprOverride={cprOverride} nibpPhase={nibpPhase} nibpDisplayValue={nibpDisplayValue} patientMode={patientMode} selectedAction={navigation.selectedId} canAdjustEnergy={canAdjustEnergy} onTask={onTask ? navigation.touch : undefined} onEnergyDown={onEnergyDown ? () => navigation.touch('energyDown') : undefined} onEnergyUp={onEnergyUp ? () => navigation.touch('energyUp') : undefined} locale={locale} />) : <div data-testid="wagami-a-screen-off" className="grid h-full w-full place-items-center bg-wagami-a-screen font-mono text-[clamp(12px,1.2cqw,18px)] tracking-widest text-wagami-a-muted-text">{text.powerOff}</div>}
+        {poweredOn ? (resolvedScreenContent ?? <WagamiAScreen display={display} energy={energy} defibState={defibState} chargeProgress={chargeProgress} chargeOrigin={chargeOrigin} cprTime={cprTime} cprOverride={cprOverride} nibpPhase={nibpPhase} nibpDisplayValue={nibpDisplayValue} patientMode={patientMode} selectedAction={navigation.selectedId} canAdjustEnergy={canAdjustEnergy} onTask={onTask ? navigation.touch : undefined} onEnergyDown={onEnergyDown ? () => navigation.touch('energyDown') : undefined} onEnergyUp={onEnergyUp ? () => navigation.touch('energyUp') : undefined} locale={locale} callInfoDisabled={callInfoBlocked} />) : <div data-testid="wagami-a-screen-off" className="grid h-full w-full place-items-center bg-wagami-a-screen font-mono text-[clamp(12px,1.2cqw,18px)] tracking-widest text-wagami-a-muted-text">{text.powerOff}</div>}
       </div>
       <button type="button" aria-label={text.power} aria-pressed={poweredOn} onClick={onPowerToggle} className="wagami-a-power-button absolute right-[3.2%] top-[2.4%] z-20 grid h-[6.4%] w-[5%] min-h-[44px] min-w-[44px] place-items-center rounded-[9px] border-2 border-wagami-a-border bg-wagami-a-surface-raised text-wagami-a-text enabled:hover:brightness-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wagami-a-pni"><ShellIcon kind="power" /></button>
       <button type="button" aria-label={muted ? text.unmute : text.mute} aria-pressed={muted} disabled={!poweredOn || !onMute} onClick={onMute} className={`${SIDE_KEY} left-[1.4%] top-[18%] h-[10%]`}><ShellIcon kind="sound" muted={muted} /></button>

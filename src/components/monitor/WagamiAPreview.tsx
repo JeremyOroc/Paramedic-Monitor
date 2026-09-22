@@ -1,15 +1,21 @@
 'use client'
 
 import { WagamiADevice } from '@/components/monitor/WagamiADevice'
+import { WagamiACallInfoPage } from '@/components/monitor/WagamiACallInfoPage'
 import { WagamiAWorkspace } from '@/components/monitor/WagamiAWorkspace'
+import type { CallerInfoVariant } from '@/components/monitor/CallerInfoModal'
 import { useWagamiAClinicalCore } from '@/hooks/useWagamiAClinicalCore'
 import { useWagamiAWorkspace } from '@/hooks/useWagamiAWorkspace'
 import { resolveWagamiAPreviewState } from '@/lib/wagamiAPreviewState'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
 import { useMonitorStore } from '@/store/monitorStore'
 
+type WagamiAPreviewProps = {
+  callerInfoVariant?: CallerInfoVariant
+}
+
 /** Room-free A5 device preview; A6 live Attempts stay gated. */
-export function WagamiAPreview() {
+export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPreviewProps) {
   const confirmed = useMonitorStore((state) => state.confirmed)
   const confirmedActive = useMonitorStore((state) => state.confirmedVitalActive)
   const cprMode = useMonitorStore((state) => state.cprMode)
@@ -49,8 +55,6 @@ export function WagamiAPreview() {
       canAdjustEnergy={clinical.defib.canAdjustEnergy}
       onEnergyDown={clinical.onEnergyDown}
       onEnergyUp={clinical.onEnergyUp}
-      callerInfo={callerInfo}
-      dispatchRoute={dispatchRoute}
       selectedAction={selectedAction}
     />
   )
@@ -61,6 +65,29 @@ export function WagamiAPreview() {
         <div className="font-sans text-xl font-semibold">{text.landscapeRequired}</div>
         <p className="mt-3 text-wagami-a-muted-text">{text.landscapeHelp}</p>
       </div>
+      {workspace.view === 'callInfo' ? (
+        <div className="h-full w-full max-[1023px]:hidden">
+          <WagamiACallInfoPage
+            locale={workspace.preferences.locale}
+            patientMode={clinical.patientMode}
+            alarms={clinical.display.alarms}
+            onBack={workspace.goBack}
+            callerInfo={{
+              info: callerInfo,
+              onCallerEvent: () => {},
+              buttonState: {
+                acknowledge: { disabled: true },
+                arrival: { disabled: true },
+                transport: { disabled: true },
+              },
+              responseFormatted: '--:--',
+              variant: callerInfoVariant,
+              route: dispatchRoute,
+              mapReadOnly: true,
+            }}
+          />
+        </div>
+      ) : (
       <div className="max-[1023px]:hidden">
         <WagamiADevice
           display={clinical.display}
@@ -99,6 +126,7 @@ export function WagamiAPreview() {
           shellAlarmLedEnabled={workspace.preferences.shellAlarmLedEnabled}
         />
       </div>
+      )}
     </main>
   )
 }

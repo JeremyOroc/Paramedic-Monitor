@@ -5,6 +5,54 @@
 
 ---
 
+## [2026-09-21] [ui/navigation/testing] — Give Wagami A a full-page Call Info workflow
+
+- Replaced the constrained inner-screen Call Info view with a shell-free Assignment dashboard,
+  localized status/Back header, X-style live dispatch events and hospital-map actions, and the
+  optional classic layout. Kept other A destinations in the shell and left X/Z unchanged.
+- Blocked A Call Info entry through touch and physical navigation during analysis, charging, and
+  charged states. Preview remains non-live; Spectator mirrors both reopened Call Info and the
+  initial dispatch gate without offering trainee actions.
+- Added page, guard, navigation, live, Preview, Spectator, map-containment, and classic-fit tests.
+  The 71-test focused suite, TypeScript, ESLint with zero errors and one existing warning, and the
+  Next.js 16.3 Webpack production build pass. Production browser checks at 1280×720 and 1024×768
+  show full viewport fit, no scrollbars, classic 4:3 fit, Back return, and no console errors.
+  The full suite has 1,594 passing, one skipped, and the same three unrelated baseline failures.
+
+## [2026-09-21] [planning/ui/domain] — Complete Wagami A Call Info page design
+
+- Chose a slim page header with Back and title at left and Device Patient mode plus active alarm
+  labels at right; the dispatch dashboard fills the remaining area. The pre-arrival gate remains
+  unchanged. Added the distinct Wagami A Call Info page term to the glossary.
+- Recorded ADR 0032 as the deliberate Call Info exception to ADR 0029's persistent-shell rule.
+  Implementation awaits the programmer's overall design confirmation.
+
+## [2026-09-21] [planning/ui] — Set Call Info clinical-safety boundary
+
+- Confirmed Wagami A alone blocks entry to Call Info during analysis, charging, and charged states;
+  the analysis guard prevents automatic charging after the shell disappears. Wagami X remains
+  unchanged, despite currently permitting entry during charge states.
+- Confirmed A's reopened Call Info must continue alarms and show Device Patient mode and active
+  clinical alarms on-page. Exact placement is still being settled; no implementation has begun.
+
+## [2026-09-21] [planning/ui] — Resolve Call Info language, safety, and preview boundaries
+
+- Confirmed Wagami A's selected French/English language and X's optional classic-layout switch
+  apply to A's page-filling Call Info. The Assignment dashboard remains the default.
+- Confirmed A must block Call Info entry while charging or charged. Room-free Preview does not
+  invent dispatch events or running timers, and Spectator remains read-only within its canvas.
+  The already-open-page/automatic-charge edge case is still under discussion; no code has changed.
+
+## [2026-09-21] [planning/ui/domain] — Begin Wagami A full-page Call Info redesign
+
+- Confirmed a shell-free, page-filling Assignment dashboard when Wagami A reopens Call Info,
+  with Wagami X's live dispatch workflow rather than the current read-only inner-display view.
+  Preview and Spectator fill only their respective viewing canvases. The pre-arrival dispatch
+  gate remains page-filling; other Wagami A destinations retain the shell.
+- Recorded this as a superseding requirement in PLAN.md and clarified the glossary boundary.
+  Language, clinical continuity, Preview interaction, and variant details remain under discussion;
+  no implementation has begun.
+
 ## [2026-09-21] [ui/testing] — Make Wagami A mute state visible on the shell
 
 - Changed only the audio shell icon: speaker with waves when unmuted, crossed speaker when muted.

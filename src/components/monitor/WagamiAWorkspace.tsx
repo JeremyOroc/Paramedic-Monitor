@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 
-import { CallerInfoModal } from '@/components/monitor/CallerInfoModal'
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { TwelveLeadPrintout } from '@/components/monitor/TwelveLeadPrintout'
 import { WagamiAClinicalStatusLine } from '@/components/monitor/WagamiAClinicalStatusLine'
@@ -12,10 +11,9 @@ import type { DefibChargeOrigin, DefibState } from '@/hooks/useDefibSequence'
 import type { NibpPhase } from '@/hooks/useNibpReading'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
 import { ALL_MEDICATIONS } from '@/lib/monitor/medications'
+import { isWagamiACallInfoBlocked } from '@/lib/wagamiACallInfo'
 import { TWELVE_LEAD_TRANSMISSION_DESTINATIONS } from '@/lib/twelveLeadTransmission'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
-import type { CallerInfo } from '@/types/callerInfo'
-import type { DispatchRoute } from '@/types/dispatchRoute'
 import { NIBP_AUTO_INTERVALS } from '@/types/nibp'
 import type { WagamiALocale } from '@/types/wagamiA'
 import type { AlarmChannel, PatientMode } from '@/types/vitals'
@@ -37,8 +35,6 @@ type WagamiAWorkspaceProps = {
   canAdjustEnergy: boolean
   onEnergyDown: () => void
   onEnergyUp: () => void
-  callerInfo: CallerInfo
-  dispatchRoute?: DispatchRoute
   selectedAction?: string | null
   readOnly?: boolean
 }
@@ -81,8 +77,6 @@ export function WagamiAWorkspace({
   canAdjustEnergy,
   onEnergyDown,
   onEnergyUp,
-  callerInfo,
-  dispatchRoute,
   selectedAction,
   readOnly = false,
 }: WagamiAWorkspaceProps) {
@@ -90,6 +84,9 @@ export function WagamiAWorkspace({
   const [eventPage, setEventPage] = useState(1)
   const [vitalPage, setVitalPage] = useState(1)
   const clinicalStatus = { patientMode, alarms: display.alarms, locale: controller.preferences.locale }
+  const callInfoBlocked = isWagamiACallInfoBlocked(defibState)
+
+  if (controller.view === 'callInfo') return null
 
   if (controller.view === 'monitor') {
     return (
@@ -106,11 +103,15 @@ export function WagamiAWorkspace({
         patientMode={patientMode}
         selectedAction={selectedAction}
         canAdjustEnergy={canAdjustEnergy}
-        onTask={controller.openTask}
+        onTask={(task) => {
+          if (task === 'callInfo' && callInfoBlocked) return
+          controller.openTask(task)
+        }}
         onEnergyDown={onEnergyDown}
         onEnergyUp={onEnergyUp}
         onOpenNibpSettings={readOnly ? undefined : () => controller.setView('nibpSettings')}
         locale={controller.preferences.locale}
+        callInfoDisabled={callInfoBlocked}
       />
     )
   }
@@ -225,12 +226,6 @@ export function WagamiAWorkspace({
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.pniMode}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.nibpMode === 'manual'} onClick={() => controller.setNibpMode('manual')}>{text.manual}</Toggle><Toggle active={controller.nibpMode === 'automatic'} onClick={() => controller.setNibpMode('automatic')}>{text.automatic}</Toggle></div></div>
           <fieldset disabled={controller.nibpMode !== 'automatic'} className="rounded border border-wagami-a-border bg-wagami-a-surface p-4 disabled:opacity-50"><legend className="px-2">{text.interval}</legend><div className="grid grid-cols-6 gap-2">{NIBP_AUTO_INTERVALS.map((interval) => <Toggle key={interval} active={controller.nibpAutoInterval === interval} onClick={() => controller.setNibpAutoInterval(interval)}>{interval} {text.minutes}</Toggle>)}</div></fieldset>
         </div>
-      </ViewFrame>
-    )
-  } else {
-    content = (
-      <ViewFrame title={text.callInfoTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
-        <CallerInfoModal open info={callerInfo} onCallerEvent={() => {}} buttonState={{ acknowledge: { disabled: true }, arrival: { disabled: true }, transport: { disabled: true } }} fullScreen contained variant="assignment" route={dispatchRoute} mapReadOnly locale={controller.preferences.locale} />
       </ViewFrame>
     )
   }

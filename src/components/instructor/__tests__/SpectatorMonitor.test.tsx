@@ -2,9 +2,78 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
 import type { MonitorProjection } from '@/types/monitorProjection'
+import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
+import { DEFAULT_VITALS } from '@/types/vitals'
 import { SpectatorMonitor } from '../SpectatorMonitor'
 
 describe('SpectatorMonitor A2 model boundary', () => {
+  it('mirrors Wagami A Call Info across the spectator canvas without a shell or live actions', () => {
+    const projection = {
+      model: 'wagamiA',
+      powerState: 'on',
+      controller: { isMuted: false },
+      defib: { state: 'idle', energy: 120, progress: 0, phaseStartedAt: null, phaseEndsAt: null },
+      confirmed: DEFAULT_VITALS,
+      confirmedVitalActive: { hr: true, bp_sys: true, bp_dia: true, etco2: true, spo2: true },
+      acceptedBp: { bp_sys: 120, bp_dia: 80 },
+      acceptedBpActive: { bp_sys: true, bp_dia: true },
+      displayedHrActive: true,
+      vfDisplayedHr: 80,
+      displayedEtco2: 35,
+      alarms: ['hr'],
+      nibp: { enabled: true, phase: 'idle', displayValue: '' },
+      callerInfo: DEFAULT_CALLER_INFO,
+      dispatchRoute: { geometry: [] },
+      dispatch: { countdownLocked: true, transportedAt: null },
+      countdownFormatted: '00:00',
+      responseTimer: '03:12',
+      callerInfoVariant: 'assignment',
+      cprOverrideActive: false,
+      wagamiA: {
+        view: 'callInfo',
+        preferences: { locale: 'fr', shellAlarmLedEnabled: true },
+        patientMode: 'adult',
+        etco2CalibrationStatus: 'idle',
+        nibpMode: 'manual',
+        nibpAutoInterval: 5,
+        medicationEvents: [],
+        vitalLog: [],
+        twelveLead: { captureState: 'idle', lastCapture: null, printOpen: false, transmissionOpen: false, sentDestination: null, sentUntil: null },
+      },
+    } as unknown as MonitorProjection
+
+    render(<SpectatorMonitor projection={projection} embedded />)
+
+    expect(screen.getByTestId('wagami-a-call-info-page')).toBeInTheDocument()
+    expect(screen.queryByTestId('wagami-a-shell')).not.toBeInTheDocument()
+    expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE · ALARME · FC')
+    expect(screen.getByRole('button', { name: /Retour/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Transport' })).toBeDisabled()
+  })
+
+  it('keeps the initial Wagami A dispatch gate shell-free in Spectator', () => {
+    const projection = {
+      model: 'wagamiA',
+      surface: 'dispatch',
+      controller: { isPoweredOn: false },
+      defib: { state: 'idle', progress: 0, phaseStartedAt: null, phaseEndsAt: null },
+      callerInfo: DEFAULT_CALLER_INFO,
+      dispatchRoute: { geometry: [] },
+      dispatch: { countdownLocked: true, transportedAt: null },
+      countdownFormatted: '04:20',
+      responseTimer: '00:40',
+      callerInfoVariant: 'assignment',
+      wagamiA: { preferences: { locale: 'fr' } },
+    } as unknown as MonitorProjection
+
+    render(<SpectatorMonitor projection={projection} embedded />)
+    expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
+    expect(screen.queryByTestId('wagami-a-shell')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Response timer')).toHaveTextContent('00:40')
+    expect(screen.getByRole('button', { name: 'Accuser réception' })).toBeDisabled()
+  })
+
   it('does not silently display an A projection as Wagami X', () => {
     const projection = {
       model: 'wagamiA',

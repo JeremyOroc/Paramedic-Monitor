@@ -27,9 +27,10 @@ type WagamiAScreenProps = {
   onEnergyUp?: () => void
   onOpenNibpSettings?: () => void
   locale?: WagamiALocale
+  callInfoDisabled?: boolean
 }
 
-export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp, onOpenNibpSettings, locale = 'fr' }: WagamiAScreenProps) {
+export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp, onOpenNibpSettings, locale = 'fr', callInfoDisabled = false }: WagamiAScreenProps) {
   const text = getWagamiAText(locale)
   const { vitals, active, alarms } = display
   const isNibpReadingActive = nibpPhase === 'please_wait' || nibpPhase === 'reading' || nibpPhase === 'counting'
@@ -50,7 +51,7 @@ export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProg
         <WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={alarms} patientMode={patientMode} cprOverride={cprOverride} locale={locale} />
       </div>
       <aside aria-label="Wagami A right-side task and defib rail" className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-[clamp(4px,0.65cqw,10px)]">
-        <WagamiATaskDock onTask={onTask} selectedAction={selectedAction} locale={locale} />
+        <WagamiATaskDock onTask={onTask} selectedAction={selectedAction} locale={locale} callInfoDisabled={callInfoDisabled} />
         <WagamiADefibPanel state={defibState} energy={energy} chargeProgress={chargeProgress} chargeOrigin={chargeOrigin} cprTime={cprTime} canAdjustEnergy={canAdjustEnergy} onEnergyDown={onEnergyDown} onEnergyUp={onEnergyUp} selectedAction={selectedAction} locale={locale} />
       </aside>
     </section>

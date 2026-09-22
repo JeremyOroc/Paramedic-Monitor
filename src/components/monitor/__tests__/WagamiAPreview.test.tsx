@@ -26,7 +26,7 @@ describe('Wagami A Room-free clinical preview', () => {
     expect(screen.getByRole('button', { name: 'Droite' })).toBeEnabled()
   })
 
-  it('opens every A5 destination inside the persistent shell and returns without losing it', () => {
+  it('keeps non-Call-Info destinations inside the persistent shell', () => {
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
 
@@ -34,7 +34,6 @@ describe('Wagami A Room-free clinical preview', () => {
       ['12 dérivations', 'ECG 12 dérivations'],
       ['EtCO₂', 'Étalonnage EtCO₂'],
       ['Médicaments', 'Médicaments'],
-      ['Info appel', 'Nouvelle affectation'],
       ['Journal des signes vitaux', 'Journal des signes vitaux'],
       ['Configurer', 'Configuration'],
     ]) {
@@ -44,6 +43,46 @@ describe('Wagami A Room-free clinical preview', () => {
       expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE')
       fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     }
+  })
+
+  it('replaces the shell with a full-page Call Info canvas and returns to the monitor', () => {
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
+    expect(screen.getByTestId('wagami-a-call-info-page')).toBeInTheDocument()
+    expect(screen.queryByTestId('wagami-a-shell')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Information d’appel' })).toBeInTheDocument()
+    expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE')
+    expect(screen.getByLabelText('Response timer')).toHaveTextContent('--:--')
+    expect(screen.getByRole('button', { name: 'Accuser réception' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Arrivée' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Transport' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    expect(screen.getByTestId('wagami-a-shell')).toBeInTheDocument()
+    expect(screen.queryByTestId('wagami-a-call-info-page')).not.toBeInTheDocument()
+  })
+
+  it('uses the classic layout switch and blocks Call Info from analysis through charge', () => {
+    vi.useFakeTimers()
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview callerInfoVariant="classic" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
+    expect(screen.getByTestId('dispatch-tablet-frame')).toHaveClass('dispatch-tablet-frame-classic-contained')
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Analyser WAGAMI A' }))
+    expect(screen.getByRole('button', { name: 'Info appel' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Charge WAGAMI A' }))
+    expect(screen.getByRole('button', { name: 'Info appel' })).toBeDisabled()
+    act(() => vi.advanceTimersByTime(4000))
+    expect(screen.getByRole('button', { name: 'Info appel' })).toBeDisabled()
+    vi.useRealTimers()
   })
 
   it('switches language and shell LED, preserving both through a power cycle', () => {
