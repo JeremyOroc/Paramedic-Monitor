@@ -6,6 +6,12 @@
 ---
 
 ## Current Phase
+**Wagami A mute-button visual state — COMPLETE (2026-09-21).** The shell-only audio button now
+shows a speaker with waves when device audio is on and a crossed speaker when muted. No label,
+badge, or state-specific color was added; accessible French/English action names, pressed state,
+audio behavior, alarm indication, and X/Z remain unchanged. Seven focused component tests,
+TypeScript, affected-file ESLint, and rendered landscape Preview inspection of both states pass.
+
 **Wagami A direct PNI-settings entry — COMPLETE LOCALLY (2026-09-20).** The complete
 on-screen PNI card is now the sole localized entry to PNI settings on Wagami A, including while
 PNI is Off or a reading is active. The current reading continues unchanged; edits affect later
