@@ -94,7 +94,7 @@ export function VitalTrendTimer() {
       data-testid="vital-trend-timer"
     >
       <span className="w-14 shrink-0 text-xs text-neutral-300 xl:[@media(min-height:800px)]:w-16 xl:[@media(min-height:800px)]:text-sm">
-        Timer
+        Trend
       </span>
       <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5">
         <label>

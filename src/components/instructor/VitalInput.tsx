@@ -93,7 +93,7 @@ export function VitalInput({
       <div
         className={cn(
           'group relative flex shrink-0 items-center border border-b',
-          compact ? 'w-28' : 'w-28',
+          compact ? 'w-20 xl:[@media(min-height:800px)]:w-24' : 'w-24',
           automaticRangeDisplay && (compact ? 'w-28 xl:[@media(min-height:800px)]:w-32' : 'w-32'),
           'transition-[border-color,box-shadow,background-color] duration-150',
           'focus-within:border-transparent focus-within:border-b-cyan-bp focus-within:bg-cyan-bp/5',

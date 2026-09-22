@@ -10,6 +10,29 @@
 
 ## Current Requirement Updates
 
+- 2026-09-22 Instructor fused-vital layout refinement — **programmer-confirmed and implemented
+  locally**.
+  Restore the established two-column Instructor composition: place ECG at the top of the right
+  column above CPR and timed-vital buttons, and place the shared Trend minute/second control at the
+  top of the left column directly above FC. Rename its visible label from `Timer` to `Trend`, return
+  compact fused vital inputs to `w-20` with `w-24` on taller displays, and return the EtCO2
+  calibration indicator beneath the EtCO2 vital. Preserve all fused-input, Trend timing, ECG, CPR,
+  calibration, Save/Send, and responsive behavior.
+
+### Testing — Instructor fused-vital layout refinement
+
+Cover the two-column ownership and DOM order, Trend label and placement, compact input widths,
+EtCO2-indicator placement, and preservation of timer interactions and clinical controls. Run focused
+Instructor component tests, TypeScript, affected-file ESLint, production build, and rendered desktop
+layout QA.
+
+**Completed locally 2026-09-22.** ECG now leads the right column above CPR and timed-vital controls;
+the shared control leads the left column above FC and visibly reads `Trend`. Compact numeric inputs
+use `w-20` and `w-24` on taller displays, while automatic FC ranges retain their larger safe width,
+and EtCO2 calibration again sits beneath EtCO2. All 67 focused component tests, TypeScript,
+affected-file ESLint, the Next.js 16.3 Webpack production build, and rendered 1280×720 desktop QA
+pass. No ADR is warranted for this reversible composition change.
+
 - 2026-09-21 Wagami A Call Info page — **programmer-confirmed and implemented locally**.
   When Call Info is reopened from Wagami A, replace the
   visible device shell with the page-filling Assignment dashboard and a page-level return action,

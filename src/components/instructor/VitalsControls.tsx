@@ -76,14 +76,12 @@ export function VitalsControls({
         Vitals
       </h2>
 
-      <div className="min-w-0" data-testid="admin-ecg-column">
-        <div data-testid="admin-graph-row-ecg">
-          <EcgRhythmSelector compact />
-        </div>
-      </div>
-
       <div className="grid min-w-0 grid-cols-1 items-start gap-2 sm:grid-cols-[minmax(15rem,0.9fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:grid-cols-[minmax(17rem,1fr)_minmax(0,1.1fr)] xl:[@media(min-height:800px)]:gap-4">
-        <div className="order-1 flex min-w-0 flex-col gap-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[25rem] xl:[@media(min-height:800px)]:gap-3" data-testid="admin-vitals-column">
+        <div className="flex min-w-0 flex-col gap-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[18rem] xl:[@media(min-height:800px)]:gap-3" data-testid="admin-vitals-column">
+          <div data-testid="admin-trend-timer-row">
+            <VitalTrendTimer />
+          </div>
+
           <div className="flex items-center" data-testid="admin-vital-row-fc">
             <VitalInput compact field="hr" label="FC" unit="bpm" min={0} max={300} />
           </div>
@@ -103,64 +101,14 @@ export function VitalsControls({
           <div className="flex items-center" data-testid="admin-vital-row-etco2">
             <VitalInput compact field="etco2" label="EtCO2" unit="mmHg" min={0} max={150} />
           </div>
-        </div>
-
-        <div className="order-3 min-w-0 self-start sm:order-2 xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[24rem]" data-testid="admin-utility-column">
-          <div
-            role="group"
-            className="grid grid-cols-2 gap-1.5"
-            aria-label="CPR mode"
-          >
-            {CPR_MODES.map(({ mode, label }) => {
-              const active = cprMode === mode
-              return (
-                <button
-                  key={mode}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => setCprMode(active ? 'off' : mode)}
-                  className={[
-                    'flex h-9 w-full items-center justify-center border px-2 xl:[@media(min-height:800px)]:h-11',
-                    'font-mono text-[10px] font-bold uppercase tracking-wider transition-colors xl:[@media(min-height:800px)]:text-xs',
-                    active
-                      ? 'border-ecg-green bg-ecg-green/15 text-ecg-green shadow-[0_0_18px_-8px_var(--color-ecg-green)]'
-                      : 'border-neutral-600 bg-neutral-900 text-neutral-300 hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green',
-                  ].join(' ')}
-                >
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-          <div
-            className="relative z-10 mt-2 grid grid-cols-3 grid-rows-2 gap-1.5"
-            aria-label="Timed vitals"
-          >
-            {TIMED_VITAL_BUTTONS.map((slot) => (
-              <button
-                key={slot}
-                type="button"
-                onClick={() => handleTimedVitalsClick(slot)}
-                className="relative z-10 flex h-11 min-h-11 w-full cursor-pointer appearance-none items-center justify-center border border-neutral-600 bg-neutral-900 px-2 py-2 text-xs font-mono font-bold uppercase tracking-wider text-neutral-200 pointer-events-auto hover:border-cyan-bp hover:bg-cyan-bp/10 hover:text-cyan-bp focus:outline-none focus:ring-2 focus:ring-cyan-bp xl:[@media(min-height:800px)]:h-14 xl:[@media(min-height:800px)]:min-h-14 xl:[@media(min-height:800px)]:text-sm"
-              >
-                {slot}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div
-          className="order-2 flex min-w-0 items-center gap-3 sm:order-3 sm:col-span-2"
-          data-testid="admin-etco2-trend-timer-row"
-        >
           <div
             role="status"
             aria-label="EtCO2 calibration status"
             data-testid="admin-etco2-calibration-indicator"
             data-calibrated={etco2Calibrated}
             className={[
-              'flex h-7 w-20 shrink-0 items-center justify-center border px-2',
-              'xl:[@media(min-height:800px)]:h-9 xl:[@media(min-height:800px)]:w-24',
+              'ml-14 flex h-7 w-20 items-center justify-center border px-2',
+              'xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:h-9 xl:[@media(min-height:800px)]:w-24',
               'font-mono text-[10px] font-bold uppercase tracking-wider transition-colors xl:[@media(min-height:800px)]:text-xs',
               etco2Calibrated
                 ? 'border-purple-etco2 bg-purple-etco2/15 text-purple-etco2 shadow-[0_0_16px_-6px_var(--color-purple-etco2)]'
@@ -169,7 +117,55 @@ export function VitalsControls({
           >
             EtCO2
           </div>
-          <VitalTrendTimer />
+        </div>
+
+        <div className="min-w-0 self-start xl:[@media(min-height:800px)]:mx-auto xl:[@media(min-height:800px)]:w-full xl:[@media(min-height:800px)]:max-w-[24rem]" data-testid="admin-ecg-column">
+          <div data-testid="admin-graph-row-ecg">
+            <EcgRhythmSelector compact />
+          </div>
+          <div className="mt-2" data-testid="admin-utility-column">
+            <div
+              role="group"
+              className="grid grid-cols-2 gap-1.5"
+              aria-label="CPR mode"
+            >
+              {CPR_MODES.map(({ mode, label }) => {
+                const active = cprMode === mode
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setCprMode(active ? 'off' : mode)}
+                    className={[
+                      'flex h-9 w-full items-center justify-center border px-2 xl:[@media(min-height:800px)]:h-11',
+                      'font-mono text-[10px] font-bold uppercase tracking-wider transition-colors xl:[@media(min-height:800px)]:text-xs',
+                      active
+                        ? 'border-ecg-green bg-ecg-green/15 text-ecg-green shadow-[0_0_18px_-8px_var(--color-ecg-green)]'
+                        : 'border-neutral-600 bg-neutral-900 text-neutral-300 hover:border-ecg-green hover:bg-ecg-green/10 hover:text-ecg-green',
+                    ].join(' ')}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+            <div
+              className="relative z-10 mt-2 grid grid-cols-3 grid-rows-2 gap-1.5"
+              aria-label="Timed vitals"
+            >
+              {TIMED_VITAL_BUTTONS.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  onClick={() => handleTimedVitalsClick(slot)}
+                  className="relative z-10 flex h-11 min-h-11 w-full cursor-pointer appearance-none items-center justify-center border border-neutral-600 bg-neutral-900 px-2 py-2 text-xs font-mono font-bold uppercase tracking-wider text-neutral-200 pointer-events-auto hover:border-cyan-bp hover:bg-cyan-bp/10 hover:text-cyan-bp focus:outline-none focus:ring-2 focus:ring-cyan-bp xl:[@media(min-height:800px)]:h-14 xl:[@media(min-height:800px)]:min-h-14 xl:[@media(min-height:800px)]:text-sm"
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       {patientSns ? <PatientSnsControls {...patientSns} /> : null}

@@ -38,7 +38,7 @@ describe('VitalInput', () => {
     const shell = screen.getByTestId('vital-input-shell-hr')
 
     expect(input).toHaveClass('text-right')
-    expect(shell).toHaveClass('w-28')
+    expect(shell).toHaveClass('w-24')
     expect(shell).toHaveClass('bg-transparent')
     expect(shell).toContainElement(input)
     expect(shell).toContainElement(screen.getByText('bpm'))
@@ -51,7 +51,10 @@ describe('VitalInput', () => {
     const shell = screen.getByTestId('vital-input-shell-hr')
     const toggle = screen.getByRole('button', { name: 'FC off' })
 
-    expect(shell).toHaveClass('w-28')
+    expect(shell).toHaveClass(
+      'w-20',
+      'xl:[@media(min-height:800px)]:w-24',
+    )
     expect(input).toHaveClass(
       'h-7',
       'xl:[@media(min-height:800px)]:h-9',

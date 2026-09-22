@@ -5,6 +5,22 @@
 
 ---
 
+## [2026-09-22] [instructor/ui/testing] — Restore compact two-column vital controls
+
+- Moved ECG back to the top of the right column above CPR and timed-vital controls, and moved the
+  shared timer above FC in the left column with the visible label `Trend`.
+- Restored compact fused-input widths and placed the EtCO2 calibration indicator beneath EtCO2
+  without changing any clinical, fused-authoring, timer, Save/Send, or calibration behavior.
+- Added layout and sizing regressions. All 67 focused tests, TypeScript, affected-file ESLint, the
+  Next.js 16.3 Webpack production build, and rendered 1280×720 desktop QA pass.
+
+## [2026-09-22] [planning/instructor/ui] — Refine fused-vital panel composition
+
+- Confirmed restoration of ECG to the right utility column above CPR and timed-vital controls, with
+  the shared Trend timer above FC in the left vitals column and its visible label changed to `Trend`.
+- Confirmed the prior compact vital-input widths and EtCO2 calibration placement beneath EtCO2 while
+  preserving all fused authoring and timing behavior. Implementation is in progress.
+
 ## [2026-09-22] [instructor/domain/testing] — Implement fused vital and Trend authoring
 
 - Removed the separate Trend target column and made each widened vital value the immediate value for
