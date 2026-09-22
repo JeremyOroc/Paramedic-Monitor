@@ -24,4 +24,13 @@ describe('Wagami A right task dock', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
     expect(onTask).toHaveBeenCalledWith('callInfo')
   })
+
+  it('visibly disables Call Info without disabling the other destinations', () => {
+    const onTask = vi.fn()
+    render(<WagamiATaskDock onTask={onTask} callInfoDisabled />)
+    expect(screen.getByRole('button', { name: 'Info appel' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Médicaments' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
+    expect(onTask).not.toHaveBeenCalled()
+  })
 })

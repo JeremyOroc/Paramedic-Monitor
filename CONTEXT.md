@@ -372,7 +372,8 @@ _Avoid_: Confirmed patient category, patient age
 
 **Wagami A full-display view**:
 A secondary Wagami A view that fills the device's inner display while its outer shell remains
-visible and operable.
+visible and operable. The Call Info destination instead opens a shell-free Assignment dashboard
+and is not a Wagami A full-display view.
 _Avoid_: Browser fullscreen, shell-free page
 
 **Vital Log**:
@@ -384,6 +385,12 @@ _Avoid_: Print/Capture log, medication Event Log, 12-lead printout
 The Wagami A live-screen task that leads to the trainee's Assignment dashboard and caller
 information. It is distinct from the medication Event Log.
 _Avoid_: Events destination, Event Log tile
+
+**Wagami A Call Info page**:
+The shell-free Assignment dashboard reached through Wagami A's Call Info destination after
+entering the monitor. It fills the Scenario device's presentation area rather than the device's
+inner display aperture.
+_Avoid_: Wagami A full-display view, inner-screen Call Info panel
 
 **Device language**:
 The French or English Wagami A interface presentation selected on one Scenario device and mirrored

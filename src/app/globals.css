@@ -359,6 +359,11 @@ body.monitor-viewport-lock {
   aspect-ratio: 4 / 3;
 }
 
+.dispatch-tablet-frame-classic-contained {
+  width: min(88cqw, calc(90cqh * 4 / 3), 720px);
+  aspect-ratio: 4 / 3;
+}
+
 .dispatch-map-marker {
   display: block;
   border-radius: 9999px;

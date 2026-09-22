@@ -86,6 +86,17 @@ describe('Wagami A approved v3 shell controls', () => {
     expect(onTask).toHaveBeenCalledWith('configure')
   })
 
+  it('removes Call Info from the physical navigation ring during a charge', () => {
+    const onTask = vi.fn()
+    render(<WagamiADevice display={display} energy={120} defibState="charging" poweredOn onPowerToggle={() => {}} onTask={onTask} />)
+    for (let index = 0; index < 4; index += 1) {
+      fireEvent.click(screen.getByRole('button', { name: 'Droite' }))
+    }
+    expect(screen.getByTestId('a-screen-mock')).toHaveAttribute('data-selection', 'vitalLog')
+    fireEvent.click(screen.getByRole('button', { name: 'Entrée' }))
+    expect(onTask).toHaveBeenCalledExactlyOnceWith('vitalLog')
+  })
+
   it('guards patient mode and keeps shell controls available in a secondary inner view', () => {
     const onPatientModeCycle = vi.fn()
     const onAnalyse = vi.fn()

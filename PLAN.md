@@ -10,6 +10,41 @@
 
 ## Current Requirement Updates
 
+- 2026-09-21 Wagami A Call Info page — **programmer-confirmed and implemented locally**.
+  When Call Info is reopened from Wagami A, replace the
+  visible device shell with the page-filling Assignment dashboard and a page-level return action,
+  matching Wagami X's live dispatch workflow rather than the current read-only, inner-display
+  presentation. This includes live response/countdown timers, dispatch actions, and interactive
+  hospital routing/directory behavior. Preserve the initial pre-arrival full-page dispatch gate.
+  In Preview and Spectator, the Call Info surface fills the respective viewing canvas, not the
+  entire Instructor Console. This explicitly supersedes the Call Info portion of the historical
+  A3.1/A5 rule that every destination remains inside the persistent shell; the other secondary
+  destinations keep that rule. The page follows Wagami A's selected French/English Device language;
+  the optional `?callerInfoVariant=classic` switch also applies to A while Assignment remains the
+  default. Prevent entry from A's analysis, charging, and charged states so an automatically advised
+  charge cannot begin behind a shell-free page. This safety guard is A-only; Wagami X remains
+  unchanged pending any separate X decision. Room-free Preview shows available caller information
+  and route but cannot create dispatch events or running dispatch timers; Spectator remains
+  read-only and mirrors the trainee's Call Info page. On
+  reopened A Call Info, continue clinical alarms and show the Device Patient mode plus active
+  alarms in a slim, shell-free page header: Back and title on the left, mode and active alarm labels
+  on the right. The Assignment dashboard fills the remaining viewport; the same header also sits
+  above the optional classic layout. The pre-arrival dispatch gate remains unchanged and needs no
+  active-monitor clinical status. ADR 0032 records the deliberate exception to ADR 0029.
+
+### Testing — Wagami A Call Info page
+
+Cover live viewport takeover, shell absence and return, locale and variant selection, dispatch
+timers/actions, hospital map and directory, analysis/charging/charged entry guards, Preview's non-live
+controls, Spectator containment and read-only mirroring, on-page alarm/mode status, and regression
+of the pre-arrival gate and X/Z. Verify supported landscape layouts.
+
+**Completed locally 2026-09-21.** The 71-test focused Call Info/A/Spectator suite, TypeScript,
+affected-file ESLint with zero errors and one pre-existing hook warning, and Next.js 16.3 Webpack
+production build pass. Browser review at 1280×720 and 1024×768 confirms viewport fit, classic
+tablet fit, no scrolling, and Back return. The full suite has 1,594 passing, one skipped, and the
+same three unrelated Room-ownership/PatientInfoPanel baseline failures.
+
 - 2026-09-21 Wagami A mute-button visual state — **programmer-confirmed and implemented**. Keep the
   existing shell-only all-device-cues mute action, but show a speaker with sound waves while
   audio is on and a crossed speaker while muted. Change only the icon: add no visible label,

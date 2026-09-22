@@ -15,7 +15,7 @@ import type { WagamiALocale } from '@/types/wagamiA'
 export type CallerEventKey = 'acknowledge' | 'arrival' | 'transport'
 export type CallerInfoVariant = 'classic' | 'assignment'
 
-type CallerInfoModalProps = {
+export type CallerInfoModalProps = {
   open: boolean
   info: CallerInfo
   onCallerEvent: (key: CallerEventKey) => void
@@ -30,6 +30,8 @@ type CallerInfoModalProps = {
   fullScreen?: boolean
   /** Keeps a full-screen surface inside an embedded spectator canvas. */
   contained?: boolean
+  /** Overrides map containment when the page itself is positioned inside a layout frame. */
+  mapContained?: boolean
   /** A/B switch: classic tablet or icon-led assignment dashboard. */
   variant?: CallerInfoVariant
   /** Full-page in-monitor caller info uses this tablet button to return to the Zoll. */
@@ -203,6 +205,7 @@ export function CallerInfoModal({
   responseFormatted = '00:00',
   fullScreen = false,
   contained = false,
+  mapContained = contained,
   variant = 'assignment',
   onBack,
   onEnterMonitor,
@@ -258,6 +261,7 @@ export function CallerInfoModal({
       <div
         className={cn(
           'flex h-full w-full items-center justify-center overflow-hidden',
+          contained && '[container-type:size]',
           !fullScreen && 'bg-black/80 p-4',
           fullScreen && (assignmentFullBleed ? 'bg-dispatch-bezel' : 'bg-dispatch-wall p-5'),
         )}
@@ -273,7 +277,7 @@ export function CallerInfoModal({
                 ? 'dispatch-tablet-frame-assignment'
                 : 'h-[94%] w-[92%] min-w-[390px] max-w-[740px]'
               : fullScreen
-                ? 'dispatch-tablet-frame-classic'
+                ? contained ? 'dispatch-tablet-frame-classic-contained' : 'dispatch-tablet-frame-classic'
                 : 'h-[92%] w-[84%] min-w-[360px] max-w-[680px]',
           )}
         >
@@ -314,7 +318,7 @@ export function CallerInfoModal({
               hospitalMap={hospitalMap}
               transported={transported}
               atHospital={atHospital}
-              contained={contained}
+              contained={mapContained}
               mapReadOnly={mapReadOnly}
               onOpenHospitalDirectory={onOpenHospitalDirectory}
               onCloseHospitalDirectory={onCloseHospitalDirectory}

@@ -79,6 +79,47 @@ describe('Wagami A live Attempt integration', () => {
     })
   })
 
+  it('reopens Call Info as a full-page live dispatch workflow and projects the page', async () => {
+    const events: StudentEventRecord[] = []
+    const projections: MonitorProjection[] = []
+    render(
+      <MonitorPage
+        transportStorageScope="ABC234.participant-1.1"
+        onStudentEvent={(event) => events.push(event)}
+        onProjectionChange={(projection) => projections.push(projection)}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
+
+    expect(screen.getByTestId('wagami-a-call-info-page')).toBeInTheDocument()
+    expect(screen.queryByTestId('wagami-a-shell')).not.toBeInTheDocument()
+    expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
+    expect(screen.getByLabelText('Response timer')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Transport' })).toBeEnabled()
+    await waitFor(() => expect(projections.at(-1)?.wagamiA?.view).toBe('callInfo'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Transport' }))
+    expect(events).toContainEqual(expect.objectContaining({ kind: 'transport', label: 'Transport' }))
+
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    expect(screen.getByTestId('wagami-a-shell')).toBeInTheDocument()
+    expect(screen.queryByTestId('wagami-a-call-info-page')).not.toBeInTheDocument()
+  })
+
+  it('preserves A language on the full-page caller surface', () => {
+    render(<MonitorPage transportStorageScope="ABC234.participant-1.1" />)
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    fireEvent.click(screen.getByRole('button', { name: /Back/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Call Info' }))
+    expect(screen.getByRole('heading', { name: 'Call information' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Acknowledge' })).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULT')
+  })
+
   it('resets device preferences for a new Attempt scope', async () => {
     const first = render(
       <MonitorPage

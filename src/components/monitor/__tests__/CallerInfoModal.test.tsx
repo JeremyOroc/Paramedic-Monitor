@@ -432,4 +432,30 @@ describe('CallerInfoModal', () => {
     expect(screen.getByLabelText('Caller info')).toHaveClass('absolute', 'inset-0')
     expect(screen.getByLabelText('Caller info')).not.toHaveClass('fixed')
   })
+
+  it('allows a page-positioned live surface to keep X-style fullscreen map behavior', () => {
+    const hospitalMap = {
+      routeKind: 'dispatch' as const,
+      selectedHospitalId: null,
+      pendingHospitalId: null,
+      failedHospitalId: null,
+      failureMessage: '',
+      directoryOpen: true,
+      fullscreen: true,
+      distances: {},
+      distanceStatus: 'idle' as const,
+      rankingOrigin: null,
+    }
+    renderModal({
+      fullScreen: true,
+      contained: true,
+      mapContained: false,
+      route: DEFAULT_DISPATCH_ROUTE,
+      hospitalMap,
+    })
+
+    expect(screen.getByLabelText('Caller info')).toHaveClass('absolute', 'inset-0')
+    expect(screen.getByTestId('dispatch-route-map-shell')).toHaveClass('fixed')
+    expect(screen.getByTestId('map-fullscreen-toggle')).toHaveTextContent('Minimize')
+  })
 })
