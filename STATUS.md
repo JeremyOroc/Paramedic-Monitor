@@ -6,6 +6,26 @@
 ---
 
 ## Current Phase
+**Wagami A metadata-row and Preview-timer refinement — COMPLETE LOCALLY (2026-09-22).** Device
+Patient mode and active alarms, Montréal date/time, and Monitor elapsed time now share one aligned
+row beneath the vital cards. MODE has explicit separation from its selected chip; clock and timer
+text use a larger 13–18 px responsive treatment. `/?dev=3` now counts from its initially powered-on
+state, continues through secondary views, resets on power-off, and restarts at zero on power-on
+without creating Preview Vital Log rows. Live and Spectator retain shared presentation/parity. All
+38 focused tests, TypeScript, affected-file ESLint, the Next.js 16.3 Webpack production build, and
+rendered 1280×720 plus 1024×768 interaction QA pass with no browser console errors.
+
+**Wagami A medication, metadata, Vital Log, localization, and mode cues — COMPLETE LOCALLY
+(2026-09-22).** Medication presses receive a 400 ms cyan local confirmation without changing event
+recording, and visible Record/Consigner sublabels are removed. The live display adds a right-aligned
+elapsed timer and Montréal date/time; Preview and Spectator use the defined honest/mirrored variants.
+Vital Log defaults to five minutes and A Configure now offers persisted 1/3/5/10/15/30-minute
+exact-second cadences while X remains fixed at five. English A terminology is consistently HR/BP,
+French remains FC/PNI, and the current mode uses a subtle chip. The 82-test focused suite,
+TypeScript, affected-file ESLint with zero errors and one existing warning, the Next.js 16.3 Webpack
+production build, and rendered 1280×720 plus 1024×768 interaction QA pass. The full suite has 1,624
+passing and one skipped; two concurrent admin timeouts pass in isolation, leaving the same three
+unrelated Room-ownership/PatientInfoPanel baseline failures.
 **Continuous VF waveform — COMPLETE LOCALLY (2026-09-22).** The shared VF signal no longer forces a
 near-zero tail before its four-second boundary. Irregular alternating extrema occupy the complete
 cycle, and the sampled endpoint closes onto the first without a wrap spike. VF amplitude, variation,

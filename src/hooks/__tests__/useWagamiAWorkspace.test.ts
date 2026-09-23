@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 import { ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { TWELVE_LEAD_SENT_MS } from '@/lib/twelveLeadTransmission'
-import { useWagamiAWorkspace } from '../useWagamiAWorkspace'
+import { MEDICATION_CONFIRMATION_MS, useWagamiAWorkspace } from '../useWagamiAWorkspace'
 
 describe('useWagamiAWorkspace', () => {
   beforeEach(() => {
@@ -36,6 +36,29 @@ describe('useWagamiAWorkspace', () => {
     })
     expect(result.current.view).toBe('medicationLog')
     expect(result.current.medicationEvents[0]).toMatchObject({ medication: 'Epi', time: '14:00:00' })
+  })
+
+  it('briefly confirms only the latest accepted medication press', () => {
+    const onStudentEvent = vi.fn()
+    const { result } = renderHook(() => useWagamiAWorkspace({
+      scope: 'preview',
+      rhythm: 'nsr',
+      hr: 80,
+      onStudentEvent,
+    }))
+
+    act(() => result.current.recordMedication('Epi'))
+    expect(result.current.flashedMedication).toBe('Epi')
+    act(() => vi.advanceTimersByTime(MEDICATION_CONFIRMATION_MS - 1))
+    expect(result.current.flashedMedication).toBe('Epi')
+
+    act(() => result.current.recordMedication('Amio'))
+    expect(result.current.flashedMedication).toBe('Amio')
+    expect(result.current.medicationEvents).toHaveLength(2)
+    expect(onStudentEvent).toHaveBeenCalledTimes(2)
+
+    act(() => vi.advanceTimersByTime(MEDICATION_CONFIRMATION_MS))
+    expect(result.current.flashedMedication).toBeNull()
   })
 
   it('returns directly from PNI settings to the monitor', () => {

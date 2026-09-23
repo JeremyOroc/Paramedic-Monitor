@@ -7,6 +7,8 @@ import type { CallerInfoVariant } from '@/components/monitor/CallerInfoModal'
 import { useWagamiAClinicalCore } from '@/hooks/useWagamiAClinicalCore'
 import { useWagamiAWorkspace } from '@/hooks/useWagamiAWorkspace'
 import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
+import { useMonitorClock } from '@/hooks/useMonitorClock'
+import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { resolveWagamiAPreviewState } from '@/lib/wagamiAPreviewState'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -18,6 +20,7 @@ type WagamiAPreviewProps = {
 
 /** Room-free A5 device preview; A6 live Attempts stay gated. */
 export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPreviewProps) {
+  const montrealClock = useMonitorClock('America/Toronto')
   const confirmed = useMonitorStore((state) => state.confirmed)
   const confirmedActive = useMonitorStore((state) => state.confirmedVitalActive)
   const cprMode = useMonitorStore((state) => state.cprMode)
@@ -35,6 +38,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
     cprMode,
     locale: workspace.preferences.locale,
   })
+  const { formatted: monitorElapsed } = useSessionTimer(clinical.poweredOn)
   const text = getWagamiAText(workspace.preferences.locale)
   const { showCallInfo, onMonitorReady } = useWagamiACallInfoCover(workspace.view)
 
@@ -61,6 +65,9 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
       onEnergyUp={clinical.onEnergyUp}
       selectedAction={selectedAction}
       onMonitorReady={onMonitorReady}
+      date={montrealClock.date}
+      time={montrealClock.time}
+      sessionTimer={monitorElapsed}
       waveformSequenceKey={monitorResetVersion}
     />
   )
@@ -107,6 +114,9 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
           screenContent={screenContent}
           locale={workspace.preferences.locale}
           shellAlarmLedEnabled={workspace.preferences.shellAlarmLedEnabled}
+          date={montrealClock.date}
+          time={montrealClock.time}
+          sessionTimer={monitorElapsed}
         />
       </div>
       {showCallInfo ? (

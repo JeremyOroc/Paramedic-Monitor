@@ -2,6 +2,10 @@ import type { VitalLogEntry } from '@/hooks/useVitalLog'
 import type { Etco2CalibrationStatus } from '@/store/monitorStore'
 import type { PatientMode, Rhythm } from '@/types/vitals'
 import type { NibpAutoInterval, NibpMode } from '@/types/nibp'
+import {
+  DEFAULT_VITAL_LOG_INTERVAL,
+  type VitalLogInterval,
+} from '@/types/vitalLog'
 
 export type WagamiALocale = 'fr' | 'en'
 
@@ -19,11 +23,13 @@ export type WagamiAView =
 export type WagamiAPreferences = {
   locale: WagamiALocale
   shellAlarmLedEnabled: boolean
+  vitalLogInterval: VitalLogInterval
 }
 
 export const DEFAULT_WAGAMI_A_PREFERENCES: WagamiAPreferences = {
   locale: 'fr',
   shellAlarmLedEnabled: true,
+  vitalLogInterval: DEFAULT_VITAL_LOG_INTERVAL,
 }
 
 export type WagamiAMedicationEvent = {

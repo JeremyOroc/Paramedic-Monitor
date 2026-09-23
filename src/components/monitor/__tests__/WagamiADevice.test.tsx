@@ -140,5 +140,6 @@ describe('Wagami A approved v3 shell controls', () => {
     expect(screen.getByRole('navigation', { name: 'Wagami A physical navigation' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Left' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Change patient mode, current mode ADULT' })).toHaveTextContent('MODE')
+    expect(screen.getByRole('button', { name: 'Measure blood pressure' })).toHaveTextContent('BP')
   })
 })

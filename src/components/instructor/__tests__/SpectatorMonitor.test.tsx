@@ -11,6 +11,9 @@ describe('SpectatorMonitor A2 model boundary', () => {
     const projection = {
       model: 'wagamiA',
       powerState: 'on',
+      date: '2026-09-22',
+      time: '20:19:40',
+      sessionTimer: '00:07:23',
       controller: { isMuted: false },
       defib: { state: 'idle', energy: 120, progress: 0, phaseStartedAt: null, phaseEndsAt: null },
       confirmed: DEFAULT_VITALS,
@@ -55,6 +58,8 @@ describe('SpectatorMonitor A2 model boundary', () => {
     rerender(<SpectatorMonitor projection={{ ...projection, wagamiA: { ...projection.wagamiA!, view: 'monitor' } }} embedded />)
     expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
     expect(screen.getByTestId('wagami-a-shell').parentElement).not.toHaveClass('invisible')
+    expect(screen.getByLabelText('Date et heure de Montréal')).toHaveTextContent('2026-09-22 20:19:40')
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:07:23')
   })
 
   it('keeps the initial Wagami A dispatch gate shell-free in Spectator', () => {
@@ -111,7 +116,7 @@ describe('SpectatorMonitor A2 model boundary', () => {
       cprOverrideActive: false,
       wagamiA: {
         view: 'configure',
-        preferences: { locale: 'en', shellAlarmLedEnabled: false },
+        preferences: { locale: 'en', shellAlarmLedEnabled: false, vitalLogInterval: 3 },
         etco2CalibrationStatus: 'idle',
         patientMode: 'adult',
         nibpMode: 'manual',
@@ -126,6 +131,8 @@ describe('SpectatorMonitor A2 model boundary', () => {
 
     expect(screen.getByRole('heading', { name: 'Configure' })).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'false')
+    expect(screen.getByRole('button', { name: '3 min' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: '3 min' })).toBeDisabled()
     expect(screen.queryByText('WAGAMI A · STATE UNAVAILABLE')).not.toBeInTheDocument()
   })
 
@@ -202,6 +209,6 @@ describe('SpectatorMonitor A2 model boundary', () => {
     expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('72')
     expect(screen.getByTestId('wagami-a-vital-pni')).not.toHaveTextContent('118/76')
     expect(screen.getByTestId('wagami-a-vital-pni').tagName).toBe('DIV')
-    expect(screen.queryByRole('button', { name: 'Open NIBP settings' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Open BP settings' })).not.toBeInTheDocument()
   })
 })

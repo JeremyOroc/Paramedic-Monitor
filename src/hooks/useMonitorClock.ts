@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 import { formatMonitorClock, type MonitorClock } from '@/lib/monitorClock'
 
 /**
- * Ticking monitor clock. Returns the formatted `{ date, time }` for the local
- * time zone (falling back to America/Toronto), updating once per second.
+ * Ticking monitor clock. Returns the formatted `{ date, time }` for an
+ * explicitly requested time zone, or the local time zone with a Montréal
+ * fallback, updating once per second.
  */
-export function useMonitorClock(): MonitorClock {
+export function useMonitorClock(requestedTimeZone?: string): MonitorClock {
   const [now, setNow] = useState<Date | null>(null)
 
-  const timeZone = (() => {
+  const timeZone = requestedTimeZone ?? (() => {
     try {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
       return tz || 'America/Toronto'

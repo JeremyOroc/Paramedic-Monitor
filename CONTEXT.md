@@ -382,6 +382,18 @@ The Scenario device's all-cues audio-suppression state. It does not acknowledge 
 or disable Wagami A's on-screen alarm indication or shell alarm LED.
 _Avoid_: Alarm mute, alarm acknowledgement, LED Off
 
+**Monitor elapsed timer**:
+The Scenario device's powered-on elapsed time. It begins at monitor power-on and returns to zero at
+power-off, independently of the Attempt, dispatch countdown, and response timer. A Room-free Preview
+uses the same powered-on elapsed-time semantics without creating Attempt-only clinical records such
+as Vital Log rows.
+_Avoid_: Session timer, Attempt timer, response timer
+
+**Wagami A wall clock**:
+The calendar date and clock presented on Wagami A in Montréal civil time, regardless of the viewing
+device's local timezone.
+_Avoid_: Device-local time, Monitor elapsed timer
+
 **Wagami A clinical status line**:
 The compact line that begins with the current Device Patient mode and appends active alarm channels.
 When no alarm is active, its alarm portion is blank rather than announcing a normal state.
@@ -413,6 +425,13 @@ _Avoid_: Browser fullscreen, shell-free page
 The Scenario device's time-ordered history of monitored vital measurements during an Attempt.
 It is distinct from the medication Event Log and from a captured or printed 12-lead.
 _Avoid_: Print/Capture log, medication Event Log, 12-lead printout
+
+**Vital Log interval**:
+The Wagami A Scenario device's selected cadence for future Vital Log snapshots. Changing it preserves
+existing rows, creates no retrospective rows, and begins a new cadence from the exact, unrounded
+Monitor elapsed time of the change. The selection persists within an Attempt even though the Vital
+Log rows themselves clear with the Monitor elapsed timer's power-off or reload lifecycle.
+_Avoid_: PNI automatic interval, cuff interval, historical backfill
 
 **Call Info destination**:
 The Wagami A live-screen task that leads to the trainee's Assignment dashboard and caller

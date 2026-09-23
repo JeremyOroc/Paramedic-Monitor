@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-export const VITAL_LOG_INTERVAL_SECONDS = 5 * 60
+import {
+  DEFAULT_VITAL_LOG_INTERVAL,
+  type VitalLogInterval,
+} from '@/types/vitalLog'
+
+export const VITAL_LOG_INTERVAL_SECONDS = DEFAULT_VITAL_LOG_INTERVAL * 60
 
 export type VitalLogSnapshot = {
   fc: number | null
@@ -20,6 +25,7 @@ type UseVitalLogOptions = {
   elapsedSeconds: number
   isRunning: boolean
   snapshot: VitalLogSnapshot
+  intervalMinutes?: VitalLogInterval
 }
 
 function formatTimestamp(totalSeconds: number): string {
@@ -35,9 +41,12 @@ export function useVitalLog({
   elapsedSeconds,
   isRunning,
   snapshot,
+  intervalMinutes = DEFAULT_VITAL_LOG_INTERVAL,
 }: UseVitalLogOptions): VitalLogEntry[] {
+  const intervalSeconds = intervalMinutes * 60
   const [entries, setEntries] = useState<VitalLogEntry[]>([])
-  const nextSampleSecondsRef = useRef(VITAL_LOG_INTERVAL_SECONDS)
+  const nextSampleSecondsRef = useRef(intervalSeconds)
+  const intervalMinutesRef = useRef(intervalMinutes)
   const latestSnapshotRef = useRef(snapshot)
   const previousElapsedSecondsRef = useRef(0)
 
@@ -47,7 +56,8 @@ export function useVitalLog({
 
   useEffect(() => {
     if (!isRunning || elapsedSeconds < previousElapsedSecondsRef.current) {
-      nextSampleSecondsRef.current = VITAL_LOG_INTERVAL_SECONDS
+      intervalMinutesRef.current = intervalMinutes
+      nextSampleSecondsRef.current = intervalSeconds
       previousElapsedSecondsRef.current = elapsedSeconds
       // This history is an event stream driven by the timer, not derived render
       // state. Clearing here deliberately follows the same lifecycle as the
@@ -57,6 +67,13 @@ export function useVitalLog({
     }
 
     previousElapsedSecondsRef.current = elapsedSeconds
+
+    if (intervalMinutesRef.current !== intervalMinutes) {
+      intervalMinutesRef.current = intervalMinutes
+      nextSampleSecondsRef.current = elapsedSeconds + intervalSeconds
+      return
+    }
+
     if (elapsedSeconds < nextSampleSecondsRef.current) return
 
     const currentSnapshot = latestSnapshotRef.current
@@ -66,11 +83,11 @@ export function useVitalLog({
         timestamp: formatTimestamp(nextSampleSecondsRef.current),
         ...currentSnapshot,
       })
-      nextSampleSecondsRef.current += VITAL_LOG_INTERVAL_SECONDS
+      nextSampleSecondsRef.current += intervalSeconds
     }
 
     setEntries((current) => [...current, ...newEntries])
-  }, [elapsedSeconds, isRunning])
+  }, [elapsedSeconds, intervalMinutes, intervalSeconds, isRunning])
 
   return entries
 }
