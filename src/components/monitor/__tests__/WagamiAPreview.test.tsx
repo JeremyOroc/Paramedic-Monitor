@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useMonitorStore } from '@/store/monitorStore'
@@ -27,16 +27,36 @@ describe('Wagami A Room-free clinical preview', () => {
     expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
   })
 
-  it('shows a live Montréal wall clock with an honest zero Preview timer', async () => {
+  it('runs the Monitor elapsed timer with the Preview power lifecycle', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-22T20:19:40Z'))
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
 
     expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
-    await waitFor(() => {
-      expect(screen.getByLabelText('Date et heure de Montréal')).toHaveTextContent(
-        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
-      )
-    })
+    act(() => vi.advanceTimersByTime(1100))
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:01')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Médicaments' }))
+    act(() => vi.advanceTimersByTime(1000))
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:02')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
+    act(() => vi.advanceTimersByTime(1000))
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:03')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    act(() => vi.advanceTimersByTime(2000))
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
+    act(() => vi.advanceTimersByTime(1000))
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:01')
+    expect(screen.getByLabelText('Date et heure de Montréal')).toHaveTextContent(
+      /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
+    )
+    vi.useRealTimers()
   })
 
   it('keeps non-Call-Info destinations inside the persistent shell', () => {

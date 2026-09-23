@@ -10,6 +10,44 @@
 
 ## Current Requirement Updates
 
+- 2026-09-22 Wagami A metadata-row and Preview-timer refinement — **programmer-confirmed design;
+  implemented locally**. Consolidate the full Wagami A clinical status
+  line, Montréal wall clock, and Monitor elapsed timer into one metadata row beneath the vital cards.
+  Keep Device Patient mode and any active alarms at the left, the Montréal date/time centered beneath
+  the SpO2/BP gap, and Monitor elapsed time aligned at the right beneath EtCO2. Vertically center all
+  three regions on one shared line. Add a deliberate visual gap between the `MODE` label and its
+  selected mode chip so they never appear glued together.
+
+  Increase the Montréal date/time and Monitor elapsed typography responsively from the current small
+  metadata treatment to approximately 13–18 px, retaining monospaced tabular numerals and full fit at
+  the supported 1280×720 and 1024×768 landscape sizes. Apply the shared layout to live trainee,
+  Room-free Preview, and Spectator presentations.
+
+  Replace Preview's former fixed `00:00:00` placeholder with the real Monitor elapsed lifecycle:
+  Preview begins counting immediately because it boots powered on, keeps counting through secondary
+  pages and full-page Call Info, resets to zero at power-off, restarts from zero at the next power-on,
+  and resets on browser refresh. This display timer does not invent Preview Vital Log rows. Keep the
+  established live-trainee timer lifecycle and Spectator mirroring unchanged.
+
+### Testing — Wagami A metadata-row and Preview-timer refinement
+
+- Cover shared-container and vertical-alignment semantics for mode/alarms, Montréal date/time, and
+  elapsed time, explicit mode-label spacing, larger responsive metadata typography, and absence of a
+  duplicate status line.
+- Cover Preview timer progression from its initially powered-on state, continuity across secondary
+  pages and Call Info, zero reset on power-off, fresh restart on power-on, refresh reset, unchanged
+  empty Preview Vital Log, and existing live/Spectator parity.
+- Run focused Preview/screen/workspace/Spectator tests, TypeScript, affected-file ESLint, the
+  production build, and rendered interaction QA at 1280×720 and 1024×768.
+
+**Completed locally 2026-09-22.** The main A display now renders one true three-region metadata row,
+with explicit spacing between the mode label and chip, 13–18 px responsive clock/timer typography,
+and no duplicate waveform status row. Room-free Preview uses the shared power-driven elapsed timer,
+including continuous secondary-view timing and power-cycle reset/restart, while retaining an empty
+Preview Vital Log. All 38 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3
+Webpack production build pass. Rendered `/?dev=3` QA at 1280×720 and 1024×768 confirms alignment,
+fit, visible timer progression, `00:00:00` reset, `00:00:01` restart, and a clean browser console.
+
 - 2026-09-22 Wagami A medication, metadata, Vital Log, localization, and mode cues —
   **programmer-confirmed and implemented locally**. Give each
   accepted medication press a 400 ms Wagami A cyan confirmation flash. The most recently pressed

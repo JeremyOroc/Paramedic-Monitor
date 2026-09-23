@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-09-22] [wagami-a/ui/testing] — Align metadata and activate the Preview elapsed timer
+
+- Consolidated mode/active alarms, Montréal date/time, and Monitor elapsed time into one aligned
+  three-region row, added explicit MODE-to-chip spacing, enlarged clock/timer typography, and removed
+  the duplicate status row above the waveforms.
+- Connected Room-free Preview to the shared power-driven elapsed timer so it counts from load,
+  continues across views, resets on power-off, and restarts from zero on power-on while leaving
+  Preview Vital Log empty.
+- All 38 focused tests, TypeScript, affected-file ESLint, the Next.js 16.3 Webpack build, and rendered
+  `/?dev=3` QA at 1280×720 and 1024×768 pass. Browser interaction confirmed timer progression and
+  `00:00:00` → `00:00:01` restart after a power cycle with no console errors.
+
+## [2026-09-22] [planning/wagami-a/domain] — Refine the metadata row and Preview elapsed-time contract
+
+- Chose one shared metadata row with Device Patient mode and active alarms at left, Montréal
+  date/time centered beneath the SpO2/BP gap, and Monitor elapsed time at right beneath EtCO2.
+- Required an explicit gap between the `MODE` label and selected mode chip plus larger responsive
+  monospaced clock/timer typography across live, Preview, and Spectator presentations.
+- Replaced the prior fixed-zero Preview rule with the normal powered-on Monitor elapsed lifecycle:
+  count from Preview load, continue across views, reset on power-off, restart on power-on, and reset
+  on refresh without creating Preview Vital Log rows. This reversible presentation refinement does
+  not warrant an ADR; implementation remains gated on final grill confirmation.
+
 ## [2026-09-22] [wagami-a/ui/domain/testing] — Add medication feedback, clocks, Vital Log cadence, and English labels
 
 - Added a trainee-local 400 ms cyan medication-button confirmation, removed the visible

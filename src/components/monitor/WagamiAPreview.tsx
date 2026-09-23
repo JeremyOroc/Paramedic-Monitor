@@ -8,6 +8,7 @@ import { useWagamiAClinicalCore } from '@/hooks/useWagamiAClinicalCore'
 import { useWagamiAWorkspace } from '@/hooks/useWagamiAWorkspace'
 import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
 import { useMonitorClock } from '@/hooks/useMonitorClock'
+import { useSessionTimer } from '@/hooks/useSessionTimer'
 import { resolveWagamiAPreviewState } from '@/lib/wagamiAPreviewState'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -36,6 +37,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
     cprMode,
     locale: workspace.preferences.locale,
   })
+  const { formatted: monitorElapsed } = useSessionTimer(clinical.poweredOn)
   const text = getWagamiAText(workspace.preferences.locale)
   const { showCallInfo, onMonitorReady } = useWagamiACallInfoCover(workspace.view)
 
@@ -64,7 +66,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
       onMonitorReady={onMonitorReady}
       date={montrealClock.date}
       time={montrealClock.time}
-      sessionTimer="00:00:00"
+      sessionTimer={monitorElapsed}
     />
   )
 
@@ -112,7 +114,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
           shellAlarmLedEnabled={workspace.preferences.shellAlarmLedEnabled}
           date={montrealClock.date}
           time={montrealClock.time}
-          sessionTimer="00:00:00"
+          sessionTimer={monitorElapsed}
         />
       </div>
       {showCallInfo ? (

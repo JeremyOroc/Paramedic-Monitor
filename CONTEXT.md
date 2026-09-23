@@ -359,7 +359,9 @@ _Avoid_: Alarm mute, alarm acknowledgement, LED Off
 
 **Monitor elapsed timer**:
 The Scenario device's powered-on elapsed time. It begins at monitor power-on and returns to zero at
-power-off, independently of the Attempt, dispatch countdown, and response timer.
+power-off, independently of the Attempt, dispatch countdown, and response timer. A Room-free Preview
+uses the same powered-on elapsed-time semantics without creating Attempt-only clinical records such
+as Vital Log rows.
 _Avoid_: Session timer, Attempt timer, response timer
 
 **Wagami A wall clock**:

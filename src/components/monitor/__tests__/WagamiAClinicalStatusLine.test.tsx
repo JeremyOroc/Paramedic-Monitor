@@ -11,6 +11,7 @@ describe('WagamiAClinicalStatusLine', () => {
     expect(status).toHaveTextContent('MODE PÉDIATRIQUE')
     expect(status).not.toHaveTextContent('ALARME')
     expect(status).not.toHaveTextContent('AUCUNE')
+    expect(within(status).getByText('MODE')).toHaveClass('mr-2')
   })
 
   it('orders active French alarm labels as FC, SpO₂, then PNI and colors only the alarm segment red', () => {
