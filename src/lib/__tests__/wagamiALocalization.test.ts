@@ -20,6 +20,20 @@ describe('Wagami A localization', () => {
     })
     expect(getWagamiAText('fr').openPniSettings).toBe('Ouvrir les réglages PNI')
     expect(getWagamiAText('en').openPniSettings).toBe('Open BP settings')
+    expect(getWagamiAText('fr')).toMatchObject({
+      patientInfo: 'Info patient',
+      patientInfoTitle: 'Informations patient',
+      patientAge: 'Âge',
+      patientSex: 'Sexe',
+      done: 'Terminé',
+    })
+    expect(getWagamiAText('en')).toMatchObject({
+      patientInfo: 'Patient Info',
+      patientInfoTitle: 'Patient Information',
+      patientAge: 'Age',
+      patientSex: 'Sex',
+      done: 'Done',
+    })
     expect(getWagamiADefibLabel('fr', 'shock_advised')).toContain('CHOC CONSEILLÉ')
     expect(getWagamiADefibLabel('en', 'shock_advised')).toContain('SHOCK ADVISED')
     expect(getWagamiADefibLabel('fr', 'charging', 'automatic_advised')).toBe('CHOC CONSEILLÉ · CHARGE EN COURS')

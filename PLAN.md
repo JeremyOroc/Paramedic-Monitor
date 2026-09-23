@@ -10,6 +10,70 @@
 
 ## Current Requirement Updates
 
+- 2026-09-23 Wagami A live lead-label suppression — **programmer-confirmed correction and
+  implemented locally**. While Wagami A `Acquérir` is actively running, and while its completed result or
+  print preview is displayed, hide the live green 12-lead identifiers I–III, aVR/aVL/aVF, and
+  V1–V6. The black identifiers built into the static ECG printout remain visible. Preserve the
+  underlying waveform rendering, acquisition status, timing, cancellation, and footer behavior.
+  Restore every live identifier when acquisition is cancelled or the result is closed. Keep
+  transmission, Spectator parity, and Wagami X behavior unchanged.
+
+### Testing — Wagami A acquisition lead-label suppression
+
+- Cover the complete live identifier set disappearing during active acquisition and remaining hidden
+  behind completed-result and print-preview layers, then returning after cancellation or result close.
+- Confirm the lead cells and canvases remain mounted throughout acquisition and that ordinary live
+  12-lead rendering remains unchanged.
+- Run focused component/workspace tests, TypeScript, and affected-file ESLint.
+
+**Completed locally 2026-09-23.** The mounted live grid now suppresses its green identifiers during
+acquisition and beneath completed-result and print-preview layers. The static printout keeps its
+black identifiers, while cancellation or closing the result restores the live labels. All 17
+focused tests, TypeScript, and affected-file ESLint pass.
+
+- 2026-09-23 Wagami A 12-lead Patient Information and layer cleanup — **programmer-confirmed and
+  implemented locally**. Reorder the Wagami A 12-lead footer to `Acquérir`, `Info patient`,
+  `Transmettre`, `Imprimer`. Replace the redundant permanent `Fermer` slot with an A-native,
+  localized Patient Information panel that edits the shared Age `0–120` and Sex `M/F` record using
+  touch or Left/Right/Enter navigation. Live and Preview may edit; Spectator mirrors the panel and
+  values read-only. Patient Information does not annotate or recreate an ECG capture and creates no
+  new patient-information event.
+
+  Keep capture, print, Patient Information, and transmission as mutually exclusive visible layers.
+  A captured result or print preview uses the first footer button as the sole `Fermer`, returning to
+  live 12-lead. Patient Information hides the ordinary footer and uses one `Terminé` / `Done` action;
+  transmission hides the footer and uses its own sole `Fermer`. Make transmission fully opaque so
+  I–III, aVR/aVL/aVF, and V1–V6 labels, grids, and traces never bleed through, while retaining the
+  mounted occluded waveform underneath for continuity. Closing or completing transmission returns
+  to the captured result; the three-second sent confirmation remains locked.
+
+  Header `Retour` exits the complete 12-lead workflow and closes temporary layers, except while the
+  sent confirmation is locked. Power-off closes Patient Information but preserves shared Age/Sex;
+  Monitor Reset and New Attempt restore the existing defaults `40/M`. Keep Wagami X behavior
+  unchanged beyond sharing the same patient record.
+
+### Testing — Wagami A 12-lead Patient Information and layer cleanup
+
+- Cover footer ordering and enablement, one-contextual-`Fermer` behavior, mutually exclusive layers,
+  opaque transmission, sent-confirmation locking, captured-result restoration, and preserved
+  mounted-waveform continuity.
+- Cover localized Patient Information controls, touch and physical navigation, Age bounds, Sex
+  selection, Done/focus behavior, shared live/Preview edits, read-only Spectator parity, power-off,
+  Monitor Reset, and New Attempt behavior.
+- Run focused hook, workspace, live, Preview, Spectator, localization, projection, and store tests;
+  TypeScript; affected-file ESLint; the Next.js 16.3 Webpack production build; and rendered Wagami A
+  12-lead interaction QA.
+
+**Completed locally 2026-09-23.** The reordered footer, shared localized Patient Information panel,
+touch/physical navigation, reset lifecycle, read-only Spectator projection, mutually exclusive
+layers, and opaque transmission surface are implemented. All 171 focused tests across 12 files,
+TypeScript, affected-file ESLint with zero errors and one existing MonitorPage warning, and the
+Next.js 16.3 Webpack production build pass. Rendered `/?dev=3` QA confirmed the footer order,
+physical Age editing, single contextual close, and lead-free opaque transmission at 1280×720 with
+no browser warnings or errors. The full suite has 1,641 passing and one skipped; it retains the same
+three unrelated Room-ownership/legacy PatientInfoPanel baseline failures, while one concurrent
+admin timeout passes all five tests in isolation.
+
 - 2026-09-23 Wagami A inline EtCO₂ calibration — **programmer-confirmed and implemented locally**.
   Remove the dedicated EtCO₂ calibration destination screen. The EtCO₂ task tile
   instead starts calibration while the main monitor remains visible; a second press during

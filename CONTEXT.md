@@ -149,6 +149,11 @@ One of seven fixed hospital recipients to which a trainee may simulate sending a
 It is independent of the Selected receiving hospital and does not change the Transport leg.
 _Avoid_: Receiving hospital, transport destination
 
+**12-lead Patient Information**:
+The shared patient Age and Sex record available from a device's 12-lead workflow. Editing it does not
+alter an existing ECG capture or create another capture.
+_Avoid_: 12-lead annotation, capture demographics, patient mode
+
 **Spectator view**:
 A host-authorized, read-only reproduction of one Scenario device's current simulator presentation, shown either inside the Instructor Console or as a standalone page. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
 _Avoid_: Remote monitor, screen share, instructor monitor

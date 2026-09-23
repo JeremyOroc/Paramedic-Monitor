@@ -153,6 +153,48 @@ describe('SpectatorMonitor A2 model boundary', () => {
     expect(screen.queryByText('WAGAMI A · STATE UNAVAILABLE')).not.toBeInTheDocument()
   })
 
+  it('mirrors Wagami A 12-lead Patient Information as a read-only layer', () => {
+    const projection = {
+      model: 'wagamiA',
+      powerState: 'on',
+      controller: { isMuted: false },
+      defib: { state: 'idle', energy: 120, progress: 0, phaseStartedAt: null, phaseEndsAt: null, canAnalyse: true, canCharge: true, canShock: false, canAdjustEnergy: true },
+      confirmed: { hr: 80, bp_sys: 120, bp_dia: 80, etco2: 35, spo2: 98, rhythm: 'nsr', spo2_waveform: 'normal', etco2_waveform: 'normal' },
+      confirmedVitalActive: { hr: true, bp_sys: true, bp_dia: true, etco2: true, spo2: true },
+      acceptedBp: { bp_sys: 118, bp_dia: 76 },
+      acceptedBpActive: { bp_sys: true, bp_dia: true },
+      displayedHrActive: true,
+      vfDisplayedHr: 80,
+      displayedEtco2: 35,
+      alarms: [],
+      nibp: { enabled: true, phase: 'idle', displayValue: '' },
+      patientInfo: { age: 67, sex: 'F' },
+      callerInfo: DEFAULT_CALLER_INFO,
+      dispatchRoute: { geometry: [] },
+      cprOverrideActive: false,
+      wagamiA: {
+        view: 'twelveLead',
+        preferences: { locale: 'en', shellAlarmLedEnabled: true, vitalLogInterval: 5 },
+        etco2CalibrationStatus: 'idle',
+        patientMode: 'adult',
+        nibpMode: 'manual',
+        nibpAutoInterval: 5,
+        medicationEvents: [],
+        vitalLog: [],
+        twelveLead: { captureState: 'idle', lastCapture: null, printOpen: false, transmissionOpen: false, patientInfoOpen: true, sentDestination: null, sentUntil: null },
+      },
+    } as unknown as MonitorProjection
+
+    render(<SpectatorMonitor projection={projection} embedded />)
+
+    expect(screen.getByRole('dialog', { name: 'Patient Information' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Age')).toHaveTextContent('67')
+    expect(screen.getByRole('button', { name: 'F' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Decrease age' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled()
+    expect(screen.queryByTestId('wagami-a-twelve-lead-footer')).not.toBeInTheDocument()
+  })
+
   it('mirrors automatic advised charge origin and capacitor progress', () => {
     const projection = {
       model: 'wagamiA',

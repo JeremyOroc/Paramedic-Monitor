@@ -52,6 +52,7 @@ export type WagamiATwelveLeadState = {
   lastCapture: WagamiATwelveLeadCapture | null
   printOpen: boolean
   transmissionOpen: boolean
+  patientInfoOpen: boolean
   sentDestination: string | null
   sentUntil: number | null
 }

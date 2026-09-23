@@ -6,6 +6,23 @@
 ---
 
 ## Current Phase
+**Wagami A live lead-label suppression — COMPLETE LOCALLY (2026-09-23).** While `Acquérir` is
+active and beneath completed-result or print-preview layers, the mounted live grid's green I–III,
+aVR/aVL/aVF, and V1–V6 identifiers are absent. The static printout keeps its black identifiers;
+cancellation or closing the result restores the live labels. Lead cells and canvases remain mounted,
+and transmission and Wagami X are unchanged. All 17 focused tests, TypeScript, and affected-file
+ESLint pass.
+
+**Wagami A 12-lead Patient Information and layer cleanup — COMPLETE LOCALLY (2026-09-23).** The
+reordered footer now opens an A-native shared Age/Sex editor with touch and physical navigation;
+Live and Preview edit while Spectator mirrors read-only. Capture, print, Patient Information, and
+transmission are mutually exclusive; only one contextual close is visible; and the opaque
+transmission surface fully hides the mounted lead grid without resetting waveform continuity. All
+171 focused tests across 12 files, TypeScript, affected-file ESLint with zero errors and one existing
+warning, the Next.js 16.3 Webpack production build, and rendered 1280×720 interaction QA pass with
+no browser warnings or errors. The full suite retains only its three unrelated baseline failures;
+one concurrent admin timeout passes all five tests in isolation.
+
 **Wagami A inline EtCO₂ calibration — COMPLETE LOCALLY (2026-09-23).** A's dedicated calibration
 page is removed and the EtCO₂ task tile now runs an inline 45-second, absolute-time lane command.
 The workflow includes left-to-right progress, immediate cancellation with three-second feedback,
