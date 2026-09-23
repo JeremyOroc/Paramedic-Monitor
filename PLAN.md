@@ -10,6 +10,76 @@
 
 ## Current Requirement Updates
 
+- 2026-09-23 Wagami A Vital Log layout and Physical shell prominence — **programmer-confirmed and
+  implemented locally**. Move the A-only Vital Log
+  interval control out of Configure so the Vital Log page becomes its sole interactive location.
+  Preserve the existing 1/3/5/10/15/30-minute choices, five-minute default, persistence,
+  exact-time rescheduling, immutable history, no-backfill behavior, and absence of a separate
+  Evaluation event. Keep Wagami X fixed at five minutes. Present the selector as a horizontal band
+  below the table and immediately above the pagination footer, analogous to the Medication page's
+  Event Log action. Pagination remains the lowest row because it controls the records currently on
+  screen. Spectator mirrors the selected interval and displays the selector disabled.
+
+  Replace Wagami A's shared eight-row Vital Log pagination with ten rows per page at every supported
+  viewport so page boundaries remain identical across live, Preview, and Spectator. Distribute the
+  table vertically through its available area and increase row size rather than packing rows at the
+  top. Preserve ten fixed-height ruled slots on partial pages rather than stretching the populated
+  rows; unused slots remain visibly empty so table geometry does not jump between pages. Do not
+  change the Medication Event Log's independent eight-row pagination. Vertically center responsive
+  15–18 px tabular values in each row and use slightly smaller bold column headings. Before the first
+  sample exists, retain the headings, ten ruled slots, interval band, and disabled `Page 1 of 1`
+  pagination while centering the localized empty-log message across the table body.
+
+  Make Wagami A's code-native housing more visually prominent in live, Preview, Spectator, and every
+  shell-contained secondary view without changing the established shell, aperture, or control
+  geometry. Strengthen the graphite material separation, layered perimeter, recessed inner bezel,
+  highlights, and shadows while using the supplied rugged-device image only as visual inspiration.
+  Every visible physical-shell button must remain fully contained inside the physical shell's outer
+  dimensions at all supported landscape sizes; no control may visually overlap or protrude beyond
+  the housing silhouette. Raised control pods may form part of that silhouette, but button faces,
+  focus treatments, and minimum touch targets remain inside it. Permit only the minimal control
+  inset or size correction needed for containment while preserving the overall composition. Use a
+  near-black neutral viewport backdrop plus a visibly lighter graphite Physical shell, layered
+  perimeter, black recessed Inner display bezel, and restrained directional highlights. Do not
+  ship or trace the supplied raster image. Use a pronounced but restrained field-equipment finish:
+  subtle code-native texture, distinct bevel planes, visible edge lighting, and deep recesses without
+  glossy, photorealistic, or decorative effects. Preserve every control's established color, label,
+  size, and state cue while seating it in a darker recessed mounting well or integrated bevel. This
+  requirement
+  supersedes the earlier Configure placement and eight-row Wagami A pagination rules while leaving
+  X/Z unchanged.
+
+### Testing — Wagami A Vital Log layout and physical-shell prominence
+
+- Cover removal of the interval selector from Configure, its A-only Vital Log placement, all six
+  choices, unchanged cadence semantics, enabled live/Preview interaction, disabled Spectator
+  presentation, and unchanged Wagami X behavior.
+- Cover fixed ten-row pagination independently from the Medication Event Log, vertically distributed
+  row geometry at supported landscape sizes, pagination boundaries, fixed ruled partial-page slots,
+  stable row height across full and partial pages, responsive value/header typography, and stable
+  first-sample empty-log geometry.
+- Cover shared shell styling across live, Preview, Spectator, and secondary views; unchanged screen
+  and overall control composition; complete containment of every button face, focus treatment, and
+  touch target inside the Physical shell silhouette; preserved control colors/labels/state cues;
+  recessed control mounting; and full-screen, no-scroll fit at 1280×720 and 1024×768.
+- Run focused workspace, Preview, live-monitor, Spectator, shell, and pagination tests; TypeScript;
+  affected-file ESLint; the Next.js 16.3 Webpack production build; and rendered interaction QA.
+
+No ADR is warranted because the selector relocation, pagination density, and code-native material
+treatment are localized and reversible.
+
+**Completed locally 2026-09-23.** Wagami A's Vital Log now owns the six-option interval band, uses
+ten vertically distributed ruled rows with responsive 15–18 px values, and retains stable partial and
+empty-page geometry; Configure no longer duplicates the setting, Spectator shows it disabled, and
+the Medication Event Log and Wagami X remain unchanged. A new centralized backdrop token, layered
+graphite rim, recessed Inner display, inset side controls, and integrated bottom navigation pod make
+the shared Physical shell distinct while retaining every established control face and keeping all
+control bounds inside the shell. All 41 focused tests, TypeScript, affected-file ESLint with zero
+errors and one existing MonitorPage warning, and the Next.js 16.3 Webpack production build pass.
+The complete suite has 1,636 passing and one skipped, with only the same three unrelated
+Room-ownership/PatientInfoPanel baseline failures. Rendered in-app browser QA at 1280×720 and
+1024×768 confirms the ten-row layout, footer ordering, all six interval choices, control containment,
+no scrolling, a clean console, and removal of the selector from Configure.
 - 2026-09-23 Wagami A live lead-label suppression — **programmer-confirmed correction and
   implemented locally**. While Wagami A `Acquérir` is actively running, and while its completed result or
   print preview is displayed, hide the live green 12-lead identifiers I–III, aVR/aVL/aVF, and

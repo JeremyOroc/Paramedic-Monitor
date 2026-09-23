@@ -1059,7 +1059,7 @@ export function MonitorPage({
     return (
       <main
         data-testid="wagami-a-live"
-        className="fixed inset-0 grid h-screen w-screen min-w-[1024px] place-items-center overflow-hidden bg-wagami-a-screen text-wagami-a-text max-[1023px]:min-w-0"
+        className="fixed inset-0 grid h-screen w-screen min-w-[1024px] place-items-center overflow-hidden bg-wagami-a-backdrop text-wagami-a-text max-[1023px]:min-w-0"
       >
         <div className="hidden max-[1023px]:grid max-[1023px]:place-items-center max-[1023px]:p-8 max-[1023px]:text-center">
           <div className="font-sans text-xl font-semibold">

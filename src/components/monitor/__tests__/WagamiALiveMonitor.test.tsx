@@ -101,7 +101,7 @@ describe('Wagami A live Attempt integration', () => {
     )
 
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Journal des signes vitaux' }))
     events.length = 0
     fireEvent.click(screen.getByRole('button', { name: '3 min' }))
 
@@ -255,10 +255,12 @@ describe('Wagami A live Attempt integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
     fireEvent.click(screen.getByRole('button', { name: 'English' }))
-    fireEvent.click(screen.getByRole('button', { name: '3 min' }))
     fireEvent.click(screen.getByRole('button', { name: 'Off' }))
     expect(screen.getByRole('heading', { name: 'Configure' })).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'false')
+    fireEvent.click(screen.getByRole('button', { name: /Back/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Vital Log' }))
+    fireEvent.click(screen.getByRole('button', { name: '3 min' }))
     first.unmount()
 
     render(
@@ -273,7 +275,7 @@ describe('Wagami A live Attempt integration', () => {
       expect(screen.getByRole('button', { name: 'Configurer' })).toBeInTheDocument()
       expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'true')
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Journal des signes vitaux' }))
     expect(screen.getByRole('button', { name: '5 min' })).toHaveAttribute('aria-pressed', 'true')
   })
 })

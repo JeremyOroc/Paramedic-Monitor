@@ -6,6 +6,20 @@
 ---
 
 ## Current Phase
+**Wagami A Vital Log layout and Physical shell prominence — COMPLETE LOCALLY (2026-09-23).** The A-only
+1/3/5/10/15/30-minute selector from Configure
+now lives in a bottom band on the Vital Log page, appears disabled in Spectator, and leaves Wagami X fixed at
+five minutes. The A log uses ten vertically distributed rows per page without changing the
+Medication Event Log. The shared code-native Physical shell now has stronger graphite layering,
+bezel depth, highlights, and shadows across live, Preview, Spectator, and secondary views while
+preserving the overall composition and keeping every button face, focus treatment, and touch target
+inside the housing silhouette. The interval band will sit above the lowest pagination row; partial
+pages retain ten ruled slots; and a near-black backdrop will separate the lighter graphite Physical
+shell and recessed Inner display. Responsive 15–18 px values, stable empty-log geometry, restrained
+field-equipment texture/bevels, and recessed control mounting complete the implementation. All 41
+focused tests, TypeScript, affected-file ESLint with zero errors and one existing warning, the
+Webpack production build, and rendered 1280×720/1024×768 QA pass. The full suite has 1,636 passing
+and one skipped, with only the same three unrelated Room-ownership/PatientInfoPanel failures.
 **Wagami A live lead-label suppression — COMPLETE LOCALLY (2026-09-23).** While `Acquérir` is
 active and beneath completed-result or print-preview layers, the mounted live grid's green I–III,
 aVR/aVL/aVF, and V1–V6 identifiers are absent. The static printout keeps its black identifiers;

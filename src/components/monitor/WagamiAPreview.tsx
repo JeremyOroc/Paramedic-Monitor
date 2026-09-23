@@ -116,7 +116,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
   )
 
   return (
-    <main data-testid="wagami-a-preview" className="fixed inset-0 grid h-screen w-screen min-w-[1024px] place-items-center overflow-hidden bg-wagami-a-screen text-wagami-a-text max-[1023px]:min-w-0">
+    <main data-testid="wagami-a-preview" className="fixed inset-0 grid h-screen w-screen min-w-[1024px] place-items-center overflow-hidden bg-wagami-a-backdrop text-wagami-a-text max-[1023px]:min-w-0">
       <div className="hidden max-[1023px]:grid max-[1023px]:place-items-center max-[1023px]:p-8 max-[1023px]:text-center">
         <div className="font-sans text-xl font-semibold">{text.landscapeRequired}</div>
         <p className="mt-3 text-wagami-a-muted-text">{text.landscapeHelp}</p>

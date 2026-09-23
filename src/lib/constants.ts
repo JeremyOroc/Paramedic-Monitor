@@ -53,6 +53,7 @@ export const WAGAMI_Z_COLORS = {
 
 /** Wagami A Precision Graphite v2; keep in sync with the Wagami A Tailwind tokens. */
 export const WAGAMI_A_COLORS = {
+  backdrop: '#020506',
   screen: '#081014',
   surface: '#0D1B20',
   surfaceRaised: '#14272F',

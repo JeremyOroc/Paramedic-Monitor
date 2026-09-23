@@ -96,21 +96,38 @@ describe('WagamiAWorkspace', () => {
     expect(screen.getByRole('button', { name: 'Open PNI settings' })).toBeInTheDocument()
   })
 
-  it('paginates the Vital Log after eight rows and places the clinical status in its header', () => {
-    render(<Harness vitalLog={makeLog(9)} />)
+  it('paginates the Vital Log after ten stable rows and places the clinical status in its header', () => {
+    render(<Harness vitalLog={makeLog(11)} />)
     fireEvent.click(screen.getByRole('button', { name: 'Open vital log' }))
 
     expect(screen.getByText('Page 1 sur 2')).toBeInTheDocument()
-    expect(screen.getByText('00:40:00')).toBeInTheDocument()
-    expect(screen.queryByText('00:45:00')).not.toBeInTheDocument()
+    expect(screen.getByText('00:50:00')).toBeInTheDocument()
+    expect(screen.queryByText('00:55:00')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('wagami-a-vital-log-row')).toHaveLength(10)
+    expect(screen.getAllByTestId('wagami-a-vital-log-row').every((row) => row.dataset.empty === 'false')).toBe(true)
     const clinicalStatus = screen.getByTestId('wagami-a-clinical-status-line')
     expect(clinicalStatus).toHaveTextContent('MODE ADULTE · ALARME · FC')
     expect(clinicalStatus).toHaveClass('ml-auto')
 
     fireEvent.click(screen.getByRole('button', { name: /Suivant/ }))
     expect(screen.getByText('Page 2 sur 2')).toBeInTheDocument()
-    expect(screen.getByText('00:45:00')).toBeInTheDocument()
+    expect(screen.getByText('00:55:00')).toBeInTheDocument()
     expect(screen.queryByText('00:05:00')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('wagami-a-vital-log-row').filter((row) => row.dataset.empty === 'true')).toHaveLength(9)
+  })
+
+  it('keeps the empty Vital Log table, interval band, and disabled pagination stable', () => {
+    render(<Harness vitalLog={[]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open vital log' }))
+
+    expect(screen.getByTestId('wagami-a-vital-log-table')).toBeInTheDocument()
+    expect(screen.getAllByTestId('wagami-a-vital-log-row')).toHaveLength(10)
+    expect(screen.getAllByTestId('wagami-a-vital-log-row').every((row) => row.dataset.empty === 'true')).toBe(true)
+    expect(screen.getByText('Aucun signe vital consigné.')).toBeInTheDocument()
+    expect(screen.getByText('Page 1 sur 1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Précédent/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Suivant/ })).toBeDisabled()
+    expect(screen.getByRole('group', { name: 'Intervalle du journal des signes vitaux' })).toBeInTheDocument()
   })
 
   it('flashes only the accepted medication button and removes Record/Consigner sublabels', () => {
@@ -132,20 +149,21 @@ describe('WagamiAWorkspace', () => {
     expect(nitro).toHaveAttribute('data-confirmed', 'false')
   })
 
-  it('configures the Vital Log interval and localizes English vital headers as HR/BP', () => {
+  it('moves the Vital Log interval out of Configure and localizes English vital headers as HR/BP', () => {
     render(<Harness vitalLog={makeLog(1)} />)
     fireEvent.click(screen.getByRole('button', { name: 'Open configure' }))
 
-    expect(screen.getByText('Intervalle du journal des signes vitaux')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '5 min' })).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(screen.getByRole('button', { name: '3 min' }))
-    expect(screen.getByRole('button', { name: '3 min' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText('Intervalle du journal des signes vitaux')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '5 min' })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'English' }))
-    expect(screen.getByText('Vital Log interval')).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-configure-mode')).toHaveClass('border-wagami-a-border', 'bg-wagami-a-surface-raised')
 
     fireEvent.click(screen.getByRole('button', { name: /Back/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Open vital log' }))
+    expect(screen.getByRole('group', { name: 'Vital Log interval' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '5 min' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: '3 min' }))
+    expect(screen.getByRole('button', { name: '3 min' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByText('HR')).toBeInTheDocument()
     expect(screen.getByText('BP SYS')).toBeInTheDocument()
     expect(screen.getByText('BP DIA')).toBeInTheDocument()
