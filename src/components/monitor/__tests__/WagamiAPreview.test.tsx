@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useMonitorStore } from '@/store/monitorStore'
@@ -12,7 +12,7 @@ describe('Wagami A Room-free clinical preview', () => {
     render(<WagamiAPreview />)
 
     expect(screen.getByTestId('wagami-a-preview')).toBeInTheDocument()
-    expect(screen.getByText('MODE ADULTE')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-current-mode')).toHaveTextContent('ADULTE')
     expect(screen.queryByText(/PREVIEW|DONNÉES SIMULÉES/)).not.toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-vital-fc')).toHaveTextContent('80')
     expect(screen.getByText('Info appel')).toBeInTheDocument()
@@ -24,6 +24,19 @@ describe('Wagami A Room-free clinical preview', () => {
     expect(screen.getByRole('button', { name: 'Mesurer la pression artérielle' })).toBeEnabled()
     expect(within(dock).getAllByRole('button').every((button) => !button.hasAttribute('disabled'))).toBe(true)
     expect(screen.getByRole('button', { name: 'Droite' })).toBeEnabled()
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
+  })
+
+  it('shows a live Montréal wall clock with an honest zero Preview timer', async () => {
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview />)
+
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
+    await waitFor(() => {
+      expect(screen.getByLabelText('Date et heure de Montréal')).toHaveTextContent(
+        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
+      )
+    })
   })
 
   it('keeps non-Call-Info destinations inside the persistent shell', () => {
@@ -126,6 +139,7 @@ describe('Wagami A Room-free clinical preview', () => {
     render(<WagamiAPreview />)
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
     fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    fireEvent.click(screen.getByRole('button', { name: '3 min' }))
     fireEvent.click(screen.getByRole('button', { name: 'Off' }))
     expect(screen.getByRole('heading', { name: 'Configure' })).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'false')
@@ -133,6 +147,8 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'WAGAMI A power' }))
     expect(screen.getByRole('button', { name: 'Call Info' })).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'false')
+    fireEvent.click(screen.getByRole('button', { name: 'Configure' }))
+    expect(screen.getByRole('button', { name: '3 min' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('records medication events inside Medications and keeps preview Vital Log honest', () => {
@@ -200,7 +216,7 @@ describe('Wagami A Room-free clinical preview', () => {
     render(<WagamiAPreview />)
     fireEvent.click(screen.getByRole('button', { name: /Changer le mode patient/ }))
     expect(screen.getByRole('button', { name: 'Changer le mode patient, mode actuel PÉDIATRIQUE' })).toHaveTextContent('MODE')
-    expect(screen.getByText('MODE PÉDIATRIQUE')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-current-mode')).toHaveTextContent('PÉDIATRIQUE')
     expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('50')
     for (let index = 0; index < 7; index += 1) {
       fireEvent.click(screen.getByRole('button', { name: 'Droite' }))

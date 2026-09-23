@@ -98,7 +98,6 @@ export function MonitorPage({
   transportStorageScope?: string
 } = {}) {
   useMonitorViewportLock()
-  const { date, time } = useMonitorClock()
 
   useStoreHydration()
   useVitalTrendClock()
@@ -153,6 +152,7 @@ export function MonitorPage({
         : defibrillatorModelConfirmed
   const isWagamiZ = activeDefibrillatorModel === 'wagamiZ'
   const isWagamiA = activeDefibrillatorModel === 'wagamiA'
+  const { date, time } = useMonitorClock(isWagamiA ? 'America/Toronto' : undefined)
   const wagamiAPreferenceState = useWagamiAPreferences(
     transportStorageScope ?? 'unscoped-live',
     isWagamiA,
@@ -512,6 +512,9 @@ export function MonitorPage({
     elapsedSeconds: sessionElapsedSeconds,
     isRunning: controller.isTimerRunning,
     snapshot: vitalLogSnapshot,
+    intervalMinutes: isWagamiA
+      ? wagamiAPreferenceState.preferences.vitalLogInterval
+      : undefined,
   })
   const wagamiAWorkspace = useWagamiAWorkspaceWithPreferences({
     rhythm: confirmed.rhythm,
@@ -1114,10 +1117,16 @@ export function MonitorPage({
                 onEnergyUp={() => handleWagamiAEnergyChange('up')}
                 selectedAction={selectedAction}
                 onMonitorReady={onWagamiAMonitorReady}
+                date={date}
+                time={time}
+                sessionTimer={sessionTimer}
               />
             )}
             locale={wagamiAWorkspace.preferences.locale}
             shellAlarmLedEnabled={wagamiAWorkspace.preferences.shellAlarmLedEnabled}
+            date={date}
+            time={time}
+            sessionTimer={sessionTimer}
           />
         </div>
         {showWagamiACallInfo ? (

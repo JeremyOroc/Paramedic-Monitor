@@ -6,6 +6,18 @@
 ---
 
 ## Current Phase
+**Wagami A medication, metadata, Vital Log, localization, and mode cues — COMPLETE LOCALLY
+(2026-09-22).** Medication presses receive a 400 ms cyan local confirmation without changing event
+recording, and visible Record/Consigner sublabels are removed. The live display adds a right-aligned
+elapsed timer and Montréal date/time; Preview and Spectator use the defined honest/mirrored variants.
+Vital Log defaults to five minutes and A Configure now offers persisted 1/3/5/10/15/30-minute
+exact-second cadences while X remains fixed at five. English A terminology is consistently HR/BP,
+French remains FC/PNI, and the current mode uses a subtle chip. The 82-test focused suite,
+TypeScript, affected-file ESLint with zero errors and one existing warning, the Next.js 16.3 Webpack
+production build, and rendered 1280×720 plus 1024×768 interaction QA pass. The full suite has 1,624
+passing and one skipped; two concurrent admin timeouts pass in isolation, leaving the same three
+unrelated Room-ownership/PatientInfoPanel baseline failures.
+
 **Wagami A waveform continuity across navigation — COMPLETE LOCALLY (2026-09-22).** Live ECG,
 SpO₂, EtCO₂, and the first-opened live 12-lead grid retain their canvas and patient-time sweep
 through every temporary view, including shell-free Call Info, in trainee, Preview, and Spectator

@@ -35,4 +35,15 @@ describe('useMonitorClock', () => {
     // Still a valid HH:MM:SS string after the interval fires.
     expect(result.current.time).toMatch(/^\d{2}:\d{2}:\d{2}$/)
   })
+
+  it('honors an explicit Montréal timezone independently of device locale', () => {
+    vi.setSystemTime(new Date('2026-09-23T00:19:40Z'))
+    const { result } = renderHook(() => useMonitorClock('America/Toronto'))
+
+    act(() => {
+      vi.advanceTimersByTime(0)
+    })
+
+    expect(result.current).toEqual({ date: '2026-09-22', time: '20:19:40' })
+  })
 })

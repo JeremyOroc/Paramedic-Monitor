@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
+import type { VitalLogInterval } from '@/types/vitalLog'
 import { useVitalLog, type VitalLogSnapshot } from '../useVitalLog'
 
 const snapshot: VitalLogSnapshot = {
@@ -43,6 +44,53 @@ describe('useVitalLog', () => {
       { timestamp: '00:10:00', ...latest },
       { timestamp: '00:15:00', ...latest },
     ])
+  })
+
+  it.each([1, 3, 5, 10, 15, 30] as VitalLogInterval[])(
+    'records the first snapshot at the selected %i-minute interval',
+    (intervalMinutes) => {
+      const elapsedSeconds = intervalMinutes * 60
+      const { result } = renderHook(() => useVitalLog({
+        elapsedSeconds,
+        isRunning: true,
+        snapshot,
+        intervalMinutes,
+      }))
+
+      expect(result.current).toEqual([{
+        timestamp: `00:${String(intervalMinutes).padStart(2, '0')}:00`,
+        ...snapshot,
+      }])
+    },
+  )
+
+  it('restarts a changed cadence from the exact elapsed second without backfill', () => {
+    const { result, rerender } = renderHook(
+      (props: { elapsedSeconds: number; intervalMinutes: VitalLogInterval }) =>
+        useVitalLog({ ...props, isRunning: true, snapshot }),
+      { initialProps: { elapsedSeconds: 300, intervalMinutes: 5 as VitalLogInterval } },
+    )
+    expect(result.current.map((entry) => entry.timestamp)).toEqual(['00:05:00'])
+
+    rerender({ elapsedSeconds: 443, intervalMinutes: 3 })
+    rerender({ elapsedSeconds: 622, intervalMinutes: 3 })
+    expect(result.current.map((entry) => entry.timestamp)).toEqual(['00:05:00'])
+
+    rerender({ elapsedSeconds: 623, intervalMinutes: 3 })
+    expect(result.current.map((entry) => entry.timestamp)).toEqual(['00:05:00', '00:10:23'])
+  })
+
+  it('lets a setting change win an unrecorded due boundary without duplicate timestamps', () => {
+    const { result, rerender } = renderHook(
+      (props: { elapsedSeconds: number; intervalMinutes: VitalLogInterval }) =>
+        useVitalLog({ ...props, isRunning: true, snapshot }),
+      { initialProps: { elapsedSeconds: 299, intervalMinutes: 5 as VitalLogInterval } },
+    )
+
+    rerender({ elapsedSeconds: 300, intervalMinutes: 3 })
+    expect(result.current).toEqual([])
+    rerender({ elapsedSeconds: 480, intervalMinutes: 3 })
+    expect(result.current.map((entry) => entry.timestamp)).toEqual(['00:08:00'])
   })
 
   it('preserves null values for independent unavailable channels', () => {

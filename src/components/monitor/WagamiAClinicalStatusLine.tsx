@@ -30,7 +30,13 @@ export function WagamiAClinicalStatusLine({ patientMode, alarms, locale = 'fr', 
       role="status"
       className={cn('flex h-full min-w-0 items-center font-sans text-[clamp(10px,1cqw,15px)]', className)}
     >
-      <span className="shrink-0 text-wagami-a-muted-text">{text.mode} {modeLabel}</span>
+      <span className="shrink-0 text-wagami-a-muted-text">{text.mode}{' '}</span>
+      <span
+        data-testid="wagami-a-current-mode"
+        className="shrink-0 rounded border border-wagami-a-border bg-wagami-a-surface-raised px-1.5 py-0.5 font-semibold text-wagami-a-text"
+      >
+        {modeLabel}
+      </span>
       {activeAlarmLabels.length > 0 ? (
         <>
           <span aria-hidden="true" className="shrink-0 whitespace-pre text-wagami-a-muted-text"> · </span>

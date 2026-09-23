@@ -26,7 +26,7 @@ describe('Wagami A fixed live display', () => {
     expect(labels.map((label) => label.textContent)).toEqual(['FC', 'SpO₂', 'PNI', 'EtCO₂'])
     expect(screen.getByTestId('a-waveform-workspace')).toBeInTheDocument()
     expect(screen.queryByText(/DONNÉES SIMULÉES|PREVIEW/)).not.toBeInTheDocument()
-    expect(screen.getByTestId('wagami-a-main-clinical-column')).toHaveClass('grid-rows-[clamp(82px,11.4cqw,160px)_minmax(0,1fr)]')
+    expect(screen.getByTestId('wagami-a-main-clinical-column')).toHaveClass('grid-rows-[clamp(82px,11.4cqw,160px)_clamp(18px,2.2cqw,30px)_minmax(0,1fr)]')
     expect(screen.getByTestId('wagami-a-vital-pni').tagName).toBe('BUTTON')
     screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }).click()
     expect(onOpenNibpSettings).toHaveBeenCalledOnce()
@@ -67,14 +67,19 @@ describe('Wagami A fixed live display', () => {
     expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('120/80')
   })
 
-  it('keeps settings available with PNI off and localizes the action in English', () => {
+  it('uses English HR/BP terminology and displays Montréal clock metadata', () => {
     const inactiveBp = {
       ...display,
       active: { ...display.active, bp_sys: false, bp_dia: false },
     }
 
-    render(<WagamiAScreen display={inactiveBp} energy={120} locale="en" onOpenNibpSettings={() => {}} />)
+    render(<WagamiAScreen display={inactiveBp} energy={120} locale="en" onOpenNibpSettings={() => {}} date="2026-09-22" time="20:19:40" sessionTimer="00:07:23" />)
 
-    expect(screen.getByRole('button', { name: 'Open NIBP settings' })).toHaveTextContent('--/--')
+    const strip = screen.getByLabelText('Fixed A vital card strip')
+    expect(within(strip).getByText('HR')).toBeInTheDocument()
+    expect(within(strip).getByText('BP')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open BP settings' })).toHaveTextContent('--/--')
+    expect(screen.getByLabelText('Montréal date and time')).toHaveTextContent('2026-09-22 20:19:40')
+    expect(screen.getByLabelText('Monitor elapsed time')).toHaveTextContent('00:07:23')
   })
 })

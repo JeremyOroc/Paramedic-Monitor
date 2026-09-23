@@ -7,6 +7,7 @@ import {
   type WagamiALocale,
   type WagamiAPreferences,
 } from '@/types/wagamiA'
+import { isVitalLogInterval, type VitalLogInterval } from '@/types/vitalLog'
 
 const STORAGE_PREFIX = 'paramedic-monitor.wagami-a.preferences'
 
@@ -20,6 +21,9 @@ export function normalizeWagamiAPreferences(value: unknown): WagamiAPreferences 
   return {
     locale: candidate.locale === 'en' ? 'en' : 'fr',
     shellAlarmLedEnabled: candidate.shellAlarmLedEnabled !== false,
+    vitalLogInterval: isVitalLogInterval(candidate.vitalLogInterval)
+      ? candidate.vitalLogInterval
+      : DEFAULT_WAGAMI_A_PREFERENCES.vitalLogInterval,
   }
 }
 
@@ -73,11 +77,23 @@ export function useWagamiAPreferences(scope: string, enabled = true) {
     }))
   }
 
+  function setVitalLogInterval(vitalLogInterval: VitalLogInterval) {
+    touchedScopeRef.current = scope
+    setScoped((current) => ({
+      scope,
+      value: {
+        ...(current.scope === scope ? current.value : DEFAULT_WAGAMI_A_PREFERENCES),
+        vitalLogInterval,
+      },
+    }))
+  }
+
   const preferences = scoped.scope === scope ? scoped.value : DEFAULT_WAGAMI_A_PREFERENCES
 
   return {
     preferences,
     setLocale,
     setShellAlarmLedEnabled,
+    setVitalLogInterval,
   }
 }

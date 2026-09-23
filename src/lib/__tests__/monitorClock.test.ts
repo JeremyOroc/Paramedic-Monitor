@@ -15,4 +15,15 @@ describe('formatMonitorClock', () => {
       time: '14:29:07',
     })
   })
+
+  it('applies Montréal daylight-saving and standard-time offsets', () => {
+    expect(formatMonitorClock(new Date('2026-01-15T01:19:40Z'), 'America/Toronto')).toEqual({
+      date: '2026-01-14',
+      time: '20:19:40',
+    })
+    expect(formatMonitorClock(new Date('2026-09-23T00:19:40Z'), 'America/Toronto')).toEqual({
+      date: '2026-09-22',
+      time: '20:19:40',
+    })
+  })
 })

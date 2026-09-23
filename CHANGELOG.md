@@ -5,6 +5,64 @@
 
 ---
 
+## [2026-09-22] [wagami-a/ui/domain/testing] — Add medication feedback, clocks, Vital Log cadence, and English labels
+
+- Added a trainee-local 400 ms cyan medication-button confirmation, removed the visible
+  `Consigner` / `Record` sublabels, and retained every durable medication event and existing offline
+  queuing behavior.
+- Added the powered-on elapsed timer and Montréal `YYYY-MM-DD HH:MM:SS` clock to the main display,
+  including mirrored Spectator values and the honest Preview zero timer.
+- Added persisted Wagami A Vital Log intervals of 1/3/5/10/15/30 minutes with a five-minute default,
+  exact-second rescheduling, no backfill or duplicates, no Evaluation event, and unchanged fixed
+  five-minute Wagami X behavior.
+- Standardized English Wagami A vital terminology on HR/BP, preserved French FC/PNI, and added the
+  restrained current-mode chip. The 82-test focused suite, TypeScript, affected-file ESLint with zero
+  errors and one existing warning, the Next.js 16.3 Webpack build, and rendered interaction QA at
+  1280×720 and 1024×768 pass. The full suite has 1,624 passing and one skipped; two concurrent admin
+  timeouts pass in isolation, leaving the same three unrelated baseline failures.
+
+## [2026-09-22] [planning/wagami-a/spectator] — Keep medication confirmation trainee-local
+
+- Confirmed that latest-state publication and one-second Spectator polling cannot reliably reproduce
+  a 400 ms medication-button flash without late, missed, or stale feedback.
+- Kept the transient flash on the trainee device under ADR 0006 while preserving normal Spectator
+  mirroring of the durable medication event, count, and Event Log row. No projection-schema change or
+  new ADR is warranted.
+
+## [2026-09-22] [planning/wagami-a/domain] — Close Vital Log scheduling and display-surface rules
+
+- Chose exact-second, change-relative Vital Log scheduling, deterministic due/change event ordering,
+  duplicate prevention, and uncapped eight-row pagination for each powered-on run.
+- Defined live and Spectator clock/timer parity plus an honest live Montréal clock and zero elapsed
+  timer in Room-free Preview, with no invented Preview log rows.
+- Kept the new Configure setting on the existing touch/click and keyboard interaction model without
+  expanding this batch into secondary-page shell-navigation redesign. Spectator medication-flash
+  feasibility remains under read-only review.
+
+## [2026-09-22] [planning/wagami-a/domain] — Resolve feedback, clock, log-lifecycle, and mode edges
+
+- Defined the medication flash as immediate local acceptance rather than server synchronization and
+  kept established offline event queuing responsible for eventual recording.
+- Fixed the unlabeled visible clock to Montréal civil time with an accessible Montréal description.
+- Kept Vital Log rows ephemeral across power-off/reload while persisting the interval within the
+  Attempt, placed its six-option bilingual control in Configure, and excluded setting changes from
+  the Evaluation timeline.
+- Kept the neutral current-mode chip fully legible while the outer mode control is locked.
+  Implementation remains pending completion of the design interview.
+
+## [2026-09-22] [planning/wagami-a/domain] — Define medication, clock, Vital Log, labels, and mode cues
+
+- Chose a 400 ms most-recent-button medication flash and removed only the visible `Consigner` /
+  `Record` button sublabels without changing medication event semantics or accessibility.
+- Defined the powered-on Monitor elapsed timer and a Montréal-time `YYYY-MM-DD HH:MM:SS` wall clock
+  for the main live display.
+- Defined an A-only persisted Vital Log interval with 1/3/5/10/15/30-minute options, five-minute
+  default, no historical backfill, change-time-based rescheduling, Spectator parity, and unchanged
+  fixed five-minute Wagami X behavior.
+- Standardized visible English Wagami A vital terminology on HR/BP while preserving French FC/PNI,
+  and selected a subtle shared-status-line/Configure chip for the current Device Patient mode.
+  Implementation remains gated on completion of the design interview and final confirmation.
+
 ## [2026-09-22] [wagami-a/ui/testing] — Keep live waveforms continuous through navigation
 
 - Retained Wagami A monitor canvases and the first-opened live 12-lead grid through temporary views

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useWagamiAWorkspace } from '@/hooks/useWagamiAWorkspace'
 import type { VitalLogEntry } from '@/hooks/useVitalLog'
@@ -18,6 +18,7 @@ vi.mock('../WagamiAScreen', () => ({
       <>
         <button type="button" onClick={() => onTask?.('vitalLog')}>Open vital log</button>
         <button type="button" onClick={() => onTask?.('configure')}>Open configure</button>
+        <button type="button" onClick={() => onTask?.('medications')}>Open medications</button>
         {onOpenNibpSettings ? <button type="button" onClick={onOpenNibpSettings}>Open PNI settings</button> : null}
       </>
     )
@@ -70,6 +71,11 @@ function Harness({ vitalLog }: { vitalLog: VitalLogEntry[] }) {
 }
 
 describe('WagamiAWorkspace', () => {
+  beforeEach(() => {
+    vi.useRealTimers()
+    window.localStorage.clear()
+  })
+
   it('opens PNI settings from the monitor card, removes the Configure route, and returns to monitor', () => {
     render(<Harness vitalLog={[]} />)
 
@@ -99,5 +105,43 @@ describe('WagamiAWorkspace', () => {
     expect(screen.getByText('Page 2 sur 2')).toBeInTheDocument()
     expect(screen.getByText('00:45:00')).toBeInTheDocument()
     expect(screen.queryByText('00:05:00')).not.toBeInTheDocument()
+  })
+
+  it('flashes only the accepted medication button and removes Record/Consigner sublabels', () => {
+    vi.useFakeTimers()
+    render(<Harness vitalLog={[]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open medications' }))
+
+    const epi = screen.getByRole('button', { name: 'Epi' })
+    const nitro = screen.getByRole('button', { name: 'Nitro' })
+    expect(screen.queryByText('Consigner')).not.toBeInTheDocument()
+    fireEvent.click(epi)
+    expect(epi).toHaveAttribute('data-confirmed', 'true')
+    expect(nitro).toHaveAttribute('data-confirmed', 'false')
+
+    fireEvent.click(nitro)
+    expect(epi).toHaveAttribute('data-confirmed', 'false')
+    expect(nitro).toHaveAttribute('data-confirmed', 'true')
+    act(() => vi.advanceTimersByTime(400))
+    expect(nitro).toHaveAttribute('data-confirmed', 'false')
+  })
+
+  it('configures the Vital Log interval and localizes English vital headers as HR/BP', () => {
+    render(<Harness vitalLog={makeLog(1)} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open configure' }))
+
+    expect(screen.getByText('Intervalle du journal des signes vitaux')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '5 min' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: '3 min' }))
+    expect(screen.getByRole('button', { name: '3 min' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    expect(screen.getByText('Vital Log interval')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-configure-mode')).toHaveClass('border-wagami-a-border', 'bg-wagami-a-surface-raised')
+
+    fireEvent.click(screen.getByRole('button', { name: /Back/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open vital log' }))
+    expect(screen.getByText('HR')).toBeInTheDocument()
+    expect(screen.getByText('BP SYS')).toBeInTheDocument()
+    expect(screen.getByText('BP DIA')).toBeInTheDocument()
   })
 })

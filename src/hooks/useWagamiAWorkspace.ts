@@ -39,6 +39,8 @@ const INITIAL_TWELVE_LEAD: WagamiATwelveLeadState = {
   sentUntil: null,
 }
 
+export const MEDICATION_CONFIRMATION_MS = 400
+
 const TASK_VIEW: Record<WagamiATask, WagamiAView> = {
   twelveLead: 'twelveLead',
   etco2: 'etco2',
@@ -92,12 +94,14 @@ function useWagamiAWorkspaceState({
   const [view, setView] = useState<WagamiAView>('monitor')
   const [etco2Status, setEtco2Status] = useState<'idle' | 'calibrating' | 'calibrated'>('idle')
   const [medicationEvents, setMedicationEvents] = useState<WagamiAMedicationEvent[]>([])
+  const [flashedMedication, setFlashedMedication] = useState<string | null>(null)
   const [twelveLead, setTwelveLead] = useState<WagamiATwelveLeadState>(INITIAL_TWELVE_LEAD)
   const [nibpMode, setNibpMode] = useState<NibpMode>('manual')
   const [nibpAutoInterval, setNibpAutoInterval] = useState<NibpAutoInterval>(5)
   const captureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const calibrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const transmissionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const medicationFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearTimer = useCallback((ref: { current: ReturnType<typeof setTimeout> | null }) => {
     if (ref.current !== null) clearTimeout(ref.current)
@@ -108,6 +112,7 @@ function useWagamiAWorkspaceState({
     clearTimer(captureTimerRef)
     clearTimer(calibrationTimerRef)
     clearTimer(transmissionTimerRef)
+    clearTimer(medicationFlashTimerRef)
   }, [clearTimer])
 
   const workflowBusy = twelveLead.captureState === 'acquiring' || twelveLead.sentUntil !== null
@@ -141,6 +146,12 @@ function useWagamiAWorkspaceState({
 
   function recordMedication(medication: string) {
     if (workflowBusy) return
+    clearTimer(medicationFlashTimerRef)
+    setFlashedMedication(medication)
+    medicationFlashTimerRef.current = setTimeout(() => {
+      medicationFlashTimerRef.current = null
+      setFlashedMedication(null)
+    }, MEDICATION_CONFIRMATION_MS)
     const stamp = createEventLogStamp()
     setMedicationEvents((current) => [
       ...current,
@@ -223,6 +234,8 @@ function useWagamiAWorkspaceState({
     clearTimer(captureTimerRef)
     clearTimer(transmissionTimerRef)
     clearTimer(calibrationTimerRef)
+    clearTimer(medicationFlashTimerRef)
+    setFlashedMedication(null)
     setEtco2Status((current) => current === 'calibrating' ? 'idle' : current)
     setView('monitor')
     setTwelveLead(INITIAL_TWELVE_LEAD)
@@ -233,8 +246,10 @@ function useWagamiAWorkspaceState({
     preferences: preferenceState.preferences,
     setLocale: preferenceState.setLocale,
     setShellAlarmLedEnabled: preferenceState.setShellAlarmLedEnabled,
+    setVitalLogInterval: preferenceState.setVitalLogInterval,
     etco2Status,
     medicationEvents,
+    flashedMedication,
     twelveLead,
     nibpMode,
     nibpAutoInterval,

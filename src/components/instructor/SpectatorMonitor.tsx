@@ -28,6 +28,7 @@ import { WagamiAWorkspace } from '@/components/monitor/WagamiAWorkspace'
 import { WaveformPanel } from '@/components/monitor/WaveformPanel'
 import { ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { useCPRTimer } from '@/hooks/useCPRTimer'
+import { normalizeWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
 import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
 import { cn } from '@/lib/utils'
 import type { MonitorProjection } from '@/types/monitorProjection'
@@ -114,13 +115,16 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
       )
     }
     const noopState = () => undefined
+    const preferences = normalizeWagamiAPreferences(state.preferences)
     const projectedController: WagamiAWorkspaceController = {
       view: state.view,
-      preferences: state.preferences,
+      preferences,
       setLocale: noopState,
       setShellAlarmLedEnabled: noopState,
+      setVitalLogInterval: noopState,
       etco2Status: state.etco2CalibrationStatus,
       medicationEvents: state.medicationEvents,
+      flashedMedication: null,
       twelveLead: state.twelveLead,
       nibpMode: state.nibpMode,
       nibpAutoInterval: state.nibpAutoInterval,
@@ -188,8 +192,11 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
           onEnergyUp={noop}
           onTask={noop}
           navigationView={state.view}
-          locale={state.preferences.locale}
-          shellAlarmLedEnabled={state.preferences.shellAlarmLedEnabled}
+          locale={preferences.locale}
+          shellAlarmLedEnabled={preferences.shellAlarmLedEnabled}
+          date={projection.date}
+          time={projection.time}
+          sessionTimer={projection.sessionTimer}
           screenContent={
             <WagamiAWorkspace
               readOnly
@@ -208,6 +215,9 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
               onEnergyDown={noop}
               onEnergyUp={noop}
               onMonitorReady={onWagamiAMonitorReady}
+              date={projection.date}
+              time={projection.time}
+              sessionTimer={projection.sessionTimer}
             />
           }
         />
@@ -215,7 +225,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
         {showWagamiACallInfo ? (
           <div className="absolute inset-0 z-30 h-full w-full">
             <WagamiACallInfoPage
-              locale={state.preferences.locale}
+              locale={preferences.locale}
               patientMode={state.patientMode}
               alarms={projection.alarms}
               callerInfo={{

@@ -47,7 +47,7 @@ describe('Wagami A live waveform workspace', () => {
   it('shows English mode and fixed alarm order above the waveforms', () => {
     render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={['bp', 'hr', 'spo2']} patientMode="neonate" locale="en" />)
 
-    expect(screen.getByRole('status')).toHaveTextContent('MODE NEONATAL · ALARM · HR / SpO₂ / NIBP')
+    expect(screen.getByRole('status')).toHaveTextContent('MODE NEONATAL · ALARM · HR / SpO₂ / BP')
   })
 
   it('waits for every connected channel before revealing each reconstructed sweep', () => {

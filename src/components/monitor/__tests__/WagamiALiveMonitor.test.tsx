@@ -34,7 +34,9 @@ describe('Wagami A live Attempt integration', () => {
     expect(screen.getByTestId('wagami-a-screen-off')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
-    expect(screen.getByText('MODE ADULTE')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-current-mode')).toHaveTextContent('ADULTE')
+    expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
+    expect(screen.getByLabelText('Date et heure de Montréal')).toBeInTheDocument()
     expect(screen.queryByText(/EN DIRECT|DONNÉES CONFIRMÉES/)).not.toBeInTheDocument()
     expect(events).toContainEqual({ kind: 'power_on', label: 'Power On' })
 
@@ -50,7 +52,7 @@ describe('Wagami A live Attempt integration', () => {
         powerState: 'on',
         wagamiA: {
           view: 'medications',
-          preferences: { locale: 'fr', shellAlarmLedEnabled: true },
+          preferences: { locale: 'fr', shellAlarmLedEnabled: true, vitalLogInterval: 5 },
           medicationEvents: [expect.objectContaining({ medication: 'Epi' })],
         },
       })
@@ -76,6 +78,29 @@ describe('Wagami A live Attempt integration', () => {
     expect(events).toEqual([])
     await waitFor(() => {
       expect(projections.at(-1)?.wagamiA?.view).toBe('nibpSettings')
+    })
+  })
+
+  it('projects the A-only Vital Log interval without recording an Evaluation action', async () => {
+    const events: StudentEventRecord[] = []
+    const projections: MonitorProjection[] = []
+    render(
+      <MonitorPage
+        transportStorageScope="ABC234.participant-1.1"
+        onStudentEvent={(event) => events.push(event)}
+        onProjectionChange={(projection) => projections.push(projection)}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
+    events.length = 0
+    fireEvent.click(screen.getByRole('button', { name: '3 min' }))
+
+    expect(screen.getByRole('button', { name: '3 min' })).toHaveAttribute('aria-pressed', 'true')
+    expect(events).toEqual([])
+    await waitFor(() => {
+      expect(projections.at(-1)?.wagamiA?.preferences.vitalLogInterval).toBe(3)
     })
   })
 
@@ -137,6 +162,7 @@ describe('Wagami A live Attempt integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
     fireEvent.click(screen.getByRole('button', { name: 'English' }))
+    fireEvent.click(screen.getByRole('button', { name: '3 min' }))
     fireEvent.click(screen.getByRole('button', { name: 'Off' }))
     expect(screen.getByRole('heading', { name: 'Configure' })).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'false')
@@ -154,5 +180,7 @@ describe('Wagami A live Attempt integration', () => {
       expect(screen.getByRole('button', { name: 'Configurer' })).toBeInTheDocument()
       expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'true')
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
+    expect(screen.getByRole('button', { name: '5 min' })).toHaveAttribute('aria-pressed', 'true')
   })
 })

@@ -10,6 +10,90 @@
 
 ## Current Requirement Updates
 
+- 2026-09-22 Wagami A medication, metadata, Vital Log, localization, and mode cues —
+  **programmer-confirmed and implemented locally**. Give each
+  accepted medication press a 400 ms Wagami A cyan confirmation flash. The most recently pressed
+  medication owns the flash, a repeated press restarts it, and every accepted press still records a
+  separate medication event. The flash confirms local device acceptance rather than server
+  synchronization; established offline action queuing remains responsible for eventual recording.
+  Keep this short-lived confirmation trainee-local under the accepted latest-state Spectator
+  projection boundary in ADR 0006: one-second polling cannot reliably reproduce a 400 ms transient,
+  while the durable medication event, count, and Event Log row continue to mirror normally.
+  Remove only the visible `Consigner` / `Record` secondary line from all medication buttons while
+  preserving accessible medication names and Event Log copy.
+
+  Add the existing `HH:MM:SS` Monitor elapsed timer beneath EtCO2 on the main live display, aligned
+  to the right. It begins at power-on and resets at power-off. Add a Montréal wall clock beneath the
+  gap between SpO2 and BP, formatted `YYYY-MM-DD HH:MM:SS`, using Montréal civil time rather than the
+  viewing device's local timezone. Use the `America/Toronto` timezone so daylight-saving transitions
+  are automatic. Show no visible timezone label or abbreviation; expose an accessible Montréal
+  date-and-time name. These values remain main-live-display metadata rather than being repeated in
+  secondary-page headers.
+
+  Preserve Wagami A's already-working shared five-minute Vital Log as the default, then add an A-only
+  Vital Log interval setting to Configure with the choices 1, 3, 5, 10, 15, and 30 minutes. Keep
+  Wagami X fixed at five minutes and keep this setting distinct from the automatic BP-measurement
+  interval. Persist the selected interval through power cycles and reloads in the same Attempt,
+  mirror it to Spectator, and reset it to five minutes for a new Attempt or Room. Changing the
+  interval preserves existing rows, creates no retroactive rows, and schedules the next snapshot one
+  complete selected interval after the change; for example, changing to three minutes at `00:07:00`
+  records next at `00:10:00`; a change at `00:07:23` records next at `00:10:23` without rounding.
+  Resolve a due snapshot and interval change by accepted event order: retain the due row only if it
+  was recorded first, otherwise begin the new cadence without an extra old-cadence row, and never
+  create duplicate timestamps. Keep every row for the current powered-on run without a row cap and
+  continue paginating eight rows at a time. Keep the existing Vital Log row lifecycle: rows clear on
+  power-off or page refresh even though the selected interval persists, and a fresh cadence begins
+  one complete selected interval after the next power-on. Place the setting directly below Patient
+  mode and above Device language in Configure. Label it `Vital Log interval` in English and
+  `Intervalle du journal des signes vitaux` in French, with six cyan selected-state buttons labeled
+  `1 min`, `3 min`, `5 min`, `10 min`, `15 min`, and `30 min`. Treat the setting like Device language
+  and alarm-LED preferences: do not emit a separate trainee action into the persistent Evaluation
+  record. Make the new choices operable by touch/click and keyboard like existing Configure settings;
+  do not expand this batch into redesigning shell-arrow navigation across secondary controls.
+
+  In English Wagami A UI, use `HR`, `BP`, `BP SYS`, and `BP DIA` consistently across main vital
+  cards, Vital Log, alarms, settings, accessibility copy, and the outer shell. Preserve French
+  `FC` / `PNI`, language-neutral SpO2, EtCO2, ECG and units, and the existing internal field names.
+  Present the current Device Patient mode as a restrained bordered/raised chip in the shared clinical
+  status line on the live display and secondary headers, and give Configure's read-only mode value
+  the same treatment. Keep the chip fully legible and visually unchanged while mode changes are
+  locked during defibrillation, using one neutral treatment rather than category-specific colors.
+  Keep the outer shell control labeled `MODE`.
+
+  On the live trainee monitor, show the current Montréal wall clock and real Monitor elapsed timer.
+  Spectator mirrors the trainee's clock/timer presentation. The Room-free Preview shows a live
+  Montréal wall clock and an honest `00:00:00` elapsed value because it has no real Attempt timer;
+  it continues to invent no Vital Log rows.
+
+### Testing — Wagami A medication, metadata, Vital Log, localization, and mode cues
+
+- Cover the 400 ms most-recent medication flash, repeated and distinct rapid presses, unchanged event
+  emission and offline queuing, local-versus-server acknowledgement semantics, removed visible
+  sublabels, preserved accessible medication names, durable Spectator event mirroring, and absence
+  of unreliable transient flash state from the projection contract.
+- Cover Monitor elapsed timer lifecycle and placement, Montréal date/time formatting across timezone
+  and daylight-saving boundaries, one-second updates, and main-display-only visibility.
+- Cover all Vital Log interval choices, the five-minute default, legacy preference normalization,
+  same-Attempt persistence, new-Attempt/new-Room reset, mid-Attempt rescheduling without backfill,
+  exact-second scheduling, simultaneous due/change ordering, duplicate-timestamp prevention,
+  uncapped eight-row pagination, immutable existing rows, row cleanup versus setting persistence on
+  power-off/reload, no Evaluation event, Wagami X's fixed cadence, and trainee/Spectator parity.
+- Cover complete French/English visible and accessible vital terminology plus mode-chip presentation
+  on the live display, secondary headers, and Configure; cover live, Spectator, and honest Preview
+  clock/timer behavior plus current Configure input methods without shell-navigation expansion. Run
+  focused component/hook/integration tests, TypeScript, affected-file ESLint, the production build,
+  and rendered supported-landscape QA.
+
+**Completed locally 2026-09-22.** Wagami A now provides local 400 ms medication confirmation,
+Montréal wall-clock and elapsed-time metadata, configurable exact-second Vital Log cadence, complete
+English HR/BP terminology, and the restrained current-mode chip across live, Preview, and Spectator
+presentations. The 82-test focused suite, TypeScript, affected-file ESLint with zero errors and one
+existing warning, and the Next.js 16.3 Webpack production build pass. Rendered interaction review at
+1280×720 and 1024×768 confirms correct alignment, selection persistence, flash expiry, localization,
+and full-screen fit. The complete repository suite reports 1,624 passing and one skipped; its two
+concurrent admin timeouts pass in isolation, leaving the same three unrelated Room-ownership and
+PatientInfoPanel baseline failures documented by prior work.
+
 - 2026-09-22 Wagami A waveform continuity across navigation — **programmer-confirmed and
   implemented locally**. Every temporary Wagami A destination,
   including Medications, EtCO₂, Vital Log, Configure, 12-lead, and the shell-free Call Info page,

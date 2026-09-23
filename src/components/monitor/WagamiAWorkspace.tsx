@@ -17,6 +17,7 @@ import { createBeatClock } from '@/lib/ecg/beatClock'
 import { cn } from '@/lib/utils'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
 import { NIBP_AUTO_INTERVALS } from '@/types/nibp'
+import { VITAL_LOG_INTERVALS } from '@/types/vitalLog'
 import type { WagamiALocale } from '@/types/wagamiA'
 import type { AlarmChannel, PatientMode } from '@/types/vitals'
 
@@ -40,6 +41,9 @@ type WagamiAWorkspaceProps = {
   selectedAction?: string | null
   readOnly?: boolean
   onMonitorReady?: () => void
+  date?: string
+  time?: string
+  sessionTimer?: string
 }
 
 type ViewFrameProps = {
@@ -83,6 +87,9 @@ export function WagamiAWorkspace({
   selectedAction,
   readOnly = false,
   onMonitorReady,
+  date,
+  time,
+  sessionTimer,
 }: WagamiAWorkspaceProps) {
   const text = getWagamiAText(controller.preferences.locale)
   const [eventPage, setEventPage] = useState(1)
@@ -148,7 +155,26 @@ export function WagamiAWorkspace({
       <ViewFrame title={text.medicationsTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_56px] gap-2 p-3">
           <div className="grid min-h-0 grid-cols-4 grid-rows-3 gap-2">
-            {ALL_MEDICATIONS.map((medication) => <button key={medication} type="button" onClick={() => controller.recordMedication(medication)} className="min-h-[44px] rounded border border-wagami-a-border bg-wagami-a-surface font-sans font-semibold hover:bg-wagami-a-surface-raised focus-visible:outline-2 focus-visible:outline-wagami-a-pni"><span className="block text-wagami-a-pni">{medication}</span><span className="mt-1 block text-xs text-wagami-a-muted-text">{text.administer}</span></button>)}
+            {ALL_MEDICATIONS.map((medication) => {
+              const confirmed = controller.flashedMedication === medication
+              return (
+                <button
+                  key={medication}
+                  type="button"
+                  disabled={readOnly}
+                  data-confirmed={confirmed ? 'true' : 'false'}
+                  onClick={() => controller.recordMedication(medication)}
+                  className={cn(
+                    'min-h-[44px] rounded border font-sans font-semibold focus-visible:outline-2 focus-visible:outline-wagami-a-pni disabled:cursor-default',
+                    confirmed
+                      ? 'border-wagami-a-pni bg-wagami-a-pni text-wagami-a-screen'
+                      : 'border-wagami-a-border bg-wagami-a-surface text-wagami-a-pni enabled:hover:bg-wagami-a-surface-raised',
+                  )}
+                >
+                  {medication}
+                </button>
+              )
+            })}
           </div>
           <button type="button" onClick={() => controller.setView('medicationLog')} className="rounded border border-wagami-a-border bg-wagami-a-surface-raised font-semibold focus-visible:outline-2 focus-visible:outline-wagami-a-pni">{text.eventLog} · {controller.medicationEvents.length}</button>
         </div>
@@ -174,7 +200,7 @@ export function WagamiAWorkspace({
       <ViewFrame title={text.vitalLogTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full grid-rows-[minmax(0,1fr)_52px] p-4">
           <div className="min-h-0 overflow-hidden">
-            <div className="grid grid-cols-6 bg-wagami-a-surface-raised text-center text-xs font-semibold"><span>{text.time}</span><span className="text-wagami-a-ecg">FC</span><span className="text-wagami-a-pni">PNI SYS</span><span className="text-wagami-a-pni">PNI DIA</span><span className="text-wagami-a-etco2">EtCO₂</span><span className="text-wagami-a-spo2">SpO₂</span></div>
+            <div className="grid grid-cols-6 bg-wagami-a-surface-raised text-center text-xs font-semibold"><span>{text.time}</span><span className="text-wagami-a-ecg">{text.heartRate}</span><span className="text-wagami-a-pni">{text.bpSys}</span><span className="text-wagami-a-pni">{text.bpDia}</span><span className="text-wagami-a-etco2">EtCO₂</span><span className="text-wagami-a-spo2">SpO₂</span></div>
             {entries.map((entry) => <div key={entry.timestamp} className="grid grid-cols-6 border-b border-wagami-a-border text-center font-mono text-xs"><span>{entry.timestamp}</span><span>{entry.fc ?? '-'}</span><span>{entry.pniSys ?? '-'}</span><span>{entry.pniDia ?? '-'}</span><span>{entry.etco2 ?? '-'}</span><span>{entry.spo2 ?? '-'}</span></div>)}
             {!entries.length ? <p className="mt-4 text-wagami-a-muted-text">{text.noVitals}</p> : null}
           </div>
@@ -186,9 +212,10 @@ export function WagamiAWorkspace({
     content = (
       <ViewFrame title={text.configureTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full content-center gap-3 p-6">
-          <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.patientModeLabel}</span><strong>{patientMode === 'adult' ? text.adult : patientMode === 'pediatric' ? text.pediatric : text.neonate}</strong></div>
-          <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.language}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.locale === 'fr'} onClick={() => controller.setLocale('fr')}>{text.french}</Toggle><Toggle active={controller.preferences.locale === 'en'} onClick={() => controller.setLocale('en')}>{text.english}</Toggle></div></div>
-          <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.alarmLed}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.shellAlarmLedEnabled} onClick={() => controller.setShellAlarmLedEnabled(true)}>{text.on}</Toggle><Toggle active={!controller.preferences.shellAlarmLedEnabled} onClick={() => controller.setShellAlarmLedEnabled(false)}>{text.off}</Toggle></div></div>
+          <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.patientModeLabel}</span><strong data-testid="wagami-a-configure-mode" className="rounded border border-wagami-a-border bg-wagami-a-surface-raised px-2 py-1 text-wagami-a-text">{patientMode === 'adult' ? text.adult : patientMode === 'pediatric' ? text.pediatric : text.neonate}</strong></div>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.vitalLogInterval}</span><div className="grid grid-cols-6 gap-1">{VITAL_LOG_INTERVALS.map((interval) => <Toggle key={interval} active={controller.preferences.vitalLogInterval === interval} disabled={readOnly} onClick={() => controller.setVitalLogInterval(interval)}>{interval} {text.minutes}</Toggle>)}</div></div>
+          <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.language}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.locale === 'fr'} disabled={readOnly} onClick={() => controller.setLocale('fr')}>{text.french}</Toggle><Toggle active={controller.preferences.locale === 'en'} disabled={readOnly} onClick={() => controller.setLocale('en')}>{text.english}</Toggle></div></div>
+          <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.alarmLed}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.shellAlarmLedEnabled} disabled={readOnly} onClick={() => controller.setShellAlarmLedEnabled(true)}>{text.on}</Toggle><Toggle active={!controller.preferences.shellAlarmLedEnabled} disabled={readOnly} onClick={() => controller.setShellAlarmLedEnabled(false)}>{text.off}</Toggle></div></div>
         </div>
       </ViewFrame>
     )
@@ -237,6 +264,9 @@ export function WagamiAWorkspace({
           waveformOccluded={monitorOccluded}
           onWaveformsReady={revealMonitor}
           beatClock={beatClock}
+          date={date}
+          time={time}
+          sessionTimer={sessionTimer}
         />
       </div>
       {currentSurfaceState.twelveLeadMounted ? (
@@ -286,8 +316,8 @@ export function WagamiAWorkspace({
   )
 }
 
-function Toggle({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" aria-pressed={active} onClick={onClick} className={`min-h-[44px] rounded border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-wagami-a-pni ${active ? 'border-wagami-a-pni bg-wagami-a-pni text-wagami-a-screen' : 'border-wagami-a-border bg-wagami-a-surface-raised text-wagami-a-text'}`}>{children}</button>
+function Toggle({ active, disabled = false, onClick, children }: { active: boolean; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" aria-pressed={active} disabled={disabled} onClick={onClick} className={`min-h-[44px] rounded border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-wagami-a-pni disabled:cursor-default ${active ? 'border-wagami-a-pni bg-wagami-a-pni text-wagami-a-screen' : 'border-wagami-a-border bg-wagami-a-surface-raised text-wagami-a-text'}`}>{children}</button>
 }
 
 function Pagination({ page, totalPages, setPage, text }: { page: number; totalPages: number; setPage: React.Dispatch<React.SetStateAction<number>>; text: ReturnType<typeof getWagamiAText> }) {
