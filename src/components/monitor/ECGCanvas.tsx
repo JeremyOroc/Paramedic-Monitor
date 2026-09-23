@@ -56,8 +56,15 @@ function LiveECGCanvas({
       getWaveform: () =>
         get().cprOverride ? CPR_COMPRESSION_WAVEFORM : getEcgRhythm(get().rhythm),
       getSignalKey: () => get().cprOverride
-        ? `cpr-compression:${get().hr}`
-        : `${get().rhythm}:${get().hr}`,
+        ? 'cpr-compression'
+        : get().rhythm,
+      getTimingKey: () => {
+        if (get().cprOverride) return `cpr-compression:${get().hr}`
+        const rhythm = get().rhythm
+        const rateControlled =
+          rhythm === 'torsades' || ECG_RHYTHMS[rhythm].cycleMs === null
+        return rateControlled ? `${rhythm}:${get().hr}` : rhythm
+      },
       getCycleMs: () => {
         if (get().cprOverride) return getCprCompressionCycleMs(get().hr)
         if (get().rhythm === 'torsades') return getTorsadesPacketDurationMs(get().hr)

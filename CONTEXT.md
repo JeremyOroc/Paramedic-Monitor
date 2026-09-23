@@ -307,7 +307,8 @@ backgrounding. Re-entry reconstructs the current sweep without a blank, rewind, 
 a genuine new sequence instead uses a Fresh sweep reveal. Connected rhythm, morphology, rate, and
 CPR changes replace prior history only as the Sweep erase band advances, including while the surface
 is covered. Continuity reconstruction preserves every transition still inside the Sweep history
-window; each display has its own phase, and a full browser reload begins a new local sequence.
+window; rate-only changes alter cadence without leaving a retained background-colored cut, each
+display has its own phase, and a full browser reload begins a new local sequence.
 _Avoid_: Hidden rendering, ECG restart, paused waveform
 
 **Live 12-lead grid**:

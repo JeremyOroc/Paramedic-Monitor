@@ -286,6 +286,81 @@ describe('startRenderer', () => {
     stop()
   })
 
+  it('applies timing-only changes without leaving an incremental stroke gap', () => {
+    let now = 1000
+    let wallNow = 10_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    let hr = 80
+    const getWaveform = vi.fn(() => ECG_RHYTHMS.nsr)
+    const stop = startRenderer({
+      canvas,
+      color: '#00ff41',
+      getWaveform,
+      getSignalKey: () => 'nsr',
+      getTimingKey: () => `nsr:${hr}`,
+      getCycleMs: () => 60_000 / hr,
+      cycleJitter: 0,
+      ampJitter: 0,
+    })
+
+    rafCalls.shift()?.(now)
+    now = 1016
+    wallNow = 10_016
+    rafCalls.shift()?.(now)
+    const drawsBeforeRateChange = vi.mocked(ctx.lineTo).mock.calls.length
+    const waveformReadsBeforeRateChange = getWaveform.mock.calls.length
+
+    hr = 120
+    stop.syncSignal()
+    now = 1032
+    wallNow = 10_032
+    rafCalls.shift()?.(now)
+
+    expect(ctx.lineTo).toHaveBeenCalledTimes(drawsBeforeRateChange + 1)
+    expect(getWaveform).toHaveBeenCalledTimes(waveformReadsBeforeRateChange)
+    stop()
+  })
+
+  it('connects reconstructed history across a timing-only change', () => {
+    let now = 1000
+    let wallNow = 10_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    let hr = 80
+    const stop = startRenderer({
+      canvas,
+      color: '#00ff41',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getSignalKey: () => 'nsr',
+      getTimingKey: () => `nsr:${hr}`,
+      getCycleMs: () => 60_000 / hr,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+      initiallyOccluded: true,
+    })
+
+    hr = 120
+    wallNow = 12_000
+    stop.syncSignal()
+    now = 3000
+    wallNow = 13_000
+    stop.setOccluded(false)
+
+    // At this wall/sweep position the timing snapshot boundary maps to x=200.
+    // A line ending there proves reconstruction did not turn it into a gap.
+    expect(vi.mocked(ctx.lineTo).mock.calls.some(([x]) => Number(x) === 200)).toBe(true)
+    stop()
+  })
+
   it('ignores resize jitter, rejects transients, and preserves a stable resize', () => {
     const ctx = fakeCtx()
     const canvas = document.createElement('canvas')

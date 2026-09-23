@@ -9,6 +9,8 @@ export type RendererOptions = {
   getWaveform: () => WaveformDef
   getCycleMs: () => number
   getSignalKey?: () => string
+  /** Tracks cadence-only changes without creating a visible stroke boundary. */
+  getTimingKey?: () => string
   /** Time in ms for the trace to sweep across the full canvas. Defaults to 4000ms (~Zoll ECG paper speed). */
   sweepMs?: number
   /** Aligns the erase/update sweep to wall-clock time so separate canvases share the same x position. */
@@ -51,6 +53,7 @@ type SignalSnapshot = {
   cycleMs: number
   phaseAtStart: number
   amplitudeMultiplier: number
+  connectFromPrevious: boolean
 }
 
 const RESIZE_JITTER_PX = 1
@@ -74,6 +77,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     getWaveform,
     getCycleMs,
     getSignalKey,
+    getTimingKey,
     sweepMs = 4000,
     synchronizeSweep = false,
     amplitude = 0.85,
@@ -105,6 +109,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
 
   let activeWaveform = getWaveform()
   let activeSignalKey = getSignalKey?.() ?? 'default'
+  let activeTimingKey = getTimingKey?.() ?? activeSignalKey
   let cssWidth = 0
   let cssHeight = 0
   let dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1
@@ -257,31 +262,50 @@ export function startRenderer(opts: RendererOptions): RendererController {
     }
   }
 
-  const recordSignalSnapshot = (nowWall: number) => {
+  const recordSignalSnapshot = (
+    nowWall: number,
+    connectFromPrevious: boolean,
+  ) => {
     signalHistory.push({
       startedAtWall: nowWall,
       waveform: activeWaveform,
       cycleMs: Math.max(60, getCycleMs() * cycleMul),
       phaseAtStart: phase,
       amplitudeMultiplier: ampMul,
+      connectFromPrevious,
     })
     pruneSignalHistory(nowWall)
   }
 
-  recordSignalSnapshot(sequenceStartedAtWall)
+  recordSignalSnapshot(sequenceStartedAtWall, false)
 
   const refreshSignal = (nowWall = Date.now()): boolean => {
     const nextSignalKey = getSignalKey?.() ?? 'default'
     if (nextSignalKey === activeSignalKey) return false
 
     activeSignalKey = nextSignalKey
+    activeTimingKey = getTimingKey?.() ?? nextSignalKey
     activeWaveform = getWaveform()
     phase = getPhaseAt?.(nowWall, getCycleMs()) ?? 0
     rollJitter()
     prevY = yFromValue(sampleAt(0))
-    recordSignalSnapshot(nowWall)
+    recordSignalSnapshot(nowWall, false)
     suppressNextIncrementalStroke = true
     return true
+  }
+
+  const refreshTiming = (nowWall = Date.now()): boolean => {
+    const nextTimingKey = getTimingKey?.() ?? activeTimingKey
+    if (nextTimingKey === activeTimingKey) return false
+
+    activeTimingKey = nextTimingKey
+    if (getPhaseAt) phase = getPhaseAt(nowWall, getCycleMs())
+    recordSignalSnapshot(nowWall, true)
+    return true
+  }
+
+  const refreshTimeline = (nowWall = Date.now()) => {
+    if (!refreshSignal(nowWall)) refreshTiming(nowWall)
   }
 
   const advancePhase = (elapsedMs: number) => {
@@ -357,7 +381,10 @@ export function startRenderer(opts: RendererOptions): RendererController {
         snapshot.amplitudeMultiplier,
       )
 
-      if (previousPoint && previousSnapshot === snapshot) {
+      if (
+        previousPoint &&
+        (previousSnapshot === snapshot || snapshot.connectFromPrevious)
+      ) {
         drawSegment(previousPoint.x, previousPoint.y, x, y)
       }
       previousPoint = { x, y }
@@ -374,7 +401,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
   ) => {
     if (rebuild) resize(now, true)
     const nowWall = Date.now()
-    refreshSignal(nowWall)
+    refreshTimeline(nowWall)
     advancePhase(elapsedMs)
     advanceSweep(now, elapsedMs)
     prevY = yFromValue(sampleAt(phase))
@@ -444,7 +471,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     }
 
     if (occluded) {
-      refreshSignal(nowWall)
+      refreshTimeline(nowWall)
       advancePhase(elapsedMs)
       advanceSweep(now, elapsedMs)
       prevY = yFromValue(sampleAt(phase))
@@ -477,7 +504,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     lastT = now
     lastWallT = nowWall
 
-    refreshSignal(nowWall)
+    refreshTimeline(nowWall)
 
     const cycleMs = Math.max(60, getCycleMs() * cycleMul)
     const dPhase = dt / cycleMs
@@ -574,7 +601,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     if (freshReveal) {
       const now = performance.now()
       const nowWall = Date.now()
-      refreshSignal(nowWall)
+      refreshTimeline(nowWall)
       if (synchronizeSweep) prevX = synchronizedX(now)
       prevY = yFromValue(sampleAt(phase))
       lastT = now
@@ -620,7 +647,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
 
   stop.syncSignal = () => {
     if (stopped) return
-    refreshSignal(Date.now())
+    refreshTimeline(Date.now())
   }
 
   return stop

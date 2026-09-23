@@ -48,7 +48,15 @@ export function LeadCell({
         cycleJitter: 0,
         synchronizeSweep: true,
         getWaveform: pick,
-        getSignalKey: () => `${get().rhythm}:${label}:${get().hr}`,
+        getSignalKey: () => `${get().rhythm}:${label}`,
+        getTimingKey: () => {
+          const waveform = pick()
+          const rateControlled =
+            get().rhythm === 'torsades' || waveform.cycleMs === null
+          return rateControlled
+            ? `${get().rhythm}:${label}:${get().hr}`
+            : `${get().rhythm}:${label}`
+        },
         getCycleMs: () => beatClock && get().rhythm === 'torsades'
           ? getTorsadesPacketDurationMs(get().hr)
           : pick().cycleMs ?? 60000 / Math.max(20, get().hr),

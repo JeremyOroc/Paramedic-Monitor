@@ -1,10 +1,16 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import type { Etco2Waveform, Spo2Waveform } from '@/types/vitals'
 import { SecondaryChannel } from '../SecondaryChannel'
 
-vi.mock('@/lib/ecg/renderer', () => ({
-  startRenderer: vi.fn(() => () => {}),
+const { useWaveformRenderer } = vi.hoisted(() => ({
+  useWaveformRenderer: vi.fn((...args: unknown[]) => {
+    void args
+    return { current: null }
+  }),
 }))
+
+vi.mock('@/hooks/useWaveformRenderer', () => ({ useWaveformRenderer }))
 
 const baseProps = {
   hr: 80,
@@ -14,7 +20,20 @@ const baseProps = {
   etco2Waveform: 'normal' as const,
 }
 
+type SecondaryState = {
+  channel: 'spo2' | 'etco2'
+  hr: number
+  spo2: number
+  etco2: number
+  spo2Waveform: Spo2Waveform
+  etco2Waveform: Etco2Waveform
+}
+
 describe('SecondaryChannel', () => {
+  beforeEach(() => {
+    useWaveformRenderer.mockClear()
+  })
+
   it('shows the SpO2 label with 1x scale metadata', () => {
     render(<SecondaryChannel {...baseProps} channel="spo2" />)
 
@@ -53,5 +72,53 @@ describe('SecondaryChannel', () => {
 
     expect(screen.getByText('SpO2')).toHaveClass('bg-[var(--color-selection-blue)]', 'text-white')
     expect(screen.getByText('1x')).toHaveClass('bg-[var(--color-selection-blue)]', 'text-white')
+  })
+
+  it('updates SpO2 cadence from FC without changing waveform identity', () => {
+    render(<SecondaryChannel {...baseProps} channel="spo2" />)
+
+    const call = useWaveformRenderer.mock.calls[0] as unknown as [
+      unknown,
+      (get: () => SecondaryState) => {
+        getSignalKey?: () => string
+        getTimingKey?: () => string
+        getCycleMs: () => number
+      },
+    ]
+    const buildOptions = call[1]
+    const normal = buildOptions(() => ({ ...baseProps, channel: 'spo2' }))
+    const faster = buildOptions(() => ({ ...baseProps, channel: 'spo2', hr: 120 }))
+    const lowerSaturation = buildOptions(() => ({ ...baseProps, channel: 'spo2', hr: 120, spo2: 82 }))
+    const weak = buildOptions(() => ({ ...baseProps, channel: 'spo2', hr: 120, spo2Waveform: 'weak' }))
+
+    expect(normal.getSignalKey?.()).toBe('spo2:normal:98')
+    expect(faster.getSignalKey?.()).toBe('spo2:normal:98')
+    expect(normal.getTimingKey?.()).toBe('spo2:80')
+    expect(faster.getTimingKey?.()).toBe('spo2:120')
+    expect(normal.getCycleMs()).toBe(750)
+    expect(faster.getCycleMs()).toBe(500)
+    expect(lowerSaturation.getSignalKey?.()).toBe('spo2:normal:82')
+    expect(weak.getSignalKey?.()).toBe('spo2:weak:98')
+  })
+
+  it('retains EtCO2 morphology and value identity', () => {
+    render(<SecondaryChannel {...baseProps} channel="etco2" />)
+
+    const call = useWaveformRenderer.mock.calls[0] as unknown as [
+      unknown,
+      (get: () => SecondaryState) => {
+        getSignalKey?: () => string
+        getTimingKey?: () => string
+      },
+    ]
+    const buildOptions = call[1]
+    const normal = buildOptions(() => ({ ...baseProps, channel: 'etco2' }))
+    const changedValue = buildOptions(() => ({ ...baseProps, channel: 'etco2', etco2: 48 }))
+    const obstructed = buildOptions(() => ({ ...baseProps, channel: 'etco2', etco2Waveform: 'obstructed' }))
+
+    expect(normal.getSignalKey?.()).toBe('etco2:normal:35')
+    expect(normal.getTimingKey?.()).toBe('etco2')
+    expect(changedValue.getSignalKey?.()).toBe('etco2:normal:48')
+    expect(obstructed.getSignalKey?.()).toBe('etco2:obstructed:35')
   })
 })
