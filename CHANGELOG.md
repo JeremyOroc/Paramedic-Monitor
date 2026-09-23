@@ -55,6 +55,60 @@
   visible physical-shell button to remain inside the housing silhouette.
 - Recorded the remaining footer, partial-page, terminology, and material-contrast questions. The
   design interview is still in progress and no runtime implementation has begun.
+## [2026-09-23] [wagami-a/ui/testing] — Remove live green labels from captured printouts
+
+- Extended live-label suppression through Wagami A's completed-result and print-preview layers so
+  the green live-grid identifiers no longer bleed over the static ECG paper.
+- Preserved the printout's black identifiers and restored the live labels after result close or
+  acquisition cancellation without unmounting lead cells or waveform canvases.
+- All 17 focused tests, TypeScript, and affected-file ESLint pass.
+
+## [2026-09-23] [planning/wagami-a/ui] — Correct live-label suppression scope
+
+- Confirmed from rendered output that the green identifiers belong to the mounted live grid beneath
+  the static capture and must remain hidden for completed-result and print-preview layers.
+- Retained the static printout's black identifiers and required live labels to return only after
+  cancellation or closing the captured result.
+
+## [2026-09-23] [wagami-a/ui/testing] — Suppress identifiers during 12-lead acquisition
+
+- Hid I–III, aVR/aVL/aVF, and V1–V6 only while Wagami A acquisition is actively running, restoring
+  them after completion or cancellation.
+- Kept every lead cell and waveform canvas mounted so acquisition timing, rendering continuity,
+  completed captures, and surrounding workflows remain unchanged.
+- All 17 focused tests, TypeScript, and affected-file ESLint pass.
+
+## [2026-09-23] [planning/wagami-a/ui] — Hide lead identifiers during acquisition
+
+- Confirmed that Wagami A's live waveform grid remains mounted while `Acquérir` is active, but its
+  I–III, aVR/aVL/aVF, and V1–V6 identifiers disappear until completion or cancellation.
+- Kept acquisition timing/status, completed results, printing, transmission, Spectator parity, and
+  Wagami X outside the scope of the presentation-only change.
+
+## [2026-09-23] [wagami-a/ui/domain/testing] — Add 12-lead Patient Information and simplify layers
+
+- Reordered the Wagami A 12-lead footer to Acquire, Patient Information, Transmit, Print and added a
+  localized A-native editor for the shared Age/Sex record with touch and physical navigation.
+- Synchronized the open panel and values through live/Preview/Spectator, preserved patient data
+  through power-off, and retained the existing Monitor Reset/New Attempt defaults.
+- Made capture, print, Patient Information, and transmission mutually exclusive, reduced the flow
+  to one contextual close action, and made transmission fully opaque while preserving the mounted
+  waveform underneath.
+- All 171 focused tests, TypeScript, affected-file ESLint with zero errors and one existing warning,
+  the Next.js 16.3 Webpack build, and rendered 1280×720 QA pass. The full suite's only durable
+  failures remain the three unrelated baselines; the additional concurrent admin timeout passes in
+  isolation.
+
+## [2026-09-23] [planning/wagami-a/domain] — Define the 12-lead Patient Information workflow
+
+- Replaced the redundant fourth 12-lead `Fermer` slot with `Info patient` and fixed the footer order
+  as Acquire, Patient Information, Transmit, Print.
+- Defined an A-native localized editor for the shared Age/Sex record with touch and physical
+  navigation, editable live/Preview behavior, read-only Spectator parity, and existing reset rules.
+- Required mutually exclusive capture/print/patient/transmission layers, exactly one contextual
+  close action, and an opaque transmission surface that preserves the mounted waveform underneath.
+- Added `12-lead Patient Information` to the project glossary. No ADR is warranted for this
+  reversible workflow and presentation correction.
 
 ## [2026-09-23] [wagami-a/ui/domain/testing] — Run EtCO₂ calibration inline
 

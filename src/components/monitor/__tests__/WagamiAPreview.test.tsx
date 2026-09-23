@@ -82,6 +82,37 @@ describe('Wagami A Room-free clinical preview', () => {
     expect(screen.getByRole('progressbar', { name: 'ÉTALONNAGE…' })).toBeInTheDocument()
   })
 
+  it('edits 12-lead Patient Information with physical navigation and preserves it through power-off', () => {
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview />)
+
+    fireEvent.click(screen.getByRole('button', { name: '12 dérivations' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Info patient' }))
+    expect(screen.getByLabelText('Âge')).toHaveTextContent('40')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Droite' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Droite' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Entrée' }))
+    expect(screen.getByLabelText('Âge')).toHaveTextContent('41')
+    fireEvent.click(screen.getByRole('button', { name: 'F' }))
+    expect(useMonitorStore.getState().patientInfo).toEqual({ age: 41, sex: 'F' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    expect(screen.queryByRole('dialog', { name: 'Informations patient' })).not.toBeInTheDocument()
+    expect(useMonitorStore.getState().patientInfo).toEqual({ age: 41, sex: 'F' })
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    fireEvent.click(screen.getByRole('button', { name: '12 dérivations' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Info patient' }))
+    expect(screen.getByLabelText('Âge')).toHaveTextContent('41')
+    expect(screen.getByRole('button', { name: 'F' })).toHaveAttribute('aria-pressed', 'true')
+
+    act(() => useMonitorStore.getState().reset())
+    expect(screen.queryByRole('dialog', { name: 'Informations patient' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Info patient' }))
+    expect(screen.getByLabelText('Âge')).toHaveTextContent('40')
+    expect(screen.getByRole('button', { name: 'M' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
   it('keeps live and 12-lead canvases mounted across tasks and shell-free Call Info', () => {
     vi.useFakeTimers()
     useMonitorStore.getState().reset()

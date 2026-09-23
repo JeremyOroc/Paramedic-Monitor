@@ -19,6 +19,7 @@ type LeadCellProps = {
   readyOnStart?: boolean
   freshReveal?: boolean
   sequenceKey?: string | number
+  hideLabel?: boolean
 }
 
 export function LeadCell({
@@ -32,6 +33,7 @@ export function LeadCell({
   readyOnStart = false,
   freshReveal = false,
   sequenceKey,
+  hideLabel = false,
 }: LeadCellProps) {
   const canvasRef = useWaveformRenderer(
     { rhythm, hr },
@@ -68,9 +70,11 @@ export function LeadCell({
         className,
       )}
     >
-      <span className="absolute top-1 left-2 z-10 text-xs font-mono font-bold text-ecg-green drop-shadow-[0_0_2px_black]">
-        {label}
-      </span>
+      {!hideLabel ? (
+        <span className="absolute top-1 left-2 z-10 text-xs font-mono font-bold text-ecg-green drop-shadow-[0_0_2px_black]">
+          {label}
+        </span>
+      ) : null}
       <canvas
         ref={canvasRef}
         data-testid={`lead-canvas-${label}`}

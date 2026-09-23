@@ -17,17 +17,19 @@ describe('useWagamiAWorkspace', () => {
     window.localStorage.clear()
   })
 
-  it('keeps a 12-lead acquisition running after navigation and captures the original values', () => {
+  it('cancels an in-progress 12-lead acquisition when Retour exits the workflow', () => {
     const { result } = renderHook(() => useWagamiAWorkspace({ scope: 'preview', rhythm: 'nsr', hr: 80 }))
     act(() => {
       result.current.openTask('twelveLead')
       result.current.startTwelveLeadCapture()
+    })
+    act(() => {
       result.current.goBack()
       vi.advanceTimersByTime(ACQUIRE_MS)
     })
     expect(result.current.view).toBe('monitor')
-    expect(result.current.twelveLead.lastCapture).toEqual({ rhythm: 'nsr', hr: 80 })
-    expect(result.current.twelveLead.captureState).toBe('result')
+    expect(result.current.twelveLead.lastCapture).toBeNull()
+    expect(result.current.twelveLead.captureState).toBe('idle')
   })
 
   it('records medication meaning independently of locale and nests the event log', () => {
@@ -88,6 +90,8 @@ describe('useWagamiAWorkspace', () => {
     expect(result.current.twelveLead.printOpen).toBe(true)
     act(() => {
       result.current.closeTwelveLeadOverlay()
+    })
+    act(() => {
       result.current.openTransmission()
     })
     act(() => {
@@ -96,6 +100,65 @@ describe('useWagamiAWorkspace', () => {
     expect(result.current.twelveLead.sentDestination).toBe('CHUM')
     act(() => vi.advanceTimersByTime(TWELVE_LEAD_SENT_MS))
     expect(result.current.twelveLead.transmissionOpen).toBe(false)
+  })
+
+  it('edits shared Patient Information and keeps its temporary layer exclusive', () => {
+    const onPatientAgeChange = vi.fn()
+    const onPatientSexChange = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ age, sex }) => useWagamiAWorkspace({
+        scope: 'preview',
+        rhythm: 'nsr',
+        hr: 80,
+        patientInfo: { age, sex },
+        onPatientAgeChange,
+        onPatientSexChange,
+      }),
+      { initialProps: { age: 40, sex: 'M' as 'M' | 'F' } },
+    )
+
+    act(() => {
+      result.current.openTask('twelveLead')
+      result.current.openPatientInfo()
+    })
+    expect(result.current.twelveLead.patientInfoOpen).toBe(true)
+    act(() => result.current.openPrint())
+    expect(result.current.twelveLead.printOpen).toBe(false)
+
+    act(() => result.current.patientInfoActions.find(({ id }) => id === 'patientAgeUp')?.activate())
+    expect(onPatientAgeChange).toHaveBeenCalledWith(41)
+    act(() => result.current.patientInfoActions.find(({ id }) => id === 'patientSexF')?.activate())
+    expect(onPatientSexChange).toHaveBeenCalledWith('F')
+
+    rerender({ age: 41, sex: 'F' })
+    expect(result.current.patientInfo).toEqual({ age: 41, sex: 'F' })
+    act(() => result.current.patientInfoActions.find(({ id }) => id === 'patientInfoDone')?.activate())
+    expect(result.current.twelveLead.patientInfoOpen).toBe(false)
+  })
+
+  it('returns transmission to the captured result and locks Retour during sent confirmation', () => {
+    const { result } = renderHook(() => useWagamiAWorkspace({ scope: 'preview', rhythm: 'nsr', hr: 80 }))
+    act(() => {
+      result.current.openTask('twelveLead')
+      result.current.startTwelveLeadCapture()
+      vi.advanceTimersByTime(ACQUIRE_MS)
+    })
+    act(() => {
+      result.current.openTransmission()
+    })
+    expect(result.current.twelveLead.captureState).toBe('result')
+    expect(result.current.twelveLead.transmissionOpen).toBe(true)
+
+    act(() => result.current.sendTwelveLead('CHUM'))
+    act(() => result.current.goBack())
+    expect(result.current.view).toBe('twelveLead')
+
+    act(() => vi.advanceTimersByTime(TWELVE_LEAD_SENT_MS))
+    expect(result.current.twelveLead.transmissionOpen).toBe(false)
+    expect(result.current.twelveLead.captureState).toBe('result')
+    act(() => result.current.goBack())
+    expect(result.current.view).toBe('monitor')
+    expect(result.current.twelveLead.captureState).toBe('idle')
   })
 
   it('starts calibration inline, completes on its absolute deadline, and preserves completion across power-off', () => {

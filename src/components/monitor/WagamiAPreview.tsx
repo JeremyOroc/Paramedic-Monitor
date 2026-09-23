@@ -31,6 +31,9 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
   const callerInfo = useMonitorStore((state) => state.callerInfoConfirmed)
   const dispatchRoute = useMonitorStore((state) => state.dispatchRouteConfirmed)
   const monitorResetVersion = useMonitorStore((state) => state.monitorResetVersion)
+  const patientInfo = useMonitorStore((state) => state.patientInfo)
+  const setPatientAge = useMonitorStore((state) => state.setPatientAge)
+  const setPatientSex = useMonitorStore((state) => state.setPatientSex)
   const sourceDisplay = resolveWagamiAPreviewState(confirmed, confirmedActive)
   const preferenceState = useWagamiAPreferences('preview')
   const clinical = useWagamiAClinicalCore({
@@ -46,6 +49,9 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
     rhythm: clinical.display.vitals.rhythm,
     hr: clinical.display.vitals.hr,
     monitorResetVersion,
+    patientInfo,
+    onPatientAgeChange: setPatientAge,
+    onPatientSexChange: setPatientSex,
     preferenceState,
   })
   const vitalLogSnapshot = useMemo(() => ({
@@ -146,8 +152,12 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
           onEnergyDown={clinical.onEnergyDown}
           onEnergyUp={clinical.onEnergyUp}
           onTask={workspace.openTask}
-          navigationView={workspace.view}
-          secondaryActions={workspace.view === 'monitor' ? undefined : [{ id: 'back', enabled: true, activate: workspace.goBack }]}
+          navigationView={workspace.twelveLead.patientInfoOpen ? 'twelveLeadPatientInfo' : workspace.view}
+          secondaryActions={workspace.twelveLead.patientInfoOpen
+            ? workspace.patientInfoActions
+            : workspace.view === 'monitor'
+              ? undefined
+              : [{ id: 'back', enabled: workspace.twelveLead.sentUntil === null, activate: workspace.goBack }]}
           screenContent={screenContent}
           locale={workspace.preferences.locale}
           shellAlarmLedEnabled={workspace.preferences.shellAlarmLedEnabled}

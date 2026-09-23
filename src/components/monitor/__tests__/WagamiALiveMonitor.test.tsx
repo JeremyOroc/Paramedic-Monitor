@@ -161,6 +161,42 @@ describe('Wagami A live Attempt integration', () => {
     expect(projections.at(-1)?.displayedEtco2).toBe(35)
   })
 
+  it('projects shared 12-lead Patient Information without recording a new clinical event', async () => {
+    const events: StudentEventRecord[] = []
+    const projections: MonitorProjection[] = []
+    render(
+      <MonitorPage
+        transportStorageScope="ABC234.participant-1.1"
+        onStudentEvent={(event) => events.push(event)}
+        onProjectionChange={(projection) => projections.push(projection)}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    fireEvent.click(screen.getByRole('button', { name: '12 dérivations' }))
+    events.length = 0
+    fireEvent.click(screen.getByRole('button', { name: 'Info patient' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Augmenter l’âge' }))
+    fireEvent.click(screen.getByRole('button', { name: 'F' }))
+
+    expect(useMonitorStore.getState().patientInfo).toEqual({ age: 41, sex: 'F' })
+    expect(events).toEqual([])
+    await waitFor(() => {
+      expect(projections.at(-1)).toMatchObject({
+        patientInfo: { age: 41, sex: 'F' },
+        wagamiA: {
+          view: 'twelveLead',
+          twelveLead: { patientInfoOpen: true },
+        },
+      })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Terminé' }))
+    await waitFor(() => {
+      expect(projections.at(-1)?.wagamiA?.twelveLead.patientInfoOpen).toBe(false)
+    })
+  })
+
   it('reopens Call Info as a full-page live dispatch workflow and projects the page', async () => {
     const events: StudentEventRecord[] = []
     const projections: MonitorProjection[] = []

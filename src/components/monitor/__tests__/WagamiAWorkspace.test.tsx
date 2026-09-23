@@ -1,8 +1,9 @@
-import { useEffect } from 'react'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { useEffect, useState } from 'react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useWagamiAWorkspace } from '@/hooks/useWagamiAWorkspace'
+import { ACQUIRE_MS } from '@/hooks/useMonitorController'
 import type { VitalLogEntry } from '@/hooks/useVitalLog'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
 import { DEFAULT_VITALS } from '@/types/vitals'
@@ -19,6 +20,7 @@ vi.mock('../WagamiAScreen', () => ({
         <button type="button" onClick={() => onTask?.('vitalLog')}>Open vital log</button>
         <button type="button" onClick={() => onTask?.('configure')}>Open configure</button>
         <button type="button" onClick={() => onTask?.('medications')}>Open medications</button>
+        <button type="button" onClick={() => onTask?.('twelveLead')}>Open twelve lead</button>
         {onOpenNibpSettings ? <button type="button" onClick={onOpenNibpSettings}>Open PNI settings</button> : null}
       </>
     )
@@ -44,10 +46,14 @@ function makeLog(count: number): VitalLogEntry[] {
 }
 
 function Harness({ vitalLog }: { vitalLog: VitalLogEntry[] }) {
+  const [patientInfo, setPatientInfo] = useState({ age: 40, sex: 'M' as 'M' | 'F' })
   const controller = useWagamiAWorkspace({
     scope: 'workspace-test',
     rhythm: display.vitals.rhythm,
     hr: display.vitals.hr,
+    patientInfo,
+    onPatientAgeChange: (age) => setPatientInfo((current) => ({ ...current, age })),
+    onPatientSexChange: (sex) => setPatientInfo((current) => ({ ...current, sex })),
   })
 
   return (
@@ -161,5 +167,105 @@ describe('WagamiAWorkspace', () => {
     expect(screen.getByText('HR')).toBeInTheDocument()
     expect(screen.getByText('BP SYS')).toBeInTheDocument()
     expect(screen.getByText('BP DIA')).toBeInTheDocument()
+  })
+
+  it('orders the 12-lead footer and edits Patient Information without duplicate close actions', () => {
+    render(<Harness vitalLog={[]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open twelve lead' }))
+
+    const footer = screen.getByTestId('wagami-a-twelve-lead-footer')
+    expect(within(footer).getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Acquérir',
+      'Info patient',
+      'Transmettre',
+      'Imprimer',
+    ])
+
+    const patientInfoButton = within(footer).getByRole('button', { name: 'Info patient' })
+    fireEvent.click(patientInfoButton)
+    expect(screen.getByRole('dialog', { name: 'Informations patient' })).toBeInTheDocument()
+    expect(screen.queryByTestId('wagami-a-twelve-lead-footer')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-twelve-lead-content')).toHaveAttribute('aria-hidden', 'true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Augmenter l’âge' }))
+    expect(screen.getByLabelText('Âge')).toHaveTextContent('41')
+    fireEvent.click(screen.getByRole('button', { name: 'F' }))
+    expect(screen.getByRole('button', { name: 'F' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Terminé' }))
+
+    expect(screen.queryByRole('dialog', { name: 'Informations patient' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Info patient' })).toHaveFocus()
+  })
+
+  it('uses one contextual Fermer and fully covers the leads during transmission', () => {
+    vi.useFakeTimers()
+    render(<Harness vitalLog={[]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open twelve lead' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Acquérir' }))
+    act(() => vi.advanceTimersByTime(ACQUIRE_MS))
+
+    expect(screen.getAllByRole('button', { name: 'Fermer' })).toHaveLength(1)
+    const capturedFooter = screen.getByTestId('wagami-a-twelve-lead-footer')
+    expect(within(capturedFooter).getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Fermer',
+      'Info patient',
+      'Transmettre',
+      'Imprimer',
+    ])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Transmettre' }))
+    const transmission = screen.getByRole('dialog', { name: 'Destination de transmission' })
+    expect(transmission).toHaveClass('bg-wagami-a-screen')
+    expect(screen.queryByTestId('wagami-a-twelve-lead-footer')).not.toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-twelve-lead-content')).toHaveAttribute('aria-hidden', 'true')
+    expect(within(transmission).getAllByRole('button', { name: 'Fermer' })).toHaveLength(1)
+
+    fireEvent.click(within(transmission).getByRole('button', { name: 'Fermer' }))
+    expect(screen.getByTestId('twelve-lead-printout')).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Fermer' })).toHaveLength(1)
+    vi.useRealTimers()
+  })
+
+  it('hides live 12-lead identifiers through acquisition, result, and print preview', () => {
+    vi.useFakeTimers()
+    render(<Harness vitalLog={[]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Open twelve lead' }))
+
+    const leads = ['I', 'II', 'III', 'aVR', 'aVL', 'aVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6']
+    for (const lead of leads) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).toHaveTextContent(lead)
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'Acquérir' }))
+    for (const lead of leads) {
+      const cell = screen.getByTestId(`lead-cell-${lead}`)
+      expect(cell).not.toHaveTextContent(lead)
+      expect(screen.getByTestId(`lead-canvas-${lead}`)).toBeInTheDocument()
+    }
+
+    act(() => vi.advanceTimersByTime(ACQUIRE_MS))
+    for (const lead of leads) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).not.toHaveTextContent(lead)
+    }
+    expect(screen.getByTestId('twelve-lead-printout')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Imprimer' }))
+    for (const lead of leads) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).not.toHaveTextContent(lead)
+    }
+    expect(screen.getByTestId('twelve-lead-printout')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fermer' }))
+    for (const lead of leads) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).toHaveTextContent(lead)
+    }
+
+    fireEvent.click(screen.getByRole('button', { name: 'Acquérir' }))
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open twelve lead' }))
+    for (const lead of leads) {
+      expect(screen.getByTestId(`lead-cell-${lead}`)).toHaveTextContent(lead)
+    }
+    vi.useRealTimers()
   })
 })
