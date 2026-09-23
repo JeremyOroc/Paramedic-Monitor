@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseTimedVitalsAutoSort, parseVitalsAutoSort } from '../vitalsAutoSort'
+import {
+  isTimedSpO2Unavailable,
+  parseTimedVitalsAutoSort,
+  parseVitalsAutoSort,
+} from '../vitalsAutoSort'
 
 const TIMED_VITALS_SAMPLE = [
   'Treated (+5 min)',
@@ -27,6 +31,62 @@ const TIMED_VITALS_SAMPLE = [
   'Respirations: 30 breaths/min, Irregular, Weak respiratory effort',
   'Temp: 36.0°C',
   'EtCO₂: 26 mmHg',
+].join('\n')
+
+const MARKDOWN_SERIAL_VITALS_SAMPLE = [
+  '## Initial Vitals',
+  'Pulse: 128 bpm (15 sec = 32 beats, 30 sec = 64 beats), Fast, Regular, Thready',
+  'SpO₂: 94% on room air',
+  'BP: 94/60 mmHg',
+  'Respirations: 28 breaths/min (15 sec = 7 breaths, 30 sec = 14 breaths), Fast, Regular, Labored',
+  'Temp: 36.0°C',
+  'EtCO₂: 30 mmHg',
+  '',
+  '# Treated Vitals',
+  'Treatment pathway: supportive care',
+  '',
+  '## Treated (+5 min)',
+  'Pulse: 126 bpm, Fast, Regular, Thready',
+  'SpO₂: 97% with supplemental oxygen',
+  'BP: 96/62 mmHg',
+  'Respirations: 26 breaths/min, Fast, Regular, Labored',
+  'EtCO₂: 31 mmHg',
+  '---',
+  '## Treated (+10 min)',
+  'Pulse: 132 bpm, Fast, Regular, Thready',
+  'SpO₂: 98% with supplemental oxygen',
+  'BP: 92/58 mmHg',
+  'Respirations: 28 breaths/min, Fast, Regular, Labored',
+  'EtCO₂: 29 mmHg',
+  '---',
+  '## Treated (+15 min)',
+  'Pulse: 138 bpm, Fast, Regular, Thready',
+  'SpO₂: 97% with supplemental oxygen',
+  'BP: 86/54 mmHg',
+  'Respirations: 30 breaths/min, Fast, Regular, Labored',
+  'EtCO₂: 26 mmHg',
+  '---',
+  '# Untreated Vitals',
+  '## Untreated (+5 min)',
+  'Pulse: 142 bpm, Fast, Regular, Thready',
+  'SpO₂: 92% on room air',
+  'BP: 82/50 mmHg',
+  'Respirations: 32 breaths/min, Fast, Regular, Labored',
+  'EtCO₂: 25 mmHg',
+  '---',
+  '## Untreated (+10 min)',
+  'Pulse: 158 bpm, Fast, Regular, Barely Palpable',
+  'SpO₂: 88% on room air',
+  'BP: 66/38 mmHg',
+  'Respirations: 36 breaths/min, Fast, Regular, Severely Labored',
+  'EtCO₂: 18 mmHg',
+  '---',
+  '## Untreated (+15 min)',
+  'Pulse: 46 bpm, Slow, Irregular, Barely Palpable',
+  'SpO₂: Not reliably obtainable due to critically poor peripheral perfusion',
+  'BP: 44/26 mmHg',
+  'Respirations: 8 breaths/min, Slow, Irregular, Shallow',
+  'EtCO₂: 10 mmHg',
 ].join('\n')
 
 describe('parseVitalsAutoSort', () => {
@@ -210,6 +270,16 @@ describe('parseVitalsAutoSort', () => {
     })
   })
 
+  it('uses the Markdown Initial Vitals section instead of later serial values', () => {
+    expect(parseVitalsAutoSort(MARKDOWN_SERIAL_VITALS_SAMPLE)).toEqual({
+      hr: 128,
+      spo2: 94,
+      bp_sys: 94,
+      bp_dia: 60,
+      etco2: 30,
+    })
+  })
+
   it('keeps the first valid repeated vitals when no origin heading exists', () => {
     expect(
       parseVitalsAutoSort(
@@ -303,5 +373,35 @@ describe('parseVitalsAutoSort', () => {
 
   it('returns no values for a missing timed vitals section', () => {
     expect(parseTimedVitalsAutoSort(TIMED_VITALS_SAMPLE, 'T3')).toEqual({})
+  })
+
+  it.each([
+    ['T1', 126, 97, 96, 62, 31],
+    ['T2', 132, 98, 92, 58, 29],
+    ['T3', 138, 97, 86, 54, 26],
+    ['U1', 142, 92, 82, 50, 25],
+    ['U2', 158, 88, 66, 38, 18],
+  ] as const)(
+    'maps %s to the matching Markdown serial-vitals section',
+    (slot, hr, spo2, bpSys, bpDia, etco2) => {
+      expect(parseTimedVitalsAutoSort(MARKDOWN_SERIAL_VITALS_SAMPLE, slot)).toEqual({
+        hr,
+        spo2,
+        bp_sys: bpSys,
+        bp_dia: bpDia,
+        etco2,
+      })
+    },
+  )
+
+  it('maps U3 while identifying its non-obtainable SpO2 value', () => {
+    expect(parseTimedVitalsAutoSort(MARKDOWN_SERIAL_VITALS_SAMPLE, 'U3')).toEqual({
+      hr: 46,
+      bp_sys: 44,
+      bp_dia: 26,
+      etco2: 10,
+    })
+    expect(isTimedSpO2Unavailable(MARKDOWN_SERIAL_VITALS_SAMPLE, 'U3')).toBe(true)
+    expect(isTimedSpO2Unavailable(MARKDOWN_SERIAL_VITALS_SAMPLE, 'U2')).toBe(false)
   })
 })

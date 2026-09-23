@@ -925,6 +925,23 @@ describe('diffStates — SNS findings and patient history', () => {
     expect(summarizeChanges(changes)).toContain('Pulse strength strong → thready')
   })
 
+  it('names Pulse speed, Respiratory effort, and Respiratory speed canonically', () => {
+    const before = normalizeHistoryState(sharedState({}, {}, instructorOnly()))
+    const after = normalizeHistoryState(
+      sharedState({}, {}, instructorOnly({
+        'pulse-speed': 'fast',
+        'respiratory-strength': 'labored',
+        'respiratory-speed': 'slow',
+      })),
+    )
+
+    expect(diffStates(before, after)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ label: 'Pulse speed', after: 'fast' }),
+      expect.objectContaining({ label: 'Respiratory effort', after: 'labored' }),
+      expect.objectContaining({ label: 'Respiratory speed', after: 'slow' }),
+    ]))
+  })
+
   it('reads a first-time finding as filled in rather than as a change from nothing', () => {
     const before = normalizeHistoryState(sharedState({}, {}, instructorOnly()))
     const after = normalizeHistoryState(

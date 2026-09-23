@@ -1844,21 +1844,38 @@ describe('AdminPage', () => {
           'Abdomen',
           'Soft',
           '',
-          'Treated (+5 min)',
-          'Pulse: 106 bpm, Regular, Moderate',
+          '## Initial Vitals',
+          'Pulse: 128 bpm, Fast, Regular, Thready',
+          'SpO2: 94% on room air',
+          'BP: 94/60 mmHg',
+          'Respirations: 28 breaths/min, Fast, Regular, Labored',
+          'EtCO2: 30 mmHg',
+          '',
+          '# Treated Vitals',
+          '## Treated (+5 min)',
+          'Pulse: 106 bpm, Fast, Regular, Moderate',
           'SpO2: 98% on O2',
           'BP: 112/70 mmHg',
-          'Respirations: 22 breaths/min, Regular, Unlabored',
+          'Respirations: 22 breaths/min, Fast, Regular, Unlabored',
           'EtCO2: 36 mmHg',
           '',
-          'Untreated (+15 min)',
-          'Pulse: 136 bpm, Regular, Thready',
-          'SpO2: 92% on room air',
-          'BP: 76/46 mmHg',
-          'Respirations: 30 breaths/min, Irregular, Weak respiratory effort',
-          'EtCO2: 26 mmHg',
+          '# Untreated Vitals',
+          '## Untreated (+15 min)',
+          'Pulse: 46 bpm, Slow, Irregular, Barely Palpable',
+          'SpO2: Not reliably obtainable due to critically poor peripheral perfusion',
+          'BP: 44/26 mmHg',
+          'Respirations: 8 breaths/min, Slow, Irregular, Shallow',
+          'EtCO2: 10 mmHg',
         ].join('\n'),
       },
+    })
+
+    expect(useMonitorStore.getState().draft).toMatchObject({
+      hr: 128,
+      spo2: 94,
+      bp_sys: 94,
+      bp_dia: 60,
+      etco2: 30,
     })
 
     await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
@@ -1879,24 +1896,27 @@ describe('AdminPage', () => {
     revealSnsOptions('pulse')
     await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
     expect(screen.getByRole('region', { name: 'Pulse measurement result' })).toHaveTextContent(
-      'Rate: 106 bpm',
+      'Rate: 106bpm',
     )
     expect(screen.getByRole('region', { name: 'Pulse measurement result' })).toHaveTextContent(
-      'Strength: Moderate',
+      'Moderate, regular, fast',
     )
     revealSnsOptions('respiratory')
     await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
     expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
-      'Respiratory: 22 breaths/min',
+      'Rate: 22 breaths/min',
     )
     expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
-      'Unlabored',
+      'Unlabored, regular, fast',
     )
 
+    act(() => useMonitorStore.getState().setDraftVitalActive('spo2', true))
     await user.click(screen.getByRole('button', { name: 'U3' }))
 
+    expect(useMonitorStore.getState().draftVitalActive.spo2).toBe(false)
+
     expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
-      'Respiratory: 22 breaths/min',
+      'Rate: 22 breaths/min',
     )
     revealSnsOptions('respiratory')
     await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
@@ -1904,10 +1924,10 @@ describe('AdminPage', () => {
     revealSnsOptions('respiratory')
     await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
     expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
-      'Respiratory: 30 breaths/min',
+      'Rate: 8 breaths/min',
     )
     expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
-      'Weak respiratory effort',
+      'Shallow, irregular, slow',
     )
     revealSnsOptions('pulse')
     await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
@@ -1915,10 +1935,10 @@ describe('AdminPage', () => {
     revealSnsOptions('pulse')
     await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
     expect(screen.getByRole('region', { name: 'Pulse measurement result' })).toHaveTextContent(
-      'Rate: 136 bpm',
+      'Rate: 46bpm',
     )
     expect(screen.getByRole('region', { name: 'Pulse measurement result' })).toHaveTextContent(
-      'Strength: Thready',
+      'Barely palpable, irregular, slow',
     )
     await user.click(screen.getByRole('button', { name: 'Patient Physical' }))
     expect(screen.getByRole('button', { name: 'Front abdomen' })).toHaveAttribute(
@@ -2077,7 +2097,7 @@ describe('AdminPage', () => {
     revealSnsOptions('respiratory')
     await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
     expect(screen.getByRole('region', { name: 'Respiratory measurement result' })).toHaveTextContent(
-      'Respiratory: 24 breaths/min',
+      'Rate: 24 breaths/min',
     )
     await user.click(skinExtremities)
     expect(screen.getByRole('region', { name: 'Skin/Extremities finding slider' })).toHaveTextContent(

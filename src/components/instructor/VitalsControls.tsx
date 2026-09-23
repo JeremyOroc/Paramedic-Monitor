@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  isTimedSpO2Unavailable,
   parseTimedVitalsAutoSort,
   type TimedVitalsSlot,
 } from '@/lib/vitalsAutoSort'
@@ -50,6 +51,7 @@ export function VitalsControls({
   sessionEtco2Calibrated,
 }: VitalsControlsProps) {
   const setTimedDraftVitals = useMonitorStore((s) => s.setTimedDraftVitals)
+  const setDraftVitalActive = useMonitorStore((s) => s.setDraftVitalActive)
   const etco2CalibrationStatus = useMonitorStore((s) => s.etco2CalibrationStatus)
   const cprMode = useMonitorStore((s) => s.cprMode)
   const setCprMode = useMonitorStore((s) => s.setCprMode)
@@ -67,6 +69,9 @@ export function VitalsControls({
 
   const handleTimedVitalsClick = (slot: TimedVitalsSlot) => {
     applyParsedVitals(parseTimedVitalsAutoSort(autoSortText, slot))
+    if (isTimedSpO2Unavailable(autoSortText, slot)) {
+      setDraftVitalActive('spo2', false)
+    }
     onTimedVitalsClick?.(slot)
   }
 

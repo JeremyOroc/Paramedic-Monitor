@@ -73,9 +73,14 @@ function parseBloodPressure(value: string) {
   return { systolic, diastolic }
 }
 
-function isOriginVitalsHeading(line: string) {
+function isInitialVitalsHeading(line: string) {
   const normalized = normalizeLabel(line)
-  return normalized === 'vitalsorigin' || normalized === 'originvitals'
+  return [
+    'vitalsorigin',
+    'originvitals',
+    'initialvitals',
+    'vitalsinitial',
+  ].includes(normalized)
 }
 
 function isSectionBoundary(line: string) {
@@ -103,17 +108,30 @@ export function isTimedVitalsHeading(line: string) {
 
 function getVitalsSourceText(text: string) {
   const lines = text.split(/\r?\n/)
-  const originStart = lines.findIndex(isOriginVitalsHeading)
+  const originStart = lines.findIndex(isInitialVitalsHeading)
 
   if (originStart === -1) return text
 
+  return getSectionTextAfter(lines, originStart)
+}
+
+function getSectionTextAfter(lines: ReadonlyArray<string>, sectionStart: number) {
   const sectionLines: string[] = []
-  for (const line of lines.slice(originStart + 1)) {
+  for (const line of lines.slice(sectionStart + 1)) {
     if (isSectionBoundary(line)) break
     sectionLines.push(line)
   }
 
   return sectionLines.join('\n')
+}
+
+export function getInitialVitalsSectionText(text: string): string {
+  const lines = text.split(/\r?\n/)
+  const initialStart = lines.findIndex(isInitialVitalsHeading)
+
+  if (initialStart === -1) return ''
+
+  return getSectionTextAfter(lines, initialStart)
 }
 
 export function parseVitalsAutoSort(text: string): ParsedVitalsAutoSort {
@@ -169,4 +187,22 @@ export function getTimedVitalsSectionText(text: string, slot: TimedVitalsSlot): 
   }
 
   return sectionLines.join('\n')
+}
+
+const UNAVAILABLE_SPO2_PATTERN =
+  /\b(?:not\s+(?:reliably\s+)?obtainable|unobtainable|unable\s+to\s+(?:obtain|measure))\b/i
+
+export function isTimedSpO2Unavailable(text: string, slot: TimedVitalsSlot): boolean {
+  const sectionText = getTimedVitalsSectionText(text, slot)
+  if (!sectionText) return false
+
+  for (const rawLine of sectionText.split(/\r?\n/)) {
+    const match = /^(.+?)\s*[:\-]\s*(.*?)\s*$/.exec(rawLine)
+    if (!match) continue
+    const target = LABEL_TO_TARGET[normalizeLabel(match[1])]
+    if (target?.field !== 'spo2') continue
+    return UNAVAILABLE_SPO2_PATTERN.test(match[2])
+  }
+
+  return false
 }

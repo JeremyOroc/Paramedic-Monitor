@@ -19,6 +19,7 @@ import type {
 type IconFinding = {
   id: PatientPhysicalIconFindingId
   label: string
+  optional?: boolean
 }
 
 type PatientSnsGroup = {
@@ -55,6 +56,7 @@ const PATIENT_SNS_GROUPS: ReadonlyArray<PatientSnsGroup> = [
       { id: 'pulse-rate', label: 'Rate' },
       { id: 'pulse-rhythm', label: 'Rhythm' },
       { id: 'pulse-strength', label: 'Strength' },
+      { id: 'pulse-speed', label: 'Speed', optional: true },
     ],
     showFindingLabels: true,
     showMissingFields: true,
@@ -67,7 +69,8 @@ const PATIENT_SNS_GROUPS: ReadonlyArray<PatientSnsGroup> = [
     findings: [
       { id: 'respiratory-rate', label: 'Rate' },
       { id: 'respiratory-rhythm', label: 'Rhythm' },
-      { id: 'respiratory-strength', label: 'Strength' },
+      { id: 'respiratory-strength', label: 'Effort' },
+      { id: 'respiratory-speed', label: 'Speed', optional: true },
     ],
     showFindingLabels: true,
     showMissingFields: true,
@@ -97,7 +100,7 @@ function getMissingFindingLabels(
   findings: PatientPhysicalFindings,
 ) {
   return group.findings
-    .filter((finding) => !findings[finding.id])
+    .filter((finding) => !finding.optional && !findings[finding.id])
     .map((finding) => finding.label)
 }
 
@@ -389,7 +392,7 @@ export function PatientSnsControls({
                     role="region"
                     aria-label={`${group.label} measurement result`}
                     aria-live="polite"
-                    className="grid max-h-20 min-w-0 gap-1 overflow-y-auto border border-ecg-green bg-black p-2 font-mono text-[10px] leading-4"
+                    className="grid min-h-24 max-h-28 min-w-0 content-start gap-1 overflow-y-auto border border-ecg-green bg-black p-2 font-mono text-[10px] leading-4"
                   >
                     {measurementResult.lines.map((line) => (
                       <p key={line} className="whitespace-pre-wrap break-words text-ecg-green">

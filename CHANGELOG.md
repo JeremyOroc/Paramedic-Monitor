@@ -72,6 +72,52 @@
   visible physical-shell button to remain inside the housing silhouette.
 - Recorded the remaining footer, partial-page, terminology, and material-contrast questions. The
   design interview is still in progress and no runtime implementation has begun.
+## [2026-09-23] [instructor/domain/testing] — Repair serial-vitals auto-sort
+
+- Recognized Markdown `Initial Vitals` as authoritative for initial numeric and Patient SNS drafts,
+  preventing later Treated/Untreated findings from bleeding into the initial state.
+- Mapped every T1/T2/T3 and U1/U2/U3 control to its corresponding +5/+10/+15-minute section and
+  preserved commas inside parenthetical 15/30-second count text.
+- Added optional scenario-authored Respiratory speed throughout parsing, measurement snapshots,
+  Saved scenarios, and Evaluation history; retained Shallow as Respiratory effort.
+- Interpreted timed non-obtainable SpO2 text as an Off channel while preserving ordinary numeric
+  timed-vital channel states and continuing to ignore unsupported Temperature values.
+- All 263 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack build pass.
+  The full suite has 1,677 passing and one skipped, with only the same three unrelated baseline
+  failures.
+
+## [2026-09-23] [instructor/domain/testing] — Recognize shallow respiratory effort
+
+- Added Respiratory/Respiration Depth aliases while retaining Effort and legacy Strength inputs,
+  with `Shallow` mapped to the existing Respiratory effort finding.
+- Made inline respiratory parsing order-independent across all descriptors and preserved multiple
+  effort findings such as Shallow plus Labored without displacing rhythm.
+- Removed Depth prefixes from result copy, normalized casing and duplicates, and kept Shallow
+  scenario-authored rather than inferred from vitals.
+- All 204 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack build pass.
+
+## [2026-09-23] [instructor/domain/testing] — Canonicalize Pulse and Respiratory results
+
+- Replaced verbose/duplicated measurement copy with four-line canonical Rate, 15-second count,
+  30-second count, and combined scenario-authored descriptor output.
+- Added optional Pulse speed across flexible auto-sort, timed snapshots, Saved scenarios, and
+  instructor-only Evaluation history; standardized Respiratory effort while retaining legacy aliases
+  and saved-key compatibility.
+- Enlarged only the Pulse/Respiratory result regions for normal no-scroll rendering and retained
+  bounded fallback overflow without changing Skin/Extremities.
+- All 193 focused tests, TypeScript, affected-file ESLint, the Next.js 16.3 Webpack build, and rendered
+  1440×900 QA pass. The full suite has 1,649 passing and one skipped, with only the same three
+  unrelated Room-ownership/legacy PatientInfoPanel baseline failures.
+
+## [2026-09-23] [planning/instructor/domain] — Define canonical Pulse and Respiratory results
+
+- Defined concise four-line Pulse and Respiratory measurement results with canonical rate units,
+  unit-free rounded counts, and combined scenario-authored descriptor lines.
+- Added optional Pulse speed and canonical Respiratory effort semantics, flexible/legacy auto-sort
+  compatibility, snapshot and instructor-only persistence rules, and four-line result geometry.
+- Added Pulse speed and Respiratory effort to the project glossary. No ADR is warranted for this
+  reversible presentation and domain-language refinement.
+
 ## [2026-09-23] [wagami-a/ui/testing] — Remove live green labels from captured printouts
 
 - Extended live-label suppression through Wagami A's completed-result and print-preview layers so

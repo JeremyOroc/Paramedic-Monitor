@@ -22,6 +22,7 @@ describe('usePatientSnsMeasurements', () => {
         'pulse-rate': '98 bpm',
         'pulse-rhythm': 'Regular',
         'pulse-strength': 'Moderate',
+        'pulse-speed': 'Fast',
       })
       result.current.startMeasurement('respiratory', 30, {
         'respiratory-rate': '22 breaths/min',
@@ -41,6 +42,7 @@ describe('usePatientSnsMeasurements', () => {
       'pulse-rate': '98 bpm',
       'pulse-rhythm': 'Regular',
       'pulse-strength': 'Moderate',
+      'pulse-speed': 'Fast',
     })
     expect(onResult).toHaveBeenCalledWith('pulse')
     expect(result.current.measurements.respiratory.secondsLeft).toBe(15)
@@ -117,6 +119,48 @@ describe('usePatientSnsMeasurements', () => {
       'pulse-rhythm': 'Regular',
     })
     expect(onResult).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps Pulse speed from measurement start when the source changes before completion', () => {
+    const { result } = renderHook(() => usePatientSnsMeasurements())
+    const sourceFindings = {
+      'pulse-rate': '156 bpm',
+      'pulse-rhythm': 'Regular',
+      'pulse-strength': 'Strong',
+      'pulse-speed': 'Fast',
+    }
+
+    act(() => {
+      result.current.startMeasurement('pulse', 15, sourceFindings)
+    })
+    sourceFindings['pulse-speed'] = 'Slow'
+    act(() => {
+      vi.advanceTimersByTime(15_000)
+    })
+
+    expect(result.current.measurements.pulse.resultSnapshot?.['pulse-speed']).toBe('Fast')
+  })
+
+  it('keeps Respiratory speed from measurement start when the source changes', () => {
+    const { result } = renderHook(() => usePatientSnsMeasurements())
+    const sourceFindings = {
+      'respiratory-rate': '28 breaths/min',
+      'respiratory-rhythm': 'Regular',
+      'respiratory-strength': 'Labored',
+      'respiratory-speed': 'Fast',
+    }
+
+    act(() => {
+      result.current.startMeasurement('respiratory', 15, sourceFindings)
+    })
+    sourceFindings['respiratory-speed'] = 'Slow'
+    act(() => {
+      vi.advanceTimersByTime(15_000)
+    })
+
+    expect(result.current.measurements.respiratory.resultSnapshot?.['respiratory-speed']).toBe(
+      'Fast',
+    )
   })
 
   it('resets active countdowns and visible results together', () => {

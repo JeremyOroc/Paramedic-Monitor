@@ -595,6 +595,32 @@ describe('VitalsControls', () => {
     expect(state.draft.etco2_waveform).toBe('normal')
   })
 
+  it('stages SpO2 Off when a timed section says it is not reliably obtainable', async () => {
+    const user = userEvent.setup()
+    useMonitorStore.getState().setDraft('spo2', 88)
+    useMonitorStore.getState().setDraftVitalActive('spo2', true)
+    render(
+      <VitalsControls
+        autoSortText={[
+          '# Untreated Vitals',
+          '## Untreated (+15 min)',
+          'Pulse: 46 bpm, Slow, Irregular, Barely Palpable',
+          'SpO₂: Not reliably obtainable due to critically poor peripheral perfusion',
+          'BP: 44/26 mmHg',
+          'Respirations: 8 breaths/min, Slow, Irregular, Shallow',
+          'EtCO₂: 10 mmHg',
+        ].join('\n')}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'U3' }))
+
+    const state = useMonitorStore.getState()
+    expect(state.draft.spo2).toBe(88)
+    expect(state.draftVitalActive.spo2).toBe(false)
+    expect(state.draft.spo2_waveform).toBe('off')
+  })
+
   it('keeps SpO2 and EtCO2 off when switching timed vitals after they were turned off', async () => {
     const user = userEvent.setup()
     useMonitorStore.getState().setDraftVitalActive('spo2', true)

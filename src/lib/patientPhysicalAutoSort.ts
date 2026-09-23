@@ -1,13 +1,19 @@
-import { getTimedVitalsSectionText, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
+import {
+  getInitialVitalsSectionText,
+  getTimedVitalsSectionText,
+  type TimedVitalsSlot,
+} from '@/lib/vitalsAutoSort'
 
 export type PatientPhysicalFindings = Record<string, string>
 export type PatientPhysicalIconFindingId =
   | 'respiratory-rate'
   | 'respiratory-rhythm'
   | 'respiratory-strength'
+  | 'respiratory-speed'
   | 'pulse-rate'
   | 'pulse-rhythm'
   | 'pulse-strength'
+  | 'pulse-speed'
   | 'skin-extremities-note'
   | 'scene-environment-note'
 
@@ -61,12 +67,19 @@ const ICON_LABEL_TO_TARGET: Record<string, PatientPhysicalIconFindingId> = {
   'respiratory rate': 'respiratory-rate',
   'respiratory rhythm': 'respiratory-rhythm',
   'respiratory strength': 'respiratory-strength',
+  'respiratory effort': 'respiratory-strength',
+  'respiratory depth': 'respiratory-strength',
+  'respiratory speed': 'respiratory-speed',
   'respiration rate': 'respiratory-rate',
   'respiration rhythm': 'respiratory-rhythm',
   'respiration strength': 'respiratory-strength',
+  'respiration effort': 'respiratory-strength',
+  'respiration depth': 'respiratory-strength',
+  'respiration speed': 'respiratory-speed',
   'pulse rate': 'pulse-rate',
   'pulse rhythm': 'pulse-rhythm',
   'pulse strength': 'pulse-strength',
+  'pulse speed': 'pulse-speed',
 }
 
 const BROAD_ICON_SECTIONS: Record<string, 'respiratory' | 'pulse'> = {
@@ -113,8 +126,27 @@ function appendFinding(
 
 function getBroadIconTargets(group: 'respiratory' | 'pulse') {
   return group === 'respiratory'
-    ? (['respiratory-rate', 'respiratory-rhythm', 'respiratory-strength'] as const)
-    : (['pulse-rate', 'pulse-rhythm', 'pulse-strength'] as const)
+    ? (['respiratory-rate', 'respiratory-rhythm', 'respiratory-strength', 'respiratory-speed'] as const)
+    : (['pulse-rate', 'pulse-rhythm', 'pulse-strength', 'pulse-speed'] as const)
+}
+
+function splitIconSummaryParts(value: string): string[] {
+  const parts: string[] = []
+  let parenthesisDepth = 0
+  let partStart = 0
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index]
+    if (character === '(') parenthesisDepth += 1
+    else if (character === ')') parenthesisDepth = Math.max(0, parenthesisDepth - 1)
+    else if (character === ',' && parenthesisDepth === 0) {
+      parts.push(value.slice(partStart, index))
+      partStart = index + 1
+    }
+  }
+
+  parts.push(value.slice(partStart))
+  return parts
 }
 
 function applyIconSummaryLine(
@@ -123,13 +155,35 @@ function applyIconSummaryLine(
   value: string,
 ) {
   const targets = getBroadIconTargets(group)
-  const parts = value
-    .split(',')
+  const parts = splitIconSummaryParts(value)
     .map((part) => cleanFindingLine(part))
     .filter(Boolean)
 
-  parts.slice(0, targets.length).forEach((part, index) => {
-    findings[targets[index]] = part
+  const [rate, ...descriptors] = parts
+  if (rate) findings[targets[0]] = rate
+
+  const descriptorTargets = targets.slice(1)
+  const assigned = new Set<PatientPhysicalIconFindingId>()
+  const unresolved: string[] = []
+  descriptors.forEach((part) => {
+    const classifiedTarget = classifyBroadIconLine(group, part)
+    if (!classifiedTarget || classifiedTarget === targets[0]) {
+      unresolved.push(part)
+      return
+    }
+    if (assigned.has(classifiedTarget)) {
+      appendFinding(findings, classifiedTarget, part)
+      return
+    }
+    findings[classifiedTarget] = part
+    assigned.add(classifiedTarget)
+  })
+
+  unresolved.forEach((part) => {
+    const target = descriptorTargets.find((candidate) => !assigned.has(candidate))
+    if (!target) return
+    findings[target] = part
+    assigned.add(target)
   })
 }
 
@@ -146,6 +200,9 @@ function classifyBroadIconLine(
     if (/\b(rhythm|regular|irregular)\b/.test(normalized)) {
       return 'respiratory-rhythm'
     }
+    if (/\b(speed|fast|slow|rapid|tachypneic|bradypneic)\b/.test(normalized)) {
+      return 'respiratory-speed'
+    }
     if (/\b(strength|effort|depth|shallow|deep|labored|laboured|unlabored|unlaboured|strong|weak|chest rise)\b/.test(normalized)) {
       return 'respiratory-strength'
     }
@@ -155,16 +212,19 @@ function classifyBroadIconLine(
   if (/\b(rate|pr|bpm|beats per minute|beats min)\b/.test(normalized)) {
     return 'pulse-rate'
   }
+  if (/\b(speed|fast|slow|rapid|tachycardic|bradycardic)\b/.test(normalized)) {
+    return 'pulse-speed'
+  }
   if (/\b(rhythm|regular|irregular)\b/.test(normalized)) {
     return 'pulse-rhythm'
   }
-  if (/\b(strength|strong|weak|thready|bounding|present|absent)\b/.test(normalized)) {
+  if (/\b(strength|strong|moderate|weak|thready|bounding|present|absent)\b/.test(normalized)) {
     return 'pulse-strength'
   }
   return null
 }
 
-export function parsePatientPhysicalAutoSort(text: string): PatientPhysicalFindings {
+function parsePatientPhysicalAutoSortContent(text: string): PatientPhysicalFindings {
   const findings: PatientPhysicalFindings = {}
   let currentRegions: string[] | null = null
   let currentIconTarget: PatientPhysicalIconFindingId | null = null
@@ -308,6 +368,15 @@ export function parsePatientPhysicalAutoSort(text: string): PatientPhysicalFindi
       continue
     }
 
+    if (/^\s*#{1,6}\s+/.test(rawLine) || /^-{3,}$/.test(rawLine.trim())) {
+      commitCurrentSection()
+      currentRegions = null
+      currentIconTarget = null
+      currentBroadIconSection = null
+      currentLines = []
+      continue
+    }
+
     const line = cleanFindingLine(rawLine)
     if (!line) continue
 
@@ -321,6 +390,32 @@ export function parsePatientPhysicalAutoSort(text: string): PatientPhysicalFindi
   }
 
   commitCurrentSection()
+
+  return findings
+}
+
+const INITIAL_VITAL_ICON_FINDING_IDS: ReadonlyArray<PatientPhysicalIconFindingId> = [
+  'pulse-rate',
+  'pulse-rhythm',
+  'pulse-strength',
+  'pulse-speed',
+  'respiratory-rate',
+  'respiratory-rhythm',
+  'respiratory-strength',
+  'respiratory-speed',
+]
+
+export function parsePatientPhysicalAutoSort(text: string): PatientPhysicalFindings {
+  const findings = parsePatientPhysicalAutoSortContent(text)
+  const initialVitalsText = getInitialVitalsSectionText(text)
+  if (!initialVitalsText) return findings
+
+  const initialFindings = parsePatientPhysicalAutoSortContent(initialVitalsText)
+  for (const findingId of INITIAL_VITAL_ICON_FINDING_IDS) {
+    const value = initialFindings[findingId]
+    if (value) findings[findingId] = value
+    else delete findings[findingId]
+  }
 
   return findings
 }
