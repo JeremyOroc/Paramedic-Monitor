@@ -148,9 +148,89 @@ describe('startRenderer', () => {
 
     expect(onReady).toHaveBeenCalledTimes(1)
     expect(getPhaseAt).toHaveBeenCalledWith(expect.any(Number), 750)
+    expect(canvas.getContext('2d')?.stroke).toHaveBeenCalled()
     stop.setOccluded(true)
     stop.setOccluded(false)
     expect(onReady).toHaveBeenCalledTimes(2)
+    stop()
+  })
+
+  it('reports a fresh canvas ready without painting history ahead of the sweep', () => {
+    let now = 1000
+    let wallNow = 10_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    const onReady = vi.fn()
+    const stop = startRenderer({
+      canvas,
+      color: '#65E5D9',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 1000,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+      readyOnStart: true,
+      freshReveal: true,
+      onReady,
+    })
+
+    expect(onReady).toHaveBeenCalledTimes(1)
+    expect(ctx.stroke).not.toHaveBeenCalled()
+
+    rafCalls.shift()?.(now)
+    expect(ctx.stroke).not.toHaveBeenCalled()
+    now = 1016
+    wallNow = 10_016
+    rafCalls.shift()?.(now)
+    expect(ctx.stroke).toHaveBeenCalledTimes(1)
+    stop()
+  })
+
+  it('rebuilds only earned fresh-sweep history and keeps hidden signal changes at their cursor boundary', () => {
+    let now = 1000
+    let wallNow = 10_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    let key = 'old'
+    const oldWaveform = { data: new Float32Array([0]), cycleMs: 1000 }
+    const newWaveform = { data: new Float32Array([1]), cycleMs: 1000 }
+    const onReady = vi.fn()
+    const stop = startRenderer({
+      canvas,
+      color: '#65E5D9',
+      getWaveform: () => key === 'old' ? oldWaveform : newWaveform,
+      getSignalKey: () => key,
+      getCycleMs: () => 1000,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+      initiallyOccluded: true,
+      readyOnStart: true,
+      freshReveal: true,
+      onReady,
+    })
+
+    wallNow = 11_000
+    key = 'new'
+    stop.syncSignal()
+    now = 3000
+    wallNow = 12_000
+    stop.setOccluded(false)
+
+    const lineCalls = vi.mocked(ctx.lineTo).mock.calls
+    expect(onReady).toHaveBeenCalledTimes(1)
+    expect(lineCalls.length).toBeGreaterThan(0)
+    expect(lineCalls.length).toBeLessThan(120)
+    expect(lineCalls.some(([, y]) => Number(y) === 100)).toBe(true)
+    expect(lineCalls.some(([, y]) => Number(y) === 15)).toBe(true)
     stop()
   })
 

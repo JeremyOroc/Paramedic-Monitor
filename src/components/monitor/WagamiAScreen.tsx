@@ -32,9 +32,10 @@ type WagamiAScreenProps = {
   waveformOccluded?: boolean
   onWaveformsReady?: () => void
   beatClock?: BeatClock
+  waveformSequenceKey?: string | number
 }
 
-export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp, onOpenNibpSettings, locale = 'fr', callInfoDisabled = false, waveformOccluded = false, onWaveformsReady, beatClock }: WagamiAScreenProps) {
+export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp, onOpenNibpSettings, locale = 'fr', callInfoDisabled = false, waveformOccluded = false, onWaveformsReady, beatClock, waveformSequenceKey }: WagamiAScreenProps) {
   const text = getWagamiAText(locale)
   const { vitals, active, alarms } = display
   const isNibpReadingActive = nibpPhase === 'please_wait' || nibpPhase === 'reading' || nibpPhase === 'counting'
@@ -52,7 +53,7 @@ export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProg
           <WagamiAVitalCard channel="pni" label="PNI" value={pniValue} unit="mmHg" actionLabel={text.openPniSettings} onClick={onOpenNibpSettings} />
           <WagamiAVitalCard channel="etco2" label="EtCO₂" value={active.etco2 ? String(vitals.etco2) : '--'} unit="mmHg" />
         </div>
-        <WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={alarms} patientMode={patientMode} cprOverride={cprOverride} locale={locale} occluded={waveformOccluded} onReady={onWaveformsReady} beatClock={beatClock} />
+        <WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={alarms} patientMode={patientMode} cprOverride={cprOverride} locale={locale} occluded={waveformOccluded} onReady={onWaveformsReady} beatClock={beatClock} sequenceKey={waveformSequenceKey} />
       </div>
       <aside aria-label="Wagami A right-side task and defib rail" className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-[clamp(4px,0.65cqw,10px)]">
         <WagamiATaskDock onTask={onTask} selectedAction={selectedAction} locale={locale} callInfoDisabled={callInfoDisabled} />

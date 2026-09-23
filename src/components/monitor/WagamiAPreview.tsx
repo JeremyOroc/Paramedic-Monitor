@@ -23,6 +23,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
   const cprMode = useMonitorStore((state) => state.cprMode)
   const callerInfo = useMonitorStore((state) => state.callerInfoConfirmed)
   const dispatchRoute = useMonitorStore((state) => state.dispatchRouteConfirmed)
+  const monitorResetVersion = useMonitorStore((state) => state.monitorResetVersion)
   const sourceDisplay = resolveWagamiAPreviewState(confirmed, confirmedActive)
   const workspace = useWagamiAWorkspace({
     scope: 'preview',
@@ -60,6 +61,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
       onEnergyUp={clinical.onEnergyUp}
       selectedAction={selectedAction}
       onMonitorReady={onMonitorReady}
+      waveformSequenceKey={monitorResetVersion}
     />
   )
 

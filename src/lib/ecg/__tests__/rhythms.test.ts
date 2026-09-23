@@ -520,6 +520,24 @@ describe('ECG_RHYTHMS', () => {
     expect(maxAdjacentDelta(data)).toBeLessThan(0.105)
   })
 
+  it('keeps VF active through the final segment and closes its loop seamlessly', () => {
+    const variants = [
+      ECG_RHYTHMS.vf,
+      ...Array.from({ length: 8 }, () => getEcgRhythm('vf')),
+    ]
+
+    for (const variant of variants) {
+      const data = variant.data
+      const finalSegment = data.slice(Math.floor(data.length * 0.9))
+      const tailAmplitude = peakOf(finalSegment) - troughOf(finalSegment)
+      const boundaryDelta = Math.abs(data[data.length - 1] - data[0])
+
+      expect(tailAmplitude).toBeGreaterThan(0.12)
+      expect(zeroCrossings(finalSegment)).toBeGreaterThanOrEqual(2)
+      expect(boundaryDelta).toBeLessThan(0.002)
+    }
+  })
+
   it('torsades is a multi-second twisting polymorphic VT template', () => {
     expectTorsadesStylePattern(ECG_RHYTHMS.torsades)
   })

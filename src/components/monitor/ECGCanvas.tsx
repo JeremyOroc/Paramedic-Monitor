@@ -26,6 +26,8 @@ type ECGCanvasProps = {
   palette?: 'wagamiX' | 'wagamiA'
   beatClock?: BeatClock
   readyOnStart?: boolean
+  freshReveal?: boolean
+  sequenceKey?: string | number
 }
 
 function LiveECGCanvas({
@@ -38,6 +40,8 @@ function LiveECGCanvas({
   palette = 'wagamiX',
   beatClock,
   readyOnStart = false,
+  freshReveal = false,
+  sequenceKey,
 }: Omit<ECGCanvasProps, 'connected'>) {
   const color = palette === 'wagamiA' ? WAGAMI_A_COLORS.ecg : COLORS.ecgGreen
   const canvasRef = useWaveformRenderer(
@@ -51,7 +55,9 @@ function LiveECGCanvas({
       cycleJitter: palette === 'wagamiA' ? 0 : 0.03,
       getWaveform: () =>
         get().cprOverride ? CPR_COMPRESSION_WAVEFORM : getEcgRhythm(get().rhythm),
-      getSignalKey: () => (get().cprOverride ? 'cpr-compression' : get().rhythm),
+      getSignalKey: () => get().cprOverride
+        ? `cpr-compression:${get().hr}`
+        : `${get().rhythm}:${get().hr}`,
       getCycleMs: () => {
         if (get().cprOverride) return getCprCompressionCycleMs(get().hr)
         if (get().rhythm === 'torsades') return getTorsadesPacketDurationMs(get().hr)
@@ -59,8 +65,9 @@ function LiveECGCanvas({
       },
       getPhaseAt: beatClock ? (nowMs, cycleMs) => beatClock.phase(nowMs, cycleMs) : undefined,
       readyOnStart,
+      freshReveal,
     }),
-    [color, beatClock, palette === 'wagamiA' ? cprOverride : false],
+    [color, beatClock, palette, readyOnStart, freshReveal, sequenceKey],
     { occluded, onReady },
   )
 
@@ -72,6 +79,7 @@ function LiveECGCanvas({
       data-cpr-override={cprOverride ? 'true' : 'false'}
       data-heart-rate={hr}
       data-palette={palette}
+      data-fresh-reveal={freshReveal ? 'true' : 'false'}
       className={cn('block h-full w-full', className)}
     />
   )
@@ -88,6 +96,8 @@ export function ECGCanvas({
   palette = 'wagamiX',
   beatClock,
   readyOnStart = false,
+  freshReveal = false,
+  sequenceKey,
 }: ECGCanvasProps) {
   if (!connected && !cprOverride) {
     if (palette === 'wagamiA') {
@@ -115,8 +125,10 @@ export function ECGCanvas({
       occluded={occluded}
       onReady={onReady}
       palette={palette}
-      beatClock={cprOverride ? undefined : beatClock}
+      beatClock={beatClock}
       readyOnStart={readyOnStart}
+      freshReveal={freshReveal}
+      sequenceKey={sequenceKey}
     />
   )
 }

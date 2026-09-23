@@ -5,6 +5,97 @@
 
 ---
 
+## [2026-09-22] [ecg/testing] — Remove the broken VF tail
+
+- Rebuilt the shared VF template as an even, circular sequence of irregular alternating extrema so
+  fibrillation remains active through the entire four-second cycle instead of tapering into a forced
+  near-zero section.
+- Closed the sampled endpoint onto the first sample to prevent a wrap spike while preserving VF
+  amplitude, variation, sweep timing, displayed-FC behavior, defibrillation logic, and shared use by
+  Wagami A, X, Z, and live 12-lead views.
+- Added regression coverage for final-segment activity and endpoint continuity across multiple VF
+  variants. The 114-test focused suite, TypeScript, affected-file ESLint with zero errors and five
+  existing warnings, the Next.js 16.3 Webpack production build, and rendered Wagami A VF review pass.
+  The full suite retains only the same three unrelated Room-ownership and PatientInfoPanel failures.
+
+## [2026-09-22] [planning/ecg] — Define continuous VF template correction
+
+- Identified the recurring broken graph section as the shared VF template's forced near-zero tail
+  before its four-second loop boundary.
+- Confirmed a continuous irregular signal through the final segment plus seamless endpoint closure,
+  preserving VF amplitude, sweep timing, displayed-FC behavior, defibrillation logic, and consistent
+  rendering across Wagami A, X, Z, and live 12-lead views. Implementation is in progress.
+
+## [2026-09-22] [wagami-a/ui/testing] — Reveal live traces behind the sweep band
+
+- Changed Wagami A ECG, SpO2, EtCO2, and all live 12-lead canvases to begin genuine sequences
+  blank and expose only history earned behind their existing Sweep erase bands. Labels, values,
+  disconnected traces, captured records, and clinical controls remain immediate; X and Z retain
+  their existing renderer presentation.
+- Preserved partial-sweep age, synchronized cursor position, and bounded rhythm/rate/morphology/CPR
+  transitions through navigation, overlays, resize, and browser suspension. Monitor Reset, New
+  Attempt, power-on, remount, and Off-to-On still create fresh sequence boundaries across trainee,
+  Preview, and Spectator paths.
+- Added deterministic renderer and Wagami A integration regressions. Focused tests, TypeScript,
+  affected-file ESLint (zero errors; one existing warning), the Next.js 16.3 Webpack production
+  build, and rendered Preview checks of power-on and all twelve live leads pass. The full suite has
+  only the same three unrelated Room-ownership and PatientInfoPanel baseline failures.
+
+## [2026-09-22] [planning/wagami-a/domain] — Complete Fresh sweep reveal design
+
+- Closed the design tree by retaining every signal transition still inside one bounded Sweep history
+  window: four seconds for ECG, SpO2, and live 12-lead; 30 seconds for EtCO2. Older transitions are
+  discarded after the erase band fully replaces them.
+- Completed the glossary and implementation/test contract. No ADR is warranted because the policy is
+  an isolated, reversible waveform-presentation refinement. Implementation awaits final programmer
+  confirmation.
+
+## [2026-09-22] [planning/wagami-a/domain] — Preserve hidden sweep transitions
+
+- Confirmed that connected rhythm, rate, secondary morphology, and CPR changes remain owned by the
+  virtual Sweep erase band while the surface is covered; reconstruction retains the old/new boundary.
+- Confirmed that Monitor Reset, New Attempt, and Off-to-On while hidden start a new Fresh sweep at the
+  actual event time, so return exposes only history earned since that boundary. Multiple-change
+  retention is the remaining design frontier; no implementation has begun.
+
+## [2026-09-22] [planning/wagami-a/domain] — Keep fresh sweeps on patient time
+
+- Confirmed that partially filled traces continue advancing in elapsed patient time while covered by
+  temporary pages, overlays, or browser backgrounding. Return shows the earned partial history, or a
+  full strip only after that channel's complete sweep duration has elapsed.
+- Confirmed that resize and orientation changes preserve sequence age and synchronized cursor position
+  while reconstructing only earned history at final geometry. Hidden signal/reset details remain under
+  interview; no implementation has begun.
+
+## [2026-09-22] [planning/wagami-a/domain] — Preserve partial fresh-sweep history
+
+- Confirmed that leaving and returning during a first sweep restores only trace history earned by
+  elapsed sequence time; continuity must not turn a partial trace into an instant full strip.
+- Decoupled surface readiness from waveform fill: final-geometry canvases, labels, values, alarms,
+  pulse indicators, and clinical behavior appear immediately while live trace pixels sweep in.
+- Preserved the existing erase-band width, dark channel palettes, and sweep speeds without adding a
+  separate painted line. Hidden-time and resize catch-up remain under interview.
+
+## [2026-09-22] [planning/wagami-a/domain] — Set fresh-sequence and continuity boundaries
+
+- Confirmed Fresh sweep reveals after power-on, Monitor Reset, New Attempt, full display remount or
+  reload, channel Off-to-On, and the first 12-lead opening after those boundaries.
+- Kept connected rhythm, morphology, rate, and CPR transitions continuous: old history remains ahead
+  of the synchronized band while the new signal replaces it behind. Temporary navigation, browser
+  backgrounding, and 12-lead overlays use Continuity reconstruction.
+- Confirmed immediate blank-canvas 12-lead handoff at the current synchronized sweep position. The
+  remaining partial-fill and readiness details are under interview; no implementation has begun.
+
+## [2026-09-22] [planning/wagami-a/domain] — Define fresh waveform sweep reveal
+
+- Identified the moving dark strip as the Sweep erase band and distinguished a Fresh sweep reveal
+  from the existing continuity reconstruction used after temporary navigation or browser backgrounding.
+- Confirmed blank-to-sweep presentation for Wagami A live ECG, SpO2, EtCO2, and the synchronized
+  Live 12-lead grid at their existing speeds. Labels, values, disconnected traces, captures, and
+  printouts remain immediate; capture stays available during fill; X/Z remain unchanged.
+- Applied the rule to trainee, Preview, and Spectator presentations. Fresh-sequence and reset edge
+  cases remain under interview; no implementation has begun.
+
 ## [2026-09-22] [wagami-a/ui/testing] — Keep live waveforms continuous through navigation
 
 - Retained Wagami A monitor canvases and the first-opened live 12-lead grid through temporary views
