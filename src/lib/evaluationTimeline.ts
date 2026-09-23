@@ -212,9 +212,11 @@ const PATIENT_SNS_LABELS = {
   'pulse-rate': 'Pulse rate',
   'pulse-rhythm': 'Pulse rhythm',
   'pulse-strength': 'Pulse strength',
+  'pulse-speed': 'Pulse speed',
   'respiratory-rate': 'Resp rate',
   'respiratory-rhythm': 'Resp rhythm',
-  'respiratory-strength': 'Resp strength',
+  'respiratory-strength': 'Respiratory effort',
+  'respiratory-speed': 'Respiratory speed',
   'skin-extremities-note': 'Skin/Extremities',
 } as const
 

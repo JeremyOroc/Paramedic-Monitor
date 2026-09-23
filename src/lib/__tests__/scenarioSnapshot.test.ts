@@ -40,6 +40,22 @@ describe('scenario snapshots', () => {
     expect(scenarioSnapshotsEqual(snapshot, { ...snapshot, autoSortText: '' })).toBe(false)
   })
 
+  it('round-trips optional Pulse speed in saved scenario findings', () => {
+    const input = createEmptyScenarioSnapshot()
+    input.patientPhysical.findings['pulse-speed'] = 'Fast'
+
+    expect(normalizeScenarioSnapshot(input)?.patientPhysical.findings['pulse-speed']).toBe('Fast')
+  })
+
+  it('round-trips optional Respiratory speed in saved scenario findings', () => {
+    const input = createEmptyScenarioSnapshot()
+    input.patientPhysical.findings['respiratory-speed'] = 'Slow'
+
+    expect(normalizeScenarioSnapshot(input)?.patientPhysical.findings['respiratory-speed']).toBe(
+      'Slow',
+    )
+  })
+
   it('normalizes valid JSON and excludes runtime-only fields', () => {
     const input = {
       ...createEmptyScenarioSnapshot(),

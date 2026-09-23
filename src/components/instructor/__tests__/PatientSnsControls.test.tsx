@@ -133,6 +133,7 @@ describe('PatientSnsControls', () => {
       'pulse-rate': '98 bpm',
       'pulse-rhythm': 'Regular',
       'pulse-strength': 'Moderate',
+      'pulse-speed': 'Fast',
       'respiratory-rate': '22 breaths/min',
       'respiratory-rhythm': 'Regular',
     })
@@ -143,22 +144,21 @@ describe('PatientSnsControls', () => {
     await user.click(screen.getByRole('button', { name: 'Respiratory Tap' }))
 
     const pulseResult = screen.getByRole('region', { name: 'Pulse measurement result' })
-    expect(pulseResult).toHaveTextContent('Rate: 98 bpm')
-    expect(pulseResult).toHaveTextContent('15 sec = 25 beats')
-    expect(pulseResult).toHaveTextContent('30 sec = 49 beats')
-    expect(pulseResult).toHaveTextContent('Rhythm: Regular')
-    expect(pulseResult).toHaveTextContent('Strength: Moderate')
+    expect(pulseResult).toHaveTextContent('Rate: 98bpm')
+    expect(pulseResult).toHaveTextContent('15 sec = 25')
+    expect(pulseResult).toHaveTextContent('30 sec = 49')
+    expect(pulseResult).toHaveTextContent('Moderate, regular, fast')
 
     const respiratoryResult = screen.getByRole('region', {
       name: 'Respiratory measurement result',
     })
-    expect(respiratoryResult).toHaveTextContent('Respiratory: 22 breaths/min')
-    expect(respiratoryResult).toHaveTextContent('15 sec = 6 breaths')
-    expect(respiratoryResult).toHaveTextContent('30 sec = 11 breaths')
+    expect(respiratoryResult).toHaveTextContent('Rate: 22 breaths/min')
+    expect(respiratoryResult).toHaveTextContent('15 sec = 6')
+    expect(respiratoryResult).toHaveTextContent('30 sec = 11')
     expect(respiratoryResult).toHaveTextContent('Regular')
     expect(respiratoryResult).toHaveTextContent('Missing: Effort')
-    expect(pulseResult).toHaveClass('max-h-20', 'overflow-y-auto')
-    expect(respiratoryResult).toHaveClass('max-h-20', 'overflow-y-auto')
+    expect(pulseResult).toHaveClass('min-h-24', 'max-h-28', 'overflow-y-auto')
+    expect(respiratoryResult).toHaveClass('min-h-24', 'max-h-28', 'overflow-y-auto')
   })
 
   it('uses Tap as an independent hide and fresh-snapshot reveal toggle', async () => {
@@ -169,7 +169,7 @@ describe('PatientSnsControls', () => {
     revealOptionsWithMouse('pulse')
     await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
     expect(screen.getByRole('region', { name: 'Pulse measurement result' }))
-      .toHaveTextContent('Rate: 98 bpm')
+      .toHaveTextContent('Rate: 98bpm')
 
     await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
     expect(screen.queryByRole('region', { name: 'Pulse measurement result' })).toBeNull()
@@ -179,7 +179,7 @@ describe('PatientSnsControls', () => {
     findings['pulse-rate'] = '140 bpm'
     await user.click(screen.getByRole('button', { name: 'Pulse Tap' }))
     expect(screen.getByRole('region', { name: 'Pulse measurement result' }))
-      .toHaveTextContent('Rate: 140 bpm')
+      .toHaveTextContent('Rate: 140bpm')
   })
 
   it('replaces one option row with a cancellable countdown and restores it without a result', () => {

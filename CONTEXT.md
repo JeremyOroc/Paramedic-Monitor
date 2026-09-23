@@ -154,6 +154,21 @@ The shared patient Age and Sex record available from a device's 12-lead workflow
 alter an existing ECG capture or create another capture.
 _Avoid_: 12-lead annotation, capture demographics, patient mode
 
+**Pulse speed**:
+An optional scenario-authored qualitative description of a patient's pulse as fast, normal, or slow,
+distinct from the numeric Pulse rate and never inferred from it.
+_Avoid_: Pulse rate, FC, automatic tachycardia classification
+
+**Respiratory effort**:
+A scenario-authored qualitative description of the work or depth of a patient's breathing, including
+shallow breathing. It is never inferred from the Respiratory rate or other vitals.
+_Avoid_: Respiratory strength, Respiratory rate, rhythm
+
+**Respiratory speed**:
+An optional scenario-authored qualitative description of breathing as fast, normal, or slow,
+distinct from Respiratory rate and never inferred from it.
+_Avoid_: Respiratory rate, automatic tachypnea classification
+
 **Spectator view**:
 A host-authorized, read-only reproduction of one Scenario device's current simulator presentation, shown either inside the Instructor Console or as a standalone page. It follows the attempt's confirmed defibrillator model without sharing browser chrome or pointer location.
 _Avoid_: Remote monitor, screen share, instructor monitor

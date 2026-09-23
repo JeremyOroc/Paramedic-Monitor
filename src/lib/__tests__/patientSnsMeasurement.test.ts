@@ -13,6 +13,7 @@ describe('patientSnsMeasurement', () => {
         'pulse-rate': '98 bpm',
         'pulse-rhythm': 'Regular',
         'pulse-strength': 'Moderate',
+        'pulse-speed': 'Fast',
         'respiratory-rate': '22 breaths/min',
         'skin-extremities-note': 'Pale',
       }),
@@ -20,6 +21,7 @@ describe('patientSnsMeasurement', () => {
       'pulse-rate': '98 bpm',
       'pulse-rhythm': 'Regular',
       'pulse-strength': 'Moderate',
+      'pulse-speed': 'Fast',
     })
   })
 
@@ -36,14 +38,14 @@ describe('patientSnsMeasurement', () => {
         'pulse-rate': '98 bpm',
         'pulse-rhythm': 'Regular',
         'pulse-strength': 'Moderate',
+        'pulse-speed': 'Fast',
       }),
     ).toEqual({
       lines: [
-        'Rate: 98 bpm',
-        '15 sec = 25 beats',
-        '30 sec = 49 beats',
-        'Rhythm: Regular',
-        'Strength: Moderate',
+        'Rate: 98bpm',
+        '15 sec = 25',
+        '30 sec = 49',
+        'Moderate, regular, fast',
       ],
       missingLabels: [],
     })
@@ -55,14 +57,33 @@ describe('patientSnsMeasurement', () => {
         'respiratory-rate': '22 breaths/min',
         'respiratory-rhythm': 'Regular',
         'respiratory-strength': 'Mildly labored',
+        'respiratory-speed': 'Fast',
       }),
     ).toEqual({
       lines: [
-        'Respiratory: 22 breaths/min',
-        '15 sec = 6 breaths',
-        '30 sec = 11 breaths',
-        'Regular',
-        'Mildly labored',
+        'Rate: 22 breaths/min',
+        '15 sec = 6',
+        '30 sec = 11',
+        'Mildly labored, regular, fast',
+      ],
+      missingLabels: [],
+    })
+  })
+
+  it('formats shallow respiratory depth as effort without prefixes or duplicates', () => {
+    expect(
+      getPatientSnsMeasurementResult('respiratory', {
+        'respiratory-rate': '8 breaths/min',
+        'respiratory-rhythm': 'Rhythm: REGULAR',
+        'respiratory-strength': 'Depth: SHALLOW, shallow, Labored',
+        'respiratory-speed': 'Speed: SLOW',
+      }),
+    ).toEqual({
+      lines: [
+        'Rate: 8 breaths/min',
+        '15 sec = 2',
+        '30 sec = 4',
+        'Shallow, labored, regular, slow',
       ],
       missingLabels: [],
     })
@@ -75,8 +96,37 @@ describe('patientSnsMeasurement', () => {
         'respiratory-rhythm': 'Irregular',
       }),
     ).toEqual({
-      lines: ['Respiratory: Unknown', 'Irregular'],
+      lines: ['Rate: Unknown', 'Irregular'],
       missingLabels: ['Effort'],
     })
+  })
+
+  it('normalizes legacy rate text, prefixes, casing, embedded speed, and duplicates', () => {
+    expect(
+      getPatientSnsMeasurementResult('pulse', {
+        'pulse-rate': 'Rate: 156 bpm (15 sec = 39 beats',
+        'pulse-rhythm': 'Rhythm: REGULAR',
+        'pulse-strength': 'Strength: Strong, Fast',
+        'pulse-speed': 'Speed: FAST',
+      }),
+    ).toEqual({
+      lines: [
+        'Rate: 156bpm',
+        '15 sec = 39',
+        '30 sec = 78',
+        'Strong, regular, fast',
+      ],
+      missingLabels: [],
+    })
+  })
+
+  it('preserves decimal precision while rounding only observed counts', () => {
+    expect(
+      getPatientSnsMeasurementResult('pulse', {
+        'pulse-rate': '98.5 bpm',
+        'pulse-rhythm': 'Regular',
+        'pulse-strength': 'Strong',
+      }).lines,
+    ).toEqual(['Rate: 98.5bpm', '15 sec = 25', '30 sec = 49', 'Strong, regular'])
   })
 })

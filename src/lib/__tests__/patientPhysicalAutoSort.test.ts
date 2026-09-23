@@ -31,6 +31,37 @@ const TIMED_PHYSICAL_SAMPLE = [
   'EtCO2: 26 mmHg',
 ].join('\n')
 
+const MARKDOWN_SERIAL_PHYSICAL_SAMPLE = [
+  '## Initial Vitals',
+  'Pulse: 128 bpm (15 sec = 32 beats, 30 sec = 64 beats), Fast, Regular, Thready',
+  'Respirations: 28 breaths/min (15 sec = 7 breaths, 30 sec = 14 breaths), Fast, Regular, Labored',
+  '# Treated Vitals',
+  '## Treated (+5 min)',
+  'Pulse: 126 bpm, Fast, Regular, Thready',
+  'Respirations: 26 breaths/min, Fast, Regular, Labored',
+  '---',
+  '## Treated (+10 min)',
+  'Pulse: 132 bpm, Fast, Regular, Thready',
+  'Respirations: 28 breaths/min, Fast, Regular, Labored',
+  '---',
+  '## Treated (+15 min)',
+  'Pulse: 138 bpm, Fast, Regular, Thready',
+  'Respirations: 30 breaths/min, Fast, Regular, Labored',
+  '---',
+  '# Untreated Vitals',
+  '## Untreated (+5 min)',
+  'Pulse: 142 bpm, Fast, Regular, Thready',
+  'Respirations: 32 breaths/min, Fast, Regular, Labored',
+  '---',
+  '## Untreated (+10 min)',
+  'Pulse: 158 bpm, Fast, Regular, Barely Palpable',
+  'Respirations: 36 breaths/min, Fast, Regular, Severely Labored',
+  '---',
+  '## Untreated (+15 min)',
+  'Pulse: 46 bpm, Slow, Irregular, Barely Palpable',
+  'Respirations: 8 breaths/min, Slow, Irregular, Shallow',
+].join('\n')
+
 describe('parsePatientPhysicalAutoSort', () => {
   it('parses the provided physical assessment sections into body-region findings', () => {
     expect(
@@ -218,19 +249,36 @@ describe('parsePatientPhysicalAutoSort', () => {
         [
           'Respiratory Rate: 24 breaths/min',
           'Respiratory Rhythm: Regular',
-          'Respiratory Strength: Shallow but equal',
+          'Respiratory Effort: Shallow but equal',
+          'Respiratory Speed: Slow',
           'Pulse Rate: 112 bpm',
           'Pulse Rhythm: Irregular',
           'Pulse Strength: Weak radial pulse',
+          'Pulse Speed: Fast',
         ].join('\n'),
       ),
     ).toEqual({
       'respiratory-rate': '24 breaths/min',
       'respiratory-rhythm': 'Regular',
       'respiratory-strength': 'Shallow but equal',
+      'respiratory-speed': 'Slow',
       'pulse-rate': '112 bpm',
       'pulse-rhythm': 'Irregular',
       'pulse-strength': 'Weak radial pulse',
+      'pulse-speed': 'Fast',
+    })
+  })
+
+  it.each([
+    'Respiratory Effort: Shallow',
+    'Respiratory Strength: Shallow',
+    'Respiratory Depth: Shallow',
+    'Respiration Effort: Shallow',
+    'Respiration Strength: Shallow',
+    'Respiration Depth: Shallow',
+  ])('maps %s to the canonical respiratory effort finding', (source) => {
+    expect(parsePatientPhysicalAutoSort(source)).toEqual({
+      'respiratory-strength': 'Shallow',
     })
   })
 
@@ -258,20 +306,56 @@ describe('parsePatientPhysicalAutoSort', () => {
     })
   })
 
-  it('parses comma-separated pulse and respirations summary lines', () => {
+  it('semantically parses flexible pulse summaries and respiratory summaries', () => {
     expect(
       parsePatientPhysicalAutoSort(
-        ['Pulse: 136 bpm, Regular, Weak', 'Respirations: 30 breaths/min, Regular, Labored'].join(
+        ['Pulse: 136 bpm, Strong, Regular, Rapid', 'Respirations: 30 breaths/min, Normal, Regular'].join(
           '\n',
         ),
       ),
     ).toEqual({
       'pulse-rate': '136 bpm',
+      'pulse-strength': 'Strong',
       'pulse-rhythm': 'Regular',
-      'pulse-strength': 'Weak',
+      'pulse-speed': 'Rapid',
       'respiratory-rate': '30 breaths/min',
+      'respiratory-strength': 'Normal',
       'respiratory-rhythm': 'Regular',
-      'respiratory-strength': 'Labored',
+    })
+  })
+
+  it.each([
+    'Respirations: 8 breaths/min, Shallow, Regular',
+    'Respirations: 8 breaths/min, Regular, Shallow',
+  ])('recognizes shallow in an inline respiratory summary: %s', (source) => {
+    expect(parsePatientPhysicalAutoSort(source)).toEqual({
+      'respiratory-rate': '8 breaths/min',
+      'respiratory-rhythm': 'Regular',
+      'respiratory-strength': 'Shallow',
+    })
+  })
+
+  it('preserves multiple respiratory effort descriptors in an inline summary', () => {
+    expect(
+      parsePatientPhysicalAutoSort(
+        'Respirations: 8 breaths/min, Shallow, Labored, Regular',
+      ),
+    ).toEqual({
+      'respiratory-rate': '8 breaths/min',
+      'respiratory-rhythm': 'Regular',
+      'respiratory-strength': 'Shallow\nLabored',
+    })
+  })
+
+  it('recognizes plain shallow and depth-prefixed findings in broad respiratory sections', () => {
+    expect(
+      parsePatientPhysicalAutoSort(
+        ['Respiratory', 'Rate: 8 breaths/min', 'Regular', 'Shallow', 'Depth: shallow'].join('\n'),
+      ),
+    ).toEqual({
+      'respiratory-rate': 'Rate: 8 breaths/min',
+      'respiratory-rhythm': 'Regular',
+      'respiratory-strength': 'Shallow\nDepth: shallow',
     })
   })
 
@@ -358,6 +442,47 @@ describe('parsePatientPhysicalAutoSort', () => {
       'respiratory-strength': 'Unlabored',
     })
   })
+
+  it('keeps Initial Vitals authoritative over every serial Patient SNS section', () => {
+    expect(
+      parsePatientPhysicalAutoSort(
+        ['Abdomen', 'Soft', MARKDOWN_SERIAL_PHYSICAL_SAMPLE].join('\n'),
+      ),
+    ).toMatchObject({
+      'front-abdomen': 'Soft',
+      'pulse-rate': '128 bpm (15 sec = 32 beats, 30 sec = 64 beats)',
+      'pulse-speed': 'Fast',
+      'pulse-rhythm': 'Regular',
+      'pulse-strength': 'Thready',
+      'respiratory-rate': '28 breaths/min (15 sec = 7 breaths, 30 sec = 14 breaths)',
+      'respiratory-speed': 'Fast',
+      'respiratory-rhythm': 'Regular',
+      'respiratory-strength': 'Labored',
+    })
+  })
+
+  it.each([
+    ['T1', '126 bpm', 'Fast', 'Regular', 'Thready', '26 breaths/min', 'Fast', 'Regular', 'Labored'],
+    ['T2', '132 bpm', 'Fast', 'Regular', 'Thready', '28 breaths/min', 'Fast', 'Regular', 'Labored'],
+    ['T3', '138 bpm', 'Fast', 'Regular', 'Thready', '30 breaths/min', 'Fast', 'Regular', 'Labored'],
+    ['U1', '142 bpm', 'Fast', 'Regular', 'Thready', '32 breaths/min', 'Fast', 'Regular', 'Labored'],
+    ['U2', '158 bpm', 'Fast', 'Regular', 'Barely Palpable', '36 breaths/min', 'Fast', 'Regular', 'Severely Labored'],
+    ['U3', '46 bpm', 'Slow', 'Irregular', 'Barely Palpable', '8 breaths/min', 'Slow', 'Irregular', 'Shallow'],
+  ] as const)(
+    'maps %s to its Pulse and Respiratory serial findings',
+    (slot, pulseRate, pulseSpeed, pulseRhythm, pulseStrength, respiratoryRate, respiratorySpeed, respiratoryRhythm, respiratoryEffort) => {
+      expect(parseTimedPatientPhysicalAutoSort(MARKDOWN_SERIAL_PHYSICAL_SAMPLE, slot)).toEqual({
+        'pulse-rate': pulseRate,
+        'pulse-speed': pulseSpeed,
+        'pulse-rhythm': pulseRhythm,
+        'pulse-strength': pulseStrength,
+        'respiratory-rate': respiratoryRate,
+        'respiratory-speed': respiratorySpeed,
+        'respiratory-rhythm': respiratoryRhythm,
+        'respiratory-strength': respiratoryEffort,
+      })
+    },
+  )
 
   it('parses U3 pulse and respiratory findings from timed vitals', () => {
     expect(parseTimedPatientPhysicalAutoSort(TIMED_PHYSICAL_SAMPLE, 'U3')).toEqual({

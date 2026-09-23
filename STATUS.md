@@ -6,6 +6,30 @@
 ---
 
 ## Current Phase
+**Initial/Treated/Untreated auto-sort repair — COMPLETE LOCALLY (2026-09-23).** Markdown Initial
+Vitals now controls the initial numeric and Patient SNS drafts, while T1/T2/T3 and U1/U2/U3 map to
+their matching +5/+10/+15-minute sections without overwriting one another. Decorated count text is
+parsed safely, Respiratory speed is retained as an optional authored finding, Shallow remains
+Respiratory effort, and non-obtainable timed SpO2 stages the channel Off. All 263 focused tests,
+TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack build pass. The full suite has 1,677
+passing and one skipped, retaining only the same three unrelated baseline failures.
+
+**Respiratory shallow-depth recognition — COMPLETE LOCALLY (2026-09-23).** Scenario-authored
+`Shallow` now fills the existing Respiratory effort finding through Effort, legacy Strength, and
+Depth labels; broad sections; and inline summaries in either order. Multiple effort descriptors are
+preserved, prefixes/case/duplicates normalize for display, Shallow clears the required-Effort
+warning, and no value is inferred from vitals. All 204 focused tests, TypeScript, affected-file
+ESLint, and the Next.js 16.3 Webpack build pass.
+
+**Instructor Pulse/Respiratory result wording — COMPLETE LOCALLY (2026-09-23).** Shared Instructor
+SNS results now use canonical four-line Rate/count/descriptor copy. Optional scenario-authored Pulse
+speed survives semantic auto-sort, timed snapshots, Saved scenarios, and instructor-only Evaluation
+history without rate inference; Respiratory effort is the consistent user-facing term. Legacy rate
+and descriptor text is normalized for display, normal results fit without scrolling, and
+Skin/Extremities is unchanged. All 193 focused tests, TypeScript, affected-file ESLint, the Next.js
+16.3 Webpack build, and rendered 1440×900 QA pass without browser warnings. The full suite has 1,649
+passing and one skipped, retaining only the same three unrelated baseline failures.
+
 **Wagami A live lead-label suppression — COMPLETE LOCALLY (2026-09-23).** While `Acquérir` is
 active and beneath completed-result or print-preview layers, the mounted live grid's green I–III,
 aVR/aVL/aVF, and V1–V6 identifiers are absent. The static printout keeps its black identifiers;

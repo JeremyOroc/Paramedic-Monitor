@@ -10,6 +10,97 @@
 
 ## Current Requirement Updates
 
+- 2026-09-23 Initial/Treated/Untreated auto-sort repair — **programmer-confirmed and implemented
+  locally**.
+  Recognize Markdown `Initial Vitals` as the authoritative initial numeric-vitals and Patient SNS
+  section so later Treated/Untreated serial findings cannot overwrite it. Map T1/T2/T3 and U1/U2/U3
+  to their matching Treated and Untreated +5/+10/+15-minute sections, including both numeric vitals
+  and Pulse/Respiratory findings. Add optional scenario-authored Respiratory speed so Fast/Slow is
+  retained and shown after Effort and Rhythm without inference. A timed SpO2 value described as not
+  reliably obtainable stages SpO2 Off; ordinary numeric timed values continue preserving the manual
+  channel state. Temperature remains ignored because the Instructor Console has no Temperature
+  control.
+
+### Testing — Initial/Treated/Untreated auto-sort repair
+
+- Cover the supplied Markdown hierarchy, authoritative initial-section isolation, all six timed-slot
+  mappings, decorated rate/count text, Pulse and Respiratory descriptor ordering, optional
+  Respiratory speed, Shallow effort, and non-obtainable SpO2 channel state.
+- Cover Instructor integration so paste and timed button selection update the intended numeric and
+  Patient SNS drafts without serial-section bleed-through.
+- Run focused parser, formatter, Vitals controls, Patient SNS controls, scenario, Evaluation, and
+  Admin integration tests; TypeScript; affected-file ESLint; and the production build.
+
+**Completed locally 2026-09-23.** Markdown Initial Vitals is authoritative for initial numeric and
+Patient SNS drafts; all six Treated/Untreated time slots map independently without serial
+bleed-through. Parenthetical count commas remain part of the rate, optional Respiratory speed flows
+through snapshots/scenarios/Evaluation, and non-obtainable timed SpO2 stages the channel Off. All
+263 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production build
+pass. The full suite has 1,677 passing and one skipped, with only the same three unrelated
+Room-ownership/legacy PatientInfoPanel baseline failures.
+
+- 2026-09-23 Respiratory shallow-depth recognition — **programmer-confirmed and implemented
+  locally**.
+  Treat scenario-authored `Shallow` as Respiratory effort/depth without adding another Instructor
+  field. Accept explicit Respiratory/Respiration Effort, legacy Strength, and Depth labels; broad
+  respiratory sections; and inline summaries in either descriptor order. Preserve multiple authored
+  effort descriptors such as `Shallow, Labored`, remove Effort/Strength/Depth prefixes from the
+  displayed result, normalize casing and duplicates, and let Shallow satisfy the required Effort
+  finding. Never infer Shallow from Respiratory rate or another vital.
+
+### Testing — Respiratory shallow-depth recognition
+
+- Cover explicit Effort/Strength/Depth aliases, broad-section forms, both inline descriptor orders,
+  multiple effort descriptors, exact four-line result copy, prefix removal, casing, deduplication,
+  and required-Effort completion.
+- Run the focused parser and measurement tests, TypeScript, affected-file ESLint, and the production
+  build.
+
+**Completed locally 2026-09-23.** Shallow now maps to the existing Respiratory effort finding from
+explicit Effort/Strength/Depth aliases, broad sections, and order-independent inline summaries.
+Multiple effort descriptors accumulate without displacing rhythm; displayed descriptors remove
+known prefixes, normalize case, and deduplicate. All 204 focused tests, TypeScript, affected-file
+ESLint, and the Next.js 16.3 Webpack production build pass.
+
+- 2026-09-23 Instructor Pulse/Respiratory result wording — **programmer-confirmed and implemented
+  locally**. Normalize the shared Instructor Console's SNS measurement results to four concise
+  lines. Pulse uses canonical `Rate: {number}bpm`, unit-free rounded 15- and 30-second counts, and a
+  combined Strength, Rhythm, optional Pulse speed line. Respiratory uses canonical
+  `Rate: {number} breaths/min`, unit-free rounded counts, and a combined Respiratory effort, Rhythm
+  and optional Respiratory speed line. Descriptors remain scenario-authored, are trimmed,
+  deduplicated, and presentation-cased; Pulse and Respiratory speed are optional and never inferred
+  from numeric rates.
+
+  Extract the first numeric rate from legacy decorated text and rebuild its canonical unit line;
+  retain unparseable authored rates without fabricating counts. Extend Caller Info and timed-section
+  auto-sort with optional `Pulse Speed`, flexible semantic summary ordering, and canonical
+  Respiratory Effort aliases while retaining backward-compatible Strength aliases and saved keys.
+  Snapshot Pulse speed with the other findings at measurement start. Persist it in Saved scenarios
+  and instructor-only Evaluation history, but keep all SNS findings excluded from trainee and
+  Spectator state. Size Pulse/Respiratory result regions for the ordinary four-line result while
+  retaining bounded overflow for unusually long content; leave Skin/Extremities unchanged.
+
+### Testing — Instructor Pulse/Respiratory result wording
+
+- Cover exact Pulse and Respiratory output, nearest-whole counts, legacy rate cleanup, decimal and
+  invalid rates, descriptor ordering/casing/deduplication, optional/missing fields, and prefixed or
+  combined legacy findings.
+- Cover explicit and broad auto-sort forms, semantic Strength/Rhythm ordering, optional fourth Pulse
+  speed, Respiratory Effort and legacy Strength aliases, timed snapshot isolation, scenario
+  persistence, instructor-only state, and Evaluation naming.
+- Cover four-line visible geometry with bounded overflow and unchanged Skin/Extremities layout.
+- Run focused formatter, parser, hook, component, Admin integration, scenario, and Evaluation tests;
+  TypeScript; affected-file ESLint; production build; and rendered Instructor Console QA.
+
+**Completed locally 2026-09-23.** Pulse and Respiratory now render their canonical four-line results;
+legacy rate text and descriptors normalize without mutating authored data; optional Pulse speed
+flows through semantic auto-sort, snapshots, Saved scenarios, and instructor-only Evaluation history;
+and Respiratory effort is used consistently. All 193 focused tests, TypeScript, affected-file ESLint,
+and the Next.js 16.3 Webpack production build pass. The full suite has 1,649 passing and one skipped,
+with only the same three unrelated Room-ownership/legacy PatientInfoPanel baseline failures. Rendered
+1440×900 Instructor Console QA confirmed exact copy, four-line no-overflow geometry, unchanged
+Skin/Extremities geometry, and no browser warnings or errors.
+
 - 2026-09-23 Wagami A live lead-label suppression — **programmer-confirmed correction and
   implemented locally**. While Wagami A `Acquérir` is actively running, and while its completed result or
   print preview is displayed, hide the live green 12-lead identifiers I–III, aVR/aVL/aVF, and
@@ -1913,7 +2004,7 @@ suite records 1,387 passing tests and one skip with the same three documented un
 - 2026-09-02 correction: base Expand-UI on the current main layout. Widen the shared console to the available browser width with 24px side padding across all four tabs; remove the Monitor-only centered 1152px breakout. Preserve Vitals on the left and equal-height SAMPLE/OPQRST stacked on the right, existing 55/45 and expanded 8:5 proportions, all control sizing, and the compact spacing through 900px height. Use 24px outer vertical padding and section gaps only above that height. This supersedes the former tab-only width restriction.
 - Wagami X uses a resting vital layout on the ordinary main waveform view before the first accepted physical Analyze or Charge action: FC, PNI, EtCO2, and SpO2 render as four equal-width, full-featured cells in the fixed `110px` bottom region, and the idle `APPL ELECT.` banner plus its three lower boxes are removed. The first accepted physical Analyze or Charge action moves the same vital displays instantly to the existing `96px` right column for the rest of the powered-on attempt, including analysis, CPR, charge, charged, shock, and delivered states; charge states keep both the energy scale and right-side vitals. Power-off/on, monitor reset, and New Attempt restore the resting layout. The left Call Info/Analyse soft key does not change placement. Collapsing the bottom region with the existing minus control temporarily moves vitals right and preserves the expanded three-waveform view; 12-lead and full-screen overlays retain their specialized layouts. Vital values, units, alarms, PNI reading phases, SpO2 pulse bar, French labels, selection identifiers, navigation order, and Enter-on-PNI behavior remain unchanged. Wagami Z is unaffected.
 - In both the local and live-room Instructor Console, the `Monitor & Patient SNS` area uses a centered responsive two-column composition. At the compact accepted landscapes (`1080×700` and `1280×720`), it retains the approximately 55/45 Vitals-left and equal-height SAMPLE/OPQRST-right layout and compact controls so the complete ordinary-content tab remains visible without horizontal overflow. At landscape viewports at least `1280px` wide and `800px` high, this tab alone breaks out from the console shell into a centered container up to approximately `1152px`, uses an approximately `8:5` split, and grows Vitals by roughly one third to about `700px` while SAMPLE/OPQRST remains about `438px`; other tabs keep the existing console maximum width. The full `1440×900` layout enlarges and horizontally centers the interactive contents in both columns, with the largest growth applied to buttons: Vitals inputs/toggles, ECG, CPR, timed-vitals controls, SNS cards/options, checklist letter buttons, and checklist fields all receive roomier targets and modestly larger text/icons. Below `1024px` or in portrait, the tab stacks vertically and permits page scrolling without horizontal overflow. The Instructor Console is primarily presented on a MacBook or desktop monitor and must also fit a landscape iPad 8th generation as a supported secondary instructor display. Live-room content above the tabs may make the overall page scroll vertically. Vitals retains its two internal columns and clinical ordering. SAMPLE/OPQRST retain equal heights, stable two-line textareas without focus-driven reflow, and bounded field scrolling for longer notes.
-- Pulse and Respiratory retain their default icon/title surface. On hover or keyboard focus, that entire fixed-size surface becomes three equal SNS measurement options of at least 44px height: `15s`, `30s`, and `Tap`. On touch, a first tap reveals and pins the options until an option is chosen, the user taps outside, Escape is pressed, or the other idle card is revealed. Only one idle touch option surface is pinned at a time; countdowns and results remain independent. Unrevealed options are not interactive or exposed as available controls. The surrounding card always communicates state: unconfirmed auto-sorted findings retain an amber border and persistent `!`, confirmed findings retain a green border, option buttons remain neutral until hover/focus, and an active countdown uses amber. A timed option replaces the same surface with a full-width cancellable countdown that remains visible without hover; cancellation restores the icon/title without revealing or newly confirming a result, while completion restores the icon/title, confirms the finding, and reveals the result below. Each result is capped at approximately three visible lines with bounded internal scrolling so both can remain visible without expanding Vitals. Tap is a per-group result-visibility toggle: when a result is visible, Tap hides it without unconfirming the green card or changing findings; when hidden, Tap takes a fresh snapshot, confirms, and reveals it. Pulse and Respiratory measurements remain fully independent: their countdowns may run and complete simultaneously, both results may remain visible, and starting, cancelling, hiding, or revealing one affects only that group. The transformation uses a short fixed-geometry color/crossfade transition, suppresses decorative motion under reduced-motion preferences, and restores focus to the group's disclosure control after dismissal, cancellation, or completion. Skin/Extremities and Scene/Environment retain their existing relationship and neither affect nor are affected by Pulse/Respiratory measurements. Timed measurements continue and complete at their real deadlines while another Instructor Console tab is selected, including off-tab confirmation and draft-dirty state, but cancel on scenario load/reset, refresh, or New Attempt. Each measurement snapshots the current auto-sorted findings at start. The 15- and 30-second count lines are display-only values derived from the snapshot rate using nearest-whole-count rounding. Missing findings retain the existing amber review treatment. Countdown state and derived counts are not saved in scenarios or broadcast to trainees.
+- Pulse and Respiratory retain their default icon/title surface. On hover or keyboard focus, that entire fixed-size surface becomes three equal SNS measurement options of at least 44px height: `15s`, `30s`, and `Tap`. On touch, a first tap reveals and pins the options until an option is chosen, the user taps outside, Escape is pressed, or the other idle card is revealed. Only one idle touch option surface is pinned at a time; countdowns and results remain independent. Unrevealed options are not interactive or exposed as available controls. The surrounding card always communicates state: unconfirmed auto-sorted findings retain an amber border and persistent `!`, confirmed findings retain a green border, option buttons remain neutral until hover/focus, and an active countdown uses amber. A timed option replaces the same surface with a full-width cancellable countdown that remains visible without hover; cancellation restores the icon/title without revealing or newly confirming a result, while completion restores the icon/title, confirms the finding, and reveals the result below. Each ordinary result presents four visible lines with bounded internal scrolling retained only for unusually long content or missing-field warnings. Tap is a per-group result-visibility toggle: when a result is visible, Tap hides it without unconfirming the green card or changing findings; when hidden, Tap takes a fresh snapshot, confirms, and reveals it. Pulse and Respiratory measurements remain fully independent: their countdowns may run and complete simultaneously, both results may remain visible, and starting, cancelling, hiding, or revealing one affects only that group. The transformation uses a short fixed-geometry color/crossfade transition, suppresses decorative motion under reduced-motion preferences, and restores focus to the group's disclosure control after dismissal, cancellation, or completion. Skin/Extremities and Scene/Environment retain their existing relationship and neither affect nor are affected by Pulse/Respiratory measurements. Timed measurements continue and complete at their real deadlines while another Instructor Console tab is selected, including off-tab confirmation and draft-dirty state, but cancel on scenario load/reset, refresh, or New Attempt. Each measurement snapshots the current auto-sorted findings at start. The 15- and 30-second count lines are display-only values derived from the snapshot rate using nearest-whole-count rounding. Missing required findings retain the existing amber review treatment; optional Pulse and Respiratory speed are never listed as missing. Countdown state and derived counts are not saved in scenarios or broadcast to trainees.
 - The shared instructor Save/Send actions must render in a left-aligned row immediately above the three-tab strip instead of below the forms. Selecting VF, VT, or Asystole locks the FC editor and turns FC On: VF shows `AUTO 190–220`, saves an underlying FC of 190, and displays a synchronized inclusive 190–220 integer on each 1.9-second FC alarm-flash cycle; VT shows and saves exactly 220; Asystole shows and saves `0 bpm` and also disables the FC On/Off toggle while the ECG remains On. Automatic-rhythm values cannot be overwritten by direct, auto-sort, timed, scenario, or hydration paths. Leaving an automatic rhythm, including switching an Asystole ECG Off, restores the current interaction's prior manual FC and unlocks both Asystole-locked controls, with 80 as the fallback for loaded/rehydrated automatic rhythms. VF randomness affects only the visible FC digits; waveform cadence, alarms, logs, and captures keep the underlying FC, CPR takes precedence, and room participants use server-timestamped deterministic display timing so they see the same sequence.
 - Default entry point is now a Kahoot-style session lobby: instructors create rooms, students join with code + nickname, and `/?dev=1` remains the local monitor shortcut.
 - Session room codes must be selectable and copyable from instructor and student waiting-room views.
@@ -1925,7 +2016,7 @@ suite records 1,387 passing tests and one skip with the same three documented un
 - The call assignment screen should show New Assignment and assignment detail labels without decorative icons.
 - Automatic call assignment display should play `/audio/caller_info_alarm.mp4` and gently flash 4 times for each new dispatch run; manual sidebar reopening must stay silent.
 - T1/T2/T3/U1/U2/U3 timed vitals must update draft numbers without turning Off vitals back On; SpO2/EtCO2 graph connections stay tied to their existing On/Off toggle state.
-- Direct vital fields, universal scenario auto-sort, and timed vital updates must change draft numbers without changing the current manual On/Off state; Save and Send retain inactive values for later manual activation.
+- Direct vital fields, universal scenario auto-sort, and numeric timed vital updates must change draft numbers without changing the current manual On/Off state; Save and Send retain inactive values for later manual activation. A timed SpO2 line explicitly described as not reliably obtainable is the sole exception and stages SpO2 Off.
 - Pressing physical Home while Vital Log is already open must close it; Home remains blocked by every other modal or capture/print overlay.
 - Event Log must merge Call, medication, and Analyze entries into an oldest-first chronological stream using hidden capture ordering, with stable `HH:MM:SS` fallback for legacy rows.
 
@@ -2684,8 +2775,8 @@ dispatch run, and that minimizing a pre-Transport hospital preview keeps that pr
   auto-sort textareas; their manual controls remain editable.
 - Vitals auto-sort parsing is driven by the Caller Info scenario box for labelled FC/HR,
   SpO2/saturation, BP/TA, and EtCO2/CO2 text. It updates only matched draft
-  vitals. If a large scenario paste contains a `Vitals (Origin)`,
-  `Vitals Origin`, or `Origin Vitals` section, only that origin section is
+  vitals. If a large scenario paste contains an `Initial Vitals`, `Vitals (Origin)`,
+  `Vitals Origin`, or `Origin Vitals` section, only that initial/origin section is
   parsed and later serial vitals are ignored. Without an origin heading, the
   first valid value for each vital wins so later treated/untreated vitals do
   not overwrite origin values. It supports combined BP values like
@@ -2773,7 +2864,7 @@ dispatch run, and that minimizing a pre-Transport hospital preview keeps that pr
   flash `0s` and stays visible without hover. Cancellation restores the icon/title
   without revealing or newly confirming the result. Completion restores the
   icon/title, confirms the card, and reveals the snapshot result below in a
-  fixed region of approximately three visible lines with bounded scrolling. The
+  fixed region sized for the ordinary four-line result with bounded fallback scrolling. The
   outer card preserves amber pending `!` or green confirmed styling throughout
   the transformation, while options are neutral until hover/focus and countdowns
   are amber. Tap
@@ -2794,15 +2885,17 @@ dispatch run, and that minimizing a pre-Transport hospital preview keeps that pr
   Scenario load/reset, refresh, and New Attempt cancel both measurements.
   Countdown state and derived counts are local, transient, excluded from saved
   scenario snapshots, and never broadcast to trainees. The result lists the
-  snapshot's current fields plus display-only 15- and 30-second counts calculated
-  from a valid rate with nearest-whole-count rounding; missing fields retain an
-  amber notice. Respiratory `strength` snapshot data is presented canonically as
-  respiratory effort without changing the backward-compatible saved field key.
+  snapshot's canonical Rate line, display-only unit-free 15- and 30-second counts calculated
+  from a valid rate with nearest-whole-count rounding, and one combined descriptor line; missing
+  required fields retain an amber notice. Pulse descriptors use Strength, Rhythm, then optional
+  Pulse speed, while Respiratory uses Respiratory effort, Rhythm, then optional Respiratory speed. Respiratory `strength`
+  snapshot data is presented canonically as respiratory effort without changing the
+  backward-compatible saved field key.
   Skin/Extremities retains its existing single icon-only toggle. Confirmed controls
   keep a black surface while their border, icon, and label turn ECG green.
-  Comma-separated summaries such as `Pulse: 136 bpm, Regular, Weak` and
-  `Respirations: 30 breaths/min, Regular, Labored` continue to fill rate, rhythm,
-  and strength/effort in order.
+  Comma-separated summaries such as `Pulse: 136 bpm, Regular, Weak, Fast` and
+  `Respirations: 30 breaths/min, Regular, Labored` fill rate plus semantically classified rhythm,
+  strength/effort, and optional Pulse/Respiratory speed even when the descriptive ordering varies.
 - Admin vitals are ordered FC → SpO2 → BP sys/dia → EtCO2. The ECG graph/rhythm
   control sits in a separate right column beside the numeric vitals column. FC,
   SpO2, BP sys, BP dia, and EtCO2 remain vertically aligned together. SpO2 and
@@ -2811,8 +2904,9 @@ dispatch run, and that minimizing a pre-Transport hospital preview keeps that pr
   Vitals auto-sort treats `Pulse` / `Pulse rate` as FC/HR labels and stores only
   the first number from summary text such as `Pulse: 136 bpm, Regular, Weak`.
   The ECG-side admin column includes `T1`/`T2`/`T3` and `U1`/`U2`/`U3` timed
-  vitals buttons that parse matching Treated/Untreated `(+5/+10/+15 min)`
-  sections from the Caller Info scenario text and stage only draft vitals. These
+  vitals buttons that parse matching Markdown Treated/Untreated `(+5/+10/+15 min)`
+  sections from the Caller Info scenario text and stage draft vitals plus matching Pulse/Respiratory
+  findings. Explicitly non-obtainable SpO2 stages that channel Off. These
   buttons use an explicit two-row, three-column grid and fill their entire
   outlined grid-cell rectangles for easier clicking. The ECG selector itself
   stays compact beside FC and does not stretch to the timed vitals button height.
