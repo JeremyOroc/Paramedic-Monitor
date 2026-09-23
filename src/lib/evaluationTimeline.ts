@@ -13,6 +13,7 @@ import {
   type VitalActiveState,
 } from '@/types/vitals'
 import type {
+  InstructorNote,
   ParticipantAttempt,
   SessionParticipant,
   SessionStateHistoryEntry,
@@ -113,6 +114,11 @@ export type TimelineInstructorRow = TimelineRowBase & {
   scenarioTitle: string
 }
 
+export type TimelineInstructorNoteRow = TimelineRowBase & {
+  kind: 'note'
+  body: string
+}
+
 /** Where a change belongs, which decides whether the summary names it or counts it. */
 export type ChangeGroup =
   | 'patient'
@@ -142,7 +148,7 @@ export type StateFact = {
   value: string
 }
 
-export type TimelineRow = TimelineActionRow | TimelineInstructorRow
+export type TimelineRow = TimelineActionRow | TimelineInstructorRow | TimelineInstructorNoteRow
 
 export type EvaluationTimeline = {
   rows: TimelineRow[]
@@ -160,6 +166,7 @@ export type EvaluationTimelineInput = {
   /** Only id and nickname are used, so a roster row from any shape fits. */
   participants: readonly Pick<SessionParticipant, 'id' | 'nickname'>[]
   attemptVersion: number
+  instructorNotes?: readonly InstructorNote[]
   /** Persistent reports use the actual Room transition to active as t+0. */
   baselineAt?: string
 }
@@ -491,7 +498,7 @@ function formatPayloadValue(value: unknown): string {
 export function formatEventDetail(event: Pick<StudentEvent, 'kind' | 'label' | 'payload'>): string {
   // The drug name is the label, and the payload only repeats the timestamp
   // already in the offset column.
-  if (event.kind === 'medication') return `"${event.label}"`
+  if (event.kind === 'medication' || event.kind === 'treatment') return event.label
 
   if (event.kind === 'twelve_lead_send') return event.label
 
@@ -816,6 +823,11 @@ export function buildEvaluationTimeline(
     )
     .sort((a, b) => a.entry.version - b.entry.version)
 
+  const instructorNotes = (input.instructorNotes ?? [])
+    .filter((note) => note.attempt_version === attemptVersion)
+    .map((note) => ({ note, at: parseTime(note.occurred_at) }))
+    .filter((item): item is { note: InstructorNote; at: number } => item.at !== null)
+
   const names = new Map(input.participants.map((one) => [one.id, one.nickname]))
 
   // The attempt's own start is the honest zero. Attempts predating the
@@ -830,6 +842,7 @@ export function buildEvaluationTimeline(
   const firstRecorded = [
     ...events.map((entry) => entry.at),
     ...history.map((item) => item.at),
+    ...instructorNotes.map((item) => item.at),
   ].sort((a, b) => a - b)[0]
 
   const explicitBaseline = parseTime(input.baselineAt)
@@ -1001,6 +1014,24 @@ export function buildEvaluationTimeline(
     })
   })
 
+  for (const { note, at } of instructorNotes) {
+    const latestState = [...history].reverse().find((item) => item.at <= at)
+    const context = latestState
+      ? contextFor(latestState.entry.version, at)
+      : { kind: 'dispatch' as const }
+    const offsetMs = baselineMs === null ? 0 : at - baselineMs
+    rows.push({
+      kind: 'note',
+      id: note.id,
+      offsetMs,
+      offset: formatOffset(offsetMs),
+      occurredAt: note.occurred_at,
+      context,
+      inAlarm: context.kind === 'state' && context.alarms.length > 0,
+      body: note.body,
+    })
+  }
+
   const sequenceOf = new Map<string, number>()
   for (const { event } of events) {
     if (typeof event.capture_sequence === 'number') sequenceOf.set(event.id, event.capture_sequence)
@@ -1011,7 +1042,10 @@ export function buildEvaluationTimeline(
     // A state change and an action landing in the same millisecond read
     // correctly only one way round: the patient changed, then the trainee acted
     // against what changed.
-    if (a.kind !== b.kind) return a.kind === 'instructor' ? -1 : 1
+    if (a.kind !== b.kind) {
+      const priority = { instructor: 0, note: 1, action: 2 } as const
+      return priority[a.kind] - priority[b.kind]
+    }
     // Two presses in one millisecond keep the order the monitor counted them.
     const sa = sequenceOf.get(a.id)
     const sb = sequenceOf.get(b.id)

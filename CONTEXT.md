@@ -87,6 +87,29 @@ with New Attempt or End Room. It may contain multiple Dispatch runs and Instruct
 retaining one Confirmed defibrillator model.
 _Avoid_: Drill, run, session
 
+**Treatment**:
+An instructor- or Scenario-device-recorded clinical intervention in an Attempt. Medication and
+trauma are stable Treatment categories, but an Evaluation record presents either as the concise
+`Treatment {name}`. Historical medication events remain valid Treatments without storage rewrites.
+_Avoid_: Medication as the umbrella term, trainee attribution, Instructor change
+
+**General Notes**:
+The single editable, latest-value narrative attached to an Attempt and its Evaluation record. It
+autosaves, remains owner-editable after the Attempt, and is distinct from chronological timeline
+entries.
+_Avoid_: Instructor Note, Report Note, event history
+
+**Report Note**:
+The Instructor Console composer used to send one Instructor Note to the current Attempt. Its draft
+is not part of the Evaluation record until Send succeeds.
+_Avoid_: General Notes, saved note, timeline row
+
+**Instructor Note**:
+One immutable, timestamped Attempt-wide annotation created by a successful Report Note Send. It is
+shown chronologically in the Evaluation record and is not attributed to a Scenario device or
+Trainee.
+_Avoid_: General Notes, Scenario device action, Instructor change
+
 **Dispatch run**:
 One assignment of a Scenario device to an Incident scene under one dispatch countdown. The first
 dispatch or an intentional Incident-scene/countdown change begins one; route calculation does not.

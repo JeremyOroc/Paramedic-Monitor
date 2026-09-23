@@ -12,7 +12,9 @@ import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { VitalsControls } from '@/components/instructor/VitalsControls'
 import { DefibrillatorPanel } from '@/components/instructor/DefibrillatorPanel'
 import { EvaluationReportPanel } from '@/components/instructor/EvaluationReportPanel'
-import { MedicationRecorder } from '@/components/instructor/MedicationRecorder'
+import { AttemptNotesPanel } from '@/components/instructor/AttemptNotesPanel'
+import type { GeneralNotesEditorHandle } from '@/components/instructor/GeneralNotesEditor'
+import { TreatmentRecorder } from '@/components/instructor/TreatmentRecorder'
 import { CallerInfoForm } from '@/components/instructor/CallerInfoForm'
 import { ScenarioLibraryPanel } from '@/components/instructor/ScenarioLibraryPanel'
 import {
@@ -50,6 +52,7 @@ import {
   scenarioSnapshotsEqual,
 } from '@/lib/scenarioSnapshot'
 import { ALL_MEDICATIONS } from '@/lib/monitor/medications'
+import { TRAUMA_TREATMENTS, type TreatmentCategory } from '@/lib/instructorTreatments'
 import { parseVitalsAutoSort, type TimedVitalsSlot } from '@/lib/vitalsAutoSort'
 import { VITAL_TREND_FIELDS } from '@/lib/vitalTrend'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -73,6 +76,8 @@ import type {
 import type { CprMode, NumericVitalField } from '@/types/vitals'
 import type {
   AttemptLabel,
+  AttemptGeneralNotes,
+  InstructorNote,
   ParticipantAttempt,
   SessionStateHistoryEntry,
   StudentEvent,
@@ -128,6 +133,8 @@ type PastReview = {
   stateHistory: SessionStateHistoryEntry[]
   attempts: ParticipantAttempt[]
   attemptLabels: AttemptLabel[]
+  attemptGeneralNotes: AttemptGeneralNotes[]
+  instructorNotes: InstructorNote[]
   truncated: boolean
 }
 
@@ -286,6 +293,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   const [stateHistory, setStateHistory] = useState<SessionStateHistoryEntry[]>([])
   const [attempts, setAttempts] = useState<ParticipantAttempt[]>([])
   const [attemptLabels, setAttemptLabels] = useState<AttemptLabel[]>([])
+  const [attemptGeneralNotes, setAttemptGeneralNotes] = useState<AttemptGeneralNotes[]>([])
+  const [instructorNotes, setInstructorNotes] = useState<InstructorNote[]>([])
   const [reviewTruncated, setReviewTruncated] = useState(false)
   const [attemptVersion, setAttemptVersion] = useState(1)
   // A past attempt the evaluator has opened in the Report tab. The 2.5s poll
@@ -308,7 +317,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   // Presses the record has not caught up with yet. The roster poll is the
   // source of truth for the tally, but it is 2.5s behind a press, and a button
   // whose count moves a beat later reads as a button that did not work.
-  const [pendingMedications, setPendingMedications] = useState<Record<string, number>>({})
+  const [pendingTreatments, setPendingTreatments] = useState<Record<string, number>>({})
+  const generalNotesEditorRef = useRef<GeneralNotesEditorHandle>(null)
   const canControlRoom = session?.canControl ?? true
 
   const stopSpectating = useCallback((participantId: string) => {
@@ -347,6 +357,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     if (includeHistory) setStateHistory(data.stateHistory ?? [])
     setAttempts(data.attempts ?? [])
     setAttemptLabels(data.attemptLabels ?? [])
+    setAttemptGeneralNotes(data.attemptGeneralNotes ?? [])
+    setInstructorNotes(data.instructorNotes ?? [])
     setReviewTruncated(data.truncated === true)
   }, [includeHistory, session])
 
@@ -364,6 +376,10 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
 
   const startNewAttempt = async () => {
     if (!session || !canControlRoom) return
+    if (generalNotesEditorRef.current && !(await generalNotesEditorRef.current.flush())) {
+      setSessionError('Save General Notes before starting a new Attempt.')
+      return
+    }
     const response = await fetch(`/api/session/${session.code}/attempt`, {
       method: 'POST',
       headers: { 'x-room-controller-token': session.controllerToken },
@@ -388,6 +404,10 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
 
   const endSession = async () => {
     if (!session || !canControlRoom) return
+    if (generalNotesEditorRef.current && !(await generalNotesEditorRef.current.flush())) {
+      setSessionError('Save General Notes before ending the Room.')
+      return
+    }
     // A thrown fetch (offline, a non-JSON 500 from the host) used to reject
     // this handler unhandled: no message, no navigation, the button did
     // nothing. Every failure now says so.
@@ -442,6 +462,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
         stateHistory: data.stateHistory ?? [],
         attempts: data.attempts ?? [],
         attemptLabels: data.attemptLabels ?? [],
+        attemptGeneralNotes: data.attemptGeneralNotes ?? [],
+        instructorNotes: data.instructorNotes ?? [],
         truncated: data.truncated === true,
       })
     },
@@ -494,10 +516,59 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     stateHistory,
     attempts,
     attemptLabels,
+    attemptGeneralNotes,
+    instructorNotes,
     truncated: reviewTruncated,
   }
   const activeAttemptLabel =
     attemptLabels.find((entry) => entry.attempt_version === attemptVersion)?.label ?? ''
+  const activeGeneralNotes =
+    attemptGeneralNotes.find((entry) => entry.attempt_version === attemptVersion)?.general_notes ?? ''
+
+  const saveGeneralNotes = useCallback(
+    async (generalNotes: string) => {
+      if (!session || !canControlRoom) throw new Error('This room is read-only on this device.')
+      const response = await fetch(`/api/session/${session.code}/attempt-notes`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-room-controller-token': session.controllerToken,
+        },
+        body: JSON.stringify({ generalNotes }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.attemptNotes) {
+        throw new Error(getResponseError(data, 'Unable to save General Notes'))
+      }
+      const saved = data.attemptNotes as AttemptGeneralNotes
+      setAttemptGeneralNotes((current) => [
+        ...current.filter((entry) => entry.attempt_version !== saved.attempt_version),
+        saved,
+      ])
+    },
+    [canControlRoom, session],
+  )
+
+  const sendReportNote = useCallback(
+    async (body: string) => {
+      if (!session || !canControlRoom) throw new Error('This room is read-only on this device.')
+      const response = await fetch(`/api/session/${session.code}/instructor-notes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-room-controller-token': session.controllerToken,
+        },
+        body: JSON.stringify({ body }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.instructorNote) {
+        throw new Error(getResponseError(data, 'Unable to send Report Note'))
+      }
+      setInstructorNotes((current) => [...current, data.instructorNote as InstructorNote])
+      await refreshReview()
+    },
+    [canControlRoom, refreshReview, session],
+  )
 
   const sendSessionState = useCallback(async (
     updateKind: 'instructor' | 'route-enrichment' | 'trend-completion' = 'instructor',
@@ -858,51 +929,49 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   )
 
   /**
-   * How many times each med has been given this attempt.
+   * How many times each treatment has been recorded this attempt.
    *
-   * Counts every dose in the run rather than only the ones logged here: a drug
-   * is a drug whether the trainee reached the monitor or the instructor pressed
-   * it for them, and the instructor is watching for "has this patient had three
-   * Epi", not "how many did I type". Scoped to the live attempt from
+   * Counts every matching action in the run rather than only the ones logged
+   * here. Scoped to the live attempt from
    * `studentEvents` rather than `report.events`, which follows the evaluator
    * into past attempts while this grid always records into the current one.
    */
-  const medicationCounts = useMemo(() => {
+  const treatmentCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const event of studentEvents) {
-      if (event.kind !== 'medication') continue
+      if (event.kind !== 'medication' && event.kind !== 'treatment') continue
       if (event.attempt_version !== attemptVersion) continue
       counts[event.label] = (counts[event.label] ?? 0) + 1
     }
-    for (const [medication, pending] of Object.entries(pendingMedications)) {
-      counts[medication] = (counts[medication] ?? 0) + pending
+    for (const [treatment, pending] of Object.entries(pendingTreatments)) {
+      counts[treatment] = (counts[treatment] ?? 0) + pending
     }
     return counts
-  }, [attemptVersion, pendingMedications, studentEvents])
+  }, [attemptVersion, pendingTreatments, studentEvents])
 
   /**
-   * A med press, counted optimistically so the tally moves under the finger.
+   * A treatment press, counted optimistically so the tally moves under the finger.
    *
    * The pending entry is released once the write has settled either way --
    * `recordInstructorAction` refreshes the record before it resolves, so a
    * success hands straight over to the polled count with no flicker, and a
-   * failure takes the optimistic dose back off rather than leaving a tally
-   * claiming a drug the record never got.
+   * failure takes the optimistic entry back off rather than leaving a tally
+   * claiming a treatment the record never got.
    */
-  const recordMedication = useCallback(
-    async (medication: string) => {
-      setPendingMedications((current) => ({
+  const recordTreatment = useCallback(
+    async (treatment: string, category: TreatmentCategory) => {
+      setPendingTreatments((current) => ({
         ...current,
-        [medication]: (current[medication] ?? 0) + 1,
+        [treatment]: (current[treatment] ?? 0) + 1,
       }))
       try {
-        await recordInstructorAction('medication', medication)
+        await recordInstructorAction('treatment', treatment, { category })
       } finally {
-        setPendingMedications((current) => {
+        setPendingTreatments((current) => {
           const next = { ...current }
-          const remaining = (next[medication] ?? 1) - 1
-          if (remaining > 0) next[medication] = remaining
-          else delete next[medication]
+          const remaining = (next[treatment] ?? 1) - 1
+          if (remaining > 0) next[treatment] = remaining
+          else delete next[treatment]
           return next
         })
       }
@@ -911,7 +980,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   )
 
   /**
-   * Why the med grid and the checklist logging cannot write right now, or null
+   * Why the treatment grid and the checklist logging cannot write right now, or null
    * when they can. Said out loud on the panel: a dead button with no reason is
    * indistinguishable from a broken one.
    */
@@ -924,6 +993,13 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
         : participants.length === 0
           ? 'No device has joined yet.'
           : null
+  const attemptNotesUnavailable = !session
+    ? 'Start a Room to add notes.'
+    : !canControlRoom
+      ? 'This Room is read-only on this device.'
+      : sessionStatus !== 'active'
+        ? 'Start / Dispatch before adding notes.'
+        : null
 
     // CPR override and full instructor resets bypass Save → Send, so in a
   // session they must push shared state themselves — the Send button stays
@@ -1710,14 +1786,25 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
                 ? anyoneCalibratedEtco2(studentEvents, attemptVersion, monitorResetVersion)
                 : undefined
             }
+            attemptNotes={
+              <AttemptNotesPanel
+                key={`${attemptVersion}:${attemptNotesUnavailable ?? 'ready'}`}
+                generalNotes={activeGeneralNotes}
+                onSaveGeneralNotes={saveGeneralNotes}
+                onSendReportNote={sendReportNote}
+                generalNotesRef={generalNotesEditorRef}
+                disabledReason={attemptNotesUnavailable}
+              />
+            }
           />
-          <MedicationRecorder
+          <TreatmentRecorder
             medications={ALL_MEDICATIONS}
+            traumaTreatments={TRAUMA_TREATMENTS}
             participants={participants}
             participantId={creditedParticipantId}
             onParticipantChange={setCreditedChoice}
-            onRecord={(medication) => void recordMedication(medication)}
-            counts={medicationCounts}
+            onRecord={(treatment, category) => void recordTreatment(treatment, category)}
+            counts={treatmentCounts}
             unavailableReason={instructorRecordingUnavailable}
             error={instructorEventError}
           />
@@ -1747,6 +1834,12 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
           attemptVersion={report.attemptVersion}
           onAttemptVersionChange={(version) => void viewReportAttempt(version)}
           attemptLabels={report.attemptLabels}
+          generalNotes={
+            report.attemptGeneralNotes.find(
+              (entry) => entry.attempt_version === report.attemptVersion,
+            )?.general_notes ?? ''
+          }
+          instructorNotes={report.instructorNotes}
           onRenameAttempt={session ? (version, label) => void renameAttempt(version, label) : undefined}
           truncated={report.truncated}
         />

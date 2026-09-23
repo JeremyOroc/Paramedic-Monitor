@@ -50,6 +50,8 @@ const DETAIL = {
   participant_attempts: [{ participant_id: 'p1', attempt_version: 2, started_at: SUMMARY.started_at, completed_at: null }],
   events: [],
   state_history: [],
+  general_notes: 'Initial General Notes',
+  instructor_notes: [],
 }
 
 function response(body: unknown, status = 200) {
@@ -107,6 +109,34 @@ describe('ReportsPage', () => {
 
     await user.click(await screen.findByRole('button', { name: /Attempt 2 · Morning/ }))
     expect(await screen.findByText('Wagami A', { exact: false })).toBeInTheDocument()
+  })
+
+  it('edits and automatically saves General Notes beneath the optional Attempt name', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = String(input)
+      if (url.startsWith('/api/reports?')) return response({ items: [SUMMARY], total: 1, page: 1, pageSize: 25 })
+      if (init?.method === 'PATCH') return response({ report: { ...SUMMARY, general_notes: 'Revised General Notes' } })
+      return response({ report: DETAIL })
+    })
+    const user = userEvent.setup()
+    render(<ReportsPage />)
+
+    await user.click(await screen.findByRole('button', { name: /Attempt 2 · Morning/ }))
+    expect(await screen.findByTestId('general-notes-view')).toHaveTextContent('Initial General Notes')
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    const editor = screen.getByRole('textbox', { name: 'General Notes' })
+    await user.clear(editor)
+    await user.type(editor, 'Revised General Notes')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      `/api/reports/${SUMMARY.id}`,
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ generalNotes: 'Revised General Notes' }),
+      }),
+    ))
+    expect(await screen.findByTestId('general-notes-view')).toHaveTextContent('Revised General Notes')
   })
 
   it('saves metadata, manually completes, and shows contextual permanent deletion', async () => {

@@ -778,6 +778,8 @@ export async function startNewAttempt(
 }
 
 export const ATTEMPT_LABEL_MAX = 60
+export const GENERAL_NOTES_MAX = 4000
+export const INSTRUCTOR_NOTE_MAX = 1000
 
 /**
  * Name one of the room's attempts. The number is what the record is keyed
@@ -817,6 +819,77 @@ export async function renameAttempt(
     .select('attempt_version, label')
     .single()
   if (error || !data) throw new SessionError(error?.message ?? 'Unable to rename attempt', 500)
+  return data
+}
+
+/** Save the one latest-value General Notes narrative for the active Attempt. */
+export async function saveAttemptGeneralNotes(
+  code: string,
+  account: RoomAccount,
+  controllerToken: string,
+  generalNotes: string,
+) {
+  const session = await verifyRoomController(code, account, controllerToken)
+  if (session.status !== 'active') {
+    throw new SessionError('Start / Dispatch before editing General Notes', 409)
+  }
+  if (generalNotes.length > GENERAL_NOTES_MAX) {
+    throw new SessionError(`General Notes must be ${GENERAL_NOTES_MAX} characters or fewer`, 400)
+  }
+
+  const supabase = createServiceClient()
+  // Only include the notes columns in the upsert. PostgREST updates columns
+  // present in the payload, so a concurrent Attempt-name edit is preserved;
+  // a missing row still receives the database's empty-label default.
+  const { data, error } = await supabase
+    .from('session_attempts')
+    .upsert(
+      {
+        session_id: session.id,
+        attempt_version: session.active_attempt_version,
+        general_notes: generalNotes,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'session_id,attempt_version' },
+    )
+    .select('attempt_version, general_notes')
+    .single()
+  if (error || !data) {
+    throw new SessionError(error?.message ?? 'Unable to save General Notes', 500)
+  }
+  return data
+}
+
+/** Append one immutable Instructor Note to the active Attempt. */
+export async function recordInstructorNote(
+  code: string,
+  account: RoomAccount,
+  controllerToken: string,
+  body: string,
+) {
+  const session = await verifyRoomController(code, account, controllerToken)
+  if (session.status !== 'active') {
+    throw new SessionError('Start / Dispatch before sending a Report Note', 409)
+  }
+  const normalized = body.trim()
+  if (!normalized) throw new SessionError('Report Note cannot be blank', 400)
+  if (normalized.length > INSTRUCTOR_NOTE_MAX) {
+    throw new SessionError(`Report Note must be ${INSTRUCTOR_NOTE_MAX} characters or fewer`, 400)
+  }
+
+  const supabase = createServiceClient()
+  const { data, error } = await supabase
+    .from('session_instructor_notes')
+    .insert({
+      session_id: session.id,
+      attempt_version: session.active_attempt_version,
+      body: normalized,
+    })
+    .select('id, session_id, attempt_version, body, occurred_at')
+    .single()
+  if (error || !data) {
+    throw new SessionError(error?.message ?? 'Unable to send Report Note', 500)
+  }
   return data
 }
 
@@ -1241,9 +1314,15 @@ export async function getReview(
     .eq('session_id', session.id)
   if (attempt !== 'all') historyQuery = historyQuery.eq('attempt_version', attempt)
 
+  let instructorNotesQuery = supabase
+    .from('session_instructor_notes')
+    .select('id, session_id, attempt_version, body, occurred_at')
+    .eq('session_id', session.id)
+  if (attempt !== 'all') instructorNotesQuery = instructorNotesQuery.eq('attempt_version', attempt)
+
   // Four independent reads; nothing here depends on another's result, so they
   // go out together rather than one round-trip after the next.
-  const [participantsResult, eventsResult, historyResult, attemptsResult, labelsResult] = await Promise.all([
+  const [participantsResult, eventsResult, historyResult, attemptsResult, labelsResult, instructorNotesResult] = await Promise.all([
     supabase
       .from('participants')
       .select('id, session_id, nickname, joined_at, last_seen_at')
@@ -1262,8 +1341,9 @@ export async function getReview(
     // Every attempt's name, not only the requested one: the picker lists them all.
     supabase
       .from('session_attempts')
-      .select('attempt_version, label')
+      .select('attempt_version, label, general_notes')
       .eq('session_id', session.id),
+    instructorNotesQuery.order('occurred_at', { ascending: true }).order('id', { ascending: true }),
   ])
 
   if (participantsResult.error) throw new SessionError(participantsResult.error.message, 500)
@@ -1271,6 +1351,7 @@ export async function getReview(
   if (historyResult.error) throw new SessionError(historyResult.error.message, 500)
   if (attemptsResult.error) throw new SessionError(attemptsResult.error.message, 500)
   if (labelsResult.error) throw new SessionError(labelsResult.error.message, 500)
+  if (instructorNotesResult.error) throw new SessionError(instructorNotesResult.error.message, 500)
 
   const allEvents = eventsResult.data ?? []
   const truncated = allEvents.length > REVIEW_EVENT_LIMIT
@@ -1283,6 +1364,14 @@ export async function getReview(
     truncated,
     stateHistory: historyResult.data ?? [],
     attempts: attemptsResult.data ?? [],
-    attemptLabels: labelsResult.data ?? [],
+    attemptLabels: (labelsResult.data ?? []).map(({ attempt_version, label }) => ({
+      attempt_version,
+      label,
+    })),
+    attemptGeneralNotes: (labelsResult.data ?? []).map(({ attempt_version, general_notes }) => ({
+      attempt_version,
+      general_notes,
+    })),
+    instructorNotes: instructorNotesResult.data ?? [],
   }
 }

@@ -1,5 +1,7 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 import {
   isTimedSpO2Unavailable,
   parseTimedVitalsAutoSort,
@@ -34,6 +36,7 @@ const CPR_MODES: ReadonlyArray<{ mode: Exclude<CprMode, 'off'>; label: string }>
 type VitalsControlsProps = {
   autoSortText: string
   patientSns?: PatientSnsControlsProps
+  attemptNotes?: ReactNode
   onTimedVitalsClick?: (slot: TimedVitalsSlot) => void
   /**
    * Set in a session, where calibration happens on a trainee's monitor and only
@@ -47,6 +50,7 @@ type VitalsControlsProps = {
 export function VitalsControls({
   autoSortText,
   patientSns,
+  attemptNotes,
   onTimedVitalsClick,
   sessionEtco2Calibrated,
 }: VitalsControlsProps) {
@@ -174,6 +178,7 @@ export function VitalsControls({
         </div>
       </div>
       {patientSns ? <PatientSnsControls {...patientSns} /> : null}
+      {attemptNotes}
     </section>
   )
 }

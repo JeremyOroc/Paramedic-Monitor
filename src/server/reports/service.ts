@@ -1,11 +1,12 @@
 import { createAuthenticatedClient, createServiceClient } from '@/lib/supabase/server'
 import type { ActiveAccount } from '@/server/accounts/service'
-import { isStudentEventKind, type ParticipantAttempt, type SessionParticipant, type SessionStateHistoryEntry, type StudentEvent } from '@/types/session'
+import { isStudentEventKind, type InstructorNote, type ParticipantAttempt, type SessionParticipant, type SessionStateHistoryEntry, type StudentEvent } from '@/types/session'
 
 export const REPORT_PAGE_SIZE = 25
 export const REPORT_STUDENT_NAME_MAX = 100
 export const REPORT_STUDENT_NAMES_MAX = 100
 export const REPORT_ATTEMPT_LABEL_MAX = 60
+export const REPORT_GENERAL_NOTES_MAX = 4000
 export const REPORT_DELETE_MAX = 25
 
 export type ReportStatus = 'incomplete' | 'complete'
@@ -36,6 +37,8 @@ export type EvaluationReport = EvaluationReportSummary & {
   participant_attempts: ParticipantAttempt[]
   events: StudentEvent[]
   state_history: SessionStateHistoryEntry[]
+  general_notes: string
+  instructor_notes: InstructorNote[]
 }
 
 export type ReportListFilters = {
@@ -202,8 +205,27 @@ function parseHistory(value: unknown): SessionStateHistoryEntry[] {
   })
 }
 
+function parseInstructorNotes(value: unknown): InstructorNote[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(isRecord).flatMap((note) => {
+    const id = stringValue(note, 'id')
+    const sessionId = stringValue(note, 'session_id')
+    const body = stringValue(note, 'body')
+    const occurredAt = stringValue(note, 'occurred_at')
+    const version = note.attempt_version
+    if (!id || !sessionId || !body || !occurredAt || typeof version !== 'number') return []
+    return [{
+      id,
+      session_id: sessionId,
+      attempt_version: version,
+      body,
+      occurred_at: occurredAt,
+    }]
+  })
+}
+
 const SUMMARY_COLUMNS = 'id, source_room_code, attempt_version, attempt_label, scenario_name, defibrillator_model, student_names, status, completion_method, started_at, completed_at, created_at, updated_at'
-const DETAIL_COLUMNS = `${SUMMARY_COLUMNS}, owner_user_id, source_session_id, scenario_snapshot, participants, participant_attempts, events, state_history`
+const DETAIL_COLUMNS = `${SUMMARY_COLUMNS}, owner_user_id, source_session_id, scenario_snapshot, participants, participant_attempts, events, state_history, general_notes, instructor_notes`
 
 export async function listEvaluationReports(
   account: Pick<ActiveAccount, 'user_id'>,
@@ -266,6 +288,8 @@ export async function getEvaluationReport(
     participant_attempts: parseParticipantAttempts(data.participant_attempts),
     events: parseEvents(data.events),
     state_history: parseHistory(data.state_history),
+    general_notes: stringValue(data, 'general_notes'),
+    instructor_notes: parseInstructorNotes(data.instructor_notes),
   }
 }
 
@@ -275,21 +299,53 @@ export async function updateEvaluationReport(
   input: unknown,
 ) {
   if (!isRecord(input)) throw new ReportError('Invalid report update', 400)
-  const payload: { attempt_label?: string; student_names?: string[] } = {}
+  const payload: { attempt_label?: string; student_names?: string[]; general_notes?: string } = {}
   if ('attemptLabel' in input) payload.attempt_label = normalizeAttemptLabel(input.attemptLabel)
   if ('studentNames' in input) payload.student_names = normalizeStudentNames(input.studentNames)
+  if ('generalNotes' in input) {
+    if (typeof input.generalNotes !== 'string') {
+      throw new ReportError('General Notes must be text', 400)
+    }
+    if (input.generalNotes.length > REPORT_GENERAL_NOTES_MAX) {
+      throw new ReportError(`General Notes must be ${REPORT_GENERAL_NOTES_MAX} characters or fewer`, 400)
+    }
+    payload.general_notes = input.generalNotes
+  }
   if (Object.keys(payload).length === 0) throw new ReportError('No report changes supplied', 400)
   const auth = await createAuthenticatedClient()
+  if (payload.general_notes !== undefined) {
+    const { data: report, error: reportError } = await auth
+      .from('evaluation_reports')
+      .select('source_session_id, attempt_version')
+      .eq('id', reportId(id))
+      .eq('owner_user_id', account.user_id)
+      .maybeSingle()
+    if (reportError) throw new ReportError('Unable to check report editing availability', 503)
+    if (!report) throw new ReportError('Report not found', 404)
+    const { data: activeRoom, error: activeRoomError } = await auth
+      .from('sessions')
+      .select('id')
+      .eq('id', report.source_session_id)
+      .eq('owner_user_id', account.user_id)
+      .eq('status', 'active')
+      .eq('active_attempt_version', report.attempt_version)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle()
+    if (activeRoomError) throw new ReportError('Unable to check report editing availability', 503)
+    if (activeRoom) {
+      throw new ReportError('Edit General Notes from the controlling Instructor Console while this Attempt is active', 409)
+    }
+  }
   const { data, error } = await auth
     .from('evaluation_reports')
     .update(payload)
     .eq('id', reportId(id))
     .eq('owner_user_id', account.user_id)
-    .select(SUMMARY_COLUMNS)
+    .select(`${SUMMARY_COLUMNS}, general_notes`)
     .maybeSingle()
   if (error) throw new ReportError('Unable to update report', 503)
   if (!data) throw new ReportError('Report not found', 404)
-  return parseSummary(data)
+  return { ...parseSummary(data), general_notes: stringValue(data, 'general_notes') }
 }
 
 export async function manuallyCompleteEvaluationReport(

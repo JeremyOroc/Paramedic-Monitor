@@ -6,6 +6,7 @@ import { buildEvaluationTimeline, formatOffset } from '@/lib/evaluationTimeline'
 import { cn } from '@/lib/utils'
 import type {
   AttemptLabel,
+  InstructorNote,
   ParticipantAttempt,
   SessionParticipant,
   SessionStateHistoryEntry,
@@ -34,6 +35,9 @@ type EvaluationReportPanelProps = {
   /** Adds an absolute local timestamp and zone abbreviation to copied rows. */
   copyTimeZone?: string
   truncated?: boolean
+  generalNotes?: string
+  instructorNotes?: readonly InstructorNote[]
+  showGeneralNotes?: boolean
 }
 
 export const ATTEMPT_LABEL_MAX = 60
@@ -129,6 +133,7 @@ function toPlainText(
   showNames: boolean,
   heading: string,
   timeZone?: string,
+  generalNotes = '',
 ): string {
   const body = rows
     .map((row) => {
@@ -141,15 +146,22 @@ function toPlainText(
             : 'sent (no change)'
         return `${when}${row.offset}\tINSTRUCTOR\t${what}\t${contextText(row.context)}`
       }
+      if (row.kind === 'note') {
+        return `${when}${row.offset}\tINSTRUCTOR NOTE\t${row.body}`
+      }
       const who = showNames ? `${row.participantName}\t` : ''
       const behind = row.behindBy > 0 ? `\t← ${row.behindBy} behind` : ''
       // Carried into the paste too: a debrief that quotes the stream should not
       // imply the trainee reached the monitor when the instructor logged it.
       const source = row.enteredByInstructor ? '\t(by instructor)' : ''
-      return `${when}${row.offset}\t${who}${row.eventKind}\t${row.detail}\t${contextText(row.context)}${behind}${source}`
+      const eventKind = row.eventKind === 'medication' || row.eventKind === 'treatment'
+        ? 'Treatment'
+        : row.eventKind
+      return `${when}${row.offset}\t${who}${eventKind}\t${row.detail}\t${contextText(row.context)}${behind}${source}`
     })
     .join('\n')
-  return `${heading}\n${body}`
+  const notes = generalNotes ? `\nGeneral Notes\n${generalNotes}\n` : ''
+  return `${heading}${notes}\n${body}`
 }
 
 export function EvaluationReportPanel({
@@ -164,6 +176,9 @@ export function EvaluationReportPanel({
   onRenameAttempt,
   copyTimeZone,
   truncated = false,
+  generalNotes = '',
+  instructorNotes = [],
+  showGeneralNotes = true,
 }: EvaluationReportPanelProps) {
   const [copied, setCopied] = useState(false)
   // Keyed by row id so a row opened mid-attempt stays open across the poll,
@@ -187,8 +202,9 @@ export function EvaluationReportPanel({
         participants,
         attemptVersion,
         baselineAt,
+        instructorNotes,
       }),
-    [attempts, attemptVersion, baselineAt, events, participants, stateHistory],
+    [attempts, attemptVersion, baselineAt, events, instructorNotes, participants, stateHistory],
   )
 
   // One device per Room is the operating assumption, so the nickname column
@@ -227,7 +243,9 @@ export function EvaluationReportPanel({
 
   const copy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(toPlainText(timeline.rows, showNames, heading, copyTimeZone))
+      await navigator.clipboard.writeText(
+        toPlainText(timeline.rows, showNames, heading, copyTimeZone, generalNotes),
+      )
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
@@ -235,7 +253,7 @@ export function EvaluationReportPanel({
       // on screen to read from.
       setCopied(false)
     }
-  }, [copyTimeZone, heading, showNames, timeline.rows])
+  }, [copyTimeZone, generalNotes, heading, showNames, timeline.rows])
 
   const actionCount = timeline.rows.filter((row) => row.kind === 'action').length
   // Every action resolving to no state is what an unapplied migration 007 looks
@@ -307,7 +325,7 @@ export function EvaluationReportPanel({
         <button
           type="button"
           onClick={() => void copy()}
-          disabled={timeline.rows.length === 0}
+          disabled={timeline.rows.length === 0 && !generalNotes}
           className="border border-neutral-700 px-3 py-1 font-mono text-xs font-bold uppercase tracking-wider text-neutral-400 enabled:hover:border-cyan-bp enabled:hover:text-cyan-bp disabled:opacity-40"
         >
           {copied ? 'Copied' : 'Copy'}
@@ -331,6 +349,18 @@ export function EvaluationReportPanel({
           No instructor state recorded for this attempt — patient context is unavailable.
         </p>
       ) : null}
+
+      {showGeneralNotes ? <section className="mt-4" aria-label="General Notes">
+        <h3 className="font-mono text-[10px] font-black uppercase tracking-wider text-neutral-500">
+          General Notes
+        </h3>
+        <div
+          className="mt-2 min-h-20 whitespace-pre-wrap break-words border border-neutral-800 bg-black px-3 py-2 text-sm text-neutral-300"
+          data-testid="report-general-notes"
+        >
+          {generalNotes || <span className="text-neutral-600">No General Notes.</span>}
+        </div>
+      </section> : null}
 
       {timeline.rows.length === 0 ? (
         <p className="mt-4 font-mono text-xs text-neutral-600">
@@ -398,6 +428,16 @@ export function EvaluationReportPanel({
                     </span>
                   </span>
                 </span>
+              ) : row.kind === 'note' ? (
+                <span
+                  className={cn(
+                    'min-w-0 uppercase tracking-wider text-cyan-bp/70',
+                    showNames ? 'md:col-span-3' : 'md:col-span-2',
+                  )}
+                >
+                  Instructor Note{' '}
+                  <span className="normal-case tracking-normal text-neutral-300">{row.body}</span>
+                </span>
               ) : (
                 <>
                   {showNames ? (
@@ -405,7 +445,11 @@ export function EvaluationReportPanel({
                       {row.participantName}
                     </span>
                   ) : null}
-                  <span className="truncate text-neutral-200">{row.eventKind}</span>
+                  <span className="truncate text-neutral-200">
+                    {row.eventKind === 'medication' || row.eventKind === 'treatment'
+                      ? 'Treatment'
+                      : row.eventKind}
+                  </span>
                   <span className="hidden truncate text-neutral-500 md:block">
                     {row.detail}
                     {row.enteredByInstructor ? (

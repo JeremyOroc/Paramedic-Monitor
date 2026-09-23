@@ -5,6 +5,39 @@
 
 ---
 
+## [2026-09-23] [instructor/reports/domain/testing] — Add Treatments and Attempt notes
+
+- Replaced the Instructor medication recorder with a Treatments panel containing the existing
+  Medications and the approved Trauma set, including Intubation, Vac Mat, and CombiCarrier; retained
+  device credit, optimistic counts, success feedback, availability rules, and rollback behavior.
+- Added categorized `treatment` persistence while preserving legacy `medication` records and
+  presenting both as concise `Treatment {name}` Evaluation rows.
+- Added Attempt-scoped General Notes with queued autosave, flush-before-transition behavior,
+  failure retention, live-controller ownership, saved-report Edit/Done support, and report-copy
+  inclusion.
+- Added immutable, timestamped Instructor Notes through the Report Note composer and Send flow,
+  with Attempt isolation, report snapshot synchronization, and chronological timeline rendering.
+- Added the database migration, Supabase types, service/API authorization, ADR-backed model,
+  component/service/route/report/migration tests, and updated project status documentation.
+- All 277 focused tests, TypeScript, and the Next.js 16.3 production build pass. Full ESLint has zero
+  errors and 12 unrelated existing warnings. The complete suite has 1,700 passing, one skipped, and
+  11 unchanged unrelated baseline/environment failures. Rendered feature-component QA passes at
+  1280×720 and 1024×768 with a clean browser console. The Supabase CLI is unavailable; the migration
+  passed contract tests and remains unapplied. No commit, push, or deployment was made.
+
+## [2026-09-23] [planning/instructor/domain] — Define Treatments and Attempt notes
+
+- Renamed the planned Instructor action area to Treatments, retained its Medication subsection,
+  and specified the Instructor-only Trauma set including Intubation, Vac Mat, and CombiCarrier.
+- Chose concise `Treatment {name}` report rows, categorized new treatment records, and display-time
+  compatibility for historical medication records without rewriting them.
+- Defined autosaving, latest-value General Notes and immutable, timestamped Instructor Notes as
+  separate Attempt-scoped report concepts, including ownership, limits, failure handling, report
+  placement, and export behavior.
+- Added the required implementation and validation scope to `PLAN.md`, marked implementation as
+  awaiting explicit approval in `STATUS.md`, and recorded the durable data-model choice in ADR 0034.
+- No application code or database migration has been applied for this requirement.
+
 ## [2026-09-23] [wagami-a/waveform/domain/testing] — Keep rate updates continuous
 
 - Removed FC from ECG, Live 12-lead, and SpO2 waveform identity while retaining live FC reads in

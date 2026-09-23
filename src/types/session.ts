@@ -36,6 +36,7 @@ export const STUDENT_EVENT_KINDS = [
   'arrival',
   'transport',
   'medication',
+  'treatment',
   'analyze',
   'charge',
   'shock',
@@ -124,6 +125,21 @@ export type AttemptLabel = {
   label: string
 }
 
+/** The latest editable narrative for one Attempt. */
+export type AttemptGeneralNotes = {
+  attempt_version: number
+  general_notes: string
+}
+
+/** An immutable Attempt-wide annotation sent by the Instructor. */
+export type InstructorNote = {
+  id: string
+  session_id: string
+  attempt_version: number
+  body: string
+  occurred_at: string
+}
+
 /** The shape `GET /api/session/[code]/review` returns. */
 export type SessionReview = {
   session: Session
@@ -134,4 +150,6 @@ export type SessionReview = {
   stateHistory: SessionStateHistoryEntry[]
   attempts: ParticipantAttempt[]
   attemptLabels: AttemptLabel[]
+  attemptGeneralNotes: AttemptGeneralNotes[]
+  instructorNotes: InstructorNote[]
 }

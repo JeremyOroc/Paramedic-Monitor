@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 
 import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
 import { EvaluationReportPanel, attemptTitle } from '@/components/instructor/EvaluationReportPanel'
+import { GeneralNotesEditor } from '@/components/instructor/GeneralNotesEditor'
 import { InstructorLayout } from '@/components/instructor/InstructorLayout'
 import type { EvaluationReport, EvaluationReportSummary, ReportStatus } from '@/server/reports/service'
 
@@ -16,7 +17,10 @@ type ReportListResponse = {
 }
 
 type ReportDetailResponse = { report?: EvaluationReport; error?: string }
-type ReportMutationResponse = { report?: EvaluationReportSummary; error?: string }
+type ReportMutationResponse = {
+  report?: EvaluationReportSummary & { general_notes?: string }
+  error?: string
+}
 type ReportDeleteResponse = { deleted?: number; error?: string }
 
 const TORONTO_TIME_ZONE = 'America/Toronto'
@@ -164,6 +168,20 @@ export function ReportsPage() {
       setBusy(false)
     }
   }
+
+  const saveGeneralNotes = useCallback(async (generalNotes: string) => {
+    if (!selected) throw new Error('Select a report before editing General Notes')
+    const response = await fetch(`/api/reports/${selected.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ generalNotes }),
+    })
+    const result = await response.json() as ReportMutationResponse
+    if (!response.ok || !result.report) {
+      throw new Error(result.error ?? 'Unable to save General Notes')
+    }
+    setSelected((current) => current ? { ...current, general_notes: generalNotes } : current)
+  }, [selected])
 
   const markComplete = async () => {
     if (!selected || deleteMode) return
@@ -392,10 +410,21 @@ export function ReportsPage() {
                   </div>
                   {selected.deletion_blocked ? <p className="mt-3 font-mono text-xs font-bold uppercase text-pending-amber">Active Attempt — cannot delete</p> : null}
                   <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <label className="grid content-start gap-2">
-                      <span className="font-mono text-xs font-black uppercase tracking-wider text-neutral-500">Attempt name</span>
-                      <input value={attemptLabel} onChange={(event) => setAttemptLabel(event.target.value)} maxLength={60} placeholder="Optional name" className="border border-neutral-700 bg-black px-3 py-2 text-sm outline-none focus:border-cyan-bp" />
-                    </label>
+                    <div className="grid content-start gap-4">
+                      <label className="grid content-start gap-2">
+                        <span className="font-mono text-xs font-black uppercase tracking-wider text-neutral-500">Attempt name</span>
+                        <input value={attemptLabel} onChange={(event) => setAttemptLabel(event.target.value)} maxLength={60} placeholder="Optional name" className="border border-neutral-700 bg-black px-3 py-2 text-sm outline-none focus:border-cyan-bp" />
+                      </label>
+                      <GeneralNotesEditor
+                        key={selected.id}
+                        value={selected.general_notes}
+                        onSave={saveGeneralNotes}
+                        disabled={selected.deletion_blocked}
+                        disabledReason={selected.deletion_blocked ? 'Edit from the controlling Instructor Console while this Attempt is active.' : undefined}
+                        showEditButton
+                        initiallyEditing={false}
+                      />
+                    </div>
                     <label className="grid gap-2">
                       <span className="font-mono text-xs font-black uppercase tracking-wider text-neutral-500">Student names</span>
                       <textarea value={studentNames} onChange={(event) => setStudentNames(event.target.value)} rows={4} placeholder="One name per line" className="resize-y border border-neutral-700 bg-black px-3 py-2 text-sm outline-none focus:border-cyan-bp" />
@@ -411,6 +440,9 @@ export function ReportsPage() {
                   attemptVersion={selected.attempt_version}
                   baselineAt={selected.started_at}
                   attemptLabels={[{ attempt_version: selected.attempt_version, label: selected.attempt_label }]}
+                  generalNotes={selected.general_notes}
+                  instructorNotes={selected.instructor_notes}
+                  showGeneralNotes={false}
                   copyTimeZone={TORONTO_TIME_ZONE}
                 />
               </div>

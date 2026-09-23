@@ -10,6 +10,75 @@
 
 ## Current Requirement Updates
 
+- 2026-09-23 Instructor Treatments and Attempt notes — **implemented locally; awaiting programmer
+  acceptance and production-migration authorization**. Rename the Instructor Console's current medication action area to
+  `Treatments`, retaining a `Medications` subsection for the existing twelve medications and adding
+  a `Trauma` subsection beneath it for BVM, OPA, NPA, Suction, Intubation, Direct Pressure,
+  Tourniquet, Wound Packing, Dressing, Saline, Chest Seal, C-Collar, Splint, Vac Mat,
+  CombiCarrier, Scoop, Backboard, and KED. Trauma is Instructor-only. Keep the Scenario device's
+  existing Medications workflow and label unchanged. Every accepted Instructor treatment press uses
+  the existing credit-to-device selection, timestamping, one-event-per-press behavior, optimistic
+  repeat count, confirmation feedback, availability rules, persistence, and failure rollback.
+
+  Make `Treatment` the report-facing umbrella for both medication and trauma interventions. New
+  records use a treatment event with stable medication or trauma category metadata, but report rows
+  use the concise form `Treatment {name}` without displaying the category. Preserve historical
+  `medication` records in storage and normalize their report presentation to the same Treatment
+  wording rather than rewriting old data.
+
+  Add two Attempt-scoped note surfaces below the Instructor Console's Pulse, Respiratory, and
+  Skin/Extremities row. `General Notes` is a large, latest-value narrative of at most 4,000
+  characters. It autosaves for the active Attempt, shows Saving/Saved/failure state, flushes pending
+  edits before Attempt switching or completion, retains the draft and prevents accidental loss when
+  a save fails, and appears in the Evaluation record immediately below the optional Attempt name.
+  It remains editable from Reports through an explicit Edit/Done control; while an Attempt is live,
+  the Room controller is the editing authority, and after it ends the report owner is the editing
+  authority. Include the latest saved General Notes in report copy, print, and export output.
+
+  `Report Note` is a smaller composer of at most 1,000 characters with a visible Send button. A
+  successful Send appends one immutable, timestamped `Instructor Note` to the Attempt-wide report
+  timeline, clears the composer, and attributes the note to the Instructor rather than a Scenario
+  device or Trainee. Blank Sends are disabled. A failed Send retains the draft and reports the
+  error. Both note surfaces are unavailable without an active Attempt or write authority. General
+  Notes retain only their latest text; Instructor Notes retain their complete chronological history.
+
+  This requirement supersedes raw `Medication` wording for medication action rows in Evaluation
+  records, while preserving the Scenario-device Medications workflow and historical event storage.
+  Accepted ADR 0034 records the Treatment compatibility boundary and the separation between mutable
+  General Notes and immutable Instructor Notes.
+
+### Testing — Instructor Treatments and Attempt notes
+
+- Cover the complete medication and Trauma button sets, grouping/order, Intubation placement,
+  credit-to-device selection, repeat counts, confirmation feedback, one durable record per press,
+  optimistic rollback, active/read-only/no-device states, and Attempt reset or switch behavior.
+- Cover new treatment persistence and database constraints, stable medication/trauma metadata,
+  legacy `medication` record compatibility, concise `Treatment {name}` timeline wording, persistent
+  Evaluation snapshots, and unchanged Scenario-device Medications behavior.
+- Cover General Notes autosave, 4,000-character limit, Saving/Saved/error states, pending-save flush,
+  loss prevention, live-controller and completed-report ownership, Edit/Done behavior, latest-value
+  persistence, Attempt isolation, report placement, and copy/print/export inclusion.
+- Cover Report Note validation, the 1,000-character limit, visible Send flow, success-only clearing,
+  failure retention, immutable chronological Instructor Note rows, timestamps, Attempt isolation,
+  and absence of Scenario-device or Trainee attribution.
+- Run focused component, service, API, report-timeline, persistent-report, authorization, and
+  migration/pgTAP tests; TypeScript; affected-file ESLint; the complete test suite; the Next.js 16.3
+  Webpack production build; and rendered Instructor/Reports QA at supported desktop and landscape
+  iPad sizes. Prepare and verify the migration locally, but do not apply it to production without
+  separate authorization.
+
+**Completed locally 2026-09-23.** The Instructor Treatments panel, categorized treatment events,
+Attempt General Notes, immutable Instructor Notes, report editing/readback, copy output, API routes,
+database migration, and compatibility handling are implemented. The 12-file focused suite passes
+all 277 tests; TypeScript and the Next.js 16.3 production build pass; full ESLint has zero errors
+and 12 unrelated existing warnings. The complete suite has 1,700 passing, one skipped, and 11
+unchanged unrelated baseline/environment failures across operations shell-script spawning,
+invite-only config parsing, Room ownership, and PatientInfoPanel styling. Actual feature components
+render correctly at 1280×720 and 1024×768 with a clean browser console. A full authenticated
+live-Room check remains unavailable without account access and the deliberately unapplied database
+migration. The Supabase CLI is not installed in this checkout, so migration validation is covered by
+contract tests rather than `supabase db lint`. No migration, commit, push, or deployment was made.
+
 - 2026-09-23 Wagami A continuous rate updates — **programmer-confirmed correction**. Preserve the
   single moving Sweep erase band, but remove the narrow retained cuts that currently appear when a
   heart-rate value changes without a genuine waveform-identity change. In particular, VF's

@@ -61,6 +61,7 @@ export type Database = {
           source_room_code: string
           attempt_version: number
           attempt_label: string
+          general_notes: string
           scenario_name: string
           defibrillator_model: 'wagamiX' | 'wagamiZ' | 'wagamiA' | null
           scenario_snapshot: unknown
@@ -68,6 +69,7 @@ export type Database = {
           participant_attempts: unknown
           events: unknown
           state_history: unknown
+          instructor_notes: unknown
           student_names: string[]
           status: 'incomplete' | 'complete'
           completion_method: 'attempt_transition' | 'room_ended' | 'manual' | 'account_disabled' | null
@@ -83,6 +85,7 @@ export type Database = {
           source_room_code: string
           attempt_version: number
           attempt_label?: string
+          general_notes?: string
           scenario_name?: string
           defibrillator_model?: 'wagamiX' | 'wagamiZ' | 'wagamiA' | null
           scenario_snapshot?: unknown
@@ -90,6 +93,7 @@ export type Database = {
           participant_attempts?: unknown
           events?: unknown
           state_history?: unknown
+          instructor_notes?: unknown
           student_names?: string[]
           status?: 'incomplete' | 'complete'
           completion_method?: 'attempt_transition' | 'room_ended' | 'manual' | 'account_disabled' | null
@@ -106,14 +110,14 @@ export type Database = {
           id: string
           report_id: string
           actor_user_id: string
-          action: 'create' | 'attempt_name_update' | 'student_names_update' | 'manual_completion' | 'delete' | 'product_correction'
+          action: 'create' | 'attempt_name_update' | 'student_names_update' | 'general_notes_update' | 'manual_completion' | 'delete' | 'product_correction'
           created_at: string
         }
         Insert: {
           id?: string
           report_id: string
           actor_user_id: string
-          action: 'create' | 'attempt_name_update' | 'student_names_update' | 'manual_completion' | 'delete' | 'product_correction'
+          action: 'create' | 'attempt_name_update' | 'student_names_update' | 'general_notes_update' | 'manual_completion' | 'delete' | 'product_correction'
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['evaluation_report_audit_log']['Insert']>
@@ -206,15 +210,35 @@ export type Database = {
           session_id: string
           attempt_version: number
           label: string
+          general_notes: string
           updated_at: string
         }
         Insert: {
           session_id: string
           attempt_version: number
           label?: string
+          general_notes?: string
           updated_at?: string
         }
         Update: Partial<Database['public']['Tables']['session_attempts']['Insert']>
+        Relationships: []
+      }
+      session_instructor_notes: {
+        Row: {
+          id: string
+          session_id: string
+          attempt_version: number
+          body: string
+          occurred_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          attempt_version: number
+          body: string
+          occurred_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['session_instructor_notes']['Insert']>
         Relationships: []
       }
       participants: {

@@ -6,6 +6,27 @@
 ---
 
 ## Current Phase
+**Instructor Treatments and Attempt notes — COMPLETE LOCALLY, AWAITING ACCEPTANCE AND MIGRATION
+AUTHORIZATION (2026-09-23).** The Instructor panel now groups the existing medications with the
+approved Trauma treatments, records new presses as categorized Treatment events, and shows both new
+and legacy medication actions as concise Treatment rows in Evaluation reports. Attempt General
+Notes autosave with queued-write and failure retention behavior, remain editable through Edit/Done
+after the live Attempt, and are included in report copy output. Report Note Send appends immutable,
+timestamped Instructor Notes to the Attempt timeline. API, service, generated type, persistent
+report, migration, compatibility, authorization, and UI coverage are included.
+
+All 277 focused tests across 12 files pass. TypeScript and the Next.js 16.3 production build pass;
+full ESLint reports zero errors and 12 unrelated existing warnings. The complete suite has 1,700
+passing, one skipped, and 11 unchanged unrelated baseline/environment failures: seven Windows
+shell-script spawn failures, one invite-only config parser failure, two Room-ownership failures, and
+one PatientInfoPanel class assertion. Actual feature components pass rendered 1280×720 and
+1024×768 QA with no browser-console warning or error. The authenticated live-Room path could not be
+exercised without account access and the unapplied migration; the Supabase CLI is unavailable, so
+the migration passed contract tests but not `supabase db lint`. Migration
+`20260923180000_instructor_treatments_and_attempt_notes.sql` exists locally and has not been applied.
+All feature and documentation files remain uncommitted; nothing was pushed or deployed. The next
+gates are programmer acceptance and separate authorization to apply the production migration.
+
 **Wagami A continuous waveform rate updates — COMPLETE LOCALLY (2026-09-23).** VF's synchronized
 1.9-second display-only FC changes no longer create retained cuts in ECG, SpO2, or Live 12-lead
 traces. The same waveform-identity correction keeps Torsades packet-rate changes, manual FC edits,

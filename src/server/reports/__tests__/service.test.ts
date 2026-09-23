@@ -69,6 +69,14 @@ function reportResolver(op: RecordedOp) {
         clock_offset_ms: null,
       }],
       state_history: [{ version: 1, attempt_version: 2, state: {}, applied_at: SUMMARY.started_at }],
+      general_notes: 'Initial narrative',
+      instructor_notes: [{
+        id: 'note-1',
+        session_id: '52000000-0000-4000-8000-000000000001',
+        attempt_version: 2,
+        body: 'Tourniquet reassessed',
+        occurred_at: '2026-09-07T14:05:00.000Z',
+      }],
     },
   }
 }
@@ -137,6 +145,8 @@ describe('persistent report service', () => {
     expect(report.participants).toEqual([{ id: 'p1', nickname: 'Trainee' }])
     expect(report.events[0]).toMatchObject({ kind: 'analyze', participant_id: 'p1' })
     expect(report.state_history[0]).toMatchObject({ version: 1, attempt_version: 2 })
+    expect(report.general_notes).toBe('Initial narrative')
+    expect(report.instructor_notes[0]).toMatchObject({ body: 'Tourniquet reassessed' })
     expect(report.deletion_blocked).toBe(false)
     expect(stub.opsFor('evaluation_reports')[0].filters).toEqual(expect.arrayContaining([
       { op: 'eq', column: 'id', value: REPORT_ID },
@@ -157,6 +167,30 @@ describe('persistent report service', () => {
       attempt_label: 'Morning group',
       student_names: ['Alice', 'Alice'],
     })
+  })
+
+  it('updates General Notes only after the Attempt is no longer active', async () => {
+    const stub = createSupabaseStub(reportResolver)
+    authClient = stub.client
+
+    await updateEvaluationReport(ACCOUNT, REPORT_ID, { generalNotes: 'Final narrative' })
+
+    expect(stub.opsFor('evaluation_reports').find((op) => op.method === 'update')?.payload)
+      .toEqual({ general_notes: 'Final narrative' })
+    await expect(updateEvaluationReport(ACCOUNT, REPORT_ID, { generalNotes: 'x'.repeat(4001) }))
+      .rejects.toMatchObject({ status: 400 })
+  })
+
+  it('refuses Reports-page General Notes edits while the controlling Attempt is active', async () => {
+    const stub = createSupabaseStub((op) => {
+      if (op.table === 'sessions') return { data: { id: 'active-room' } }
+      return reportResolver(op)
+    })
+    authClient = stub.client
+
+    await expect(updateEvaluationReport(ACCOUNT, REPORT_ID, { generalNotes: 'Live edit' }))
+      .rejects.toMatchObject({ status: 409 })
+    expect(stub.opsFor('evaluation_reports').filter((op) => op.method === 'update')).toEqual([])
   })
 
   it('manually completes and permanently deletes only an owner-scoped record', async () => {

@@ -25,8 +25,10 @@ import {
   joinSession,
   publishMonitorProjection,
   recordInstructorEvent,
+  recordInstructorNote,
   recordStudentEvent,
   renameAttempt,
+  saveAttemptGeneralNotes,
   splitInstructorOnlyState,
   startMonitorProjectionStream,
   startNewAttempt,
@@ -1038,6 +1040,24 @@ describe('recordInstructorEvent — actions logged from the console', () => {
     })
   })
 
+  it('records categorized Treatments through the same participant-scoped path', async () => {
+    const stub = withResolver({
+      student_events: (op) => (op.method === 'insert' ? { data: { id: 'event-id', ...op.payload } } : undefined),
+    })
+
+    await recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, PARTICIPANT.id, {
+      kind: 'treatment',
+      label: 'Tourniquet',
+      payload: { category: 'trauma' },
+    })
+
+    expect(stub.opsFor('student_events').find((op) => op.method === 'insert')?.payload).toMatchObject({
+      kind: 'treatment',
+      label: 'Tourniquet',
+      payload: { category: 'trauma', source: 'instructor' },
+    })
+  })
+
   it('stamps the source even when the body claims otherwise', async () => {
     const stub = withResolver({
       student_events: (op) => (op.method === 'insert' ? { data: { id: 'event-id', ...op.payload } } : undefined),
@@ -1120,5 +1140,54 @@ describe('recordInstructorEvent — actions logged from the console', () => {
     await expect(
       recordInstructorEvent(CODE, ACCOUNT, CONTROLLER_TOKEN, PARTICIPANT.id, { kind: 'medication', label: 'Epi' }),
     ).rejects.toMatchObject({ status: 410 })
+  })
+})
+
+describe('Attempt notes', () => {
+  it('upserts only the active Attempt notes columns so its name is preserved', async () => {
+    const stub = withResolver({
+      session_attempts: (op) => op.method === 'upsert'
+        ? { data: { attempt_version: 3, general_notes: op.payload?.general_notes } }
+        : undefined,
+    })
+
+    await saveAttemptGeneralNotes(CODE, ACCOUNT, CONTROLLER_TOKEN, 'Airway reassessed')
+
+    expect(stub.opsFor('session_attempts').find((op) => op.method === 'upsert')?.payload).toMatchObject({
+      attempt_version: 3,
+      general_notes: 'Airway reassessed',
+    })
+    expect(stub.opsFor('session_attempts').find((op) => op.method === 'upsert')?.payload)
+      .not.toHaveProperty('label')
+  })
+
+  it('appends an immutable trimmed Instructor Note to the active Attempt', async () => {
+    const stub = withResolver({
+      session_instructor_notes: (op) => ({ data: { id: 'note-1', occurred_at: '2026-09-23T20:00:00.000Z', ...op.payload } }),
+    })
+
+    await recordInstructorNote(CODE, ACCOUNT, CONTROLLER_TOKEN, '  Tourniquet reassessed  ')
+
+    expect(stub.opsFor('session_instructor_notes')[0].payload).toMatchObject({
+      session_id: SESSION.id,
+      attempt_version: 3,
+      body: 'Tourniquet reassessed',
+    })
+  })
+
+  it('requires an active Attempt and enforces both note limits', async () => {
+    withResolver({ sessions: () => ({ data: { ...SESSION, status: 'waiting' } }) })
+    await expect(saveAttemptGeneralNotes(CODE, ACCOUNT, CONTROLLER_TOKEN, 'x'))
+      .rejects.toMatchObject({ status: 409 })
+    await expect(recordInstructorNote(CODE, ACCOUNT, CONTROLLER_TOKEN, 'x'))
+      .rejects.toMatchObject({ status: 409 })
+
+    withResolver()
+    await expect(saveAttemptGeneralNotes(CODE, ACCOUNT, CONTROLLER_TOKEN, 'x'.repeat(4001)))
+      .rejects.toMatchObject({ status: 400 })
+    await expect(recordInstructorNote(CODE, ACCOUNT, CONTROLLER_TOKEN, 'x'.repeat(1001)))
+      .rejects.toMatchObject({ status: 400 })
+    await expect(recordInstructorNote(CODE, ACCOUNT, CONTROLLER_TOKEN, '   '))
+      .rejects.toMatchObject({ status: 400 })
   })
 })

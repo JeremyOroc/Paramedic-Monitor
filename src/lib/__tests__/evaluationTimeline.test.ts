@@ -113,7 +113,13 @@ describe('formatEventDetail', () => {
   it('shows the drug name for a medication, not the repeated timestamp', () => {
     expect(
       formatEventDetail({ kind: 'medication', label: 'Epinephrine', payload: { time: '14:05' } }),
-    ).toBe('"Epinephrine"')
+    ).toBe('Epinephrine')
+  })
+
+  it('uses the same concise detail for new categorized Treatments', () => {
+    expect(
+      formatEventDetail({ kind: 'treatment', label: 'Tourniquet', payload: { category: 'trauma' } }),
+    ).toBe('Tourniquet')
   })
 
   it('shows the complete 12-lead transmission action as a report sentence', () => {
@@ -1071,5 +1077,28 @@ describe('buildEvaluationTimeline — instructor-entered actions', () => {
     expect(rows[0].offset).toBe('t+0:45')
     // HR rides in the rhythm string rather than the vitals array.
     expect((rows[0].context as TimelineStateContext).rhythm).toBe('NSR 130')
+  })
+})
+
+describe('buildEvaluationTimeline — Instructor Notes', () => {
+  it('places immutable Attempt notes chronologically without participant attribution', () => {
+    const timeline = build({
+      stateHistory: [makeState(1, 0, sharedState({}))],
+      events: [makeEvent({ id: 'event-1', occurred_at: at(20), state_version: 1 })],
+      instructorNotes: [{
+        id: 'note-1',
+        session_id: 'session-1',
+        attempt_version: 1,
+        body: 'Tourniquet reassessed',
+        occurred_at: at(10),
+      }],
+    })
+
+    expect(timeline.rows.map((row) => row.kind)).toEqual(['instructor', 'note', 'action'])
+    expect(timeline.rows[1]).toMatchObject({
+      kind: 'note',
+      body: 'Tourniquet reassessed',
+      offset: 't+0:10',
+    })
   })
 })

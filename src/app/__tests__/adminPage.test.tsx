@@ -1161,8 +1161,9 @@ describe('AdminPage', () => {
     await waitFor(() => expect(instructorPosts(fetchMock)).toHaveLength(1))
     expect(instructorPosts(fetchMock)[0]).toEqual({
       participantId: TRAINEE.id,
-      kind: 'medication',
+      kind: 'treatment',
       label: 'Nitro',
+      payload: { category: 'medication' },
     })
 
     // Controller-authorized: the console holds no participant token.
@@ -1215,7 +1216,7 @@ describe('AdminPage', () => {
     await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
 
-    expect(screen.getByTestId('medication-recorder-unavailable')).toHaveTextContent(
+    expect(screen.getByTestId('treatment-recorder-unavailable')).toHaveTextContent(
       'No device has joined yet.',
     )
 
@@ -1348,7 +1349,7 @@ describe('AdminPage', () => {
 
     // A tally claiming a dose the record never got would be worse than no tally.
     await waitFor(() =>
-      expect(screen.getByTestId('medication-recorder-error')).toHaveTextContent(
+      expect(screen.getByTestId('treatment-recorder-error')).toHaveTextContent(
         'Participant is not in this session',
       ),
     )
@@ -1438,7 +1439,7 @@ describe('AdminPage', () => {
     expect(screen.getByRole('button', { name: 'Skin/Extremities' })).toBeInTheDocument()
     const vitals = screen.getByRole('heading', { name: 'Vitals' }).closest('section')
     const sample = screen.getByRole('region', { name: 'Sample' })
-    const meds = screen.getByTestId('medication-recorder')
+    const meds = screen.getByTestId('treatment-recorder')
     const monitorLayout = screen.getByTestId('monitor-patient-sns-layout')
     // Three columns since the med recorder landed between the vitals and the
     // checklists, which is where the instructor's eye already is mid-drill.

@@ -70,6 +70,39 @@ function renderPanel(props: Partial<React.ComponentProps<typeof EvaluationReport
 }
 
 describe('EvaluationReportPanel', () => {
+  it('shows General Notes and immutable Instructor Notes with concise Treatment wording', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
+    renderPanel({
+      generalNotes: 'Airway remained patent.',
+      stateHistory: [state(1, 0, {})],
+      events: [makeEvent({
+        kind: 'treatment',
+        label: 'Tourniquet',
+        payload: { category: 'trauma', source: 'instructor' },
+        occurred_at: at(20),
+        state_version: 1,
+      })],
+      instructorNotes: [{
+        id: 'note-1',
+        session_id: 'session-1',
+        attempt_version: 1,
+        body: 'Bleeding controlled',
+        occurred_at: at(10),
+      }],
+    })
+
+    expect(screen.getByTestId('report-general-notes')).toHaveTextContent('Airway remained patent.')
+    expect(screen.getByTestId('report-row-note')).toHaveTextContent('Instructor Note Bleeding controlled')
+    expect(screen.getByTestId('report-row-action')).toHaveTextContent('TreatmentTourniquet')
+
+    await user.click(screen.getByRole('button', { name: 'Copy' }))
+    const copied = writeText.mock.calls[0][0] as string
+    expect(copied).toContain('General Notes\nAirway remained patent.')
+    expect(copied).toContain('INSTRUCTOR NOTE\tBleeding controlled')
+    expect(copied).toContain('Treatment\tTourniquet')
+  })
+
   it('formats persistent-report copy timestamps in Toronto with the EST/EDT abbreviation', () => {
     expect(formatTimelineCopyTime('2026-01-15T15:00:00.000Z', 'America/Toronto')).toMatch(/10:00:00 EST/)
     expect(formatTimelineCopyTime('2026-07-15T14:00:00.000Z', 'America/Toronto')).toMatch(/10:00:00 EDT/)
@@ -192,7 +225,7 @@ describe('EvaluationReportPanel', () => {
       .map((row) => row.textContent ?? '')
     expect(rendered[1]).toContain('nibp_start')
     expect(rendered[2]).toContain('Instructor')
-    expect(rendered[3]).toContain('"Epinephrine"')
+    expect(rendered[3]).toContain('TreatmentEpinephrine')
   })
 
   it('names the scenario on the opening row when the instructor titled it', () => {
@@ -417,7 +450,7 @@ describe('EvaluationReportPanel', () => {
 
     const copied = writeText.mock.calls[0][0] as string
     expect(copied).toContain('t+5:02')
-    expect(copied).toContain('"Epinephrine"')
+    expect(copied).toContain('Treatment\tEpinephrine')
     expect(copied).toContain('NSR 88')
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument()
   })
