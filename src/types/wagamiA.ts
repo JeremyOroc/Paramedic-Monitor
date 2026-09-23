@@ -54,6 +54,8 @@ export type WagamiATwelveLeadState = {
 
 /** Semantic A-only render state carried by the version-1 Spectator projection. */
 export type WagamiAProjectionState = {
+  /** Instructor reset generation used to begin a fresh live sweep remotely. */
+  waveformResetVersion?: number
   view: WagamiAView
   preferences: WagamiAPreferences
   etco2CalibrationStatus: Etco2CalibrationStatus

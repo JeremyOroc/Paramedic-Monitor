@@ -37,6 +37,8 @@ type SecondaryChannelProps = {
   onReady?: () => void
   palette?: 'wagamiX' | 'wagamiA'
   readyOnStart?: boolean
+  freshReveal?: boolean
+  sequenceKey?: string | number
 }
 
 function LiveSecondaryCanvas({
@@ -50,6 +52,8 @@ function LiveSecondaryCanvas({
   onReady,
   palette,
   readyOnStart = false,
+  freshReveal = false,
+  sequenceKey,
 }: Pick<
   SecondaryChannelProps,
   | 'channel'
@@ -62,6 +66,8 @@ function LiveSecondaryCanvas({
   | 'onReady'
   | 'palette'
   | 'readyOnStart'
+  | 'freshReveal'
+  | 'sequenceKey'
 >) {
   const isEtco2 = channel === 'etco2'
   const color = palette === 'wagamiA'
@@ -86,17 +92,18 @@ function LiveSecondaryCanvas({
         getWaveform: pick,
         getSignalKey: () =>
           get().channel === 'etco2'
-            ? `${get().channel}:${get().etco2Waveform}`
-            : `${get().channel}:${get().spo2Waveform}`,
+            ? `${get().channel}:${get().etco2Waveform}:${get().etco2}`
+            : `${get().channel}:${get().spo2Waveform}:${get().hr}:${get().spo2}`,
         getCycleMs: () => {
           const def = pick()
           if (get().channel === 'etco2') return def.cycleMs ?? RESP_CYCLE_MS
           return def.cycleMs ?? 60000 / Math.max(20, get().hr)
         },
         readyOnStart,
+        freshReveal,
       }
     },
-    [isEtco2, color],
+    [isEtco2, color, readyOnStart, freshReveal, sequenceKey],
     { occluded, onReady },
   )
 
@@ -106,6 +113,7 @@ function LiveSecondaryCanvas({
       data-testid={`${channel}-waveform-canvas`}
       data-heart-rate={isEtco2 ? undefined : hr}
       data-palette={palette ?? 'wagamiX'}
+      data-fresh-reveal={freshReveal ? 'true' : 'false'}
       className="block h-full w-full"
     />
   )
@@ -128,6 +136,8 @@ export function SecondaryChannel({
   onReady,
   palette = 'wagamiX',
   readyOnStart = false,
+  freshReveal = false,
+  sequenceKey,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
 
@@ -180,6 +190,8 @@ export function SecondaryChannel({
           onReady={onReady}
           palette={palette}
           readyOnStart={readyOnStart}
+          freshReveal={freshReveal}
+          sequenceKey={sequenceKey}
         />
       ) : palette === 'wagamiA' ? (
         <div data-testid="disconnected-waveform" data-channel={channel} className="grid h-full w-full place-items-center bg-wagami-a-screen">

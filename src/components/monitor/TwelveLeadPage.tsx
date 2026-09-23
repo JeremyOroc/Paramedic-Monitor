@@ -13,6 +13,8 @@ type TwelveLeadPageProps = {
   onReady?: () => void
   beatClock?: BeatClock
   readyOnStart?: boolean
+  freshReveal?: boolean
+  sequenceKey?: string | number
 }
 
 const LEADS: ReadonlyArray<readonly [LeadName, LeadName]> = [
@@ -33,6 +35,8 @@ export function TwelveLeadPage({
   onReady,
   beatClock,
   readyOnStart = false,
+  freshReveal = false,
+  sequenceKey,
 }: TwelveLeadPageProps) {
   const [readinessGeneration, setReadinessGeneration] = useState({
     occluded,
@@ -85,6 +89,8 @@ export function TwelveLeadPage({
           onReady={() => reportLeadReady(left)}
           beatClock={beatClock}
           readyOnStart={readyOnStart}
+          freshReveal={freshReveal}
+          sequenceKey={sequenceKey}
         />,
         <LeadCell
           key={right}
@@ -95,6 +101,8 @@ export function TwelveLeadPage({
           onReady={() => reportLeadReady(right)}
           beatClock={beatClock}
           readyOnStart={readyOnStart}
+          freshReveal={freshReveal}
+          sequenceKey={sequenceKey}
         />,
       ])}
     </div>

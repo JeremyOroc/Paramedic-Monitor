@@ -51,6 +51,7 @@ describe('Wagami A live Attempt integration', () => {
         model: 'wagamiA',
         powerState: 'on',
         wagamiA: {
+          waveformResetVersion: useMonitorStore.getState().monitorResetVersion,
           view: 'medications',
           preferences: { locale: 'fr', shellAlarmLedEnabled: true, vitalLogInterval: 5 },
           medicationEvents: [expect.objectContaining({ medication: 'Epi' })],

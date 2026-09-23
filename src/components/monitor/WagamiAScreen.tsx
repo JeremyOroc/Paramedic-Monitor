@@ -36,9 +36,10 @@ type WagamiAScreenProps = {
   date?: string
   time?: string
   sessionTimer?: string
+  waveformSequenceKey?: string | number
 }
 
-export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp, onOpenNibpSettings, locale = 'fr', callInfoDisabled = false, waveformOccluded = false, onWaveformsReady, beatClock, date = '0000-00-00', time = '--:--:--', sessionTimer = '00:00:00' }: WagamiAScreenProps) {
+export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', patientMode = 'adult', selectedAction, canAdjustEnergy = false, onTask, onEnergyDown, onEnergyUp, onOpenNibpSettings, locale = 'fr', callInfoDisabled = false, waveformOccluded = false, onWaveformsReady, beatClock, date = '0000-00-00', time = '--:--:--', sessionTimer = '00:00:00', waveformSequenceKey }: WagamiAScreenProps) {
   const text = getWagamiAText(locale)
   const { vitals, active, alarms } = display
   const isNibpReadingActive = nibpPhase === 'please_wait' || nibpPhase === 'reading' || nibpPhase === 'counting'
@@ -72,7 +73,7 @@ export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProg
             {sessionTimer}
           </span>
         </div>
-        <WagamiAWaveformWorkspace vitals={vitals} active={active} cprOverride={cprOverride} occluded={waveformOccluded} onReady={onWaveformsReady} beatClock={beatClock} />
+        <WagamiAWaveformWorkspace vitals={vitals} active={active} cprOverride={cprOverride} occluded={waveformOccluded} onReady={onWaveformsReady} beatClock={beatClock} sequenceKey={waveformSequenceKey} />
       </div>
       <aside aria-label="Wagami A right-side task and defib rail" className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-[clamp(4px,0.65cqw,10px)]">
         <WagamiATaskDock onTask={onTask} selectedAction={selectedAction} locale={locale} callInfoDisabled={callInfoDisabled} />

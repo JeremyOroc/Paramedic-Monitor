@@ -25,6 +25,14 @@ describe('WaveformPanel', () => {
     expect(screen.getByText('SpO2')).toBeInTheDocument()
     expect(screen.queryByText('EtCO2')).not.toBeInTheDocument()
     expect(screen.queryByTestId('disconnected-waveform')).not.toBeInTheDocument()
+    expect(screen.getByTestId('live-ecg-canvas')).toHaveAttribute(
+      'data-fresh-reveal',
+      'false',
+    )
+    expect(screen.getByTestId('spo2-waveform-canvas')).toHaveAttribute(
+      'data-fresh-reveal',
+      'false',
+    )
   })
 
   it('uses the CPR ECG canvas override even when the normal ECG rhythm is off', () => {

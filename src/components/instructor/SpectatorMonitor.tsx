@@ -218,6 +218,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
               date={projection.date}
               time={projection.time}
               sessionTimer={projection.sessionTimer}
+              waveformSequenceKey={state.waveformResetVersion ?? 0}
             />
           }
         />

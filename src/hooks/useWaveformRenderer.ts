@@ -39,6 +39,7 @@ export function useWaveformRenderer<T>(
   useLayoutEffect(() => {
     liveRef.current = live
     activityRef.current = activity
+    rendererRef.current?.syncSignal?.()
   })
 
   useLayoutEffect(() => {

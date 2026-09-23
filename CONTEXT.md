@@ -271,13 +271,38 @@ _Avoid_: Per-second Trend entry, Trend Send, Instructor change
 The end of an Active Trend, or one vital's participation in it, before its duration elapses because it was replaced, reset, or excluded by an Automatic FC lock. Cancelled participation creates no completion record, while unaffected participants may continue to the shared deadline. An intentional immediate instruction ends the whole Active Trend but presents ordinary white `00:00` timer values rather than a red Cancelled state.
 _Avoid_: Trend completion, paused Trend
 
+**Sweep erase band**:
+The moving background-colored gap immediately ahead of a live waveform trace. New trace pixels become
+visible directly behind it as the sweep advances.
+_Avoid_: Black line, grid line, waveform cursor
+
+**Fresh sweep reveal**:
+The first presentation of a newly begun live waveform sequence, starting without historical trace
+pixels and growing only behind its Sweep erase band. It follows a true display or channel start,
+not a connected signal change or return to an established waveform surface; its trace history never
+exceeds the elapsed age of that sequence.
+_Avoid_: Blank waveform, loading animation, continuity reconstruction
+
+**Continuity reconstruction**:
+The immediate restoration of an established live waveform's current patient-time history after
+temporary navigation, browser backgrounding, or an overlay. It resumes the same sequence rather
+than presenting another Fresh sweep reveal and restores only the trace history earned by the
+sequence's elapsed age, independent of temporary visibility or display geometry.
+_Avoid_: Fresh sweep reveal, waveform restart, replay
+
+**Sweep history window**:
+The most recent one-channel sweep duration of signal transitions that can still affect visible live
+trace history. Transitions older than this window have already been replaced by the Sweep erase band.
+_Avoid_: Evaluation history, captured 12-lead, unbounded waveform log
+
 **Waveform continuity**:
 The live ECG, SpO₂, EtCO₂, CPR compression traces, and Wagami A Live 12-lead grid on each trainee,
 Preview, or Spectator display form one patient-time sequence through temporary views and browser
-backgrounding, with re-entry showing the current sweep at final geometry and no blank, rewind, or
-false connector. Navigation does not begin a new sequence, while New Attempt, monitor reset, power
-cycle, newly confirmed signal, and Off-to-On do; each display has its own phase, and a full browser
-reload is outside the guarantee.
+backgrounding. Re-entry reconstructs the current sweep without a blank, rewind, or false connector;
+a genuine new sequence instead uses a Fresh sweep reveal. Connected rhythm, morphology, rate, and
+CPR changes replace prior history only as the Sweep erase band advances, including while the surface
+is covered. Continuity reconstruction preserves every transition still inside the Sweep history
+window; each display has its own phase, and a full browser reload begins a new local sequence.
 _Avoid_: Hidden rendering, ECG restart, paused waveform
 
 **Live 12-lead grid**:

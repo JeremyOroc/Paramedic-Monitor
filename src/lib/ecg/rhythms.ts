@@ -717,28 +717,33 @@ function synthTorsades(seed = 12): Float32Array {
 
 function synthVF(seed = 31): Float32Array {
   const rand = mulberry32(seed)
-  const points: ControlPoint[] = [[0, 0]]
-  const targetOscillations = Math.floor(
-    between(rand, [VF_TUNING.minOscillations, VF_TUNING.maxOscillations]),
+  const sampledOscillations = Math.floor(
+    between(rand, [VF_TUNING.minOscillations, VF_TUNING.maxOscillations + 1]),
   )
-  let phase = 0
+  const targetOscillations = Math.min(
+    VF_TUNING.maxOscillations,
+    Math.max(VF_TUNING.minOscillations, Math.round(sampledOscillations / 2) * 2),
+  )
+  const phaseStep = 1 / targetOscillations
+  const points: ControlPoint[] = []
   let polarity: 1 | -1 = rand() > 0.5 ? 1 : -1
+  let firstValue = 0
 
-  for (let i = 0; i < targetOscillations && phase < 0.940; i++) {
-    const remaining = 1 - phase
-    const averageStep = remaining / Math.max(1, targetOscillations - i)
-    const step = Math.max(0.026, Math.min(0.056, averageStep * between(rand, [0.74, 1.36])))
-    phase = Math.min(0.940, phase + step)
-    if (rand() > 0.04) polarity = polarity === 1 ? -1 : 1
+  for (let i = 0; i < targetOscillations; i++) {
+    const phase = i === 0
+      ? 0
+      : i * phaseStep + between(rand, [-0.22, 0.22]) * phaseStep
+    if (i > 0) polarity = polarity === 1 ? -1 : 1
 
     const envelope = 0.82 + 0.18 * Math.sin((phase * 2.7 + rand() * 0.18) * Math.PI * 2)
     const jag = rand() > 0.78 ? 1.08 : 1
     const amplitude = between(rand, VF_TUNING.amplitude) * envelope * jag
-    points.push([phase, amplitude * polarity])
+    const value = amplitude * polarity
+    if (i === 0) firstValue = value
+    points.push([phase, value])
   }
 
-  points.push([0.975, 0])
-  points.push([1, 0])
+  points.push([1, firstValue])
 
   const out = new Float32Array(SAMPLES)
   let sum = 0
@@ -753,6 +758,16 @@ function synthVF(seed = 31): Float32Array {
     const value = interpolateSmooth(points, t) + baseline + fine
     out[i] = value
     sum += value
+  }
+
+  // VF is a repeating four-second template. Close its sampled endpoints
+  // without silencing the tail so the renderer can wrap to index zero without
+  // either a flat gap or a single false vertical stroke.
+  const endpointDelta = out[SAMPLES - 1] - out[0]
+  sum = 0
+  for (let i = 0; i < SAMPLES; i++) {
+    out[i] -= endpointDelta * (i / (SAMPLES - 1))
+    sum += out[i]
   }
 
   const centerOffset = sum / SAMPLES

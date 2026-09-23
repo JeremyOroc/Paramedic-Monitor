@@ -25,20 +25,32 @@ export type RendererOptions = {
   getPhaseAt?: (nowWallMs: number, cycleMs: number) => number
   /** Starts with canvas drawing suspended while patient and sweep time continue. */
   initiallyOccluded?: boolean
-  /** Reconstruct and report readiness before the first reveal. */
+  /** Report readiness before the first reveal; reconstruction is skipped for a fresh reveal. */
   readyOnStart?: boolean
+  /** Begin with an empty sweep and reveal only trace history earned since mount. */
+  freshReveal?: boolean
   /** Runs after an occluded or suspended canvas has rebuilt its current visible sweep. */
   onReady?: () => void
 }
 
 export type RendererController = (() => void) & {
   setOccluded: (occluded: boolean) => void
+  /** Records a reactive signal change even while rAF drawing is suspended. */
+  syncSignal: () => void
 }
 
 type CanvasSize = {
   width: number
   height: number
   dpr: number
+}
+
+type SignalSnapshot = {
+  startedAtWall: number
+  waveform: WaveformDef
+  cycleMs: number
+  phaseAtStart: number
+  amplitudeMultiplier: number
 }
 
 const RESIZE_JITTER_PX = 1
@@ -73,6 +85,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     getPhaseAt,
     initiallyOccluded = false,
     readyOnStart = false,
+    freshReveal = false,
     onReady,
   } = opts
 
@@ -80,6 +93,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
   if (!ctx) {
     let noopOccluded = initiallyOccluded
     const noop = (() => {}) as RendererController
+    noop.syncSignal = () => {}
     noop.setOccluded = (nextOccluded: boolean) => {
       const restoring = noopOccluded && !nextOccluded
       noopOccluded = nextOccluded
@@ -115,6 +129,9 @@ export function startRenderer(opts: RendererOptions): RendererController {
   // boundary instead of allowing Safari to join the old and new cursor anchors.
   let suppressNextIncrementalStroke = false
   let stopped = false
+  const sequenceStartedAtWall = Date.now()
+  let signalHistory: SignalSnapshot[] = []
+  let reconstructAfterResize = false
 
   const readCanvasSize = (): CanvasSize => {
     const rect = canvas.getBoundingClientRect()
@@ -159,6 +176,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
 
     prevX = previousXRatio * cssWidth
     prevY = previousYRatio * cssHeight
+    reconstructAfterResize = previousWidth > 0 && previousHeight > 0
   }
 
   // iPad browser chrome and Control Center can report short-lived viewport
@@ -210,15 +228,17 @@ export function startRenderer(opts: RendererOptions): RendererController {
   rollJitter()
   if (getPhaseAt) phase = getPhaseAt(Date.now(), getCycleMs())
 
-  const sampleAt = (p: number): number => {
-    const data = activeWaveform.data
+  const sampleWaveformAt = (waveform: WaveformDef, p: number): number => {
+    const data = waveform.data
     const idx = Math.floor(p * data.length) % data.length
     return data[idx]
   }
 
-  const yFromValue = (v: number): number => {
+  const sampleAt = (p: number): number => sampleWaveformAt(activeWaveform, p)
+
+  const yFromValue = (v: number, amplitudeMultiplier = ampMul): number => {
     const halfH = cssHeight / 2
-    return halfH - v * halfH * amplitude * ampMul
+    return halfH - v * halfH * amplitude * amplitudeMultiplier
   }
 
   const sweepDuration = () => Math.max(500, sweepMs)
@@ -227,15 +247,40 @@ export function startRenderer(opts: RendererOptions): RendererController {
 
   const eraseWidth = () => Math.max(6, cssWidth * 0.03)
 
-  const refreshSignal = (): boolean => {
+  const pruneSignalHistory = (nowWall: number) => {
+    const cutoff = nowWall - sweepDuration()
+    const firstInsideWindow = signalHistory.findIndex(
+      (snapshot) => snapshot.startedAtWall >= cutoff,
+    )
+    if (firstInsideWindow > 1) {
+      signalHistory = signalHistory.slice(firstInsideWindow - 1)
+    }
+  }
+
+  const recordSignalSnapshot = (nowWall: number) => {
+    signalHistory.push({
+      startedAtWall: nowWall,
+      waveform: activeWaveform,
+      cycleMs: Math.max(60, getCycleMs() * cycleMul),
+      phaseAtStart: phase,
+      amplitudeMultiplier: ampMul,
+    })
+    pruneSignalHistory(nowWall)
+  }
+
+  recordSignalSnapshot(sequenceStartedAtWall)
+
+  const refreshSignal = (nowWall = Date.now()): boolean => {
     const nextSignalKey = getSignalKey?.() ?? 'default'
     if (nextSignalKey === activeSignalKey) return false
 
     activeSignalKey = nextSignalKey
     activeWaveform = getWaveform()
-    phase = getPhaseAt?.(Date.now(), getCycleMs()) ?? 0
+    phase = getPhaseAt?.(nowWall, getCycleMs()) ?? 0
     rollJitter()
     prevY = yFromValue(sampleAt(0))
+    recordSignalSnapshot(nowWall)
+    suppressNextIncrementalStroke = true
     return true
   }
 
@@ -263,13 +308,16 @@ export function startRenderer(opts: RendererOptions): RendererController {
     prevX = (prevX + elapsedX) % cssWidth
   }
 
-  const reconstructCurrentSweep = () => {
+  const reconstructCurrentSweep = (nowWall = Date.now()) => {
     ctx.fillStyle = background
     ctx.fillRect(0, 0, cssWidth, cssHeight)
 
     const gapWidth = eraseWidth()
-    const cycleMs = Math.max(60, getCycleMs() * cycleMul)
+    const availableHistoryMs = freshReveal
+      ? Math.min(sweepDuration(), Math.max(0, nowWall - sequenceStartedAtWall))
+      : sweepDuration()
     let previousPoint: { x: number; y: number } | null = null
+    let previousSnapshot: SignalSnapshot | null = null
 
     for (let x = 0; x <= cssWidth; x += RECONSTRUCT_STEP_PX) {
       const distanceAhead = (x - prevX + cssWidth) % cssWidth
@@ -280,13 +328,40 @@ export function startRenderer(opts: RendererOptions): RendererController {
 
       const distanceBehind = (prevX - x + cssWidth) % cssWidth
       const elapsedBehindMs = (distanceBehind / cssWidth) * sweepDuration()
-      const samplePhase = ((phase - elapsedBehindMs / cycleMs) % 1 + 1) % 1
-      const y = yFromValue(sampleAt(samplePhase))
+      if (elapsedBehindMs > availableHistoryMs) {
+        previousPoint = null
+        previousSnapshot = null
+        continue
+      }
 
-      if (previousPoint) {
+      const sampleWall = nowWall - elapsedBehindMs
+      let snapshot: SignalSnapshot | undefined
+      for (let index = signalHistory.length - 1; index >= 0; index -= 1) {
+        if (signalHistory[index].startedAtWall <= sampleWall) {
+          snapshot = signalHistory[index]
+          break
+        }
+      }
+      if (!snapshot && !freshReveal) snapshot = signalHistory[0]
+      if (!snapshot) {
+        previousPoint = null
+        previousSnapshot = null
+        continue
+      }
+      const phaseFromStart =
+        snapshot.phaseAtStart +
+        (sampleWall - snapshot.startedAtWall) / snapshot.cycleMs
+      const samplePhase = ((phaseFromStart % 1) + 1) % 1
+      const y = yFromValue(
+        sampleWaveformAt(snapshot.waveform, samplePhase),
+        snapshot.amplitudeMultiplier,
+      )
+
+      if (previousPoint && previousSnapshot === snapshot) {
         drawSegment(previousPoint.x, previousPoint.y, x, y)
       }
       previousPoint = { x, y }
+      previousSnapshot = snapshot
     }
 
     prevY = yFromValue(sampleAt(phase))
@@ -298,15 +373,17 @@ export function startRenderer(opts: RendererOptions): RendererController {
     rebuild: boolean,
   ) => {
     if (rebuild) resize(now, true)
-    refreshSignal()
+    const nowWall = Date.now()
+    refreshSignal(nowWall)
     advancePhase(elapsedMs)
     advanceSweep(now, elapsedMs)
     prevY = yFromValue(sampleAt(phase))
     lastT = now
-    lastWallT = Date.now()
+    lastWallT = nowWall
 
     if (rebuild) {
-      reconstructCurrentSweep()
+      reconstructAfterResize = false
+      reconstructCurrentSweep(nowWall)
       suppressNextIncrementalStroke = true
       onReady?.()
     }
@@ -367,7 +444,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     }
 
     if (occluded) {
-      refreshSignal()
+      refreshSignal(nowWall)
       advancePhase(elapsedMs)
       advanceSweep(now, elapsedMs)
       prevY = yFromValue(sampleAt(phase))
@@ -391,11 +468,16 @@ export function startRenderer(opts: RendererOptions): RendererController {
     // a few times per second; resize() is a no-op when nothing changed.
     const shouldSelfHeal = (healFrame++ & 15) === 0
     if (pendingSize || shouldSelfHeal) resize(now)
+    if (reconstructAfterResize) {
+      reconstructAfterResize = false
+      reconstructCurrentSweep(nowWall)
+      suppressNextIncrementalStroke = true
+    }
     const dt = Math.min(64, rawDt)
     lastT = now
     lastWallT = nowWall
 
-    refreshSignal()
+    refreshSignal(nowWall)
 
     const cycleMs = Math.max(60, getCycleMs() * cycleMul)
     const dPhase = dt / cycleMs
@@ -489,7 +571,19 @@ export function startRenderer(opts: RendererOptions): RendererController {
   window.addEventListener('pageshow', handlePageShow)
 
   if (readyOnStart && !initiallyOccluded && hiddenAtWall === null) {
-    rebaseAfterSuspension(performance.now(), 0, true)
+    if (freshReveal) {
+      const now = performance.now()
+      const nowWall = Date.now()
+      refreshSignal(nowWall)
+      if (synchronizeSweep) prevX = synchronizedX(now)
+      prevY = yFromValue(sampleAt(phase))
+      lastT = now
+      lastWallT = nowWall
+      suppressNextIncrementalStroke = true
+      onReady?.()
+    } else {
+      rebaseAfterSuspension(performance.now(), 0, true)
+    }
   }
 
   if (hiddenAtWall === null) {
@@ -522,6 +616,11 @@ export function startRenderer(opts: RendererOptions): RendererController {
       Math.max(0, Date.now() - lastWallT),
     )
     rebaseAfterSuspension(now, elapsedMs, true)
+  }
+
+  stop.syncSignal = () => {
+    if (stopped) return
+    refreshSignal(Date.now())
   }
 
   return stop

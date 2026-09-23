@@ -8,15 +8,21 @@ vi.mock('../LeadCell', () => ({
     label,
     occluded,
     onReady,
+    freshReveal,
+    sequenceKey,
   }: {
     label: string
     occluded?: boolean
     onReady?: () => void
+    freshReveal?: boolean
+    sequenceKey?: string | number
   }) => (
     <button
       type="button"
       data-testid={`lead-${label}`}
       data-occluded={String(occluded)}
+      data-fresh-reveal={String(freshReveal)}
+      data-sequence-key={sequenceKey}
       onClick={onReady}
     >
       {label} ready
@@ -58,5 +64,27 @@ describe('TwelveLeadPage readiness', () => {
       fireEvent.click(screen.getByRole('button', { name: `${lead} ready` }))
     }
     expect(onReady).toHaveBeenCalledTimes(2)
+  })
+
+  it('gives every live lead the Wagami A fresh-sweep policy and reset generation', () => {
+    render(
+      <TwelveLeadPage
+        rhythm="nsr"
+        hr={80}
+        freshReveal
+        sequenceKey={4}
+      />,
+    )
+
+    for (const lead of LEADS) {
+      expect(screen.getByTestId(`lead-${lead}`)).toHaveAttribute(
+        'data-fresh-reveal',
+        'true',
+      )
+      expect(screen.getByTestId(`lead-${lead}`)).toHaveAttribute(
+        'data-sequence-key',
+        '4',
+      )
+    }
   })
 })

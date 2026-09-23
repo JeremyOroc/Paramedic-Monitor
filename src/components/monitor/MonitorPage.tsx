@@ -609,6 +609,7 @@ export function MonitorPage({
   )
   const wagamiAProjection = useMemo<WagamiAProjectionState | undefined>(
     () => isWagamiA ? {
+      waveformResetVersion: monitorResetVersion,
       view: wagamiAWorkspace.view,
       preferences: wagamiAWorkspace.preferences,
       etco2CalibrationStatus: wagamiAWorkspace.etco2Status,
@@ -622,6 +623,7 @@ export function MonitorPage({
     [
       controller.patientMode,
       isWagamiA,
+      monitorResetVersion,
       vitalLog,
       wagamiAWorkspace.etco2Status,
       wagamiAWorkspace.medicationEvents,
@@ -1120,6 +1122,7 @@ export function MonitorPage({
                 date={date}
                 time={time}
                 sessionTimer={sessionTimer}
+                waveformSequenceKey={monitorResetVersion}
               />
             )}
             locale={wagamiAWorkspace.preferences.locale}
