@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 import { ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { TWELVE_LEAD_SENT_MS } from '@/lib/twelveLeadTransmission'
-import { MEDICATION_CONFIRMATION_MS, useWagamiAWorkspace } from '../useWagamiAWorkspace'
+import {
+  ETCO2_CANCELLATION_CONFIRMATION_MS,
+  MEDICATION_CONFIRMATION_MS,
+  useWagamiAWorkspace,
+} from '../useWagamiAWorkspace'
 
 describe('useWagamiAWorkspace', () => {
   beforeEach(() => {
@@ -94,25 +98,85 @@ describe('useWagamiAWorkspace', () => {
     expect(result.current.twelveLead.transmissionOpen).toBe(false)
   })
 
-  it('completes calibration on its existing timer and preserves the completed state across power-off', () => {
-    const { result } = renderHook(() => useWagamiAWorkspace({ scope: 'preview', rhythm: 'nsr', hr: 80 }))
-    act(() => result.current.startEtco2Calibration())
+  it('starts calibration inline, completes on its absolute deadline, and preserves completion across power-off', () => {
+    const onStudentEvent = vi.fn()
+    const { result } = renderHook(() => useWagamiAWorkspace({
+      scope: 'preview',
+      rhythm: 'nsr',
+      hr: 80,
+      monitorResetVersion: 4,
+      onStudentEvent,
+    }))
+    act(() => result.current.openTask('etco2'))
+    expect(result.current.view).toBe('monitor')
+    expect(result.current.etco2Status).toBe('calibrating')
+    expect(result.current.etco2StartedAt).toBe(Date.now())
+    expect(result.current.etco2EndsAt).toBe(Date.now() + ETCO2_CALIBRATION_MS)
     act(() => vi.advanceTimersByTime(ETCO2_CALIBRATION_MS))
     expect(result.current.etco2Status).toBe('calibrated')
+    expect(onStudentEvent).toHaveBeenCalledOnce()
+    expect(onStudentEvent).toHaveBeenCalledWith({
+      kind: 'etco2_calibration',
+      label: 'EtCO2 Calibrated',
+      payload: { monitorResetVersion: 4 },
+    })
     act(() => {
-      result.current.startEtco2Calibration()
+      result.current.openTask('etco2')
       result.current.onDevicePowerOff()
     })
     expect(result.current.etco2Status).toBe('calibrated')
   })
 
-  it('cancels an in-progress calibration on power-off', () => {
+  it('shows cancellation for three seconds, ignores presses during it, and then permits a retry', () => {
+    const onStudentEvent = vi.fn()
+    const { result } = renderHook(() => useWagamiAWorkspace({ scope: 'preview', rhythm: 'nsr', hr: 80, onStudentEvent }))
+    act(() => result.current.openTask('etco2'))
+    act(() => result.current.openTask('etco2'))
+    expect(result.current.etco2Status).toBe('cancelled')
+    expect(result.current.etco2CancellationEndsAt).toBe(Date.now() + ETCO2_CANCELLATION_CONFIRMATION_MS)
+
+    act(() => result.current.openTask('etco2'))
+    expect(result.current.etco2Status).toBe('cancelled')
+    act(() => vi.advanceTimersByTime(ETCO2_CANCELLATION_CONFIRMATION_MS))
+    expect(result.current.etco2Status).toBe('idle')
+
+    act(() => result.current.openTask('etco2'))
+    expect(result.current.etco2Status).toBe('calibrating')
+    expect(onStudentEvent).not.toHaveBeenCalled()
+  })
+
+  it('clears unfinished and cancelled calibration on power-off', () => {
     const { result } = renderHook(() => useWagamiAWorkspace({ scope: 'preview', rhythm: 'nsr', hr: 80 }))
     act(() => {
-      result.current.startEtco2Calibration()
+      result.current.openTask('etco2')
       result.current.onDevicePowerOff()
       vi.advanceTimersByTime(ETCO2_CALIBRATION_MS)
     })
+    expect(result.current.etco2Status).toBe('idle')
+
+    act(() => result.current.openTask('etco2'))
+    act(() => result.current.openTask('etco2'))
+    expect(result.current.etco2Status).toBe('cancelled')
+    act(() => result.current.onDevicePowerOff())
+    expect(result.current.etco2Status).toBe('idle')
+  })
+
+  it('clears completed calibration when the monitor reset generation changes', () => {
+    const { result, rerender } = renderHook(
+      ({ resetVersion }) => useWagamiAWorkspace({
+        scope: 'preview',
+        rhythm: 'nsr',
+        hr: 80,
+        monitorResetVersion: resetVersion,
+      }),
+      { initialProps: { resetVersion: 0 } },
+    )
+    act(() => {
+      result.current.openTask('etco2')
+      vi.advanceTimersByTime(ETCO2_CALIBRATION_MS)
+    })
+    expect(result.current.etco2Status).toBe('calibrated')
+    rerender({ resetVersion: 1 })
     expect(result.current.etco2Status).toBe('idle')
   })
 })

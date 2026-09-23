@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import { DEFAULT_VITALS } from '@/types/vitals'
@@ -67,5 +67,47 @@ describe('Wagami A live waveform workspace', () => {
     expect(onReady).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'etco2 ready' }))
     expect(onReady).toHaveBeenCalledTimes(1)
+  })
+
+  it('gates EtCO₂ with dashed output, absolute-time progress, and localized cancellation feedback', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1000)
+    const { rerender } = render(
+      <WagamiAWaveformWorkspace
+        vitals={vitals}
+        active={active}
+        etco2CalibrationStatus="idle"
+      />,
+    )
+    expect(screen.getByTestId('a-etco2-mock')).toHaveAttribute('data-connected', 'false')
+    expect(screen.getByText('EtCO₂')).toBeInTheDocument()
+
+    rerender(
+      <WagamiAWaveformWorkspace
+        vitals={vitals}
+        active={active}
+        etco2CalibrationStatus="calibrating"
+        etco2CalibrationStartedAt={1000}
+        etco2CalibrationEndsAt={46_000}
+      />,
+    )
+    expect(screen.queryByTestId('a-etco2-mock')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('ÉTALONNAGE…')
+    expect(screen.getByRole('progressbar', { name: 'ÉTALONNAGE…' })).toHaveValue(0)
+    act(() => vi.advanceTimersByTime(22_500))
+    expect(screen.getByRole('progressbar', { name: 'ÉTALONNAGE…' })).toHaveValue(50)
+
+    rerender(
+      <WagamiAWaveformWorkspace
+        vitals={vitals}
+        active={active}
+        locale="en"
+        etco2CalibrationStatus="cancelled"
+      />,
+    )
+    expect(screen.getByTestId('a-etco2-mock')).toHaveAttribute('data-connected', 'false')
+    expect(screen.getByRole('status')).toHaveTextContent('CANCELLED')
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    vi.useRealTimers()
   })
 })

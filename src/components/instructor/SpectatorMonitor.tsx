@@ -123,18 +123,21 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
       setShellAlarmLedEnabled: noopState,
       setVitalLogInterval: noopState,
       etco2Status: state.etco2CalibrationStatus,
+      etco2StartedAt: state.etco2CalibrationStartedAt ?? null,
+      etco2EndsAt: state.etco2CalibrationEndsAt ?? null,
+      etco2CancellationEndsAt: state.etco2CancellationEndsAt ?? null,
       medicationEvents: state.medicationEvents,
       flashedMedication: null,
       twelveLead: state.twelveLead,
       nibpMode: state.nibpMode,
       nibpAutoInterval: state.nibpAutoInterval,
-      vitalLog: state.vitalLog,
       workflowBusy: state.twelveLead.captureState === 'acquiring' || state.twelveLead.sentUntil !== null,
       openTask: noopState,
       goBack: noopState,
       setView: noopState,
       startEtco2Calibration: noopState,
       cancelEtco2Calibration: noopState,
+      resetEtco2Calibration: noopState,
       recordMedication: noopState,
       startTwelveLeadCapture: noopState,
       closeTwelveLeadResult: noopState,
@@ -219,6 +222,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
               time={projection.time}
               sessionTimer={projection.sessionTimer}
               waveformSequenceKey={state.waveformResetVersion ?? 0}
+              vitalLog={state.vitalLog}
             />
           }
         />

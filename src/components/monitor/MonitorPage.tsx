@@ -254,6 +254,7 @@ export function MonitorPage({
         onStudentEvent?.({
           kind: 'etco2_calibration',
           label: 'EtCO2 Calibrated',
+          payload: { monitorResetVersion: resetVersion },
         })
       }
     }, ETCO2_CALIBRATION_MS)
@@ -480,9 +481,19 @@ export function MonitorPage({
     confirmedVitalActive.bp_sys ||
     confirmedVitalActive.bp_dia
 
+  const wagamiAWorkspace = useWagamiAWorkspaceWithPreferences({
+    rhythm: confirmed.rhythm,
+    hr: effectiveClinicalHr,
+    monitorResetVersion,
+    onStudentEvent,
+    preferenceState: wagamiAPreferenceState,
+  })
+
   const acceptedBpDisplayActive = acceptedBpActive.bp_sys || acceptedBpActive.bp_dia
   const displayedEtco2 = isWagamiA
-    ? confirmedVitalActive.etco2 ? confirmed.etco2 : null
+    ? wagamiAWorkspace.etco2Status === 'calibrated' && confirmedVitalActive.etco2
+      ? confirmed.etco2
+      : null
     : etco2Loaded
       ? confirmedVitalActive.etco2
         ? confirmed.etco2
@@ -515,13 +526,6 @@ export function MonitorPage({
     intervalMinutes: isWagamiA
       ? wagamiAPreferenceState.preferences.vitalLogInterval
       : undefined,
-  })
-  const wagamiAWorkspace = useWagamiAWorkspaceWithPreferences({
-    rhythm: confirmed.rhythm,
-    hr: effectiveClinicalHr,
-    vitalLog,
-    onStudentEvent,
-    preferenceState: wagamiAPreferenceState,
   })
   const { showCallInfo: showWagamiACallInfo, onMonitorReady: onWagamiAMonitorReady } = useWagamiACallInfoCover(wagamiAWorkspace.view)
   const activeNibpMode = isWagamiA ? wagamiAWorkspace.nibpMode : controller.nibpMode
@@ -613,6 +617,9 @@ export function MonitorPage({
       view: wagamiAWorkspace.view,
       preferences: wagamiAWorkspace.preferences,
       etco2CalibrationStatus: wagamiAWorkspace.etco2Status,
+      etco2CalibrationStartedAt: wagamiAWorkspace.etco2StartedAt,
+      etco2CalibrationEndsAt: wagamiAWorkspace.etco2EndsAt,
+      etco2CancellationEndsAt: wagamiAWorkspace.etco2CancellationEndsAt,
       patientMode: controller.patientMode,
       nibpMode: wagamiAWorkspace.nibpMode,
       nibpAutoInterval: wagamiAWorkspace.nibpAutoInterval,
@@ -626,6 +633,9 @@ export function MonitorPage({
       monitorResetVersion,
       vitalLog,
       wagamiAWorkspace.etco2Status,
+      wagamiAWorkspace.etco2StartedAt,
+      wagamiAWorkspace.etco2EndsAt,
+      wagamiAWorkspace.etco2CancellationEndsAt,
       wagamiAWorkspace.medicationEvents,
       wagamiAWorkspace.nibpAutoInterval,
       wagamiAWorkspace.nibpMode,
@@ -1123,6 +1133,7 @@ export function MonitorPage({
                 time={time}
                 sessionTimer={sessionTimer}
                 waveformSequenceKey={monitorResetVersion}
+                vitalLog={vitalLog}
               />
             )}
             locale={wagamiAWorkspace.preferences.locale}

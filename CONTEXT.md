@@ -324,7 +324,7 @@ The two-minute compression period shown by Wagami X after its Perform CPR prompt
 _Avoid_: CPR override, SNS measurement countdown, dispatch countdown
 
 **EtCO₂ calibration**:
-The trainee-local Wagami X readiness state for capnography, distinct from the instructor-confirmed EtCO₂ channel state. It remains valid through instructor channel and value changes until the monitor is reset.
+The trainee-local capnography readiness state on Wagami A or Wagami X, distinct from the instructor-confirmed EtCO₂ channel state. Each device may present calibration differently, but successful calibration remains valid through instructor channel and value changes until the monitor is reset.
 _Avoid_: EtCO₂ On, CO₂ selection
 
 **Confirmed EtCO₂ channel state**:

@@ -55,11 +55,28 @@ describe('SpectatorMonitor A2 model boundary', () => {
     expect(screen.getByRole('button', { name: /Retour/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Transport' })).toBeDisabled()
 
-    rerender(<SpectatorMonitor projection={{ ...projection, wagamiA: { ...projection.wagamiA!, view: 'monitor' } }} embedded />)
+    const calibrationStartedAt = Date.now() - 22_500
+    const calibrationEndsAt = Date.now() + 22_500
+    rerender(<SpectatorMonitor projection={{
+      ...projection,
+      wagamiA: {
+        ...projection.wagamiA!,
+        view: 'monitor',
+        etco2CalibrationStatus: 'calibrating',
+        etco2CalibrationStartedAt: calibrationStartedAt,
+        etco2CalibrationEndsAt: calibrationEndsAt,
+      },
+    }} embedded />)
     expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
     expect(screen.getByTestId('wagami-a-shell').parentElement).not.toHaveClass('invisible')
     expect(screen.getByLabelText('Date et heure de Montréal')).toHaveTextContent('2026-09-22 20:19:40')
     expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:07:23')
+    expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent('--')
+    expect(screen.getByText('ÉTALONNAGE…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'EtCO₂' })).toHaveAttribute('aria-pressed', 'true')
+    const progress = screen.getByRole('progressbar', { name: 'ÉTALONNAGE…' })
+    expect(Number(progress.getAttribute('value'))).toBeGreaterThanOrEqual(49)
+    expect(Number(progress.getAttribute('value'))).toBeLessThanOrEqual(51)
   })
 
   it('keeps the initial Wagami A dispatch gate shell-free in Spectator', () => {

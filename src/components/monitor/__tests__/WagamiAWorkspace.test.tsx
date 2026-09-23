@@ -48,7 +48,6 @@ function Harness({ vitalLog }: { vitalLog: VitalLogEntry[] }) {
     scope: 'workspace-test',
     rhythm: display.vitals.rhythm,
     hr: display.vitals.hr,
-    vitalLog,
   })
 
   return (
@@ -66,6 +65,7 @@ function Harness({ vitalLog }: { vitalLog: VitalLogEntry[] }) {
       canAdjustEnergy
       onEnergyDown={() => {}}
       onEnergyUp={() => {}}
+      vitalLog={vitalLog}
     />
   )
 }

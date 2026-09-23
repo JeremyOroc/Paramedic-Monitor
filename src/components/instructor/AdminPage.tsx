@@ -1706,7 +1706,9 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
             }}
             onTimedVitalsClick={handleTimedVitalsPatientPhysicalUpdate}
             sessionEtco2Calibrated={
-              session ? anyoneCalibratedEtco2(studentEvents, attemptVersion) : undefined
+              session
+                ? anyoneCalibratedEtco2(studentEvents, attemptVersion, monitorResetVersion)
+                : undefined
             }
           />
           <MedicationRecorder

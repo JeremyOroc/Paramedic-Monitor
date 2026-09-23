@@ -10,6 +10,52 @@
 
 ## Current Requirement Updates
 
+- 2026-09-23 Wagami A inline EtCO₂ calibration — **programmer-confirmed and implemented locally**.
+  Remove the dedicated EtCO₂ calibration destination screen. The EtCO₂ task tile
+  instead starts calibration while the main monitor remains visible; a second press during
+  calibration cancels it. Calibration lasts 45 seconds and replaces the EtCO₂ lane with a
+  constant three-pixel purple line that grows from 0% to 100% using absolute start/end timestamps.
+  Show localized `ÉTALONNAGE…` / `CALIBRATING…` at the lane's bottom-left and give the task tile its
+  selected ring while calibration is active.
+
+  Before successful calibration, keep the EtCO₂ card unavailable as `--` and show the standard
+  disconnected dashed trace. Cancellation removes the progress line immediately, removes the task
+  ring, shows localized `ANNULÉ` / `CANCELLED` for exactly three seconds, ignores EtCO₂ presses
+  during that confirmation, and then restores the normal `EtCO₂` label with dashed lines. A
+  later press starts a fresh 45-second attempt. Completion removes the status without a separate
+  completion banner and reveals the latest instructor-confirmed channel state: On shows the current
+  number and a fresh left-to-right capnogram sweep; Off remains `--` with the dashed trace.
+
+  Calibration continues beneath temporary Wagami A task surfaces and through browser suspension,
+  with live, Preview, and Spectator using the same timestamps and state. Other monitor, PNI, CPR,
+  alarm, and defibrillation controls remain usable. Completed calibration survives power-off, but
+  unfinished and cancelled states clear immediately on power-off; Monitor Reset and New Attempt
+  clear every calibration state and the Instructor's current calibrated indicator. Retain the
+  historical successful calibration event, emit no start/cancellation event, make post-completion
+  tile presses inert until reset, and announce state changes accessibly without moving focus.
+
+### Testing — Wagami A inline EtCO₂ calibration
+
+- Cover start, absolute 45-second progress, second-press cancellation, the three-second locked
+  cancellation confirmation, retry, successful completion, inert completed presses, current
+  instructor-state resolution, fresh waveform reveal, task-cover/browser catch-up, power/reset/New
+  Attempt behavior, success-only event logging, and reset-aware Instructor indication.
+- Cover localized lane copy, tile selected state, unavailable card, dashed/progress/live lane
+  transitions, status announcements, live/Preview/Spectator projection parity, and removal of the
+  dedicated EtCO₂ page.
+- Run focused hook, workspace, screen, waveform, Preview, live-monitor, Spectator, Instructor, and
+  projection tests; TypeScript; affected-file ESLint; the Next.js 16.3 Webpack production build;
+  and rendered Wagami A interaction QA.
+
+**Completed locally 2026-09-23.** The inline EtCO₂ lifecycle now runs across live, Preview, and
+Spectator with shared absolute timestamps, reset-aware Instructor state, calibrated vital/log
+gating, and success-only history. All 215 focused tests and TypeScript pass; affected-file ESLint
+has zero errors and one existing MonitorPage hook-dependency warning; and the Next.js 16.3 Webpack
+production build passes. Rendered `/?dev=3` QA confirmed the in-lane progress treatment, immediate
+cancel/dashed transition, exact three-second return to idle, and the full 45-second transition to
+the current value with a fresh capnogram sweep. The full suite has 1,635 passing and one skipped,
+with only the same three unrelated Room-ownership/PatientInfoPanel baseline failures.
+
 - 2026-09-22 Wagami A Preview Vital Log repair — **programmer-confirmed and implemented locally**.
   Replace Room-free Preview's deliberately empty Vital Log with a
   browser-local simulation driven by the same powered-on Monitor elapsed timer and sampling rules as

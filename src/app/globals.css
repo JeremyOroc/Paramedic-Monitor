@@ -347,6 +347,26 @@ body.monitor-viewport-lock {
   }
 }
 
+.wagami-a-etco2-calibration-progress {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+}
+
+.wagami-a-etco2-calibration-progress::-webkit-progress-bar {
+  background: transparent;
+}
+
+.wagami-a-etco2-calibration-progress::-webkit-progress-value {
+  background: var(--color-wagami-a-etco2);
+  border-radius: 999px;
+}
+
+.wagami-a-etco2-calibration-progress::-moz-progress-bar {
+  background: var(--color-wagami-a-etco2);
+  border-radius: 999px;
+}
+
 /* Full-screen assignment dispatch runs edge to edge — it is the surface itself,
    not a tablet resting on a wall, so no aspect-ratio or max-width cap. */
 .dispatch-tablet-frame-assignment {

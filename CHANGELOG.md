@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-09-23] [wagami-a/ui/domain/testing] — Run EtCO₂ calibration inline
+
+- Removed Wagami A's dedicated EtCO₂ screen and converted its task tile into an inline, cancellable
+  45-second calibration with a three-pixel purple lane progression and localized status feedback.
+- Gated the EtCO₂ card, waveform, and Vital Log until calibration succeeds, then revealed the latest
+  instructor channel with a fresh sweep; synchronized absolute timing across live, Preview, and
+  Spectator and added the specified power/reset lifecycle.
+- Made the Instructor's current calibration badge reset-aware while retaining successful history,
+  and added success-only event logging plus accessible task/status state.
+- All 215 focused tests and TypeScript pass; affected-file ESLint has zero errors and one existing
+  warning; and the Next.js 16.3 Webpack build passes. Rendered `/?dev=3` QA verified start, cancel,
+  the three-second idle restoration, and the full 45-second completed-value transition. The full
+  suite retains only its three unrelated Room-ownership/PatientInfoPanel baseline failures.
+
+## [2026-09-23] [planning/wagami-a/domain] — Define inline EtCO₂ calibration
+
+- Replaced the dedicated Wagami A EtCO₂ calibration destination with a main-monitor task command:
+  first press starts a 45-second absolute-time progression line and a second press cancels it.
+- Defined unavailable pre-calibration output, localized lane feedback, a locked three-second
+  cancellation confirmation, fresh-sweep completion, latest instructor-state resolution, and inert
+  post-completion presses.
+- Required background catch-up, live/Preview/Spectator parity, success-only event logging,
+  power/reset/New Attempt semantics, and a reset-aware Instructor calibration indicator. Generalized
+  the glossary term across Wagami A and Wagami X; no ADR is warranted for this reversible workflow.
+
 ## [2026-09-22] [wagami-a/ui/domain/testing] — Activate the Preview Vital Log
 
 - Connected `/?dev=3` to the shared Vital Log sampler using Preview's powered-on elapsed timer,

@@ -1,5 +1,4 @@
 import type { VitalLogEntry } from '@/hooks/useVitalLog'
-import type { Etco2CalibrationStatus } from '@/store/monitorStore'
 import type { PatientMode, Rhythm } from '@/types/vitals'
 import type { NibpAutoInterval, NibpMode } from '@/types/nibp'
 import {
@@ -12,13 +11,18 @@ export type WagamiALocale = 'fr' | 'en'
 export type WagamiAView =
   | 'monitor'
   | 'twelveLead'
-  | 'etco2'
   | 'medications'
   | 'medicationLog'
   | 'callInfo'
   | 'vitalLog'
   | 'configure'
   | 'nibpSettings'
+
+export type WagamiAEtco2CalibrationStatus =
+  | 'idle'
+  | 'calibrating'
+  | 'cancelled'
+  | 'calibrated'
 
 export type WagamiAPreferences = {
   locale: WagamiALocale
@@ -58,7 +62,10 @@ export type WagamiAProjectionState = {
   waveformResetVersion?: number
   view: WagamiAView
   preferences: WagamiAPreferences
-  etco2CalibrationStatus: Etco2CalibrationStatus
+  etco2CalibrationStatus: WagamiAEtco2CalibrationStatus
+  etco2CalibrationStartedAt?: number | null
+  etco2CalibrationEndsAt?: number | null
+  etco2CancellationEndsAt?: number | null
   patientMode: PatientMode
   nibpMode: NibpMode
   nibpAutoInterval: NibpAutoInterval

@@ -65,7 +65,6 @@ describe('Wagami A Room-free clinical preview', () => {
 
     for (const [task, heading] of [
       ['12 dérivations', 'ECG 12 dérivations'],
-      ['EtCO₂', 'Étalonnage EtCO₂'],
       ['Médicaments', 'Médicaments'],
       ['Journal des signes vitaux', 'Journal des signes vitaux'],
       ['Configurer', 'Configuration'],
@@ -76,11 +75,20 @@ describe('Wagami A Room-free clinical preview', () => {
       expect(screen.getAllByTestId('wagami-a-clinical-status-line').find((element) => !element.closest('[aria-hidden="true"]'))).toHaveTextContent('MODE ADULTE')
       fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     }
+
+    fireEvent.click(screen.getByRole('button', { name: 'EtCO₂' }))
+    expect(screen.getByTestId('wagami-a-shell')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Étalonnage EtCO₂' })).not.toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'ÉTALONNAGE…' })).toBeInTheDocument()
   })
 
   it('keeps live and 12-lead canvases mounted across tasks and shell-free Call Info', () => {
+    vi.useFakeTimers()
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'EtCO₂' }))
+    act(() => vi.advanceTimersByTime(45_000))
 
     const ecg = screen.getByTestId('live-ecg-canvas')
     const spo2 = screen.getByTestId('spo2-waveform-canvas')
@@ -117,6 +125,7 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
     expect(screen.getByTestId('wagami-a-shell').parentElement).not.toHaveClass('invisible')
+    vi.useRealTimers()
   })
 
   it('replaces the shell with a full-page Call Info canvas and returns to the monitor', () => {
@@ -197,6 +206,7 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
     fireEvent.click(screen.getByRole('button', { name: '1 min' }))
     fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'EtCO₂' }))
 
     act(() => vi.advanceTimersByTime(59_000))
     fireEvent.click(screen.getByRole('button', { name: 'Journal des signes vitaux' }))
@@ -226,14 +236,32 @@ describe('Wagami A Room-free clinical preview', () => {
     vi.useRealTimers()
   })
 
-  it('offers EtCO₂ calibration and functional automatic PNI settings', () => {
+  it('runs EtCO₂ calibration inline, cancels on a second press, and keeps PNI settings functional', () => {
+    vi.useFakeTimers()
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
+    const etco2Task = screen.getByRole('button', { name: 'EtCO₂' })
+    expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent('--')
+
+    fireEvent.click(etco2Task)
+    expect(screen.queryByRole('heading', { name: 'Étalonnage EtCO₂' })).not.toBeInTheDocument()
+    expect(screen.getByText('ÉTALONNAGE…')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'ÉTALONNAGE…' })).toBeInTheDocument()
+    expect(etco2Task).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(etco2Task)
+    expect(screen.getByText('ANNULÉ')).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar', { name: 'ÉTALONNAGE…' })).not.toBeInTheDocument()
+    expect(etco2Task).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(etco2Task)
+    expect(screen.getByText('ANNULÉ')).toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(3_000))
+    expect(screen.queryByText('ANNULÉ')).not.toBeInTheDocument()
+
     fireEvent.click(screen.getByRole('button', { name: 'EtCO₂' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Étalonner' }))
-    expect(screen.getByText('Étalonnage en cours')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }))
-    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    act(() => vi.advanceTimersByTime(45_000))
+    expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent('35')
+
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
     expect(screen.queryByRole('button', { name: /Réglages PNI/ })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
@@ -241,6 +269,7 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Automatique' }))
     fireEvent.click(screen.getByRole('button', { name: '15 min' }))
     expect(screen.getByRole('button', { name: '15 min' })).toHaveAttribute('aria-pressed', 'true')
+    vi.useRealTimers()
   })
 
   it('keeps PNI settings open while the physical key starts and completes a reading', () => {
