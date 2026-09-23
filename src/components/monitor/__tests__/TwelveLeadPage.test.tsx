@@ -71,4 +71,15 @@ describe('TwelveLeadPage', () => {
       )
     }
   })
+
+  it('can hide every identifier without unmounting the lead canvases', () => {
+    render(<TwelveLeadPage rhythm="nsr" hr={80} hideLabels />)
+
+    for (const lead of LEADS) {
+      const cell = screen.getByTestId(`lead-cell-${lead}`)
+      expect(cell).toBeInTheDocument()
+      expect(screen.getByTestId(`lead-canvas-${lead}`)).toBeInTheDocument()
+      expect(cell).not.toHaveTextContent(lead)
+    }
+  })
 })

@@ -6,9 +6,16 @@ import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 import { ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { useWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
 import { createEventLogStamp } from '@/lib/eventLog'
+import type { WagamiANavigationAction } from '@/lib/wagamiANavigation'
 import { TWELVE_LEAD_SENT_MS } from '@/lib/twelveLeadTransmission'
 import type { WagamiAClinicalEvent } from '@/hooks/useWagamiAClinicalCore'
 import type { NibpAutoInterval, NibpMode } from '@/types/nibp'
+import {
+  clampAge,
+  DEFAULT_PATIENT_INFO,
+  type PatientInfo,
+  type PatientSex,
+} from '@/types/patientInfo'
 import type { Rhythm } from '@/types/vitals'
 import type {
   WagamiAEtco2CalibrationStatus,
@@ -24,6 +31,9 @@ type Options = {
   hr: number
   monitorResetVersion?: number
   onStudentEvent?: (event: WagamiAClinicalEvent) => void
+  patientInfo?: PatientInfo
+  onPatientAgeChange?: (age: number) => void
+  onPatientSexChange?: (sex: PatientSex) => void
 }
 
 type WorkspaceOptions = Omit<Options, 'scope'> & {
@@ -35,6 +45,7 @@ const INITIAL_TWELVE_LEAD: WagamiATwelveLeadState = {
   lastCapture: null,
   printOpen: false,
   transmissionOpen: false,
+  patientInfoOpen: false,
   sentDestination: null,
   sentUntil: null,
 }
@@ -56,6 +67,9 @@ export function useWagamiAWorkspace({
   hr,
   monitorResetVersion = 0,
   onStudentEvent,
+  patientInfo = DEFAULT_PATIENT_INFO,
+  onPatientAgeChange,
+  onPatientSexChange,
 }: Options) {
   const preferenceState = useWagamiAPreferences(scope)
   return useWagamiAWorkspaceState({
@@ -63,6 +77,9 @@ export function useWagamiAWorkspace({
     hr,
     monitorResetVersion,
     onStudentEvent,
+    patientInfo,
+    onPatientAgeChange,
+    onPatientSexChange,
     preferenceState,
   })
 }
@@ -73,6 +90,9 @@ export function useWagamiAWorkspaceWithPreferences({
   hr,
   monitorResetVersion = 0,
   onStudentEvent,
+  patientInfo = DEFAULT_PATIENT_INFO,
+  onPatientAgeChange,
+  onPatientSexChange,
   preferenceState,
 }: WorkspaceOptions) {
   return useWagamiAWorkspaceState({
@@ -80,6 +100,9 @@ export function useWagamiAWorkspaceWithPreferences({
     hr,
     monitorResetVersion,
     onStudentEvent,
+    patientInfo,
+    onPatientAgeChange,
+    onPatientSexChange,
     preferenceState,
   })
 }
@@ -89,6 +112,9 @@ function useWagamiAWorkspaceState({
   hr,
   monitorResetVersion = 0,
   onStudentEvent,
+  patientInfo = DEFAULT_PATIENT_INFO,
+  onPatientAgeChange,
+  onPatientSexChange,
   preferenceState,
 }: WorkspaceOptions) {
   const [view, setView] = useState<WagamiAView>('monitor')
@@ -145,6 +171,14 @@ function useWagamiAWorkspaceState({
     if (resetVersionRef.current === monitorResetVersion) return
     resetVersionRef.current = monitorResetVersion
     resetEtco2Calibration()
+    setTwelveLead((current) => ({
+      ...current,
+      patientInfoOpen: false,
+      printOpen: false,
+      transmissionOpen: false,
+      sentDestination: null,
+      sentUntil: null,
+    }))
   }, [monitorResetVersion, resetEtco2Calibration])
 
   function openTask(task: WagamiATask) {
@@ -158,8 +192,23 @@ function useWagamiAWorkspaceState({
   }
 
   function goBack() {
-    if (view === 'medicationLog') setView('medications')
-    else setView('monitor')
+    if (view === 'medicationLog') {
+      setView('medications')
+      return
+    }
+    if (view === 'twelveLead') {
+      if (twelveLead.sentUntil !== null) return
+      clearTimer(captureTimerRef)
+      setTwelveLead((current) => ({
+        ...current,
+        captureState: 'idle',
+        printOpen: false,
+        transmissionOpen: false,
+        patientInfoOpen: false,
+        sentDestination: null,
+      }))
+    }
+    setView('monitor')
   }
 
   function startEtco2Calibration() {
@@ -241,6 +290,7 @@ function useWagamiAWorkspaceState({
       captureState: 'acquiring',
       printOpen: false,
       transmissionOpen: false,
+      patientInfoOpen: false,
     }))
     captureTimerRef.current = setTimeout(() => {
       captureTimerRef.current = null
@@ -254,17 +304,61 @@ function useWagamiAWorkspaceState({
   }
 
   function closeTwelveLeadResult() {
-    setTwelveLead((current) => ({ ...current, captureState: 'idle' }))
+    setTwelveLead((current) => ({
+      ...current,
+      captureState: 'idle',
+      printOpen: false,
+      transmissionOpen: false,
+      patientInfoOpen: false,
+    }))
   }
 
   function openPrint() {
-    if (!twelveLead.lastCapture || workflowBusy) return
-    setTwelveLead((current) => ({ ...current, printOpen: true }))
+    if (!twelveLead.lastCapture || workflowBusy || twelveLead.patientInfoOpen || twelveLead.transmissionOpen) return
+    setTwelveLead((current) => ({
+      ...current,
+      printOpen: true,
+      transmissionOpen: false,
+      patientInfoOpen: false,
+    }))
   }
 
   function openTransmission() {
-    if (!twelveLead.lastCapture || workflowBusy) return
-    setTwelveLead((current) => ({ ...current, transmissionOpen: true }))
+    if (!twelveLead.lastCapture || workflowBusy || twelveLead.patientInfoOpen || twelveLead.printOpen) return
+    setTwelveLead((current) => ({
+      ...current,
+      printOpen: false,
+      transmissionOpen: true,
+      patientInfoOpen: false,
+    }))
+  }
+
+  function openPatientInfo() {
+    if (workflowBusy || twelveLead.printOpen || twelveLead.transmissionOpen) return
+    setTwelveLead((current) => ({
+      ...current,
+      printOpen: false,
+      transmissionOpen: false,
+      patientInfoOpen: true,
+    }))
+  }
+
+  function closePatientInfo() {
+    setTwelveLead((current) => ({ ...current, patientInfoOpen: false }))
+  }
+
+  function decreasePatientAge() {
+    if (!onPatientAgeChange) return
+    onPatientAgeChange(clampAge(patientInfo.age - 1))
+  }
+
+  function increasePatientAge() {
+    if (!onPatientAgeChange) return
+    onPatientAgeChange(clampAge(patientInfo.age + 1))
+  }
+
+  function selectPatientSex(sex: PatientSex) {
+    onPatientSexChange?.(sex)
   }
 
   function sendTwelveLead(destination: string) {
@@ -292,11 +386,20 @@ function useWagamiAWorkspaceState({
     if (twelveLead.sentUntil !== null) return
     setTwelveLead((current) => ({
       ...current,
-      captureState: current.captureState === 'result' ? 'idle' : current.captureState,
       printOpen: false,
       transmissionOpen: false,
+      patientInfoOpen: false,
+      sentDestination: null,
     }))
   }
+
+  const patientInfoActions: readonly WagamiANavigationAction[] = [
+    { id: 'patientAgeDown', enabled: !!onPatientAgeChange && patientInfo.age > 0, activate: decreasePatientAge },
+    { id: 'patientAgeUp', enabled: !!onPatientAgeChange && patientInfo.age < 120, activate: increasePatientAge },
+    { id: 'patientSexM', enabled: !!onPatientSexChange, activate: () => selectPatientSex('M') },
+    { id: 'patientSexF', enabled: !!onPatientSexChange, activate: () => selectPatientSex('F') },
+    { id: 'patientInfoDone', enabled: true, activate: closePatientInfo },
+  ]
 
   function onDevicePowerOff() {
     clearTimer(captureTimerRef)
@@ -330,6 +433,8 @@ function useWagamiAWorkspaceState({
     medicationEvents,
     flashedMedication,
     twelveLead,
+    patientInfo,
+    patientInfoActions,
     nibpMode,
     nibpAutoInterval,
     workflowBusy,
@@ -344,6 +449,11 @@ function useWagamiAWorkspaceState({
     closeTwelveLeadResult,
     openPrint,
     openTransmission,
+    openPatientInfo,
+    closePatientInfo,
+    decreasePatientAge,
+    increasePatientAge,
+    selectPatientSex,
     sendTwelveLead,
     closeTwelveLeadOverlay,
     setNibpMode,

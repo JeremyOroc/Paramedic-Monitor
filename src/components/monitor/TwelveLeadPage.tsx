@@ -15,6 +15,7 @@ type TwelveLeadPageProps = {
   readyOnStart?: boolean
   freshReveal?: boolean
   sequenceKey?: string | number
+  hideLabels?: boolean
 }
 
 const LEADS: ReadonlyArray<readonly [LeadName, LeadName]> = [
@@ -37,6 +38,7 @@ export function TwelveLeadPage({
   readyOnStart = false,
   freshReveal = false,
   sequenceKey,
+  hideLabels = false,
 }: TwelveLeadPageProps) {
   const [readinessGeneration, setReadinessGeneration] = useState({
     occluded,
@@ -91,6 +93,7 @@ export function TwelveLeadPage({
           readyOnStart={readyOnStart}
           freshReveal={freshReveal}
           sequenceKey={sequenceKey}
+          hideLabel={hideLabels}
         />,
         <LeadCell
           key={right}
@@ -103,6 +106,7 @@ export function TwelveLeadPage({
           readyOnStart={readyOnStart}
           freshReveal={freshReveal}
           sequenceKey={sequenceKey}
+          hideLabel={hideLabels}
         />,
       ])}
     </div>

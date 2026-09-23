@@ -486,6 +486,9 @@ export function MonitorPage({
     hr: effectiveClinicalHr,
     monitorResetVersion,
     onStudentEvent,
+    patientInfo,
+    onPatientAgeChange: setPatientAge,
+    onPatientSexChange: setPatientSex,
     preferenceState: wagamiAPreferenceState,
   })
 
@@ -1107,10 +1110,14 @@ export function MonitorPage({
             onEnergyDown={() => handleWagamiAEnergyChange('down')}
             onEnergyUp={() => handleWagamiAEnergyChange('up')}
             onTask={wagamiAWorkspace.openTask}
-            navigationView={wagamiAWorkspace.view}
-            secondaryActions={wagamiAWorkspace.view === 'monitor'
-              ? undefined
-              : [{ id: 'back', enabled: true, activate: wagamiAWorkspace.goBack }]}
+            navigationView={wagamiAWorkspace.twelveLead.patientInfoOpen
+              ? 'twelveLeadPatientInfo'
+              : wagamiAWorkspace.view}
+            secondaryActions={wagamiAWorkspace.twelveLead.patientInfoOpen
+              ? wagamiAWorkspace.patientInfoActions
+              : wagamiAWorkspace.view === 'monitor'
+                ? undefined
+                : [{ id: 'back', enabled: wagamiAWorkspace.twelveLead.sentUntil === null, activate: wagamiAWorkspace.goBack }]}
             screenContent={(selectedAction) => (
               <WagamiAWorkspace
                 controller={wagamiAWorkspace}
