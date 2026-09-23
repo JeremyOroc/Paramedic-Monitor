@@ -415,8 +415,18 @@ The Adult, Pediatric, or Neonate operating category chosen on one Scenario devic
 distinct from the Instructor-confirmed patient category in Confirmed clinical state.
 _Avoid_: Confirmed patient category, patient age
 
+**Physical shell**:
+The complete hardware-style Wagami device housing surrounding its Inner display, including its
+integrated physical controls and raised control pods.
+_Avoid_: Outer shell, inner shell, screen
+
+**Inner display**:
+The screen surface enclosed by a Wagami device's Physical shell. It contains the monitor workspace
+and shell-contained secondary views but excludes the housing and its physical controls.
+_Avoid_: Inner shell, outer shell, browser viewport
+
 **Wagami A full-display view**:
-A secondary Wagami A view that fills the device's inner display while its outer shell remains
+A secondary Wagami A view that fills the device's Inner display while its Physical shell remains
 visible and operable. The Call Info destination instead opens a shell-free Assignment dashboard
 and is not a Wagami A full-display view.
 _Avoid_: Browser fullscreen, shell-free page

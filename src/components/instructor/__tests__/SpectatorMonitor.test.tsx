@@ -132,7 +132,7 @@ describe('SpectatorMonitor A2 model boundary', () => {
       dispatchRoute: { geometry: [] },
       cprOverrideActive: false,
       wagamiA: {
-        view: 'configure',
+        view: 'vitalLog',
         preferences: { locale: 'en', shellAlarmLedEnabled: false, vitalLogInterval: 3 },
         etco2CalibrationStatus: 'idle',
         patientMode: 'adult',
@@ -146,8 +146,9 @@ describe('SpectatorMonitor A2 model boundary', () => {
 
     render(<SpectatorMonitor projection={projection} embedded />)
 
-    expect(screen.getByRole('heading', { name: 'Configure' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Vital Log' })).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'false')
+    expect(screen.getByRole('group', { name: 'Vital Log interval' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '3 min' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: '3 min' })).toBeDisabled()
     expect(screen.queryByText('WAGAMI A · STATE UNAVAILABLE')).not.toBeInTheDocument()

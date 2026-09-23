@@ -5,6 +5,57 @@
 
 ---
 
+## [2026-09-23] [wagami-a/ui/domain/testing] — Expand the Vital Log and strengthen the Physical shell
+
+- Moved Wagami A's interval selector from Configure to a bottom Vital Log band, kept it disabled in
+  Spectator, preserved every cadence rule, and left Wagami X's fixed interval unchanged.
+- Replaced eight compressed rows with ten vertically distributed ruled slots, responsive 15–18 px
+  values, stable partial/empty pages, and independent eight-row Medication Event Log pagination.
+- Added a centralized near-black A backdrop, layered graphite shell rim, deeper Inner display bezel,
+  recessed side-control mounts, inset side controls, and an integrated navigation pod while
+  preserving control faces and containing all physical-control bounds inside the shell.
+- All 41 focused tests, TypeScript, affected-file ESLint with zero errors and one existing warning,
+  and the Next.js 16.3 Webpack build pass. The full suite has 1,636 passing and one skipped with the
+  same three unrelated baseline failures. Rendered QA at 1280×720 and 1024×768 passes with no
+  scrolling, clipping, framework overlay, or console errors.
+
+## [2026-09-23] [planning/wagami-a/domain] — Complete the Vital Log and Physical shell design interview
+
+- Chose vertically centered responsive 15–18 px Vital Log values with smaller bold headings and a
+  stable empty-log table that retains all ten ruled slots, the interval band, and disabled pagination.
+- Fixed the shared Physical shell finish as pronounced but restrained field equipment with subtle
+  code-native texture, distinct bevel planes, visible edge lighting, and deep recesses while keeping
+  the Inner display dominant.
+- Preserved every physical control's established face and state language while seating it in a dark
+  recessed mounting well or integrated bevel.
+- Exhausted the design tree without identifying an ADR-worthy decision. Runtime implementation
+  remains gated on final shared-understanding confirmation.
+
+## [2026-09-23] [planning/wagami-a/domain] — Resolve Vital Log footer and Physical shell boundaries
+
+- Ordered the Vital Log footer as table, interval band, then lowest pagination row; fixed partial
+  pages to ten ruled slots without stretching populated rows.
+- Allowed only minimal control inset or resizing needed to contain every button face, focus
+  treatment, and touch target within the Physical shell silhouette, including integrated raised
+  control pods.
+- Chose a near-black viewport backdrop, lighter graphite housing, layered edge, black recessed
+  Inner display bezel, and restrained highlights as the shared shell-separation treatment.
+- Standardized **Physical shell** for the housing and **Inner display** for the screen, explicitly
+  avoiding the ambiguous term “inner shell.” The design interview remains in progress.
+
+## [2026-09-23] [planning/wagami-a/domain] — Define the Vital Log relocation and stronger physical shell
+
+- Chose the Wagami A Vital Log as the sole interactive home of its existing six-option interval
+  selector, with a bottom control band, disabled Spectator mirroring, unchanged cadence semantics,
+  and no change to Wagami X's fixed five-minute behavior.
+- Replaced A's eight-row page contract with ten vertically distributed rows at every supported
+  viewport while keeping the Medication Event Log independently fixed at eight rows.
+- Chose a shared code-native graphite, perimeter, bezel, highlight, and shadow refinement instead of
+  changing established shell geometry or using the supplied raster reference; required every
+  visible physical-shell button to remain inside the housing silhouette.
+- Recorded the remaining footer, partial-page, terminology, and material-contrast questions. The
+  design interview is still in progress and no runtime implementation has begun.
+
 ## [2026-09-23] [wagami-a/ui/domain/testing] — Run EtCO₂ calibration inline
 
 - Removed Wagami A's dedicated EtCO₂ screen and converted its task tile into an inline, cancellable

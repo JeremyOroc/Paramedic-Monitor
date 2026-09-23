@@ -106,7 +106,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
     const state = projection.wagamiA
     if (!state) {
       return (
-        <div className="grid h-full w-full place-items-center bg-wagami-a-screen p-8 text-center text-wagami-a-text">
+        <div className="grid h-full w-full place-items-center bg-wagami-a-backdrop p-8 text-center text-wagami-a-text">
           <div className="rounded-xl border border-wagami-a-border bg-wagami-a-surface p-8 font-mono">
             <strong>WAGAMI A · STATE UNAVAILABLE</strong>
             <p className="mt-3 text-sm text-wagami-a-muted-text">Waiting for the current device state.</p>
@@ -168,7 +168,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
       simulated: false,
     }
     return (
-      <div className="relative grid h-full w-full place-items-center overflow-hidden bg-wagami-a-screen">
+      <div className="relative grid h-full w-full place-items-center overflow-hidden bg-wagami-a-backdrop">
         <div aria-hidden={showWagamiACallInfo ? true : undefined} className={cn(showWagamiACallInfo && 'invisible pointer-events-none')}>
         <WagamiADevice
           display={display}

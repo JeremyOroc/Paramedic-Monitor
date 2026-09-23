@@ -22,7 +22,8 @@ import { VITAL_LOG_INTERVALS } from '@/types/vitalLog'
 import type { WagamiALocale } from '@/types/wagamiA'
 import type { AlarmChannel, PatientMode } from '@/types/vitals'
 
-const PAGE_SIZE = 8
+const MEDICATION_LOG_PAGE_SIZE = 8
+const VITAL_LOG_PAGE_SIZE = 10
 
 type WagamiAWorkspaceProps = {
   controller: WagamiAWorkspaceController
@@ -69,6 +70,77 @@ function ViewFrame({ title, onBack, backLabel, patientMode, alarms, locale, chil
       </header>
       <div className="relative min-h-0 overflow-hidden">{children}</div>
     </section>
+  )
+}
+
+type WagamiAText = ReturnType<typeof getWagamiAText>
+
+function VitalLogTable({ entries, text }: { entries: VitalLogEntry[]; text: WagamiAText }) {
+  const rows = Array.from({ length: VITAL_LOG_PAGE_SIZE }, (_, index) => entries[index] ?? null)
+
+  return (
+    <div className="relative min-h-0 overflow-hidden">
+      <table data-testid="wagami-a-vital-log-table" className="h-full w-full table-fixed border-collapse">
+        <thead className="bg-wagami-a-surface-raised">
+          <tr className="h-[clamp(28px,3.1cqw,38px)] text-center font-sans text-[clamp(12px,0.95cqw,15px)] font-bold">
+            <th scope="col">{text.time}</th>
+            <th scope="col" className="text-wagami-a-ecg">{text.heartRate}</th>
+            <th scope="col" className="text-wagami-a-pni">{text.bpSys}</th>
+            <th scope="col" className="text-wagami-a-pni">{text.bpDia}</th>
+            <th scope="col" className="text-wagami-a-etco2">EtCO₂</th>
+            <th scope="col" className="text-wagami-a-spo2">SpO₂</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((entry, index) => (
+            <tr
+              key={entry?.timestamp ?? `empty-${index}`}
+              data-testid="wagami-a-vital-log-row"
+              data-empty={entry ? 'false' : 'true'}
+              aria-hidden={entry ? undefined : true}
+              className="border-b border-wagami-a-border/80 text-center font-mono text-[clamp(15px,1.15cqw,18px)] tabular-nums"
+            >
+              <td>{entry?.timestamp ?? '\u00a0'}</td>
+              <td>{entry ? (entry.fc ?? '-') : '\u00a0'}</td>
+              <td>{entry ? (entry.pniSys ?? '-') : '\u00a0'}</td>
+              <td>{entry ? (entry.pniDia ?? '-') : '\u00a0'}</td>
+              <td>{entry ? (entry.etco2 ?? '-') : '\u00a0'}</td>
+              <td>{entry ? (entry.spo2 ?? '-') : '\u00a0'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {!entries.length ? (
+        <p className="pointer-events-none absolute inset-x-0 bottom-0 top-[clamp(28px,3.1cqw,38px)] grid place-items-center bg-wagami-a-screen/78 text-center font-sans text-[clamp(14px,1.1cqw,17px)] font-semibold text-wagami-a-muted-text">
+          {text.noVitals}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+function VitalLogIntervalBand({
+  interval,
+  readOnly,
+  onChange,
+  text,
+}: {
+  interval: (typeof VITAL_LOG_INTERVALS)[number]
+  readOnly: boolean
+  onChange: (interval: (typeof VITAL_LOG_INTERVALS)[number]) => void
+  text: WagamiAText
+}) {
+  return (
+    <div role="group" aria-label={text.vitalLogInterval} className="grid min-h-0 grid-cols-[minmax(150px,0.8fr)_minmax(0,2fr)] items-center gap-3 rounded border border-wagami-a-border bg-wagami-a-surface px-3">
+      <span className="font-sans text-[clamp(12px,1cqw,16px)] font-semibold">{text.vitalLogInterval}</span>
+      <div className="grid grid-cols-6 gap-1">
+        {VITAL_LOG_INTERVALS.map((option) => (
+          <Toggle key={option} active={interval === option} disabled={readOnly} onClick={() => onChange(option)}>
+            {option} {text.minutes}
+          </Toggle>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -191,9 +263,9 @@ export function WagamiAWorkspace({
       </ViewFrame>
     )
   } else if (pageView === 'medicationLog') {
-    const totalPages = Math.max(1, Math.ceil(controller.medicationEvents.length / PAGE_SIZE))
+    const totalPages = Math.max(1, Math.ceil(controller.medicationEvents.length / MEDICATION_LOG_PAGE_SIZE))
     const page = Math.min(eventPage, totalPages)
-    const entries = controller.medicationEvents.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    const entries = controller.medicationEvents.slice((page - 1) * MEDICATION_LOG_PAGE_SIZE, page * MEDICATION_LOG_PAGE_SIZE)
     content = (
       <ViewFrame title={text.eventLog} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full grid-rows-[minmax(0,1fr)_52px] p-4">
@@ -203,17 +275,14 @@ export function WagamiAWorkspace({
       </ViewFrame>
     )
   } else if (pageView === 'vitalLog') {
-    const totalPages = Math.max(1, Math.ceil(vitalLog.length / PAGE_SIZE))
+    const totalPages = Math.max(1, Math.ceil(vitalLog.length / VITAL_LOG_PAGE_SIZE))
     const page = Math.min(vitalPage, totalPages)
-    const entries = vitalLog.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    const entries = vitalLog.slice((page - 1) * VITAL_LOG_PAGE_SIZE, page * VITAL_LOG_PAGE_SIZE)
     content = (
       <ViewFrame title={text.vitalLogTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
-        <div className="grid h-full grid-rows-[minmax(0,1fr)_52px] p-4">
-          <div className="min-h-0 overflow-hidden">
-            <div className="grid grid-cols-6 bg-wagami-a-surface-raised text-center text-xs font-semibold"><span>{text.time}</span><span className="text-wagami-a-ecg">{text.heartRate}</span><span className="text-wagami-a-pni">{text.bpSys}</span><span className="text-wagami-a-pni">{text.bpDia}</span><span className="text-wagami-a-etco2">EtCO₂</span><span className="text-wagami-a-spo2">SpO₂</span></div>
-            {entries.map((entry) => <div key={entry.timestamp} className="grid grid-cols-6 border-b border-wagami-a-border text-center font-mono text-xs"><span>{entry.timestamp}</span><span>{entry.fc ?? '-'}</span><span>{entry.pniSys ?? '-'}</span><span>{entry.pniDia ?? '-'}</span><span>{entry.etco2 ?? '-'}</span><span>{entry.spo2 ?? '-'}</span></div>)}
-            {!entries.length ? <p className="mt-4 text-wagami-a-muted-text">{text.noVitals}</p> : null}
-          </div>
+        <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_clamp(52px,5.7cqw,72px)_52px] gap-[clamp(4px,0.6cqw,8px)] p-[clamp(8px,1cqw,14px)]">
+          <VitalLogTable entries={entries} text={text} />
+          <VitalLogIntervalBand interval={controller.preferences.vitalLogInterval} readOnly={readOnly} onChange={controller.setVitalLogInterval} text={text} />
           <Pagination page={page} totalPages={totalPages} setPage={setVitalPage} text={text} />
         </div>
       </ViewFrame>
@@ -223,7 +292,6 @@ export function WagamiAWorkspace({
       <ViewFrame title={text.configureTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full content-center gap-3 p-6">
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.patientModeLabel}</span><strong data-testid="wagami-a-configure-mode" className="rounded border border-wagami-a-border bg-wagami-a-surface-raised px-2 py-1 text-wagami-a-text">{patientMode === 'adult' ? text.adult : patientMode === 'pediatric' ? text.pediatric : text.neonate}</strong></div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.vitalLogInterval}</span><div className="grid grid-cols-6 gap-1">{VITAL_LOG_INTERVALS.map((interval) => <Toggle key={interval} active={controller.preferences.vitalLogInterval === interval} disabled={readOnly} onClick={() => controller.setVitalLogInterval(interval)}>{interval} {text.minutes}</Toggle>)}</div></div>
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.language}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.locale === 'fr'} disabled={readOnly} onClick={() => controller.setLocale('fr')}>{text.french}</Toggle><Toggle active={controller.preferences.locale === 'en'} disabled={readOnly} onClick={() => controller.setLocale('en')}>{text.english}</Toggle></div></div>
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.alarmLed}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.shellAlarmLedEnabled} disabled={readOnly} onClick={() => controller.setShellAlarmLedEnabled(true)}>{text.on}</Toggle><Toggle active={!controller.preferences.shellAlarmLedEnabled} disabled={readOnly} onClick={() => controller.setShellAlarmLedEnabled(false)}>{text.off}</Toggle></div></div>
         </div>

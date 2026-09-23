@@ -52,6 +52,7 @@
   --color-wagami-z-knob: #17191c;
   --color-wagami-z-readiness: #102b31;
   /* Wagami A Precision Graphite v2 — keep in sync with WAGAMI_A_COLORS. */
+  --color-wagami-a-backdrop: #020506;
   --color-wagami-a-screen: #081014;
   --color-wagami-a-surface: #0D1B20;
   --color-wagami-a-surface-raised: #14272F;
@@ -702,33 +703,100 @@ body.monitor-viewport-lock {
 }
 
 /* Wagami A Precision Graphite shell: code-native housing and controls, no X/Z key anatomy. */
-.wagami-a-shell { filter: drop-shadow(0 18px 28px color-mix(in srgb, black 65%, transparent)); }
+.wagami-a-shell {
+  isolation: isolate;
+  filter:
+    drop-shadow(0 5px 4px color-mix(in srgb, black 82%, transparent))
+    drop-shadow(0 22px 34px color-mix(in srgb, black 78%, transparent));
+}
+.wagami-a-shell::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0.35%;
+  clip-path: polygon(5% 0, 11% 0, 13% 2%, 87% 2%, 89% 0, 94% 0, 99% 6%, 100% 17%, 100% 84%, 96% 98%, 85% 100%, 66% 100%, 63% 96%, 37% 96%, 34% 100%, 15% 100%, 4% 98%, 0 87%, 0 13%);
+  border: clamp(2px, 0.28cqw, 4px) solid color-mix(in srgb, var(--color-wagami-a-border) 82%, white);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-wagami-a-border) 48%, white) 0 0.5%, transparent 4%),
+    linear-gradient(145deg, color-mix(in srgb, var(--color-wagami-a-border) 58%, var(--color-wagami-a-surface-raised)) 0%, color-mix(in srgb, var(--color-wagami-a-surface-raised) 78%, var(--color-wagami-a-border)) 30%, color-mix(in srgb, var(--color-wagami-a-surface) 76%, black) 72%, color-mix(in srgb, var(--color-wagami-a-surface-raised) 72%, var(--color-wagami-a-border)) 100%);
+  box-shadow:
+    inset 0 0 0 clamp(2px, 0.35cqw, 5px) color-mix(in srgb, white 7%, transparent),
+    inset 0 -14px 24px color-mix(in srgb, black 58%, transparent),
+    0 0 0 1px black;
+  pointer-events: none;
+}
 .wagami-a-shell-inner {
   clip-path: polygon(5% 0, 11% 0, 13% 2%, 87% 2%, 89% 0, 94% 0, 99% 6%, 100% 17%, 100% 84%, 96% 98%, 85% 100%, 66% 100%, 63% 96%, 37% 96%, 34% 100%, 15% 100%, 4% 98%, 0 87%, 0 13%);
-  background: radial-gradient(ellipse at 50% 0, color-mix(in srgb, var(--color-wagami-a-border) 35%, var(--color-wagami-a-surface-raised)), transparent 75%), linear-gradient(160deg, color-mix(in srgb, var(--color-wagami-a-surface-raised) 78%, black), color-mix(in srgb, var(--color-wagami-a-surface) 83%, black));
-  border: 2px solid var(--color-wagami-a-border);
-  box-shadow: inset 0 0 0 8px color-mix(in srgb, var(--color-wagami-a-screen) 74%, transparent), inset 0 0 20px black, inset 0 16px 28px color-mix(in srgb, var(--color-wagami-a-text) 8%, transparent);
+  background:
+    radial-gradient(ellipse at 50% -8%, color-mix(in srgb, var(--color-wagami-a-border) 48%, var(--color-wagami-a-surface-raised)), transparent 68%),
+    linear-gradient(160deg, color-mix(in srgb, var(--color-wagami-a-surface-raised) 82%, var(--color-wagami-a-border)), color-mix(in srgb, var(--color-wagami-a-surface) 78%, black));
+  border: clamp(2px, 0.24cqw, 4px) solid color-mix(in srgb, var(--color-wagami-a-border) 84%, white);
+  box-shadow:
+    inset 0 0 0 clamp(6px, 0.7cqw, 10px) color-mix(in srgb, var(--color-wagami-a-screen) 64%, transparent),
+    inset 0 0 24px color-mix(in srgb, black 88%, transparent),
+    inset 0 18px 30px color-mix(in srgb, var(--color-wagami-a-text) 10%, transparent),
+    0 0 0 1px color-mix(in srgb, black 92%, transparent);
 }
 .wagami-a-shell-inner::before {
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.12;
-  background-image: repeating-linear-gradient(12deg, transparent 0 3px, color-mix(in srgb, var(--color-wagami-a-text) 10%, transparent) 3px 4px);
+  opacity: 0.18;
+  background-image:
+    repeating-linear-gradient(12deg, transparent 0 4px, color-mix(in srgb, var(--color-wagami-a-text) 8%, transparent) 4px 5px),
+    repeating-linear-gradient(102deg, transparent 0 11px, color-mix(in srgb, black 16%, transparent) 11px 12px);
+  pointer-events: none;
+}
+.wagami-a-shell-inner::after {
+  content: '';
+  position: absolute;
+  inset: clamp(5px, 0.55cqw, 9px);
+  clip-path: inherit;
+  border: 1px solid color-mix(in srgb, var(--color-wagami-a-text) 14%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, black 42%, transparent);
   pointer-events: none;
 }
 .wagami-a-shell-grip {
-  background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--color-wagami-a-border) 45%, black) 0 3px, var(--color-wagami-a-surface) 3px 7px);
+  background: repeating-linear-gradient(0deg, color-mix(in srgb, var(--color-wagami-a-border) 55%, black) 0 3px, color-mix(in srgb, var(--color-wagami-a-surface) 76%, black) 3px 7px);
+  border: 1px solid color-mix(in srgb, var(--color-wagami-a-border) 55%, black);
   border-radius: 5px;
+  box-shadow: inset 2px 0 4px black, 0 0 0 2px color-mix(in srgb, black 38%, transparent);
 }
-.wagami-a-charge-button { box-shadow: inset 0 2px 2px color-mix(in srgb, var(--color-wagami-a-text) 45%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-wagami-a-screen) 78%, transparent); }
+.wagami-a-inner-display {
+  box-shadow:
+    0 0 0 clamp(2px, 0.24cqw, 4px) var(--color-wagami-a-backdrop),
+    0 0 0 clamp(5px, 0.52cqw, 8px) color-mix(in srgb, var(--color-wagami-a-border) 54%, black),
+    0 8px 18px color-mix(in srgb, black 85%, transparent),
+    inset 0 0 18px color-mix(in srgb, black 78%, transparent);
+}
+.wagami-a-shell-control {
+  box-shadow:
+    inset 0 2px 3px color-mix(in srgb, var(--color-wagami-a-text) 12%, transparent),
+    0 2px 5px color-mix(in srgb, black 72%, transparent),
+    0 0 0 clamp(3px, 0.32cqw, 5px) var(--color-wagami-a-backdrop),
+    0 0 0 clamp(5px, 0.52cqw, 8px) color-mix(in srgb, var(--color-wagami-a-border) 42%, black);
+}
+.wagami-a-charge-button {
+  box-shadow:
+    inset 0 2px 2px color-mix(in srgb, var(--color-wagami-a-text) 45%, transparent),
+    0 2px 5px color-mix(in srgb, black 72%, transparent),
+    0 0 0 clamp(3px, 0.32cqw, 5px) var(--color-wagami-a-backdrop),
+    0 0 0 clamp(5px, 0.52cqw, 8px) color-mix(in srgb, var(--color-wagami-a-border) 42%, black);
+}
 .wagami-a-shock-guard {
   clip-path: polygon(12% 0, 88% 0, 100% 11%, 100% 89%, 88% 100%, 12% 100%, 0 89%, 0 11%);
-  background: var(--color-wagami-a-screen);
-  border: 2px solid var(--color-wagami-a-border);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--color-wagami-a-surface-raised) 72%, var(--color-wagami-a-border)), var(--color-wagami-a-backdrop) 72%);
+  border: 2px solid color-mix(in srgb, var(--color-wagami-a-border) 72%, black);
+  box-shadow: inset 0 0 0 3px black, 0 3px 7px color-mix(in srgb, black 72%, transparent);
 }
-.wagami-a-shock-button { box-shadow: inset 0 3px 3px color-mix(in srgb, var(--color-wagami-a-text) 20%, transparent), 0 0 0 2px var(--color-wagami-a-screen); }
-.wagami-a-navigation-button { box-shadow: inset 0 2px 5px color-mix(in srgb, black 55%, transparent), 0 2px 5px color-mix(in srgb, black 65%, transparent), 0 0 0 3px color-mix(in srgb, var(--color-wagami-a-screen) 65%, transparent); }
+.wagami-a-shock-button { box-shadow: inset 0 3px 3px color-mix(in srgb, var(--color-wagami-a-text) 20%, transparent), 0 0 0 3px var(--color-wagami-a-backdrop); }
+.wagami-a-navigation-well {
+  clip-path: polygon(12% 0, 88% 0, 100% 42%, 92% 100%, 8% 100%, 0 42%);
+  border: 2px solid color-mix(in srgb, var(--color-wagami-a-border) 62%, black);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--color-wagami-a-surface-raised) 82%, var(--color-wagami-a-border)), color-mix(in srgb, var(--color-wagami-a-screen) 70%, var(--color-wagami-a-backdrop)) 72%);
+  box-shadow: inset 0 0 0 4px color-mix(in srgb, black 56%, transparent), 0 5px 10px color-mix(in srgb, black 72%, transparent);
+}
+.wagami-a-navigation-button { box-shadow: inset 0 2px 5px color-mix(in srgb, black 55%, transparent), 0 2px 5px color-mix(in srgb, black 65%, transparent), 0 0 0 3px var(--color-wagami-a-backdrop); }
 .wagami-a-shell-led {
   background: var(--color-wagami-a-text);
   box-shadow: 0 0 9px color-mix(in srgb, var(--color-wagami-a-text) 65%, transparent);
