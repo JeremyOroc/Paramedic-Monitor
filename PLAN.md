@@ -10,6 +10,38 @@
 
 ## Current Requirement Updates
 
+- 2026-09-22 Wagami A Preview Vital Log repair — **programmer-confirmed and implemented locally**.
+  Replace Room-free Preview's deliberately empty Vital Log with a
+  browser-local simulation driven by the same powered-on Monitor elapsed timer and sampling rules as
+  a live Attempt. Record the first row only after one complete selected interval—five minutes by
+  default—with no artificial `00:00:00` baseline. Snapshot the trainee-visible HR, accepted BP,
+  SpO2, and EtCO2 values, preserving unavailable channels as unavailable.
+
+  Preserve existing rows when the interval changes, create no backfill or duplicate timestamps, and
+  schedule the next row one complete selected interval after the exact change time. Clear Preview
+  rows on power-off and browser refresh while retaining the selected interval through both. Keep
+  every Preview row browser-local: do not create an Attempt, Evaluation event, persistent clinical
+  record, or Spectator projection. This intentionally reverses the prior empty-Preview-log rule
+  because the now-functional Preview timer and interval controls otherwise present a non-working
+  Vital Log.
+
+### Testing — Wagami A Preview Vital Log repair
+
+- Cover the five-minute default and every selectable interval, first-row boundary, trainee-visible
+  sampling, unavailable channels, immutable existing rows, exact-time interval rescheduling, no
+  backfill or duplicate timestamps, and row cleanup on power-off and refresh.
+- Confirm interval persistence, browser-local isolation, absence of Attempt/Evaluation/Spectator
+  publication, unchanged live-A and Wagami X logging, and `/?dev=3` end-to-end interaction.
+- Run focused hook/Preview/workspace/live/Spectator tests, TypeScript, affected-file ESLint, the
+  Next.js 16.3 Webpack production build, and rendered `/?dev=3` verification.
+
+**Completed locally 2026-09-22.** Preview now feeds its powered-on elapsed seconds, trainee-visible
+vital snapshot, and persisted interval into the shared Vital Log sampler. The five-file focused
+suite passes all 42 tests; TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production
+build pass. Rendered `/?dev=3` verification at 1280×720 recorded the expected one-minute row before
+and after a power cycle, cleared the first run's rows on power-off, retained the selected interval,
+and reported no browser console warnings or errors.
+
 - 2026-09-22 Wagami A metadata-row and Preview-timer refinement — **programmer-confirmed design;
   implemented locally**. Consolidate the full Wagami A clinical status
   line, Montréal wall clock, and Monitor elapsed timer into one metadata row beneath the vital cards.
@@ -26,8 +58,9 @@
   Replace Preview's former fixed `00:00:00` placeholder with the real Monitor elapsed lifecycle:
   Preview begins counting immediately because it boots powered on, keeps counting through secondary
   pages and full-page Call Info, resets to zero at power-off, restarts from zero at the next power-on,
-  and resets on browser refresh. This display timer does not invent Preview Vital Log rows. Keep the
-  established live-trainee timer lifecycle and Spectator mirroring unchanged.
+  and resets on browser refresh. Preview Vital Log sampling is governed by the later 2026-09-22
+  repair requirement above. Keep the established live-trainee timer lifecycle and Spectator
+  mirroring unchanged.
 
 ### Testing — Wagami A metadata-row and Preview-timer refinement
 
@@ -35,16 +68,17 @@
   elapsed time, explicit mode-label spacing, larger responsive metadata typography, and absence of a
   duplicate status line.
 - Cover Preview timer progression from its initially powered-on state, continuity across secondary
-  pages and Call Info, zero reset on power-off, fresh restart on power-on, refresh reset, unchanged
-  empty Preview Vital Log, and existing live/Spectator parity.
+  pages and Call Info, zero reset on power-off, fresh restart on power-on, refresh reset, the later
+  functional Preview Vital Log contract above, and existing live/Spectator parity.
 - Run focused Preview/screen/workspace/Spectator tests, TypeScript, affected-file ESLint, the
   production build, and rendered interaction QA at 1280×720 and 1024×768.
 
 **Completed locally 2026-09-22.** The main A display now renders one true three-region metadata row,
 with explicit spacing between the mode label and chip, 13–18 px responsive clock/timer typography,
 and no duplicate waveform status row. Room-free Preview uses the shared power-driven elapsed timer,
-including continuous secondary-view timing and power-cycle reset/restart, while retaining an empty
-Preview Vital Log. All 38 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3
+including continuous secondary-view timing and power-cycle reset/restart; its Vital Log behavior was
+subsequently activated by the repair above. All 38 focused tests, TypeScript, affected-file ESLint,
+and the Next.js 16.3
 Webpack production build pass. Rendered `/?dev=3` QA at 1280×720 and 1024×768 confirms alignment,
 fit, visible timer progression, `00:00:00` reset, `00:00:01` restart, and a clean browser console.
 
@@ -99,9 +133,8 @@ fit, visible timer progression, `00:00:00` reset, `00:00:01` restart, and a clea
   Keep the outer shell control labeled `MODE`.
 
   On the live trainee monitor, show the current Montréal wall clock and real Monitor elapsed timer.
-  Spectator mirrors the trainee's clock/timer presentation. The Room-free Preview shows a live
-  Montréal wall clock and an honest `00:00:00` elapsed value because it has no real Attempt timer;
-  it continues to invent no Vital Log rows.
+  Spectator mirrors the trainee's clock/timer presentation. The Room-free Preview's timer and local
+  Vital Log behavior are governed by the later metadata-timer and Preview-log requirements above.
 
 ### Testing — Wagami A medication, metadata, Vital Log, localization, and mode cues
 

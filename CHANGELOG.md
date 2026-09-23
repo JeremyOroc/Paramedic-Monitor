@@ -5,6 +5,27 @@
 
 ---
 
+## [2026-09-22] [wagami-a/ui/domain/testing] — Activate the Preview Vital Log
+
+- Connected `/?dev=3` to the shared Vital Log sampler using Preview's powered-on elapsed timer,
+  trainee-visible vital values, and persisted 1/3/5/10/15/30-minute interval.
+- Kept Preview rows browser-local while matching live cadence, exact-time interval changes,
+  immutable history, and power-off/refresh cleanup without publishing Attempt, Evaluation, or
+  Spectator data.
+- All 42 focused tests across five files, TypeScript, affected-file ESLint, the Next.js 16.3 Webpack
+  build, and rendered 1280×720 interaction QA pass. Browser QA confirmed one-minute rows before and
+  after power-cycle cleanup with retained interval selection and no console warnings or errors.
+
+## [2026-09-22] [planning/wagami-a/domain] — Define functional Preview Vital Log behavior
+
+- Reversed the earlier empty-Preview-log rule so `/?dev=3` will simulate Vital Log snapshots from
+  its powered-on elapsed timer, selected interval, and trainee-visible vital values.
+- Kept the first row at one complete interval with exact-time rescheduling, no backfill or duplicate
+  timestamps, and the established power-off/refresh cleanup lifecycle.
+- Kept Preview rows browser-local and explicitly excluded them from Attempts, Evaluation events,
+  persistent clinical records, and Spectator projection. Runtime implementation remains gated on
+  final grill confirmation.
+
 ## [2026-09-22] [wagami-a/ui/testing] — Align metadata and activate the Preview elapsed timer
 
 - Consolidated mode/active alarms, Montréal date/time, and Monitor elapsed time into one aligned

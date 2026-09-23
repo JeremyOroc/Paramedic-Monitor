@@ -6,12 +6,22 @@
 ---
 
 ## Current Phase
+**Wagami A Preview Vital Log repair — COMPLETE LOCALLY (2026-09-22).** `/?dev=3` now uses its
+powered-on Monitor elapsed time, trainee-visible vital values, and selected 1/3/5/10/15/30-minute
+interval to create browser-local Vital Log rows. The first row occurs after one full interval;
+exact-time rescheduling, no-backfill behavior, immutable history, power-off/refresh cleanup, and
+interval persistence match live behavior without creating Attempt, Evaluation, persistent, or
+Spectator records. All 42 focused tests across five files, TypeScript, affected-file ESLint, the
+Next.js 16.3 Webpack production build, and rendered 1280×720 `/?dev=3` interaction QA pass with no
+browser console warnings or errors.
+
 **Wagami A metadata-row and Preview-timer refinement — COMPLETE LOCALLY (2026-09-22).** Device
 Patient mode and active alarms, Montréal date/time, and Monitor elapsed time now share one aligned
 row beneath the vital cards. MODE has explicit separation from its selected chip; clock and timer
 text use a larger 13–18 px responsive treatment. `/?dev=3` now counts from its initially powered-on
 state, continues through secondary views, resets on power-off, and restarts at zero on power-on
-without creating Preview Vital Log rows. Live and Spectator retain shared presentation/parity. All
+with browser-local Vital Log sampling provided by the later repair above. Live and Spectator retain
+shared presentation/parity. All
 38 focused tests, TypeScript, affected-file ESLint, the Next.js 16.3 Webpack production build, and
 rendered 1280×720 plus 1024×768 interaction QA pass with no browser console errors.
 
@@ -198,7 +208,7 @@ Log, and Configure/PNI. French is the default; English is selectable. Device lan
 shell-LED choice persist by supplied Room/Attempt scope, while LED Off leaves on-screen
 and audio alarm behavior intact. English uses existing recorded prompts; French uses
 `fr-CA` browser speech. Events retain locale-neutral semantic kinds/payloads. The direct
-preview invents no Vital Log rows. Optional typed A projection state renders these choices
+preview now creates browser-local Vital Log rows without publishing them. Optional typed A projection state renders these choices
 in Spectator. Instructor A selection, normal Save/Send, live Attempts, semantic event publication,
 shared Vital Log, and Room/participant/Attempt-scoped A projection publication are now enabled in
 the local application. X/Z remain available and X remains the default.

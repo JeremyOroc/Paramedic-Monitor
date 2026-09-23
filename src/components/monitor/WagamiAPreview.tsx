@@ -1,11 +1,15 @@
 'use client'
 
+import { useMemo } from 'react'
+
 import { WagamiADevice } from '@/components/monitor/WagamiADevice'
 import { WagamiACallInfoPage } from '@/components/monitor/WagamiACallInfoPage'
 import { WagamiAWorkspace } from '@/components/monitor/WagamiAWorkspace'
 import type { CallerInfoVariant } from '@/components/monitor/CallerInfoModal'
 import { useWagamiAClinicalCore } from '@/hooks/useWagamiAClinicalCore'
-import { useWagamiAWorkspace } from '@/hooks/useWagamiAWorkspace'
+import { useVitalLog } from '@/hooks/useVitalLog'
+import { useWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
+import { useWagamiAWorkspaceWithPreferences } from '@/hooks/useWagamiAWorkspace'
 import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
 import { useMonitorClock } from '@/hooks/useMonitorClock'
 import { useSessionTimer } from '@/hooks/useSessionTimer'
@@ -28,17 +32,46 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
   const dispatchRoute = useMonitorStore((state) => state.dispatchRouteConfirmed)
   const monitorResetVersion = useMonitorStore((state) => state.monitorResetVersion)
   const sourceDisplay = resolveWagamiAPreviewState(confirmed, confirmedActive)
-  const workspace = useWagamiAWorkspace({
-    scope: 'preview',
-    rhythm: sourceDisplay.vitals.rhythm,
-    hr: sourceDisplay.vitals.hr,
-  })
+  const preferenceState = useWagamiAPreferences('preview')
   const clinical = useWagamiAClinicalCore({
     sourceDisplay,
     cprMode,
-    locale: workspace.preferences.locale,
+    locale: preferenceState.preferences.locale,
   })
-  const { formatted: monitorElapsed } = useSessionTimer(clinical.poweredOn)
+  const {
+    formatted: monitorElapsed,
+    elapsedSeconds: monitorElapsedSeconds,
+  } = useSessionTimer(clinical.poweredOn)
+  const vitalLogSnapshot = useMemo(() => ({
+    fc: clinical.display.active.hr ? clinical.display.vitals.hr : null,
+    pniSys: clinical.display.active.bp_sys ? clinical.display.vitals.bp_sys : null,
+    pniDia: clinical.display.active.bp_dia ? clinical.display.vitals.bp_dia : null,
+    etco2: clinical.display.active.etco2 ? clinical.display.vitals.etco2 : null,
+    spo2: clinical.display.active.spo2 ? clinical.display.vitals.spo2 : null,
+  }), [
+    clinical.display.active.bp_dia,
+    clinical.display.active.bp_sys,
+    clinical.display.active.etco2,
+    clinical.display.active.hr,
+    clinical.display.active.spo2,
+    clinical.display.vitals.bp_dia,
+    clinical.display.vitals.bp_sys,
+    clinical.display.vitals.etco2,
+    clinical.display.vitals.hr,
+    clinical.display.vitals.spo2,
+  ])
+  const vitalLog = useVitalLog({
+    elapsedSeconds: monitorElapsedSeconds,
+    isRunning: clinical.poweredOn,
+    snapshot: vitalLogSnapshot,
+    intervalMinutes: preferenceState.preferences.vitalLogInterval,
+  })
+  const workspace = useWagamiAWorkspaceWithPreferences({
+    rhythm: clinical.display.vitals.rhythm,
+    hr: clinical.display.vitals.hr,
+    vitalLog,
+    preferenceState,
+  })
   const text = getWagamiAText(workspace.preferences.locale)
   const { showCallInfo, onMonitorReady } = useWagamiACallInfoCover(workspace.view)
 

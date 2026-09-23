@@ -385,8 +385,8 @@ _Avoid_: Alarm mute, alarm acknowledgement, LED Off
 **Monitor elapsed timer**:
 The Scenario device's powered-on elapsed time. It begins at monitor power-on and returns to zero at
 power-off, independently of the Attempt, dispatch countdown, and response timer. A Room-free Preview
-uses the same powered-on elapsed-time semantics without creating Attempt-only clinical records such
-as Vital Log rows.
+uses the same powered-on elapsed-time semantics and may drive browser-local simulated records such
+as Preview Vital Log rows without creating an Attempt, Evaluation event, or Spectator projection.
 _Avoid_: Session timer, Attempt timer, response timer
 
 **Wagami A wall clock**:
@@ -422,15 +422,18 @@ and is not a Wagami A full-display view.
 _Avoid_: Browser fullscreen, shell-free page
 
 **Vital Log**:
-The Scenario device's time-ordered history of monitored vital measurements during an Attempt.
-It is distinct from the medication Event Log and from a captured or printed 12-lead.
+The Scenario device's time-ordered history of trainee-visible monitored vital measurements. During
+an Attempt it is shared with Spectator; Room-free Preview simulates the same sampling behavior using
+browser-local rows that create no Attempt, Evaluation event, or Spectator data. It is distinct from
+the medication Event Log and from a captured or printed 12-lead.
 _Avoid_: Print/Capture log, medication Event Log, 12-lead printout
 
 **Vital Log interval**:
 The Wagami A Scenario device's selected cadence for future Vital Log snapshots. Changing it preserves
 existing rows, creates no retrospective rows, and begins a new cadence from the exact, unrounded
 Monitor elapsed time of the change. The selection persists within an Attempt even though the Vital
-Log rows themselves clear with the Monitor elapsed timer's power-off or reload lifecycle.
+Log rows themselves clear with the Monitor elapsed timer's power-off or reload lifecycle. Room-free
+Preview follows the same cadence, persistence, and cleanup rules locally without publishing rows.
 _Avoid_: PNI automatic interval, cuff interval, historical backfill
 
 **Call Info destination**:
