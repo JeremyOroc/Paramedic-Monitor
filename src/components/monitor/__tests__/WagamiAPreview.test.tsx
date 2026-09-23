@@ -52,6 +52,9 @@ describe('Wagami A Room-free clinical preview', () => {
     const ecg = screen.getByTestId('live-ecg-canvas')
     const spo2 = screen.getByTestId('spo2-waveform-canvas')
     const etco2 = screen.getByTestId('etco2-waveform-canvas')
+    expect(ecg).toHaveAttribute('data-fresh-reveal', 'true')
+    expect(spo2).toHaveAttribute('data-fresh-reveal', 'true')
+    expect(etco2).toHaveAttribute('data-fresh-reveal', 'true')
 
     fireEvent.click(screen.getByRole('button', { name: 'Médicaments' }))
     expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
@@ -64,6 +67,8 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: '12 dérivations' }))
     const leadI = screen.getByTestId('lead-canvas-I')
     const leadV6 = screen.getByTestId('lead-canvas-V6')
+    expect(leadI).toHaveAttribute('data-fresh-reveal', 'true')
+    expect(leadV6).toHaveAttribute('data-fresh-reveal', 'true')
     expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
     fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     expect(screen.getByTestId('lead-canvas-I')).toBe(leadI)

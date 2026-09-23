@@ -5,10 +5,10 @@ import { DEFAULT_VITALS } from '@/types/vitals'
 import { WagamiAWaveformWorkspace } from '../WagamiAWaveformWorkspace'
 
 vi.mock('../ECGCanvas', () => ({
-  ECGCanvas: ({ palette, rhythm, connected, cprOverride, onReady, readyOnStart }: { palette: string; rhythm: string; connected: boolean; cprOverride: boolean; onReady?: () => void; readyOnStart?: boolean }) => <div data-testid="a-ecg-mock" data-palette={palette} data-rhythm={rhythm} data-connected={String(connected)} data-cpr-override={String(cprOverride)} data-ready-on-start={String(readyOnStart)}><button type="button" onClick={onReady}>ECG ready</button></div>,
+  ECGCanvas: ({ palette, rhythm, connected, cprOverride, onReady, readyOnStart, freshReveal, sequenceKey }: { palette: string; rhythm: string; connected: boolean; cprOverride: boolean; onReady?: () => void; readyOnStart?: boolean; freshReveal?: boolean; sequenceKey?: string | number }) => <div data-testid="a-ecg-mock" data-palette={palette} data-rhythm={rhythm} data-connected={String(connected)} data-cpr-override={String(cprOverride)} data-ready-on-start={String(readyOnStart)} data-fresh-reveal={String(freshReveal)} data-sequence-key={sequenceKey}><button type="button" onClick={onReady}>ECG ready</button></div>,
 }))
 vi.mock('../SecondaryChannel', () => ({
-  SecondaryChannel: ({ channel, palette, connected, onReady, readyOnStart }: { channel: string; palette: string; connected: boolean; onReady?: () => void; readyOnStart?: boolean }) => <div data-testid={`a-${channel}-mock`} data-palette={palette} data-connected={String(connected)} data-ready-on-start={String(readyOnStart)}><button type="button" onClick={onReady}>{channel} ready</button></div>,
+  SecondaryChannel: ({ channel, palette, connected, onReady, readyOnStart, freshReveal, sequenceKey }: { channel: string; palette: string; connected: boolean; onReady?: () => void; readyOnStart?: boolean; freshReveal?: boolean; sequenceKey?: string | number }) => <div data-testid={`a-${channel}-mock`} data-palette={palette} data-connected={String(connected)} data-ready-on-start={String(readyOnStart)} data-fresh-reveal={String(freshReveal)} data-sequence-key={sequenceKey}><button type="button" onClick={onReady}>{channel} ready</button></div>,
 }))
 
 const vitals = { ...DEFAULT_VITALS }
@@ -16,11 +16,15 @@ const active = { hr: true, bp_sys: true, bp_dia: true, etco2: true, spo2: true }
 
 describe('Wagami A live waveform workspace', () => {
   it('uses A palette on three reused live renderers without a touchscreen mute action', () => {
-    render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={[]} />)
+    render(<WagamiAWaveformWorkspace vitals={vitals} active={active} alarms={[]} sequenceKey={7} />)
 
     expect(screen.getByTestId('a-ecg-mock')).toHaveAttribute('data-palette', 'wagamiA')
     expect(screen.getByTestId('a-spo2-mock')).toHaveAttribute('data-palette', 'wagamiA')
     expect(screen.getByTestId('a-etco2-mock')).toHaveAttribute('data-palette', 'wagamiA')
+    for (const channel of ['ecg', 'spo2', 'etco2']) {
+      expect(screen.getByTestId(`a-${channel}-mock`)).toHaveAttribute('data-fresh-reveal', 'true')
+      expect(screen.getByTestId(`a-${channel}-mock`)).toHaveAttribute('data-sequence-key', '7')
+    }
     expect(screen.queryByRole('button', { name: 'Couper tous les sons' })).not.toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('MODE ADULTE')
     expect(screen.getByRole('status')).not.toHaveTextContent('ALARME')

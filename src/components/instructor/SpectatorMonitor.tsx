@@ -208,6 +208,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
               onEnergyDown={noop}
               onEnergyUp={noop}
               onMonitorReady={onWagamiAMonitorReady}
+              waveformSequenceKey={state.waveformResetVersion ?? 0}
             />
           }
         />

@@ -10,6 +10,77 @@
 
 ## Current Requirement Updates
 
+- 2026-09-22 Continuous VF waveform — **programmer-confirmed and implemented locally**. Remove
+  the artificial near-zero tail from the shared VF template so fibrillation remains irregular across
+  the complete four-second cycle. Close the final sample onto the first without a spike, flat gap, or
+  visible break at the template boundary. Keep the established VF amplitude, irregularity, sweep
+  speed, displayed-FC behavior, and defibrillation logic. Apply the corrected shared clinical signal
+  consistently to Wagami A, X, Z, and live 12-lead rendering.
+
+### Testing — Continuous VF waveform
+
+Add deterministic rhythm tests for active oscillation in the final segment, endpoint continuity,
+normalization, and retained VF irregularity. Run focused renderer/monitor regressions, TypeScript,
+affected-file ESLint, production build, and a rendered Wagami A VF review.
+
+**Completed locally 2026-09-22.** The shared VF generator now spaces an even number of irregular,
+alternating extrema around the complete four-second cycle and closes its sampled endpoint onto the
+first. This removes the forced near-zero tail and prevents a false wrap stroke without changing VF
+timing or clinical behavior. The 114-test focused suite, TypeScript, affected-file ESLint with zero
+errors and five existing warnings, the Next.js 16.3 Webpack production build, and rendered Wagami A
+VF review pass. The full suite retains only the same three unrelated Room-ownership and
+PatientInfoPanel baseline failures.
+
+- 2026-09-22 Wagami A Fresh sweep reveal — **programmer-confirmed and implemented locally**.
+  Replace instant full-history reconstruction at a genuine waveform
+  start with a blank live surface whose trace becomes visible only behind its Sweep erase band. Apply
+  this to Wagami A ECG and SpO2 at their existing four-second sweeps, EtCO2 at its existing 30-second
+  sweep, and all twelve synchronized Live 12-lead grid traces at their existing four-second sweep.
+  Keep labels, numeric values, disconnected dashed traces, and frozen captured/printed 12-lead
+  records immediately visible. Capture remains available while a first sweep is filling. Apply the
+  presentation to Wagami A trainee, room-free Preview, and Spectator displays only; Wagami X and Z
+  remain unchanged. Preserve Waveform continuity reconstruction when returning from temporary views
+  or browser backgrounding rather than blanking an established sequence. True Fresh sweep boundaries
+  are power-on, Monitor Reset, New Attempt, a full reload or newly mounted local display, channel
+  Off-to-On, and the first 12-lead opening after those boundaries. Connected rhythm, rate, waveform,
+  and CPR transitions retain old history ahead of the band and replace it only behind the band.
+  Begin fresh traces at the current synchronized sweep position so related lanes stay aligned. Show
+  the 12-lead grid and labels immediately with blank canvases; closing Capture, Print, or Transmission
+  overlays restores that established grid through Continuity reconstruction.
+  A partial first sweep owns only the history earned by its elapsed sequence age: leaving and
+  returning after eight seconds of a 30-second EtCO2 sweep restores eight seconds of history rather
+  than a full strip. Surface readiness occurs once blank canvases have final geometry and never waits
+  for fill. Numeric vitals, alarms, pulse indicators, and clinical logic remain immediate. Preserve
+  existing band width, channel background colors, and sweep speeds without drawing a new line.
+  While a partial sweep is covered by a temporary page, overlay, or backgrounded browser tab, its
+  virtual band continues in elapsed patient time. Return reconstructs the earned portion, becoming
+  full only when that channel's complete sweep duration has elapsed. Resize and orientation changes
+  preserve the same sequence age and synchronized cursor while rebuilding earned history at final
+  geometry. Connected rhythm, rate, secondary morphology, and CPR changes while covered retain their
+  exact virtual-band transition: old history remains ahead and the new signal appears behind. Monitor
+  Reset, New Attempt, and channel Off-to-On while covered begin a new Fresh sweep at the actual event
+  time, so return shows only history earned after that event. Preserve every transition still inside
+  the bounded Sweep history window—four seconds for ECG, SpO2, and Live 12-lead; 30 seconds for
+  EtCO2—and discard older transitions once they cannot affect visible pixels. No ADR is required for
+  this isolated, reversible presentation policy.
+
+### Testing — Wagami A Fresh sweep reveal
+
+Cover blank initial canvases, trace growth only behind the Sweep erase band, established per-channel
+speeds, synchronized all-lead growth, immediate non-live content, capture availability, continuity
+re-entry, Preview/live/Spectator parity, and explicit X/Z isolation. Add renderer-level deterministic
+pixel/readiness coverage plus Wagami A workspace and 12-lead integration regressions.
+
+**Completed locally 2026-09-22.** Wagami A now distinguishes a genuine Fresh sweep from Continuity
+reconstruction. ECG, SpO2, EtCO2, and all live 12-lead traces begin blank at the synchronized cursor,
+then expose only elapsed history behind the existing erase band. The renderer retains a bounded
+per-channel transition history for covered rhythm, rate, morphology, and CPR changes, reconstructs
+only earned sequence age after suspension or resize, and receives Monitor Reset generations in live,
+Preview, and Spectator paths. Focused tests, TypeScript, affected-file ESLint (zero errors; one
+existing warning), the Next.js 16.3 Webpack production build, and rendered power-on/live-12-lead
+Preview checks pass. The full suite retains only the same three unrelated Room-ownership and
+PatientInfoPanel baseline failures.
+
 - 2026-09-22 Wagami A waveform continuity across navigation — **programmer-confirmed and
   implemented locally**. Every temporary Wagami A destination,
   including Medications, EtCO₂, Vital Log, Configure, 12-lead, and the shell-free Call Info page,

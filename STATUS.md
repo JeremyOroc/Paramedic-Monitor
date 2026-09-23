@@ -6,6 +6,25 @@
 ---
 
 ## Current Phase
+**Continuous VF waveform — COMPLETE LOCALLY (2026-09-22).** The shared VF signal no longer forces a
+near-zero tail before its four-second boundary. Irregular alternating extrema occupy the complete
+cycle, and the sampled endpoint closes onto the first without a wrap spike. VF amplitude, variation,
+sweep timing, displayed-FC behavior, defibrillation logic, and consistent A/X/Z/live-12-lead use are
+preserved. The 114-test focused suite, TypeScript, affected-file ESLint with zero errors and five
+existing warnings, the Next.js 16.3 Webpack production build, and rendered Wagami A VF review pass.
+The full suite retains only the same three unrelated Room-ownership and PatientInfoPanel failures.
+
+**Wagami A Fresh sweep reveal — COMPLETE LOCALLY (2026-09-22).** Live ECG, SpO2, EtCO2, and the
+synchronized Live 12-lead grid begin genuine sequences blank and grow only behind their existing
+Sweep erase bands. Established and partially filled sequences retain patient-time Continuity
+reconstruction through navigation, overlays, backgrounding, and resize, including bounded hidden
+signal transitions. Reset generation reaches trainee, Preview, and Spectator renderers; CPR and
+connected signal changes no longer restart the canvas. Static content remains immediate; clinical
+logic, capture availability, X, and Z are unchanged. Focused tests, TypeScript, affected-file ESLint
+with zero errors and one existing warning, the Next.js 16.3 Webpack production build, and rendered
+Preview checks of power-on and synchronized live 12-lead growth pass. The full suite retains only
+the same three unrelated Room-ownership and PatientInfoPanel baseline failures.
+
 **Wagami A waveform continuity across navigation — COMPLETE LOCALLY (2026-09-22).** Live ECG,
 SpO₂, EtCO₂, and the first-opened live 12-lead grid retain their canvas and patient-time sweep
 through every temporary view, including shell-free Call Info, in trainee, Preview, and Spectator

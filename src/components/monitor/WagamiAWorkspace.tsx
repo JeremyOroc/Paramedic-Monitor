@@ -40,6 +40,7 @@ type WagamiAWorkspaceProps = {
   selectedAction?: string | null
   readOnly?: boolean
   onMonitorReady?: () => void
+  waveformSequenceKey?: string | number
 }
 
 type ViewFrameProps = {
@@ -83,6 +84,7 @@ export function WagamiAWorkspace({
   selectedAction,
   readOnly = false,
   onMonitorReady,
+  waveformSequenceKey,
 }: WagamiAWorkspaceProps) {
   const text = getWagamiAText(controller.preferences.locale)
   const [eventPage, setEventPage] = useState(1)
@@ -237,6 +239,7 @@ export function WagamiAWorkspace({
           waveformOccluded={monitorOccluded}
           onWaveformsReady={revealMonitor}
           beatClock={beatClock}
+          waveformSequenceKey={waveformSequenceKey}
         />
       </div>
       {currentSurfaceState.twelveLeadMounted ? (
@@ -248,7 +251,7 @@ export function WagamiAWorkspace({
           <ViewFrame title={text.twelveLeadTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
             <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_clamp(52px,6cqw,80px)]">
               <div className="relative min-h-0">
-                <TwelveLeadPage rhythm={display.vitals.rhythm} hr={display.vitals.hr} occluded={twelveLeadOccluded} onReady={revealTwelveLead} beatClock={beatClock} readyOnStart />
+                <TwelveLeadPage rhythm={display.vitals.rhythm} hr={display.vitals.hr} occluded={twelveLeadOccluded} onReady={revealTwelveLead} beatClock={beatClock} readyOnStart freshReveal sequenceKey={waveformSequenceKey} />
                 {controller.twelveLead.captureState === 'acquiring' ? (
                   <div role="status" className="absolute inset-0 grid place-items-center bg-wagami-a-screen/90 font-sans text-xl font-bold text-wagami-a-pni">{text.acquiring}</div>
                 ) : null}

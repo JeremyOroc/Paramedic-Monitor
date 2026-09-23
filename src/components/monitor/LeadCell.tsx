@@ -17,6 +17,8 @@ type LeadCellProps = {
   onReady?: () => void
   beatClock?: BeatClock
   readyOnStart?: boolean
+  freshReveal?: boolean
+  sequenceKey?: string | number
 }
 
 export function LeadCell({
@@ -28,6 +30,8 @@ export function LeadCell({
   onReady,
   beatClock,
   readyOnStart = false,
+  freshReveal = false,
+  sequenceKey,
 }: LeadCellProps) {
   const canvasRef = useWaveformRenderer(
     { rhythm, hr },
@@ -42,15 +46,16 @@ export function LeadCell({
         cycleJitter: 0,
         synchronizeSweep: true,
         getWaveform: pick,
-        getSignalKey: () => `${get().rhythm}:${label}`,
+        getSignalKey: () => `${get().rhythm}:${label}:${get().hr}`,
         getCycleMs: () => beatClock && get().rhythm === 'torsades'
           ? getTorsadesPacketDurationMs(get().hr)
           : pick().cycleMs ?? 60000 / Math.max(20, get().hr),
         getPhaseAt: beatClock ? (nowMs, cycleMs) => beatClock.phase(nowMs, cycleMs) : undefined,
         readyOnStart,
+        freshReveal,
       }
     },
-    [label, beatClock, readyOnStart],
+    [label, beatClock, readyOnStart, freshReveal, sequenceKey],
     { occluded, onReady },
   )
 
@@ -69,6 +74,7 @@ export function LeadCell({
       <canvas
         ref={canvasRef}
         data-testid={`lead-canvas-${label}`}
+        data-fresh-reveal={freshReveal ? 'true' : 'false'}
         className="block h-full w-full"
       />
     </div>
