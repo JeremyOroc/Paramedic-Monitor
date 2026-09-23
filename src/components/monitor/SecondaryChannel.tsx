@@ -93,7 +93,11 @@ function LiveSecondaryCanvas({
         getSignalKey: () =>
           get().channel === 'etco2'
             ? `${get().channel}:${get().etco2Waveform}:${get().etco2}`
-            : `${get().channel}:${get().spo2Waveform}:${get().hr}:${get().spo2}`,
+            : `${get().channel}:${get().spo2Waveform}:${get().spo2}`,
+        getTimingKey: () =>
+          get().channel === 'etco2'
+            ? 'etco2'
+            : `spo2:${get().hr}`,
         getCycleMs: () => {
           const def = pick()
           if (get().channel === 'etco2') return def.cycleMs ?? RESP_CYCLE_MS

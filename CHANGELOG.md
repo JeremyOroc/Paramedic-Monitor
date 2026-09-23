@@ -5,6 +5,23 @@
 
 ---
 
+## [2026-09-23] [wagami-a/waveform/domain/testing] — Keep rate updates continuous
+
+- Removed FC from ECG, Live 12-lead, and SpO2 waveform identity while retaining live FC reads in
+  cadence calculations, eliminating VF's recurring 1.9-second retained cuts without changing its
+  waveform data or visible randomized digits.
+- Split cadence history from waveform identity in the shared renderer so rate-only changes survive
+  continuity reconstruction without suppressing the next incremental stroke.
+- Applied the same correction to Torsades packet-rate changes, ordinary manual FC edits, and CPR
+  cadence changes across every ECG mode; genuine rhythm, CPR-mode, and secondary morphology/value
+  changes keep their established signal boundaries and the moving Sweep erase band remains intact.
+- Sharpened the Waveform continuity glossary to distinguish continuous rate changes from the
+  intentional Sweep erase band; no ADR was warranted for this localized correction.
+- All 103 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack build pass.
+  The full suite has 1,664 passing and one skipped with the same three unrelated baseline failures.
+  Rendered 1280×720 QA across VF ECG/SpO2, VF Live 12-lead, Torsades, and NSR passes over multiple
+  full sweeps with a clean console.
+
 ## [2026-09-23] [wagami-a/ui/domain/testing] — Expand the Vital Log and strengthen the Physical shell
 
 - Moved Wagami A's interval selector from Configure to a bottom Vital Log band, kept it disabled in

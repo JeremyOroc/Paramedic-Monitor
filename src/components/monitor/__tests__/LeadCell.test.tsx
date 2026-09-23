@@ -32,6 +32,9 @@ describe('LeadCell', () => {
       (get: () => { rhythm: 'nsr'; hr: number }) => {
         synchronizeSweep?: boolean
         cycleJitter?: number
+        getSignalKey?: () => string
+        getTimingKey?: () => string
+        getCycleMs: () => number
       },
       unknown[],
       { occluded: boolean; onReady: () => void },
@@ -42,6 +45,14 @@ describe('LeadCell', () => {
       synchronizeSweep: true,
       cycleJitter: 0,
     })
+    expect(options.getSignalKey?.()).toBe('nsr:V1')
+    expect(options.getTimingKey?.()).toBe('nsr:V1:80')
+    expect(options.getCycleMs()).toBe(750)
+
+    const fasterOptions = buildOptions(() => ({ rhythm: 'nsr', hr: 120 }))
+    expect(fasterOptions.getSignalKey?.()).toBe('nsr:V1')
+    expect(fasterOptions.getTimingKey?.()).toBe('nsr:V1:120')
+    expect(fasterOptions.getCycleMs()).toBe(500)
     expect(call[3]).toEqual({
       occluded: true,
       onReady,

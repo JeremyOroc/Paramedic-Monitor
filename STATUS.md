@@ -6,6 +6,17 @@
 ---
 
 ## Current Phase
+**Wagami A continuous waveform rate updates — COMPLETE LOCALLY (2026-09-23).** VF's synchronized
+1.9-second display-only FC changes no longer create retained cuts in ECG, SpO2, or Live 12-lead
+traces. The same waveform-identity correction keeps Torsades packet-rate changes, manual FC edits,
+and CPR cadence changes continuous across all ECG modes while preserving genuine rhythm,
+morphology/value, and CPR-mode boundaries plus the single moving Sweep erase band. Cadence-only
+changes are retained in reconstruction history without becoming stroke boundaries. All 103 focused
+tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production build pass. The
+full suite has 1,664 passing and one skipped, with only the same three unrelated
+Room-ownership/PatientInfoPanel failures. Rendered 1280×720 multi-sweep QA covers VF main ECG/SpO2,
+VF Live 12-lead, Torsades, and NSR with no retained cuts or browser console warnings/errors.
+
 **Wagami A Vital Log layout and Physical shell prominence — COMPLETE LOCALLY (2026-09-23).** The A-only
 1/3/5/10/15/30-minute selector from Configure
 now lives in a bottom band on the Vital Log page, appears disabled in Spectator, and leaves Wagami X fixed at

@@ -10,6 +10,39 @@
 
 ## Current Requirement Updates
 
+- 2026-09-23 Wagami A continuous rate updates — **programmer-confirmed correction**. Preserve the
+  single moving Sweep erase band, but remove the narrow retained cuts that currently appear when a
+  heart-rate value changes without a genuine waveform-identity change. In particular, VF's
+  synchronized display-only FC variation must not restart ECG, SpO2, or Live 12-lead drawing;
+  Torsades packet-rate changes, manual FC edits, and CPR rate changes must likewise update cadence
+  continuously. Genuine rhythm, CPR-mode, SpO2 morphology/value, and EtCO2 morphology/value changes
+  retain their existing signal-transition and Sweep history behavior. Keep Wagami X/Z presentation,
+  waveform data, clinical timing, alarms, captures, and numeric display rules unchanged.
+
+### Testing — Wagami A continuous rate updates
+
+- Cover stable ECG identity across FC changes for every rhythm, while proving rate-controlled ECG,
+  Torsades packet timing, and CPR cadence still read the latest FC.
+- Cover stable Live 12-lead and SpO2 identity across FC changes while retaining identity changes for
+  rhythm, CPR mode, SpO2 morphology/value, and EtCO2 morphology/value changes.
+- Run focused renderer, ECG, secondary-channel, Live 12-lead, and Wagami A waveform tests;
+  TypeScript; affected-file ESLint; and rendered Wagami A VF/Torsades/ordinary-rhythm QA for longer
+  than one full sweep.
+
+No ADR is warranted because this restores the existing displayed-FC/waveform separation and is a
+localized, reversible waveform-identity correction.
+
+**Completed locally 2026-09-23.** ECG, Live 12-lead, and SpO2 waveform identity no longer includes
+FC. The renderer now records cadence-only updates separately, so reconstruction retains the latest
+timing without creating a visible stroke boundary. VF's 1.9-second display-only FC changes, Torsades
+packet-rate changes, ordinary rate edits, and CPR rate changes remain continuous; genuine rhythm,
+CPR-mode, and secondary morphology/value transitions retain their existing boundaries. All 103
+focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production build pass.
+The full suite has 1,664 passing and one skipped, with only the
+same three unrelated Room-ownership/PatientInfoPanel failures. Rendered 1280×720 QA over multiple
+full sweeps confirms VF ECG/SpO2, VF Live 12-lead, Torsades, and NSR retain only the single moving
+Sweep erase band with no console warnings or errors.
+
 - 2026-09-23 Wagami A Vital Log layout and Physical shell prominence — **programmer-confirmed and
   implemented locally**. Move the A-only Vital Log
   interval control out of Configure so the Vital Log page becomes its sole interactive location.
