@@ -8,10 +8,10 @@ import { useWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
 import { createEventLogStamp } from '@/lib/eventLog'
 import { TWELVE_LEAD_SENT_MS } from '@/lib/twelveLeadTransmission'
 import type { WagamiAClinicalEvent } from '@/hooks/useWagamiAClinicalCore'
-import type { VitalLogEntry } from '@/hooks/useVitalLog'
 import type { NibpAutoInterval, NibpMode } from '@/types/nibp'
 import type { Rhythm } from '@/types/vitals'
 import type {
+  WagamiAEtco2CalibrationStatus,
   WagamiAMedicationEvent,
   WagamiATwelveLeadState,
   WagamiAView,
@@ -22,7 +22,7 @@ type Options = {
   scope: string
   rhythm: Rhythm
   hr: number
-  vitalLog?: VitalLogEntry[]
+  monitorResetVersion?: number
   onStudentEvent?: (event: WagamiAClinicalEvent) => void
 }
 
@@ -40,10 +40,10 @@ const INITIAL_TWELVE_LEAD: WagamiATwelveLeadState = {
 }
 
 export const MEDICATION_CONFIRMATION_MS = 400
+export const ETCO2_CANCELLATION_CONFIRMATION_MS = 3000
 
-const TASK_VIEW: Record<WagamiATask, WagamiAView> = {
+const TASK_VIEW: Record<Exclude<WagamiATask, 'etco2'>, WagamiAView> = {
   twelveLead: 'twelveLead',
-  etco2: 'etco2',
   medications: 'medications',
   callInfo: 'callInfo',
   vitalLog: 'vitalLog',
@@ -54,14 +54,14 @@ export function useWagamiAWorkspace({
   scope,
   rhythm,
   hr,
-  vitalLog = [],
+  monitorResetVersion = 0,
   onStudentEvent,
 }: Options) {
   const preferenceState = useWagamiAPreferences(scope)
   return useWagamiAWorkspaceState({
     rhythm,
     hr,
-    vitalLog,
+    monitorResetVersion,
     onStudentEvent,
     preferenceState,
   })
@@ -71,14 +71,14 @@ export function useWagamiAWorkspace({
 export function useWagamiAWorkspaceWithPreferences({
   rhythm,
   hr,
-  vitalLog = [],
+  monitorResetVersion = 0,
   onStudentEvent,
   preferenceState,
 }: WorkspaceOptions) {
   return useWagamiAWorkspaceState({
     rhythm,
     hr,
-    vitalLog,
+    monitorResetVersion,
     onStudentEvent,
     preferenceState,
   })
@@ -87,12 +87,22 @@ export function useWagamiAWorkspaceWithPreferences({
 function useWagamiAWorkspaceState({
   rhythm,
   hr,
-  vitalLog = [],
+  monitorResetVersion = 0,
   onStudentEvent,
   preferenceState,
 }: WorkspaceOptions) {
   const [view, setView] = useState<WagamiAView>('monitor')
-  const [etco2Status, setEtco2Status] = useState<'idle' | 'calibrating' | 'calibrated'>('idle')
+  const [etco2Calibration, setEtco2Calibration] = useState<{
+    status: WagamiAEtco2CalibrationStatus
+    startedAt: number | null
+    endsAt: number | null
+    cancellationEndsAt: number | null
+  }>({
+    status: 'idle',
+    startedAt: null,
+    endsAt: null,
+    cancellationEndsAt: null,
+  })
   const [medicationEvents, setMedicationEvents] = useState<WagamiAMedicationEvent[]>([])
   const [flashedMedication, setFlashedMedication] = useState<string | null>(null)
   const [twelveLead, setTwelveLead] = useState<WagamiATwelveLeadState>(INITIAL_TWELVE_LEAD)
@@ -100,6 +110,7 @@ function useWagamiAWorkspaceState({
   const [nibpAutoInterval, setNibpAutoInterval] = useState<NibpAutoInterval>(5)
   const captureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const calibrationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const calibrationCancellationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const transmissionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const medicationFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -111,14 +122,38 @@ function useWagamiAWorkspaceState({
   useEffect(() => () => {
     clearTimer(captureTimerRef)
     clearTimer(calibrationTimerRef)
+    clearTimer(calibrationCancellationTimerRef)
     clearTimer(transmissionTimerRef)
     clearTimer(medicationFlashTimerRef)
   }, [clearTimer])
 
   const workflowBusy = twelveLead.captureState === 'acquiring' || twelveLead.sentUntil !== null
 
+  const resetEtco2Calibration = useCallback(() => {
+    clearTimer(calibrationTimerRef)
+    clearTimer(calibrationCancellationTimerRef)
+    setEtco2Calibration({
+      status: 'idle',
+      startedAt: null,
+      endsAt: null,
+      cancellationEndsAt: null,
+    })
+  }, [clearTimer])
+
+  const resetVersionRef = useRef(monitorResetVersion)
+  useEffect(() => {
+    if (resetVersionRef.current === monitorResetVersion) return
+    resetVersionRef.current = monitorResetVersion
+    resetEtco2Calibration()
+  }, [monitorResetVersion, resetEtco2Calibration])
+
   function openTask(task: WagamiATask) {
     if (workflowBusy) return
+    if (task === 'etco2') {
+      if (etco2Calibration.status === 'idle') startEtco2Calibration()
+      else if (etco2Calibration.status === 'calibrating') cancelEtco2Calibration()
+      return
+    }
     setView(TASK_VIEW[task])
   }
 
@@ -128,20 +163,53 @@ function useWagamiAWorkspaceState({
   }
 
   function startEtco2Calibration() {
-    if (etco2Status !== 'idle' || workflowBusy) return
+    if (etco2Calibration.status !== 'idle' || workflowBusy) return
+    const startedAt = Date.now()
+    const endsAt = startedAt + ETCO2_CALIBRATION_MS
     clearTimer(calibrationTimerRef)
-    setEtco2Status('calibrating')
+    clearTimer(calibrationCancellationTimerRef)
+    setEtco2Calibration({
+      status: 'calibrating',
+      startedAt,
+      endsAt,
+      cancellationEndsAt: null,
+    })
     calibrationTimerRef.current = setTimeout(() => {
       calibrationTimerRef.current = null
-      setEtco2Status('calibrated')
-      onStudentEvent?.({ kind: 'etco2_calibration', label: 'EtCO2 Calibrated' })
+      setEtco2Calibration({
+        status: 'calibrated',
+        startedAt: null,
+        endsAt: null,
+        cancellationEndsAt: null,
+      })
+      onStudentEvent?.({
+        kind: 'etco2_calibration',
+        label: 'EtCO2 Calibrated',
+        payload: { monitorResetVersion },
+      })
     }, ETCO2_CALIBRATION_MS)
   }
 
   function cancelEtco2Calibration() {
-    if (etco2Status !== 'calibrating') return
+    if (etco2Calibration.status !== 'calibrating') return
     clearTimer(calibrationTimerRef)
-    setEtco2Status('idle')
+    clearTimer(calibrationCancellationTimerRef)
+    const cancellationEndsAt = Date.now() + ETCO2_CANCELLATION_CONFIRMATION_MS
+    setEtco2Calibration({
+      status: 'cancelled',
+      startedAt: null,
+      endsAt: null,
+      cancellationEndsAt,
+    })
+    calibrationCancellationTimerRef.current = setTimeout(() => {
+      calibrationCancellationTimerRef.current = null
+      setEtco2Calibration({
+        status: 'idle',
+        startedAt: null,
+        endsAt: null,
+        cancellationEndsAt: null,
+      })
+    }, ETCO2_CANCELLATION_CONFIRMATION_MS)
   }
 
   function recordMedication(medication: string) {
@@ -234,9 +302,17 @@ function useWagamiAWorkspaceState({
     clearTimer(captureTimerRef)
     clearTimer(transmissionTimerRef)
     clearTimer(calibrationTimerRef)
+    clearTimer(calibrationCancellationTimerRef)
     clearTimer(medicationFlashTimerRef)
     setFlashedMedication(null)
-    setEtco2Status((current) => current === 'calibrating' ? 'idle' : current)
+    setEtco2Calibration((current) => current.status === 'calibrated'
+      ? current
+      : {
+          status: 'idle',
+          startedAt: null,
+          endsAt: null,
+          cancellationEndsAt: null,
+        })
     setView('monitor')
     setTwelveLead(INITIAL_TWELVE_LEAD)
   }
@@ -247,19 +323,22 @@ function useWagamiAWorkspaceState({
     setLocale: preferenceState.setLocale,
     setShellAlarmLedEnabled: preferenceState.setShellAlarmLedEnabled,
     setVitalLogInterval: preferenceState.setVitalLogInterval,
-    etco2Status,
+    etco2Status: etco2Calibration.status,
+    etco2StartedAt: etco2Calibration.startedAt,
+    etco2EndsAt: etco2Calibration.endsAt,
+    etco2CancellationEndsAt: etco2Calibration.cancellationEndsAt,
     medicationEvents,
     flashedMedication,
     twelveLead,
     nibpMode,
     nibpAutoInterval,
-    vitalLog,
     workflowBusy,
     openTask,
     goBack,
     setView,
     startEtco2Calibration,
     cancelEtco2Calibration,
+    resetEtco2Calibration,
     recordMedication,
     startTwelveLeadCapture,
     closeTwelveLeadResult,

@@ -6,6 +6,16 @@
 ---
 
 ## Current Phase
+**Wagami A inline EtCO₂ calibration — COMPLETE LOCALLY (2026-09-23).** A's dedicated calibration
+page is removed and the EtCO₂ task tile now runs an inline 45-second, absolute-time lane command.
+The workflow includes left-to-right progress, immediate cancellation with three-second feedback,
+pre-calibration vital/log gating, a fresh capnogram reveal, success-only history, reset-aware
+Instructor state, power/reset semantics, and live/Preview/Spectator parity. All 215 focused tests
+and TypeScript pass; affected-file ESLint has zero errors and one existing MonitorPage warning;
+and the Next.js 16.3 Webpack production build passes. Rendered `/?dev=3` QA confirmed start,
+cancel, return-to-idle, and the full completion transition. The full suite has 1,635 passing and one
+skipped, with only the same three unrelated Room-ownership/PatientInfoPanel baseline failures.
+
 **Wagami A Preview Vital Log repair — COMPLETE LOCALLY (2026-09-22).** `/?dev=3` now uses its
 powered-on Monitor elapsed time, trainee-visible vital values, and selected 1/3/5/10/15/30-minute
 interval to create browser-local Vital Log rows. The first row occurs after one full interval;

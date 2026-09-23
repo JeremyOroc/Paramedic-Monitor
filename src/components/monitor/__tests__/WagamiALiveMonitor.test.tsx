@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { ETCO2_CALIBRATION_MS } from '@/components/monitor/SecondaryChannel'
 import { useMonitorStore } from '@/store/monitorStore'
 import type { MonitorProjection } from '@/types/monitorProjection'
 import { MonitorPage, type StudentEventRecord } from '../MonitorPage'
@@ -19,9 +20,15 @@ describe('Wagami A live Attempt integration', () => {
     })
   })
 
+  afterEach(() => vi.useRealTimers())
+
   it('renders the live device, records semantic actions, and publishes A state', async () => {
     const events: StudentEventRecord[] = []
     const projections: MonitorProjection[] = []
+    act(() => useMonitorStore.setState((state) => ({
+      confirmed: { ...state.confirmed, etco2: 35, etco2_waveform: 'normal' },
+      confirmedVitalActive: { ...state.confirmedVitalActive, etco2: true },
+    })))
     render(
       <MonitorPage
         transportStorageScope="ABC234.participant-1.1"
@@ -103,6 +110,55 @@ describe('Wagami A live Attempt integration', () => {
     await waitFor(() => {
       expect(projections.at(-1)?.wagamiA?.preferences.vitalLogInterval).toBe(3)
     })
+  })
+
+  it('projects inline EtCO₂ timing, cancellation, and success-only logging', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-23T12:00:00Z'))
+    const events: StudentEventRecord[] = []
+    const projections: MonitorProjection[] = []
+    act(() => useMonitorStore.setState((state) => ({
+      confirmed: { ...state.confirmed, etco2: 35, etco2_waveform: 'normal' },
+      confirmedVitalActive: { ...state.confirmedVitalActive, etco2: true },
+    })))
+    render(
+      <MonitorPage
+        transportStorageScope="ABC234.participant-1.1"
+        onStudentEvent={(event) => events.push(event)}
+        onProjectionChange={(projection) => projections.push(projection)}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent('--')
+    events.length = 0
+
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'EtCO₂' })))
+    expect(projections.at(-1)?.wagamiA).toMatchObject({
+      view: 'monitor',
+      etco2CalibrationStatus: 'calibrating',
+      etco2CalibrationStartedAt: Date.now(),
+      etco2CalibrationEndsAt: Date.now() + ETCO2_CALIBRATION_MS,
+    })
+    expect(projections.at(-1)?.displayedEtco2).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'EtCO₂' }))
+    expect(projections.at(-1)?.wagamiA?.etco2CalibrationStatus).toBe('cancelled')
+    expect(events).toEqual([])
+
+    act(() => vi.advanceTimersByTime(3000))
+    fireEvent.click(screen.getByRole('button', { name: 'EtCO₂' }))
+    act(() => vi.advanceTimersByTime(ETCO2_CALIBRATION_MS))
+    expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent('35')
+    expect(events).toEqual([
+      {
+        kind: 'etco2_calibration',
+        label: 'EtCO2 Calibrated',
+        payload: { monitorResetVersion: useMonitorStore.getState().monitorResetVersion },
+      },
+    ])
+    expect(projections.at(-1)?.wagamiA?.etco2CalibrationStatus).toBe('calibrated')
+    expect(projections.at(-1)?.displayedEtco2).toBe(35)
   })
 
   it('reopens Call Info as a full-page live dispatch workflow and projects the page', async () => {

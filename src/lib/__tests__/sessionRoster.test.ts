@@ -60,6 +60,25 @@ describe('anyoneCalibratedEtco2', () => {
     expect(anyoneCalibratedEtco2(events, 1)).toBe(true)
     expect(anyoneCalibratedEtco2(events, 2)).toBe(false)
   })
+
+  it('keeps historical calibration events but clears the current indicator after monitor reset', () => {
+    const events = [
+      makeEvent({
+        id: 'e1',
+        kind: 'etco2_calibration',
+        payload: { monitorResetVersion: 0 },
+      }),
+    ]
+    expect(anyoneCalibratedEtco2(events, 1, 0)).toBe(true)
+    expect(anyoneCalibratedEtco2(events, 1, 1)).toBe(false)
+
+    events.push(makeEvent({
+      id: 'e2',
+      kind: 'etco2_calibration',
+      payload: { monitorResetVersion: 1 },
+    }))
+    expect(anyoneCalibratedEtco2(events, 1, 1)).toBe(true)
+  })
 })
 
 describe('participantProgress', () => {

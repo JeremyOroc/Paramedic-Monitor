@@ -42,11 +42,19 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
     formatted: monitorElapsed,
     elapsedSeconds: monitorElapsedSeconds,
   } = useSessionTimer(clinical.poweredOn)
+  const workspace = useWagamiAWorkspaceWithPreferences({
+    rhythm: clinical.display.vitals.rhythm,
+    hr: clinical.display.vitals.hr,
+    monitorResetVersion,
+    preferenceState,
+  })
   const vitalLogSnapshot = useMemo(() => ({
     fc: clinical.display.active.hr ? clinical.display.vitals.hr : null,
     pniSys: clinical.display.active.bp_sys ? clinical.display.vitals.bp_sys : null,
     pniDia: clinical.display.active.bp_dia ? clinical.display.vitals.bp_dia : null,
-    etco2: clinical.display.active.etco2 ? clinical.display.vitals.etco2 : null,
+    etco2: workspace.etco2Status === 'calibrated' && clinical.display.active.etco2
+      ? clinical.display.vitals.etco2
+      : null,
     spo2: clinical.display.active.spo2 ? clinical.display.vitals.spo2 : null,
   }), [
     clinical.display.active.bp_dia,
@@ -59,18 +67,13 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
     clinical.display.vitals.etco2,
     clinical.display.vitals.hr,
     clinical.display.vitals.spo2,
+    workspace.etco2Status,
   ])
   const vitalLog = useVitalLog({
     elapsedSeconds: monitorElapsedSeconds,
     isRunning: clinical.poweredOn,
     snapshot: vitalLogSnapshot,
     intervalMinutes: preferenceState.preferences.vitalLogInterval,
-  })
-  const workspace = useWagamiAWorkspaceWithPreferences({
-    rhythm: clinical.display.vitals.rhythm,
-    hr: clinical.display.vitals.hr,
-    vitalLog,
-    preferenceState,
   })
   const text = getWagamiAText(workspace.preferences.locale)
   const { showCallInfo, onMonitorReady } = useWagamiACallInfoCover(workspace.view)
@@ -102,6 +105,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
       time={montrealClock.time}
       sessionTimer={monitorElapsed}
       waveformSequenceKey={monitorResetVersion}
+      vitalLog={vitalLog}
     />
   )
 

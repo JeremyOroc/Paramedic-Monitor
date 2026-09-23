@@ -6,7 +6,7 @@ import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
 import { WagamiAScreen } from '../WagamiAScreen'
 
 vi.mock('../WagamiAWaveformWorkspace', () => ({
-  WagamiAWaveformWorkspace: () => <div data-testid="a-waveform-workspace" />,
+  WagamiAWaveformWorkspace: ({ etco2CalibrationStatus, etco2CalibrationStartedAt, etco2CalibrationEndsAt }: { etco2CalibrationStatus?: string; etco2CalibrationStartedAt?: number | null; etco2CalibrationEndsAt?: number | null }) => <div data-testid="a-waveform-workspace" data-etco2-status={etco2CalibrationStatus} data-started-at={etco2CalibrationStartedAt} data-ends-at={etco2CalibrationEndsAt} />,
 }))
 
 const display: WagamiADisplayState = {
@@ -42,6 +42,21 @@ describe('Wagami A fixed live display', () => {
     expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveTextContent('88')
     expect(screen.queryByText(/DONNÉES CONFIRMÉES|EN DIRECT/)).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('200')
+  })
+
+  it('gates the EtCO₂ card and marks its task only while inline calibration is running', () => {
+    const { rerender } = render(<WagamiAScreen display={display} energy={120} etco2CalibrationStatus="idle" />)
+    expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent('--')
+    expect(screen.getByRole('button', { name: 'EtCO₂' })).toHaveAttribute('aria-pressed', 'false')
+
+    rerender(<WagamiAScreen display={display} energy={120} etco2CalibrationStatus="calibrating" etco2CalibrationStartedAt={1000} etco2CalibrationEndsAt={46_000} />)
+    expect(screen.getByRole('button', { name: 'EtCO₂' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('a-waveform-workspace')).toHaveAttribute('data-etco2-status', 'calibrating')
+    expect(screen.getByTestId('a-waveform-workspace')).toHaveAttribute('data-started-at', '1000')
+
+    rerender(<WagamiAScreen display={display} energy={120} etco2CalibrationStatus="calibrated" />)
+    expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent(String(display.vitals.etco2))
+    expect(screen.getByRole('button', { name: 'EtCO₂' })).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('shows active cuff, charge and CPR states without another touch Analyze or BP action', () => {

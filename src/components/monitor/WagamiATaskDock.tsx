@@ -7,6 +7,7 @@ export type WagamiATask = 'twelveLead' | 'etco2' | 'medications' | 'callInfo' | 
 type WagamiATaskDockProps = {
   onTask?: (task: WagamiATask) => void
   selectedAction?: string | null
+  activeTask?: WagamiATask | null
   locale?: WagamiALocale
   callInfoDisabled?: boolean
 }
@@ -21,7 +22,7 @@ function TaskIcon({ task }: { task: WagamiATask }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true" className={common}><path d="M10 2h4l.5 2.4 2 .8 2-1.3 2.8 2.8-1.3 2 .8 2L23 10v4l-2.4.5-.8 2 1.3 2-2.8 2.8-2-1.3-2 .8L14 23h-4l-.5-2.4-2-.8-2 1.3-2.8-2.8 1.3-2-.8-2L1 14v-4l2.4-.5.8-2-1.3-2 2.8-2.8 2 1.3 2-.8z" /><circle cx="12" cy="12" r="3" /></svg>
 }
 
-export function WagamiATaskDock({ onTask, selectedAction, locale = 'fr', callInfoDisabled = false }: WagamiATaskDockProps) {
+export function WagamiATaskDock({ onTask, selectedAction, activeTask = null, locale = 'fr', callInfoDisabled = false }: WagamiATaskDockProps) {
   const text = getWagamiAText(locale)
   const tasks: ReadonlyArray<{ key: WagamiATask; label: string }> = [
     { key: 'twelveLead', label: text.taskTwelveLead },
@@ -39,12 +40,14 @@ export function WagamiATaskDock({ onTask, selectedAction, locale = 'fr', callInf
           type="button"
           data-task={key}
           data-navigation-selected={selectedAction === key ? 'true' : 'false'}
+          data-task-active={activeTask === key ? 'true' : 'false'}
+          aria-pressed={activeTask === key}
           disabled={!onTask || (key === 'callInfo' && callInfoDisabled)}
           onClick={() => onTask?.(key)}
           className={cn(
             'grid min-h-[44px] min-w-0 place-content-center justify-items-center gap-[clamp(3px,0.55cqw,8px)] rounded-[6px] border border-wagami-a-border bg-wagami-a-surface-raised px-1.5 py-1 text-wagami-a-pni',
             'enabled:hover:bg-wagami-a-surface enabled:active:brightness-125 focus-visible:outline-2 focus-visible:outline-wagami-a-pni disabled:cursor-not-allowed disabled:opacity-45',
-            selectedAction === key && 'ring-2 ring-inset ring-wagami-a-pni bg-wagami-a-surface',
+            (selectedAction === key || activeTask === key) && 'ring-2 ring-inset ring-wagami-a-pni bg-wagami-a-surface',
           )}
         >
           <TaskIcon task={key} />

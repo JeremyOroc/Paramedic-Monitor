@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 import { TwelveLeadPage } from '@/components/monitor/TwelveLeadPage'
 import { TwelveLeadPrintout } from '@/components/monitor/TwelveLeadPrintout'
@@ -9,6 +9,7 @@ import { WagamiAScreen } from '@/components/monitor/WagamiAScreen'
 import type { WagamiAWorkspaceController } from '@/hooks/useWagamiAWorkspace'
 import type { DefibChargeOrigin, DefibState } from '@/hooks/useDefibSequence'
 import type { NibpPhase } from '@/hooks/useNibpReading'
+import type { VitalLogEntry } from '@/hooks/useVitalLog'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
 import { ALL_MEDICATIONS } from '@/lib/monitor/medications'
 import { isWagamiACallInfoBlocked } from '@/lib/wagamiACallInfo'
@@ -45,6 +46,7 @@ type WagamiAWorkspaceProps = {
   time?: string
   sessionTimer?: string
   waveformSequenceKey?: string | number
+  vitalLog?: VitalLogEntry[]
 }
 
 type ViewFrameProps = {
@@ -92,8 +94,28 @@ export function WagamiAWorkspace({
   time,
   sessionTimer,
   waveformSequenceKey,
+  vitalLog = [],
 }: WagamiAWorkspaceProps) {
   const text = getWagamiAText(controller.preferences.locale)
+  const [etco2ClockNow, setEtco2ClockNow] = useState(() => Date.now())
+  const etco2Deadline = controller.etco2Status === 'calibrating'
+    ? controller.etco2EndsAt
+    : controller.etco2Status === 'cancelled'
+      ? controller.etco2CancellationEndsAt
+      : null
+  useEffect(() => {
+    if (etco2Deadline === null) return
+    const timer = setTimeout(
+      () => setEtco2ClockNow(Date.now()),
+      Math.max(0, etco2Deadline - Date.now()),
+    )
+    return () => clearTimeout(timer)
+  }, [etco2Deadline])
+  const effectiveEtco2Status = controller.etco2Status === 'calibrating' && controller.etco2EndsAt !== null && etco2ClockNow >= controller.etco2EndsAt
+    ? 'calibrated'
+    : controller.etco2Status === 'cancelled' && controller.etco2CancellationEndsAt !== null && etco2ClockNow >= controller.etco2CancellationEndsAt
+      ? 'idle'
+      : controller.etco2Status
   const [eventPage, setEventPage] = useState(1)
   const [vitalPage, setVitalPage] = useState(1)
   const clinicalStatus = { patientMode, alarms: display.alarms, locale: controller.preferences.locale }
@@ -138,21 +160,7 @@ export function WagamiAWorkspace({
 
   let content: React.ReactNode = null
 
-  if (pageView === 'etco2') {
-    const status = controller.etco2Status === 'idle' ? text.etco2Idle : controller.etco2Status === 'calibrating' ? text.etco2Calibrating : text.etco2Calibrated
-    content = (
-      <ViewFrame title={text.etco2Title} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
-        <div className="grid h-full place-items-center p-8">
-          <div className="grid w-[70%] gap-5 rounded-lg border border-wagami-a-border bg-wagami-a-surface p-6 text-center">
-            <div aria-hidden="true" className="mx-auto h-20 w-20 rounded-full border-4 border-wagami-a-etco2 bg-wagami-a-screen" />
-            <p role="status" className="font-sans text-xl font-semibold text-wagami-a-etco2">{status}</p>
-            {controller.etco2Status === 'calibrating' ? <progress aria-label={status} className="h-3 w-full" /> : null}
-            <button type="button" onClick={controller.etco2Status === 'calibrating' ? controller.cancelEtco2Calibration : controller.startEtco2Calibration} className="min-h-[44px] rounded border border-wagami-a-etco2 bg-wagami-a-surface-raised font-semibold focus-visible:outline-2 focus-visible:outline-wagami-a-etco2">{controller.etco2Status === 'calibrating' ? text.cancel : text.calibrate}</button>
-          </div>
-        </div>
-      </ViewFrame>
-    )
-  } else if (pageView === 'medications') {
+  if (pageView === 'medications') {
     content = (
       <ViewFrame title={text.medicationsTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_56px] gap-2 p-3">
@@ -195,9 +203,9 @@ export function WagamiAWorkspace({
       </ViewFrame>
     )
   } else if (pageView === 'vitalLog') {
-    const totalPages = Math.max(1, Math.ceil(controller.vitalLog.length / PAGE_SIZE))
+    const totalPages = Math.max(1, Math.ceil(vitalLog.length / PAGE_SIZE))
     const page = Math.min(vitalPage, totalPages)
-    const entries = controller.vitalLog.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+    const entries = vitalLog.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
     content = (
       <ViewFrame title={text.vitalLogTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full grid-rows-[minmax(0,1fr)_52px] p-4">
@@ -270,6 +278,9 @@ export function WagamiAWorkspace({
           time={time}
           sessionTimer={sessionTimer}
           waveformSequenceKey={waveformSequenceKey}
+          etco2CalibrationStatus={effectiveEtco2Status}
+          etco2CalibrationStartedAt={controller.etco2StartedAt}
+          etco2CalibrationEndsAt={controller.etco2EndsAt}
         />
       </div>
       {currentSurfaceState.twelveLeadMounted ? (

@@ -33,11 +33,20 @@ export function isConnected(
 export function anyoneCalibratedEtco2(
   events: readonly StudentEvent[],
   attemptVersion: number,
+  monitorResetVersion: number = 0,
 ): boolean {
   return events.some(
     (event) =>
-      event.kind === 'etco2_calibration' && event.attempt_version === attemptVersion,
+      event.kind === 'etco2_calibration' &&
+      event.attempt_version === attemptVersion &&
+      calibrationResetVersion(event.payload) === monitorResetVersion,
   )
+}
+
+function calibrationResetVersion(payload: unknown): number {
+  if (typeof payload !== 'object' || payload === null) return 0
+  const value = Reflect.get(payload, 'monitorResetVersion')
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0
 }
 
 export function participantProgress(
