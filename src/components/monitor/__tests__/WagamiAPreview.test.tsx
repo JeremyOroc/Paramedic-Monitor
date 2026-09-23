@@ -176,7 +176,7 @@ describe('Wagami A Room-free clinical preview', () => {
     expect(screen.getByRole('button', { name: '3 min' })).toHaveAttribute('aria-pressed', 'true')
   })
 
-  it('records medication events inside Medications and keeps preview Vital Log honest', () => {
+  it('records medication events and leaves Vital Log empty before the first interval', () => {
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
     fireEvent.click(screen.getByRole('button', { name: 'Médicaments' }))
@@ -187,6 +187,43 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Journal des signes vitaux' }))
     expect(screen.getByText('Aucun signe vital consigné.')).toBeInTheDocument()
+  })
+
+  it('records Preview vitals after the selected interval and clears rows on power-off', () => {
+    vi.useFakeTimers()
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
+    fireEvent.click(screen.getByRole('button', { name: '1 min' }))
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+
+    act(() => vi.advanceTimersByTime(59_000))
+    fireEvent.click(screen.getByRole('button', { name: 'Journal des signes vitaux' }))
+    expect(screen.getByText('Aucun signe vital consigné.')).toBeInTheDocument()
+
+    act(() => vi.advanceTimersByTime(1_000))
+    const vitalLogView = screen.getByRole('heading', { name: 'Journal des signes vitaux' }).closest('section')
+    expect(vitalLogView).not.toBeNull()
+    const firstRow = within(vitalLogView!).getByText('00:01:00').parentElement
+    expect(firstRow).toHaveTextContent('80')
+    expect(firstRow).toHaveTextContent('120')
+    expect(firstRow).toHaveTextContent('35')
+    expect(firstRow).toHaveTextContent('98')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    act(() => vi.advanceTimersByTime(0))
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Journal des signes vitaux' }))
+    const resetVitalLogView = screen.getByRole('heading', { name: 'Journal des signes vitaux' }).closest('section')
+    expect(resetVitalLogView).not.toBeNull()
+    expect(within(resetVitalLogView!).queryByText('00:01:00')).not.toBeInTheDocument()
+    expect(screen.getByText('Aucun signe vital consigné.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Retour/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
+    expect(screen.getByRole('button', { name: '1 min' })).toHaveAttribute('aria-pressed', 'true')
+    vi.useRealTimers()
   })
 
   it('offers EtCO₂ calibration and functional automatic PNI settings', () => {
