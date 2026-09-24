@@ -6,11 +6,26 @@
 ---
 
 ## Current Phase
+**Instructor Console scenario and authoring refinement — COMPLETE LOCALLY, AWAITING ACCEPTANCE
+(2026-09-23).** Active-Attempt General Notes now uses explicit Save/Revert and tab-stable dirty
+drafts. Scenario draft row clicks are inert; My Scenarios and Templates use compact responsive
+columns; permission-aware inline row renaming replaces the standalone title field; Dispatch
+Countdown sits in the Scenarios header; and Caller Info uses compact left dispatch fields plus
+auto-growing right detail fields.
+
+All 109 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production
+build pass. The complete suite has 1,710 passing, one skipped, and only the same three unrelated
+Room-ownership/PatientInfoPanel baseline failures. Rendered desktop, 1024×768 landscape-iPad, and
+767-pixel stacked-layout QA passes with a clean browser console, including inline rename and
+narrative-field expansion. The default Turbopack production build is blocked by this environment's
+worker-port permission, while the supported Webpack build completes successfully. All changes are
+local and uncommitted; nothing was pushed or deployed.
+
 **Instructor Treatments and Attempt notes — COMPLETE LOCALLY, AWAITING ACCEPTANCE AND MIGRATION
 AUTHORIZATION (2026-09-23).** The Instructor panel now groups the existing medications with the
 approved Trauma treatments, records new presses as categorized Treatment events, and shows both new
 and legacy medication actions as concise Treatment rows in Evaluation reports. Attempt General
-Notes autosave with queued-write and failure retention behavior, remain editable through Edit/Done
+Notes use explicit Save/Revert with dirty-draft retention, and remain editable through Edit/Done
 after the live Attempt, and are included in report copy output. Report Note Send appends immutable,
 timestamped Instructor Notes to the Attempt timeline. API, service, generated type, persistent
 report, migration, compatibility, authorization, and UI coverage are included.

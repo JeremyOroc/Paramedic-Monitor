@@ -10,6 +10,68 @@
 
 ## Current Requirement Updates
 
+- 2026-09-23 Instructor Console scenario and authoring refinement — **implemented locally; awaiting
+  programmer acceptance**. Replace active-Attempt
+  General Notes autosave on Monitor & Patient SNS with an explicit Save button. Save is disabled
+  while clean, reports Saving/Saved/failure state, and is the only operation that persists edits.
+  A dirty General Notes draft survives Instructor Console tab changes; Revert restores the last
+  saved value locally. New Attempt and End Room remain blocked until the instructor explicitly
+  saves or reverts, and browser close/refresh retains an unsaved-change warning. Reports-page
+  Edit/Done behavior remains unchanged.
+
+  Make a Scenario draft row inert on single click so selecting New Scenario and then clicking the
+  resulting draft does not open a deletion prompt. Draft deletion remains available only from its
+  explicit Delete action and retains confirmation. Split the scenario library into equal desktop
+  columns, with My Scenarios on the left and Templates on the right; stack them on narrow screens,
+  let content determine height, and retain document-level scrolling without nested library
+  scrollbars.
+
+  Remove the standalone Change scenario title label and input. Double-clicking an editable row's
+  title opens an inline editor; focused titles also support Enter or F2. Escape cancels. Enter or
+  blur persists a Saved scenario title immediately through a title-only update, without loading or
+  overwriting its clinical snapshot; a Scenario draft title remains local until its existing Save
+  action. Personal scenarios remain editable by their owner, Template scenarios remain editable
+  only by Administrators, and read-only Template titles do not enter edit mode. Renaming the Loaded
+  scenario updates its title baseline without making its clinical snapshot dirty.
+
+  Move Dispatch Countdown out of Caller Info and place it at the right side of the Scenarios
+  library title header so it remains higher on the Scenarios tab even while Caller Info is
+  collapsed. Preserve countdown locking, live display, minute/second editing, and responsive header
+  wrapping. In expanded Caller Info, arrange Call #, Priority, and MPDS Code as a compact vertical
+  left column, with Adresse, Probleme, Information, Mise a jour, and Heure stacked in the right
+  column. Probleme, Information, and Mise a jour automatically grow to fit their content without
+  internal vertical scrolling, allowing the Caller Info card and document to expand. Keep Auto-sort
+  Scenario, Response Route, optional extra fields, Add Extra, data behavior, and permissions
+  unchanged.
+
+### Testing — Instructor Console scenario and authoring refinement
+
+- Cover explicit-only General Notes persistence, clean/dirty/saving/saved/error states, Revert,
+  tab-change draft retention, New Attempt and End Room blocking, unload warnings, save failure
+  retention, and unchanged Reports-page editing.
+- Cover inert Scenario draft row clicks, explicit confirmed draft deletion, equal My
+  Scenarios/Templates desktop columns, narrow-screen stacking, natural-height expansion, and
+  absence of nested library scrolling.
+- Cover inline title editing by double-click, Enter/F2, Enter/blur save, Escape cancellation,
+  title-only request payloads, draft-title behavior, Loaded-scenario baseline synchronization,
+  empty-title fallback, permission boundaries, and failed-rename retention/error feedback.
+- Cover Scenarios-header countdown placement, editing and locked/live states, responsive wrapping,
+  removal from Caller Info, the left/right Caller Info field grouping, auto-growing multiline
+  fields, and unchanged Auto-sort, route, extra-field, and Add Extra behavior.
+- Run focused Instructor Console component and integration tests; TypeScript; affected-file ESLint;
+  the complete test suite; the Next.js 16.3 Webpack production build; and rendered desktop plus
+  landscape-iPad QA for both expanded and collapsed Caller Info states.
+
+**Completed locally 2026-09-23.** General Notes now persists only through its explicit Save action,
+with Revert, dirty-draft retention, unload protection, and guarded New Attempt/End Room transitions.
+The scenario library uses compact responsive My Scenarios/Templates columns, inert draft-row clicks,
+permission-aware inline title editing, and a header-level Dispatch Countdown. Caller Info uses the
+approved left/right grouping and content-growing narrative fields. All 109 focused tests pass;
+TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production build pass. The complete
+suite has 1,710 passing, one skipped, and only three unchanged unrelated failures in Room ownership
+and PatientInfoPanel styling. Rendered desktop, landscape-iPad, and narrow-layout QA passes with no
+console warnings or errors. No commit, push, or deployment was made.
+
 - 2026-09-23 Instructor Treatments and Attempt notes — **implemented locally; awaiting programmer
   acceptance and production-migration authorization**. Rename the Instructor Console's current medication action area to
   `Treatments`, retaining a `Medications` subsection for the existing twelve medications and adding
@@ -28,9 +90,10 @@
 
   Add two Attempt-scoped note surfaces below the Instructor Console's Pulse, Respiratory, and
   Skin/Extremities row. `General Notes` is a large, latest-value narrative of at most 4,000
-  characters. It autosaves for the active Attempt, shows Saving/Saved/failure state, flushes pending
-  edits before Attempt switching or completion, retains the draft and prevents accidental loss when
-  a save fails, and appears in the Evaluation record immediately below the optional Attempt name.
+  characters. On the active Attempt it saves only through an explicit Save action, shows
+  Saving/Saved/failure state, retains dirty drafts across Instructor Console tab changes, blocks
+  Attempt switching or completion until the instructor saves or reverts, prevents accidental loss
+  when a save fails, and appears in the Evaluation record immediately below the optional Attempt name.
   It remains editable from Reports through an explicit Edit/Done control; while an Attempt is live,
   the Room controller is the editing authority, and after it ends the report owner is the editing
   authority. Include the latest saved General Notes in report copy, print, and export output.
@@ -55,9 +118,10 @@
 - Cover new treatment persistence and database constraints, stable medication/trauma metadata,
   legacy `medication` record compatibility, concise `Treatment {name}` timeline wording, persistent
   Evaluation snapshots, and unchanged Scenario-device Medications behavior.
-- Cover General Notes autosave, 4,000-character limit, Saving/Saved/error states, pending-save flush,
-  loss prevention, live-controller and completed-report ownership, Edit/Done behavior, latest-value
-  persistence, Attempt isolation, report placement, and copy/print/export inclusion.
+- Cover General Notes explicit save, 4,000-character limit, clean/dirty/Saving/Saved/error states,
+  local Revert, console-tab draft retention, transition blocking, loss prevention, live-controller
+  and completed-report ownership, Reports Edit/Done behavior, latest-value persistence, Attempt
+  isolation, report placement, and copy/print/export inclusion.
 - Cover Report Note validation, the 1,000-character limit, visible Send flow, success-only clearing,
   failure retention, immutable chronological Instructor Note rows, timestamps, Attempt isolation,
   and absence of Scenario-device or Trainee attribution.

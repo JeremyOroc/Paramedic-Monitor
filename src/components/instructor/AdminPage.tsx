@@ -13,7 +13,6 @@ import { VitalsControls } from '@/components/instructor/VitalsControls'
 import { DefibrillatorPanel } from '@/components/instructor/DefibrillatorPanel'
 import { EvaluationReportPanel } from '@/components/instructor/EvaluationReportPanel'
 import { AttemptNotesPanel } from '@/components/instructor/AttemptNotesPanel'
-import type { GeneralNotesEditorHandle } from '@/components/instructor/GeneralNotesEditor'
 import { TreatmentRecorder } from '@/components/instructor/TreatmentRecorder'
 import { CallerInfoForm } from '@/components/instructor/CallerInfoForm'
 import { ScenarioLibraryPanel } from '@/components/instructor/ScenarioLibraryPanel'
@@ -297,6 +296,10 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   const [instructorNotes, setInstructorNotes] = useState<InstructorNote[]>([])
   const [reviewTruncated, setReviewTruncated] = useState(false)
   const [attemptVersion, setAttemptVersion] = useState(1)
+  const [generalNotesDraftState, setGeneralNotesDraftState] = useState<{
+    attemptVersion: number
+    value: string
+  } | null>(null)
   // A past attempt the evaluator has opened in the Report tab. The 2.5s poll
   // stays on the active attempt, because the roster depends on it -- looking
   // back is a deliberate, one-off read rather than something polled.
@@ -318,7 +321,6 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
   // source of truth for the tally, but it is 2.5s behind a press, and a button
   // whose count moves a beat later reads as a button that did not work.
   const [pendingTreatments, setPendingTreatments] = useState<Record<string, number>>({})
-  const generalNotesEditorRef = useRef<GeneralNotesEditorHandle>(null)
   const canControlRoom = session?.canControl ?? true
 
   const stopSpectating = useCallback((participantId: string) => {
@@ -376,8 +378,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
 
   const startNewAttempt = async () => {
     if (!session || !canControlRoom) return
-    if (generalNotesEditorRef.current && !(await generalNotesEditorRef.current.flush())) {
-      setSessionError('Save General Notes before starting a new Attempt.')
+    if (generalNotesDirty) {
+      setSessionError('Save or revert General Notes before starting a new Attempt.')
       return
     }
     const response = await fetch(`/api/session/${session.code}/attempt`, {
@@ -404,8 +406,8 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
 
   const endSession = async () => {
     if (!session || !canControlRoom) return
-    if (generalNotesEditorRef.current && !(await generalNotesEditorRef.current.flush())) {
-      setSessionError('Save General Notes before ending the Room.')
+    if (generalNotesDirty) {
+      setSessionError('Save or revert General Notes before ending the Room.')
       return
     }
     // A thrown fetch (offline, a non-JSON 500 from the host) used to reject
@@ -524,6 +526,17 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     attemptLabels.find((entry) => entry.attempt_version === attemptVersion)?.label ?? ''
   const activeGeneralNotes =
     attemptGeneralNotes.find((entry) => entry.attempt_version === attemptVersion)?.general_notes ?? ''
+  const generalNotesDraft = generalNotesDraftState?.attemptVersion === attemptVersion
+    ? generalNotesDraftState.value
+    : activeGeneralNotes
+  const generalNotesDirty = generalNotesDraft !== activeGeneralNotes
+
+  useEffect(() => {
+    if (!generalNotesDirty) return
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault()
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload)
+  }, [generalNotesDirty])
 
   const saveGeneralNotes = useCallback(
     async (generalNotes: string) => {
@@ -545,6 +558,10 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
         ...current.filter((entry) => entry.attempt_version !== saved.attempt_version),
         saved,
       ])
+      setGeneralNotesDraftState({
+        attemptVersion: saved.attempt_version,
+        value: saved.general_notes,
+      })
     },
     [canControlRoom, session],
   )
@@ -1096,6 +1113,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
     setScenarioBaseline(null)
     setScenarioDraftActive(false)
     setScenarioError('')
+    setGeneralNotesDraftState(null)
     setScenarioEditorVersion((version) => version + 1)
   }
   const applyLoadedScenario = (scenario: SavedScenario) => {
@@ -1158,6 +1176,12 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
       return
     }
     clearScenarioAuthoringState()
+  }
+
+  const handleScenarioRenamed = (scenario: SavedScenario) => {
+    if (loadedScenarioId !== scenario.id) return
+    setScenarioTitle(scenario.title)
+    setScenarioBaseline((current) => current ? { ...current, title: scenario.title } : current)
   }
 
   const handleNewScenario = () => {
@@ -1790,9 +1814,12 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
               <AttemptNotesPanel
                 key={`${attemptVersion}:${attemptNotesUnavailable ?? 'ready'}`}
                 generalNotes={activeGeneralNotes}
+                generalNotesDraft={generalNotesDraft}
+                onGeneralNotesDraftChange={(value) => {
+                  setGeneralNotesDraftState({ attemptVersion, value })
+                }}
                 onSaveGeneralNotes={saveGeneralNotes}
                 onSendReportNote={sendReportNote}
-                generalNotesRef={generalNotesEditorRef}
                 disabledReason={attemptNotesUnavailable}
               />
             }
@@ -1859,6 +1886,7 @@ export default function AdminPage({ initialExistingRoom, session }: SessionAdmin
             onSelectedFolderChange={setSelectedScenarioFolderId}
             onExpandedFolderChange={handleScenarioFolderExpansionChange}
             onLoadScenario={handleLoadScenario}
+            onScenarioRenamed={handleScenarioRenamed}
             onUnloadScenario={handleUnloadScenario}
             onFolderDeleted={handleScenarioFolderDeleted}
             onLoadedScenarioFolderChange={setLoadedScenarioFolderId}

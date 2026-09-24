@@ -1,8 +1,26 @@
+import { useState } from 'react'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { GeneralNotesEditor } from '../GeneralNotesEditor'
+
+function ManualEditor({ onSave }: { onSave: (value: string) => Promise<void> }) {
+  const [saved, setSaved] = useState('Saved note')
+  const [draft, setDraft] = useState(saved)
+  return (
+    <GeneralNotesEditor
+      value={saved}
+      draftValue={draft}
+      onDraftChange={setDraft}
+      onSave={async (value) => {
+        await onSave(value)
+        setSaved(value)
+      }}
+      saveMode="manual"
+    />
+  )
+}
 
 describe('GeneralNotesEditor', () => {
   it('uses Edit and Done while retaining the latest saved narrative', async () => {
@@ -66,5 +84,28 @@ describe('GeneralNotesEditor', () => {
 
     await waitFor(() => expect(onSave).toHaveBeenNthCalledWith(2, 'First and latest'))
     expect(editor).toHaveValue('First and latest')
+  })
+
+  it('requires explicit Save and can Revert a dirty manual draft', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    render(<ManualEditor onSave={onSave} />)
+
+    const editor = screen.getByRole('textbox', { name: 'General Notes' })
+    await user.clear(editor)
+    await user.type(editor, 'Unsaved note')
+    fireEvent.blur(editor)
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByText('Unsaved')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Revert General Notes' }))
+    expect(editor).toHaveValue('Saved note')
+    expect(screen.getByRole('button', { name: 'Save General Notes' })).toBeDisabled()
+
+    await user.clear(editor)
+    await user.type(editor, 'Explicit note')
+    await user.click(screen.getByRole('button', { name: 'Save General Notes' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith('Explicit note'))
+    expect(screen.getByText('Saved')).toBeInTheDocument()
   })
 })

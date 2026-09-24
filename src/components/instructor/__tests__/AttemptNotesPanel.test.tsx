@@ -1,16 +1,33 @@
+import { useState } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { AttemptNotesPanel } from '../AttemptNotesPanel'
 
+type HarnessProps = Omit<
+  React.ComponentProps<typeof AttemptNotesPanel>,
+  'generalNotesDraft' | 'onGeneralNotesDraftChange'
+>
+
+function Harness(props: HarnessProps) {
+  const [draft, setDraft] = useState(props.generalNotes)
+  return (
+    <AttemptNotesPanel
+      {...props}
+      generalNotesDraft={draft}
+      onGeneralNotesDraftChange={setDraft}
+    />
+  )
+}
+
 describe('AttemptNotesPanel', () => {
-  it('autosaves General Notes on blur and clears a Report Note only after success', async () => {
+  it('saves General Notes only from the explicit button and clears a Report Note after success', async () => {
     const user = userEvent.setup()
     const saveGeneralNotes = vi.fn().mockResolvedValue(undefined)
     const sendReportNote = vi.fn().mockResolvedValue(undefined)
     render(
-      <AttemptNotesPanel
+      <Harness
         generalNotes=""
         onSaveGeneralNotes={saveGeneralNotes}
         onSendReportNote={sendReportNote}
@@ -20,6 +37,8 @@ describe('AttemptNotesPanel', () => {
 
     await user.type(screen.getByRole('textbox', { name: 'General Notes' }), 'Ongoing narrative')
     await user.tab()
+    expect(saveGeneralNotes).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Save General Notes' }))
     await waitFor(() => expect(saveGeneralNotes).toHaveBeenCalledWith('Ongoing narrative'))
 
     const reportNote = screen.getByLabelText('Report Note')
@@ -33,7 +52,7 @@ describe('AttemptNotesPanel', () => {
     const user = userEvent.setup()
     const sendReportNote = vi.fn().mockRejectedValue(new Error('Network unavailable'))
     render(
-      <AttemptNotesPanel
+      <Harness
         generalNotes=""
         onSaveGeneralNotes={vi.fn().mockResolvedValue(undefined)}
         onSendReportNote={sendReportNote}

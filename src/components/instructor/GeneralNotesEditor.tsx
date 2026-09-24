@@ -20,6 +20,9 @@ export type GeneralNotesEditorHandle = {
 type GeneralNotesEditorProps = {
   value: string
   onSave: (value: string) => Promise<void>
+  draftValue?: string
+  onDraftChange?: (value: string) => void
+  saveMode?: 'auto' | 'manual'
   disabled?: boolean
   disabledReason?: string
   showEditButton?: boolean
@@ -36,6 +39,9 @@ export const GeneralNotesEditor = forwardRef<
   {
     value = '',
     onSave,
+    draftValue,
+    onDraftChange,
+    saveMode = 'auto',
     disabled = false,
     disabledReason,
     showEditButton = false,
@@ -44,7 +50,7 @@ export const GeneralNotesEditor = forwardRef<
   },
   ref,
 ) {
-  const [draft, setDraft] = useState(value)
+  const [localDraft, setLocalDraft] = useState(value)
   const [editing, setEditing] = useState(initiallyEditing && !disabled)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [error, setError] = useState('')
@@ -52,17 +58,31 @@ export const GeneralNotesEditor = forwardRef<
   const draftRef = useRef(value)
   const inFlightRef = useRef<Promise<boolean> | null>(null)
 
+  const draft = draftValue ?? localDraft
+  const dirty = draft !== value
+
+  const updateDraft = useCallback((next: string) => {
+    draftRef.current = next
+    if (draftValue === undefined) setLocalDraft(next)
+    onDraftChange?.(next)
+  }, [draftValue, onDraftChange])
+
   useEffect(() => {
     const previousSaved = savedRef.current
     const wasClean = draftRef.current === previousSaved
+    const confirmsLocalSave = value === savedRef.current
     savedRef.current = value
     if (wasClean) {
       draftRef.current = value
-      setDraft(value)
-      setSaveState('idle')
+      if (draftValue === undefined) setLocalDraft(value)
+      if (!confirmsLocalSave) setSaveState('idle')
       setError('')
     }
-  }, [value])
+  }, [draftValue, value])
+
+  useEffect(() => {
+    draftRef.current = draft
+  }, [draft])
 
   const saveNow = useCallback(async (): Promise<boolean> => {
     if (disabled) return false
@@ -71,12 +91,21 @@ export const GeneralNotesEditor = forwardRef<
       setSaveState('saving')
       setError('')
       try {
-        while (draftRef.current !== savedRef.current) {
+        if (saveMode === 'manual') {
           const next = draftRef.current
-          await onSave(next)
-          savedRef.current = next
+          if (next !== savedRef.current) {
+            await onSave(next)
+            savedRef.current = next
+          }
+          setSaveState(draftRef.current === next ? 'saved' : 'idle')
+        } else {
+          while (draftRef.current !== savedRef.current) {
+            const next = draftRef.current
+            await onSave(next)
+            savedRef.current = next
+          }
+          setSaveState('saved')
         }
-        setSaveState('saved')
         return true
       } catch (caught) {
         setSaveState('error')
@@ -88,15 +117,15 @@ export const GeneralNotesEditor = forwardRef<
     })()
     inFlightRef.current = request
     return request
-  }, [disabled, onSave])
+  }, [disabled, onSave, saveMode])
 
   useImperativeHandle(ref, () => ({ flush: saveNow }), [saveNow])
 
   useEffect(() => {
-    if (disabled || !editing || draft === savedRef.current) return
+    if (saveMode !== 'auto' || disabled || !editing || draft === savedRef.current) return
     const timer = window.setTimeout(() => void saveNow(), 700)
     return () => window.clearTimeout(timer)
-  }, [disabled, draft, editing, saveNow])
+  }, [disabled, draft, editing, saveMode, saveNow])
 
   useEffect(() => {
     const warnBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -111,12 +140,20 @@ export const GeneralNotesEditor = forwardRef<
     if (await saveNow()) setEditing(false)
   }
 
+  const revert = () => {
+    updateDraft(savedRef.current)
+    setSaveState('idle')
+    setError('')
+  }
+
   const statusText = saveState === 'saving'
     ? 'Saving…'
     : saveState === 'saved'
       ? 'Saved'
       : saveState === 'error'
         ? 'Save failed'
+        : saveMode === 'manual' && dirty
+          ? 'Unsaved'
         : ''
 
   return (
@@ -138,7 +175,28 @@ export const GeneralNotesEditor = forwardRef<
             </span>
           ) : null}
         </div>
-        {showEditButton ? (
+        {saveMode === 'manual' ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Revert General Notes"
+              onClick={revert}
+              disabled={disabled || saveState === 'saving' || !dirty}
+              className="border border-neutral-700 px-3 py-1 font-mono text-[10px] font-black uppercase tracking-wider text-neutral-300 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Revert
+            </button>
+            <button
+              type="button"
+              aria-label="Save General Notes"
+              onClick={() => void saveNow()}
+              disabled={disabled || saveState === 'saving' || !dirty}
+              className="border border-cyan-bp bg-cyan-bp px-3 py-1 font-mono text-[10px] font-black uppercase tracking-wider text-black disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {saveState === 'saving' ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        ) : showEditButton ? (
           <button
             type="button"
             disabled={disabled}
@@ -158,12 +216,11 @@ export const GeneralNotesEditor = forwardRef<
           rows={5}
           onChange={(event) => {
             const next = event.target.value
-            draftRef.current = next
-            setDraft(next)
+            updateDraft(next)
             setSaveState('idle')
             setError('')
           }}
-          onBlur={() => void saveNow()}
+          onBlur={saveMode === 'auto' ? () => void saveNow() : undefined}
           placeholder="General notes for this Attempt"
           className="min-h-28 w-full resize-y border border-neutral-700 bg-black px-3 py-2 text-sm text-neutral-200 outline-none placeholder:text-neutral-600 focus:border-cyan-bp disabled:cursor-not-allowed disabled:opacity-50"
         />

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { createEmptyScenarioSnapshot } from '@/lib/scenarioSnapshot'
+import { useMonitorStore } from '@/store/monitorStore'
 import type { SavedScenario, ScenarioFolder } from '@/types/savedScenario'
 
 import { ScenarioLibraryPanel } from '../ScenarioLibraryPanel'
@@ -110,10 +111,13 @@ function createFetchMock(options: {
     }
     if (url.startsWith('/api/scenarios/') && method === 'PATCH') {
       const scenario = scenarios.find((item) => item.id === url.split('/').at(-1))
-      const body = JSON.parse(String(init?.body)) as { folderId: string }
+      const body = JSON.parse(String(init?.body)) as { folderId?: string; title?: string }
       if (!scenario) return jsonResponse({ error: 'Not found' }, 404)
-      scenario.folder_id = body.folderId
-      scenario.position = scenarios.filter((item) => item.folder_id === body.folderId).length + 1
+      if (body.folderId) {
+        scenario.folder_id = body.folderId
+        scenario.position = scenarios.filter((item) => item.folder_id === body.folderId).length + 1
+      }
+      if (body.title !== undefined) scenario.title = body.title.trim() || `Scenario ${scenario.scenario_number}`
       return jsonResponse({ scenario })
     }
     if (url === '/api/scenario-folders/order' && method === 'PATCH') {
@@ -167,6 +171,7 @@ function createFetchMock(options: {
 
 type HarnessProps = {
   onLoad?: (value: SavedScenario) => void
+  onScenarioRenamed?: (value: SavedScenario) => void
   onUnload?: () => void
   onFolderDeleted?: (folderId: string) => void
   onNewScenario?: () => void
@@ -182,6 +187,7 @@ type HarnessProps = {
 
 function Harness({
   onLoad = vi.fn(),
+  onScenarioRenamed = vi.fn(),
   onUnload = vi.fn(),
   onFolderDeleted = vi.fn(),
   onNewScenario = vi.fn(),
@@ -226,6 +232,7 @@ function Harness({
         setLoadedScenarioId(value.id)
         onLoad(value)
       }}
+      onScenarioRenamed={onScenarioRenamed}
       onUnloadScenario={() => {
         setLoadedScenarioId(null)
         onUnload()
@@ -244,25 +251,51 @@ function Harness({
 describe('ScenarioLibraryPanel', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    useMonitorStore.getState().reset()
   })
 
-  it('keeps scenario naming visible in the Scenarios library', async () => {
-    createFetchMock()
-    const onScenarioTitleChange = vi.fn()
+  it('removes the standalone title field and renames an editable row inline', async () => {
+    const { fetchMock } = createFetchMock()
+    const onScenarioRenamed = vi.fn()
     const user = userEvent.setup()
-    render(
-      <Harness
-        scenarioDraftTitle="Chest Pain"
-        onScenarioTitleChange={onScenarioTitleChange}
-      />,
-    )
+    render(<Harness onScenarioRenamed={onScenarioRenamed} />)
 
-    const title = screen.getByLabelText('Change scenario title')
-    expect(title).toHaveValue('Chest Pain')
-    expect(title).toHaveAttribute('placeholder', 'Enter scenario title')
-    expect(title.closest('section')).toHaveAccessibleName('Scenarios library')
-    await user.type(title, ' Updated')
-    expect(onScenarioTitleChange).toHaveBeenLastCalledWith('Chest Pain Updated')
+    expect(screen.queryByLabelText('Change scenario title')).toBeNull()
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Rename Chest Pain' }))
+    const title = screen.getByRole('textbox', { name: 'Rename Chest Pain' })
+    await user.clear(title)
+    await user.type(title, 'Updated Chest Pain{Enter}')
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/scenarios/scenario-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ title: 'Updated Chest Pain' }),
+      }),
+    ))
+    expect(onScenarioRenamed).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Updated Chest Pain',
+    }))
+  })
+
+  it('places the editable and live Dispatch Countdown in the Scenarios header', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
+    act(() => {
+      const store = useMonitorStore.getState()
+      store.setDispatchMinutes(5)
+      store.save()
+      store.send()
+      store.startDispatchClock()
+    })
+    createFetchMock()
+    render(<Harness />)
+
+    const countdown = screen.getByTestId('scenario-dispatch-countdown')
+    expect(screen.getByRole('heading', { name: 'Scenarios' }).parentElement)
+      .toContainElement(countdown)
+    expect(screen.getByLabelText('Dispatch countdown minutes')).toBeDisabled()
+    expect(screen.getByLabelText('Dispatch countdown seconds')).toBeDisabled()
+    expect(screen.getByText('Locked · Live 05:00')).toBeInTheDocument()
   })
 
   it('blocks scenario and library actions while selection is disabled', async () => {
@@ -370,7 +403,7 @@ describe('ScenarioLibraryPanel', () => {
     expect(row).toHaveClass(
       'min-h-11',
       'py-1',
-      'md:grid-cols-[auto_minmax(0,1fr)_minmax(8rem,10rem)_auto_auto]',
+      '2xl:grid-cols-[auto_minmax(0,1fr)_minmax(8rem,10rem)_auto_auto]',
     )
     const nestedControls = Array.from(row.querySelectorAll('select, button'))
       .map((control) => control.getAttribute('aria-label'))
@@ -434,6 +467,13 @@ describe('ScenarioLibraryPanel', () => {
     render(<Harness />)
 
     const folderList = await screen.findByTestId('scenario-folder-list')
+    expect(folderList).toHaveClass('grid', 'md:grid-cols-2')
+    expect(screen.getByTestId('personal-scenario-library')).toContainElement(
+      screen.getByText('My Scenarios'),
+    )
+    expect(screen.getByTestId('template-scenario-library')).toContainElement(
+      screen.getByText('Templates'),
+    )
     expect(folderList).not.toHaveClass('max-h-96')
     expect(folderList).not.toHaveClass('overflow-y-auto')
 
@@ -569,14 +609,17 @@ describe('ScenarioLibraryPanel', () => {
     )
 
     expect(await screen.findByRole('region', { name: 'Folder 1 scenarios' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Unload Untitled Scenario' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    const draftRow = screen.getByLabelText('Scenario draft Untitled Scenario')
     expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeDisabled()
-    const draftRow = screen.getByRole('button', { name: 'Unload Untitled Scenario' })
     expect(draftRow).toHaveClass('min-h-11', 'p-1')
     expect(screen.getByText('Draft').parentElement).toHaveClass('flex', 'items-center')
+    await user.click(draftRow)
+    expect(onDeleteDraft).not.toHaveBeenCalled()
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Rename Untitled Scenario' }))
+    const draftTitle = screen.getByRole('textbox', { name: 'Rename Untitled Scenario' })
+    await user.clear(draftTitle)
+    await user.type(draftTitle, 'Airway{Enter}')
+    expect(screen.getByLabelText('Scenario draft Airway')).toBeInTheDocument()
 
     rerender(
       <Harness
@@ -621,6 +664,7 @@ describe('ScenarioLibraryPanel', () => {
     expect(within(templateSection).getByRole('button', { name: 'Rename' })).toBeDisabled()
     expect(within(templateSection).getByRole('button', { name: 'Delete' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Save Shared Arrest' })).toHaveTextContent('Save Copy')
+    expect(screen.queryByRole('button', { name: 'Rename Shared Arrest' })).toBeNull()
 
     await user.click(screen.getByRole('button', { name: 'Save Shared Arrest' }))
     expect(onSaveScenario).toHaveBeenCalledWith('mine')
@@ -648,7 +692,7 @@ describe('ScenarioLibraryPanel', () => {
     render(<Harness scenarioDraftActive />)
     await user.click(await screen.findByRole('button', { name: /^General/ }))
 
-    expect(screen.getByRole('button', { name: 'Unload Untitled Scenario' }))
+    expect(screen.getByLabelText('Scenario draft Untitled Scenario'))
       .toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Folder 1 scenarios' })).toBeNull()
   })

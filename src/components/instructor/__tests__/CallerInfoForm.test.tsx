@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { useMonitorStore } from '@/store/monitorStore'
@@ -88,16 +88,13 @@ describe('CallerInfoForm', () => {
     expect(screen.queryByRole('button', { name: /Save Scenario/ })).toBeNull()
   })
 
-  it('renders dispatch countdown before Call / Priority / MPDS', () => {
+  it('keeps Dispatch Countdown out of the Caller Info card', () => {
     renderCallerInfoForm()
 
     const formText = screen.getByRole('heading', { name: 'Caller Info' })
       .closest('section')?.textContent ?? ''
-    expect(formText.indexOf('Dispatch countdown')).toBeGreaterThan(-1)
-    expect(formText.indexOf('Call / Priority / MPDS')).toBeGreaterThan(-1)
-    expect(formText.indexOf('Dispatch countdown')).toBeLessThan(
-      formText.indexOf('Call / Priority / MPDS'),
-    )
+    expect(formText).not.toContain('Dispatch countdown')
+    expect(formText).toContain('Call / Priority / MPDS')
   })
 
   it('renders response route controls with John Abbott as the default start', () => {
@@ -114,7 +111,7 @@ describe('CallerInfoForm', () => {
     const user = userEvent.setup()
     renderCallerInfoForm()
 
-    expect(screen.getByTestId('caller-info-countdown-row')).toHaveClass(
+    expect(screen.getByTestId('caller-info-field-grid')).toHaveClass(
       'grid',
       'gap-3',
       'md:grid-cols-2',
@@ -127,16 +124,22 @@ describe('CallerInfoForm', () => {
       'gap-3',
       'md:grid-cols-2',
     )
-    expect(screen.getByTestId('caller-info-primary-grid')).toHaveClass(
-      'grid',
-      'gap-3',
-      'md:grid-cols-2',
+    expect(screen.getByTestId('caller-info-dispatch-fields')).toContainElement(
+      screen.getByLabelText('Call #'),
+    )
+    expect(screen.getByTestId('caller-info-primary-fields')).toContainElement(
+      screen.getByLabelText('Adresse'),
     )
 
     expect(screen.getByLabelText('Auto-sort scenario')).toHaveAttribute('rows', '5')
     for (const label of ['Probleme', 'Information', 'Mise a jour']) {
       expect(screen.getByLabelText(label)).toHaveAttribute('rows', '1')
-      expect(screen.getByLabelText(label)).toHaveClass('h-10', 'min-h-10', 'resize-y')
+      expect(screen.getByLabelText(label)).toHaveClass(
+        'min-h-10',
+        'resize-none',
+        'overflow-hidden',
+        '[field-sizing:content]',
+      )
     }
 
     await user.click(screen.getByRole('button', { name: 'Add extra' }))
@@ -161,23 +164,6 @@ describe('CallerInfoForm', () => {
 
     const routeSection = screen.getByText('Response route').closest('div')
     expect(routeSection).toHaveTextContent('ETA At scene')
-  })
-
-  it('disables the configured duration and shows a separate live countdown after Start', () => {
-    vi.spyOn(Date, 'now').mockReturnValue(1_000_000)
-    act(() => {
-      const store = useMonitorStore.getState()
-      store.setDispatchMinutes(5)
-      store.save()
-      store.send()
-      store.startDispatchClock()
-    })
-
-    renderCallerInfoForm()
-
-    expect(screen.getByLabelText('Dispatch countdown minutes')).toBeDisabled()
-    expect(screen.getByLabelText('Dispatch countdown seconds')).toBeDisabled()
-    expect(screen.getByText('Locked · Live 05:00')).toBeInTheDocument()
   })
 
   it('updates caller info draft values', async () => {

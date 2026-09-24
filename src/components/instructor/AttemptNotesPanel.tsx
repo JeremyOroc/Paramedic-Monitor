@@ -12,6 +12,8 @@ export const REPORT_NOTE_MAX = 1000
 
 type AttemptNotesPanelProps = {
   generalNotes: string
+  generalNotesDraft: string
+  onGeneralNotesDraftChange: (value: string) => void
   onSaveGeneralNotes: (value: string) => Promise<void>
   onSendReportNote: (value: string) => Promise<void>
   generalNotesRef?: Ref<GeneralNotesEditorHandle>
@@ -20,6 +22,8 @@ type AttemptNotesPanelProps = {
 
 export function AttemptNotesPanel({
   generalNotes,
+  generalNotesDraft,
+  onGeneralNotesDraftChange,
   onSaveGeneralNotes,
   onSendReportNote,
   generalNotesRef,
@@ -51,6 +55,9 @@ export function AttemptNotesPanel({
         ref={generalNotesRef}
         value={generalNotes}
         onSave={onSaveGeneralNotes}
+        draftValue={generalNotesDraft}
+        onDraftChange={onGeneralNotesDraftChange}
+        saveMode="manual"
         disabled={disabled}
         disabledReason={disabledReason ?? undefined}
       />

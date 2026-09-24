@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-09-23] [instructor/ui/testing] — Refine scenario authoring and manual notes
+
+- Replaced active-Attempt General Notes autosave with explicit Save/Revert controls, tab-stable
+  drafts, unload protection, failure retention, and guarded New Attempt/End Room transitions while
+  preserving Reports-page Edit/Done behavior.
+- Split My Scenarios and Templates into responsive compact columns, made draft-row single clicks
+  inert, removed the standalone title editor, and added permission-aware inline row renaming by
+  double-click, Enter, or F2 with title-only persistence for Saved scenarios.
+- Moved Dispatch Countdown into the Scenarios header and regrouped Caller Info into compact left
+  dispatch fields plus right-side auto-growing narrative fields without changing its remaining
+  authoring controls or data behavior.
+- Added component and integration coverage for the revised persistence, navigation guards, layout,
+  countdown, and rename behaviors; updated the glossary, plan, status, and ADR consequence.
+- All 109 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production
+  build pass. The complete suite has 1,710 passing, one skipped, and three unchanged unrelated
+  Room-ownership/PatientInfoPanel failures. Rendered desktop, landscape-iPad, and narrow-layout QA
+  passes with a clean console. No commit, push, or deployment was made.
+
+## [2026-09-23] [planning/instructor/domain] — Complete compact Instructor Console design interview
+
+- Replaced the planned active-Attempt General Notes autosave contract with explicit Save/Revert,
+  tab-stable dirty drafts, transition blocking, and unsaved-change protection while preserving the
+  Reports-page editor.
+- Defined inert Scenario draft row clicks, responsive side-by-side My Scenarios and Templates, and
+  permission-aware inline title renaming without loading or overwriting scenario snapshots.
+- Moved the planned Dispatch Countdown location to the Scenarios header and specified the compact
+  two-column Caller Info field arrangement with auto-growing narrative fields.
+- Updated the glossary, existing Attempt-notes ADR consequence, implementation plan, validation
+  scope, and project status. No application code was changed for this batch.
+
 ## [2026-09-23] [instructor/reports/domain/testing] — Add Treatments and Attempt notes
 
 - Replaced the Instructor medication recorder with a Treatments panel containing the existing

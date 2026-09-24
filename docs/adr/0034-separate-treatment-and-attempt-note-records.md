@@ -20,8 +20,8 @@ are Attempt-wide annotations and never masquerade as Scenario-device actions cre
 - Treatment readers must support both legacy `medication` rows and new categorized treatment rows.
 - The Scenario-device Medications workflow keeps its established label even though Evaluation rows
   use Treatment wording.
-- General Notes require autosave, ownership checks, pending-save flushing, and persistent-report
-  update support.
+- General Notes require explicit instructor saves, ownership checks, unsaved-draft protection, and
+  persistent-report update support.
 - Instructor Notes require append-only storage and timeline snapshot/readback support independent of
   participant-scoped action records.
 - Database changes and compatibility tests must be complete before the new UI can be considered
