@@ -9,6 +9,7 @@ export type DefibState =
   | 'analyzing_ecg'
   | 'analyzing_clear'
   | 'analyzing_result'
+  | 'analyzing_halted'
   | 'shock_advised'
   | 'cpr'
   | 'charge_prompt'

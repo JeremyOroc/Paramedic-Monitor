@@ -346,6 +346,7 @@ export function MonitorPage({
     patientMode: controller.patientMode,
     rhythm: confirmed.rhythm,
     chargePolicy: isWagamiA ? 'wagamiA' : 'default',
+    analysisInterference: isWagamiA && cprOverrideActive ? 'cpr_compression' : null,
     playPrompt: isWagamiA
       ? (prompt) => playWagamiADefibPrompt(wagamiAPreferenceState.preferences.locale, prompt)
       : undefined,
@@ -355,12 +356,19 @@ export function MonitorPage({
           onEnded,
         )
       : undefined,
-    onAnalyzeResult(result, analyzedRhythm) {
+    onAnalyzeResult(result, analyzedRhythm, interference) {
       controller.onAnalyzeResult(result, createEventLogStamp())
+      const label = result === 'shock'
+        ? 'Analyze - Shock'
+        : result === 'halted'
+          ? 'Analyze - Halted'
+          : 'Analyze - No Shock'
       onStudentEvent?.({
         kind: 'analyze',
-        label: result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock',
-        payload: { result, rhythm: analyzedRhythm },
+        label,
+        payload: result === 'halted'
+          ? { result, underlyingRhythm: analyzedRhythm, reason: interference }
+          : { result, rhythm: analyzedRhythm },
       })
     },
   })

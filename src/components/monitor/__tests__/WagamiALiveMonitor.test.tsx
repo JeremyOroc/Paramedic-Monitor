@@ -67,6 +67,43 @@ describe('Wagami A live Attempt integration', () => {
     })
   })
 
+  it('halts shockable analysis when Instructor CPR contaminates the live signal', () => {
+    vi.useFakeTimers()
+    const events: StudentEventRecord[] = []
+    act(() => useMonitorStore.setState((state) => ({
+      confirmed: { ...state.confirmed, rhythm: 'vf' },
+      confirmedVitalActive: { ...state.confirmedVitalActive, hr: true },
+      cprMode: 'regular',
+    })))
+    render(
+      <MonitorPage
+        transportStorageScope="ABC234.participant-1.1"
+        onStudentEvent={(event) => events.push(event)}
+      />,
+    )
+
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' })))
+    act(() => fireEvent.click(screen.getByRole('button', { name: 'Analyser WAGAMI A' })))
+    act(() => vi.advanceTimersByTime(5000))
+
+    const defibPanel = screen.getByRole('region', { name: 'Wagami A defibrillation status' })
+    expect(within(defibPanel).getByRole('status')).toHaveTextContent('ANALYSE INTERROMPUE')
+    expect(screen.getByRole('button', { name: 'Choc WAGAMI A' })).toBeDisabled()
+    expect(screen.getByRole('progressbar', { name: 'Charge progress' })).toHaveValue(0)
+    expect(events).toContainEqual({
+      kind: 'analyze',
+      label: 'Analyze - Halted',
+      payload: {
+        result: 'halted',
+        underlyingRhythm: 'vf',
+        reason: 'cpr_compression',
+      },
+    })
+
+    act(() => vi.advanceTimersByTime(4000))
+    expect(within(defibPanel).getByRole('status')).toHaveTextContent('EN ATTENTE')
+  })
+
   it('opens PNI settings without recording a clinical action and projects the view', async () => {
     const events: StudentEventRecord[] = []
     const projections: MonitorProjection[] = []

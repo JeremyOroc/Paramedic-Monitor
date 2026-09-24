@@ -1044,6 +1044,35 @@ landscape Preview inspection of both states pass.
   Webpack production build. The full suite's three remaining failures are unrelated established
   Room-ownership and PatientInfoPanel baselines; no Wagami A test fails.
 
+- 2026-09-24 Wagami A CPR-contaminated analysis precedence — **programmer-approved before
+  implementation; narrows the captured-start-rhythm rule for Wagami A only**. If either Regular or
+  Weak Instructor CPR override overlaps any part of Wagami A's Analyze acquisition, compression
+  artifact becomes the observed analysis signal and the attempt is halted without a shock/no-shock
+  rhythm classification. Show `ANALYSE INTERROMPUE` / `ANALYSIS HALTED`, play the established
+  halted-analysis cue, record one Analyze - Halted evaluation event with the underlying rhythm and
+  `reason: cpr_compression`, then return to Idle after the existing result-display duration. Do not
+  charge automatically, play Shock Not Advised or Press Shock, or enter the post-analysis CPR
+  interval. Stopping compressions cannot rescue a contaminated acquisition; the operator must start
+  a new Analyze attempt. Preserve the configured underlying rhythm. Physical manual Charge remains
+  independent, and an already charging or charged manual attempt is not cancelled when CPR begins.
+  Apply the same behavior to live and Preview Wagami A; Spectator inherits projected state. Wagami X,
+  Wagami Z, and the defibrillator-owned CPR interval remain unchanged.
+
+  #### Testing
+
+  Cover VF, VT, and Torsades with both Regular and Weak Instructor CPR; interference present at
+  Analyze start; interference beginning and then ending mid-acquisition; halted label/audio/timing;
+  absence of automatic charge, shock-ready cues, and CPR entry; event payload accuracy; underlying
+  rhythm preservation; manual-charge independence; Preview/live parity; and X/Z regressions.
+
+  **Implementation completed locally on 2026-09-24.** The shared sequence now latches A-only
+  analysis interference across the full acquisition, presents a localized halted state and cue,
+  returns to Idle without charging or entering CPR, and records the approved underlying-rhythm and
+  interference context. Live and Preview both derive the rule from the Instructor CPR override;
+  manual charge and X/Z behavior are unchanged. Focused tests, TypeScript, affected-file ESLint,
+  and the Next.js Webpack production build pass. The complete suite retains only the three
+  documented unrelated Room-ownership and PatientInfoPanel baseline failures.
+
 - 2026-09-15 Wagami A A4 shock-advice clarification — **programmer-approved before A4 code**.
   A shockable Analyze result on A advises a shock but does not enable the guarded Shock key.
   One Charge press starts the established four-second timed charge; Shock becomes enabled only

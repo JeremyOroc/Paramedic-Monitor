@@ -372,6 +372,14 @@ _Avoid_: Disabled FC, fixed alarm, monitor-only rate
 The two-minute compression period shown by Wagami X after its Perform CPR prompt phase following a no-shock analysis result or an advised shock. It is distinct from the Instructor CPR override and from the prompt/metronome cues that surround it.
 _Avoid_: CPR override, SNS measurement countdown, dispatch countdown
 
+**CPR-contaminated analysis**:
+A Wagami A Analyze attempt whose acquisition overlaps either Regular or Weak Instructor CPR override.
+Compression artifact is the observed analysis signal and takes precedence over the configured underlying
+rhythm for that attempt, so the device halts analysis without classifying the rhythm or charging
+automatically. Turning CPR off does not rescue an already contaminated attempt; a new Analyze press is
+required. The underlying configured rhythm is preserved and manual charging remains independent.
+_Avoid_: Non-shockable rhythm, CPR interval, automatic advised charge
+
 **EtCO₂ calibration**:
 The trainee-local capnography readiness state on Wagami A or Wagami X, distinct from the instructor-confirmed EtCO₂ channel state. Each device may present calibration differently, but successful calibration remains valid through instructor channel and value changes until the monitor is reset.
 _Avoid_: EtCO₂ On, CO₂ selection

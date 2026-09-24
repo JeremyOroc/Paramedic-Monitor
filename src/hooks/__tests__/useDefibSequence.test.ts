@@ -203,6 +203,93 @@ describe('useDefibSequence', () => {
     expect(audioMocks.playCprAudioSequence).toHaveBeenCalledOnce()
   })
 
+  it.each(['vf', 'vt', 'torsades'] as const)(
+    'halts a Wagami A %s analysis contaminated by compression without charging',
+    (rhythm) => {
+      const onAnalyzeResult = vi.fn()
+      const { result } = renderHook(() => useDefibSequence({
+        patientMode: 'adult',
+        rhythm,
+        chargePolicy: 'wagamiA',
+        analysisInterference: 'cpr_compression',
+        onAnalyzeResult,
+      }))
+
+      act(() => result.current.onAnalyse())
+      act(() => vi.advanceTimersByTime(5000))
+
+      expect(result.current.state).toBe('analyzing_halted')
+      expect(result.current.chargeOrigin).toBeNull()
+      expect(result.current.chargeProgress).toBe(0)
+      expect(result.current.canShock).toBe(false)
+      expect(onAnalyzeResult).toHaveBeenCalledOnce()
+      expect(onAnalyzeResult).toHaveBeenCalledWith('halted', rhythm, 'cpr_compression')
+      expect(audioMocks.playSystemAudio).toHaveBeenCalledWith('analysis_halted.mp3')
+      expect(audioMocks.playSystemAudio).not.toHaveBeenCalledWith('shock_not_advised.mp3')
+      expect(audioMocks.playSystemAudio).not.toHaveBeenCalledWith('press_shock.mp3')
+      expect(audioMocks.playCprAudioSequence).not.toHaveBeenCalled()
+
+      act(() => vi.advanceTimersByTime(4000))
+      expect(result.current.state).toBe('idle')
+    },
+  )
+
+  it('keeps an Analyze attempt halted after compression starts and stops mid-acquisition', () => {
+    const onAnalyzeResult = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ interference }: { interference: 'cpr_compression' | null }) => useDefibSequence({
+        patientMode: 'adult',
+        rhythm: 'vf',
+        chargePolicy: 'wagamiA',
+        analysisInterference: interference,
+        onAnalyzeResult,
+      }),
+      { initialProps: { interference: null } as { interference: 'cpr_compression' | null } },
+    )
+
+    act(() => result.current.onAnalyse())
+    act(() => vi.advanceTimersByTime(1000))
+    rerender({ interference: 'cpr_compression' })
+    act(() => vi.advanceTimersByTime(1000))
+    rerender({ interference: null })
+    act(() => vi.advanceTimersByTime(3000))
+
+    expect(result.current.state).toBe('analyzing_halted')
+    expect(onAnalyzeResult).toHaveBeenCalledWith('halted', 'vf', 'cpr_compression')
+  })
+
+  it('does not cancel manual charging when compression begins', () => {
+    const { result, rerender } = renderHook(
+      ({ interference }: { interference: 'cpr_compression' | null }) => useDefibSequence({
+        patientMode: 'adult',
+        chargePolicy: 'wagamiA',
+        analysisInterference: interference,
+      }),
+      { initialProps: { interference: null } as { interference: 'cpr_compression' | null } },
+    )
+
+    act(() => result.current.onCharge())
+    expect(result.current.chargeOrigin).toBe('manual')
+    rerender({ interference: 'cpr_compression' })
+    act(() => vi.advanceTimersByTime(4000))
+
+    expect(result.current.state).toBe('charged')
+    expect(result.current.chargeOrigin).toBe('manual')
+  })
+
+  it('allows physical manual Charge while compression is already active', () => {
+    const { result } = renderHook(() => useDefibSequence({
+      patientMode: 'adult',
+      chargePolicy: 'wagamiA',
+      analysisInterference: 'cpr_compression',
+    }))
+
+    act(() => result.current.onCharge())
+
+    expect(result.current.state).toBe('charging')
+    expect(result.current.chargeOrigin).toBe('manual')
+  })
+
   it('Wagami A one-press manual charge retains delivered state and reset cancels charging', () => {
     const { result } = renderHook(() => useDefibSequence({
       patientMode: 'adult', chargePolicy: 'wagamiA',

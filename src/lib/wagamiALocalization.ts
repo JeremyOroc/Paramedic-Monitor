@@ -76,12 +76,14 @@ const DEFIB_COPY: Record<WagamiALocale, Record<DefibState, string>> = {
   fr: {
     idle: 'EN ATTENTE', analyzing_ecg: 'ANALYSE ECG', analyzing_clear: 'ANALYSE · DÉGAGEZ',
     analyzing_result: 'CHOC NON CONSEILLÉ', shock_advised: 'CHOC CONSEILLÉ · CHARGE REQUISE',
+    analyzing_halted: 'ANALYSE INTERROMPUE',
     cpr: 'RCP EN COURS', charge_prompt: 'APPUYEZ SUR CHARGE', charging: 'CHARGE EN COURS',
     charged: 'PRÊT À CHOC', delivered: 'CHOC DÉLIVRÉ',
   },
   en: {
     idle: 'STANDBY', analyzing_ecg: 'ANALYZING ECG', analyzing_clear: 'ANALYZING · STAND CLEAR',
     analyzing_result: 'NO SHOCK ADVISED', shock_advised: 'SHOCK ADVISED · CHARGE REQUIRED',
+    analyzing_halted: 'ANALYSIS HALTED',
     cpr: 'CPR IN PROGRESS', charge_prompt: 'PRESS CHARGE', charging: 'CHARGING',
     charged: 'READY TO SHOCK', delivered: 'SHOCK DELIVERED',
   },

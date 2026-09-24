@@ -343,6 +343,16 @@ describe('useMonitorController', () => {
     expect(result.current.eventLogOpen).toBe(false)
   })
 
+  it('records a halted Analyze attempt distinctly from No Shock', () => {
+    const { result } = setup()
+
+    act(() => result.current.onAnalyzeResult('halted', '10:01:00'))
+
+    expect(result.current.eventLog).toEqual([
+      expect.objectContaining({ name: 'Analyze - Halted', time: '10:01:00' }),
+    ])
+  })
+
   it('clears a captured 12-lead and open menus on a drill reset', () => {
     const { result } = setup()
 

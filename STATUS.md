@@ -6,6 +6,16 @@
 ---
 
 ## Current Phase
+**Wagami A CPR-contaminated analysis — COMPLETE LOCALLY, AWAITING ACCEPTANCE (2026-09-24).** Any
+Regular or Weak Instructor CPR overlap now latches the current Wagami A Analyze attempt as invalid,
+shows and announces Analysis Halted, prevents shock/no-shock classification and automatic charge,
+records the underlying rhythm plus compression reason, and returns to Idle for a fresh attempt.
+Underlying rhythm, manual Charge, the defibrillator-owned CPR interval, and Wagami X/Z remain
+unchanged. All 209 focused tests pass, together with TypeScript, affected-file ESLint with zero
+errors and one existing MonitorPage dependency warning, and the Next.js 16.3 Webpack production
+build. The complete suite has 1,726 passing and one skipped, retaining only the same three unrelated
+Room-ownership/PatientInfoPanel baseline failures. Changes are local and uncommitted.
+
 **Instructor Console scenario and authoring refinement — COMPLETE LOCALLY, AWAITING ACCEPTANCE
 (2026-09-23).** Active-Attempt General Notes now uses explicit Save/Revert and tab-stable dirty
 drafts. Scenario draft row clicks are inert; My Scenarios and Templates use compact responsive

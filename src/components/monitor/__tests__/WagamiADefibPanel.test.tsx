@@ -42,4 +42,13 @@ describe('Wagami A separate defib panel', () => {
     render(<WagamiADefibPanel state="charging" energy={120} chargeProgress={0.25} chargeOrigin="automatic_advised" canAdjustEnergy={false} locale="en" />)
     expect(screen.getByRole('status')).toHaveTextContent('SHOCK ADVISED · CHARGING')
   })
+
+  it('shows the localized halted-analysis result without charge progress', () => {
+    const { rerender } = render(<WagamiADefibPanel state="analyzing_halted" energy={120} chargeProgress={0.8} canAdjustEnergy={false} />)
+    expect(screen.getByRole('status')).toHaveTextContent('ANALYSE INTERROMPUE')
+    expect(screen.getByRole('progressbar', { name: 'Charge progress' })).toHaveValue(0)
+
+    rerender(<WagamiADefibPanel state="analyzing_halted" energy={120} chargeProgress={0.8} canAdjustEnergy={false} locale="en" />)
+    expect(screen.getByRole('status')).toHaveTextContent('ANALYSIS HALTED')
+  })
 })

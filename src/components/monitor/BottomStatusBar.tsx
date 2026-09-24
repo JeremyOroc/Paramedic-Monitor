@@ -170,6 +170,10 @@ export function BottomStatusBar({ defibState, joules, shockCount, cprStartTime, 
     bannerText = "SHOCK NOT ADVISED"
     bannerBg = "bg-white"
     bannerTextColor = "text-[#ff2020]"
+  } else if (defibState === 'analyzing_halted') {
+    bannerText = "ANALYSIS HALTED"
+    bannerBg = "bg-white"
+    bannerTextColor = "text-[#ff2020]"
   } else if (defibState === 'cpr' && isDone) {
     bannerText = checkPatient ? "Check Patient" : "Stop CPR"
     bannerBg = "bg-white"

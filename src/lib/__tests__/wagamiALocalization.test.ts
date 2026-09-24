@@ -36,6 +36,8 @@ describe('Wagami A localization', () => {
     })
     expect(getWagamiADefibLabel('fr', 'shock_advised')).toContain('CHOC CONSEILLÉ')
     expect(getWagamiADefibLabel('en', 'shock_advised')).toContain('SHOCK ADVISED')
+    expect(getWagamiADefibLabel('fr', 'analyzing_halted')).toBe('ANALYSE INTERROMPUE')
+    expect(getWagamiADefibLabel('en', 'analyzing_halted')).toBe('ANALYSIS HALTED')
     expect(getWagamiADefibLabel('fr', 'charging', 'automatic_advised')).toBe('CHOC CONSEILLÉ · CHARGE EN COURS')
     expect(getWagamiADefibLabel('en', 'charging', 'automatic_advised')).toBe('SHOCK ADVISED · CHARGING')
   })

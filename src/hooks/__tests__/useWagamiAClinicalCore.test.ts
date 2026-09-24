@@ -98,6 +98,49 @@ describe('Wagami A Room-free clinical core', () => {
     expect(onStudentEvent.mock.calls.filter(([event]) => event.kind === 'analyze')).toHaveLength(1)
   })
 
+  it.each([
+    ['regular', 'vf'],
+    ['regular', 'vt'],
+    ['regular', 'torsades'],
+    ['weak', 'vf'],
+    ['weak', 'vt'],
+    ['weak', 'torsades'],
+  ] as const)(
+    'halts %s CPR analysis over %s and records the contaminated signal',
+    (cprMode, rhythm) => {
+      const onStudentEvent = vi.fn()
+      const shockable = { ...normal, vitals: { ...normal.vitals, rhythm } }
+      const { result } = renderHook(() => useWagamiAClinicalCore({
+        sourceDisplay: shockable,
+        cprMode,
+        locale: 'en',
+        onStudentEvent,
+      }))
+
+      act(() => result.current.onAnalyse())
+      act(() => vi.advanceTimersByTime(5000))
+
+      expect(result.current.defib.state).toBe('analyzing_halted')
+      expect(result.current.defib.chargeOrigin).toBeNull()
+      expect(result.current.defib.canShock).toBe(false)
+      expect(audio.playSystemAudio).toHaveBeenCalledWith('analysis_halted.mp3')
+      expect(audio.playChargeBeep).not.toHaveBeenCalled()
+      expect(onStudentEvent).toHaveBeenCalledWith({
+        kind: 'analyze',
+        label: 'Analyze - Halted',
+        payload: {
+          result: 'halted',
+          underlyingRhythm: rhythm,
+          reason: 'cpr_compression',
+        },
+      })
+
+      act(() => vi.advanceTimersByTime(4000))
+      expect(result.current.defib.state).toBe('idle')
+      expect(result.current.display.vitals.rhythm).toBe(rhythm)
+    },
+  )
+
   it('records a physical Charge press and manually charges in one press', () => {
     const onStudentEvent = vi.fn()
     const { result } = renderHook(() => useWagamiAClinicalCore({

@@ -21,6 +21,7 @@ const ALL_STATES: DefibState[] = [
   'analyzing_ecg',
   'analyzing_clear',
   'analyzing_result',
+  'analyzing_halted',
   'shock_advised',
   'cpr',
   'charge_prompt',
@@ -99,7 +100,7 @@ describe('chargeTransition', () => {
     for (const s of ['idle', 'cpr', 'analyzing_result', 'delivered'] as DefibState[]) {
       expect(chargeTransition(s)).toBe('charge_prompt')
     }
-    for (const s of ['analyzing_ecg', 'charging', 'charged', 'shock_advised'] as DefibState[]) {
+    for (const s of ['analyzing_ecg', 'analyzing_halted', 'charging', 'charged', 'shock_advised'] as DefibState[]) {
       expect(chargeTransition(s)).toBeNull()
     }
   })
@@ -109,6 +110,7 @@ describe('chargeTransition', () => {
       expect(chargeTransition(s, true)).toBe('charging')
     }
     expect(chargeTransition('analyzing_result', true)).toBeNull()
+    expect(chargeTransition('analyzing_halted', true)).toBeNull()
     expect(chargeTransition('charge_prompt', true)).toBeNull()
     expect(chargeTransition('shock_advised', true)).toBeNull()
   })

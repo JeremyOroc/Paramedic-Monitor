@@ -30,6 +30,8 @@ describe('Wagami A voice prompt selection', () => {
   it('keeps the existing recordings for English prompts', () => {
     playWagamiADefibPrompt('en', 'standClear')
     expect(audio.playSystemAudio).toHaveBeenCalledWith('stand_clear.mp3')
+    playWagamiADefibPrompt('en', 'analysisHalted')
+    expect(audio.playSystemAudio).toHaveBeenCalledWith('analysis_halted.mp3')
   })
 
   it('speaks deterministic fr-CA text and starts the CPR metronome after the prompt', () => {

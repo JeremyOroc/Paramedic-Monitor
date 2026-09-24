@@ -10,6 +10,7 @@ import {
 } from '@/components/monitor/EventLogModal'
 import type { PatientInfoField } from '@/components/monitor/PatientInfoPanel'
 import type { VitalLogHighlightedButton } from '@/components/monitor/VitalLogModal'
+import type { DefibAnalysisResult } from '@/hooks/useDefibSequence'
 import type { Vitals } from '@/store/monitorStore'
 import type { MonitorSelection } from '@/types/monitorSelection'
 import { clampAge, toggleSex, type PatientInfo, type PatientSex } from '@/types/patientInfo'
@@ -191,7 +192,7 @@ type Action =
   | { type: 'powerOn' }
   | { type: 'powerOff' }
   | { type: 'setJumpscareActive'; active: boolean }
-  | { type: 'addAnalyzeEvent'; result: 'shock' | 'no_shock'; stamp: EventLogStamp | string }
+  | { type: 'addAnalyzeEvent'; result: DefibAnalysisResult; stamp: EventLogStamp | string }
 
 type UseMonitorControllerOptions = {
   confirmed: Vitals
@@ -673,7 +674,11 @@ function reducer(
     case 'setJumpscareActive':
       return { ...state, jumpscareActive: action.active }
     case 'addAnalyzeEvent': {
-      const name = action.result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock'
+      const name = action.result === 'shock'
+        ? 'Analyze - Shock'
+        : action.result === 'halted'
+          ? 'Analyze - Halted'
+          : 'Analyze - No Shock'
       return {
         ...state,
         eventLog: [...state.eventLog, buildEventLogEntry(name, action.stamp)],
@@ -1005,7 +1010,7 @@ export function useMonitorController({
     onToggleMute,
     onPowerOn: () => dispatch({ type: 'powerOn' }),
     onPowerOff,
-    onAnalyzeResult: (result: 'shock' | 'no_shock', stamp: EventLogStamp | string) =>
+    onAnalyzeResult: (result: DefibAnalysisResult, stamp: EventLogStamp | string) =>
       dispatch({ type: 'addAnalyzeEvent', result, stamp }),
     onToggleBottomStatus: () => dispatch({ type: 'toggleBottomStatus' }),
     onSetJumpscareActive: (active: boolean) =>

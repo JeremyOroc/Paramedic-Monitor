@@ -30,20 +30,28 @@ type Options = {
   patientMode: PatientMode
   rhythm?: Rhythm
   chargePolicy?: DefibChargePolicy
-  onAnalyzeResult?: (result: 'shock' | 'no_shock', rhythm: Rhythm) => void
+  analysisInterference?: DefibAnalysisInterference | null
+  onAnalyzeResult?: (
+    result: DefibAnalysisResult,
+    rhythm: Rhythm,
+    interference?: DefibAnalysisInterference,
+  ) => void
   playPrompt?: (prompt: DefibPrompt) => void
   playCprPrompt?: (onEnded?: () => void) => void
 }
 
-export type DefibPrompt = 'standClear' | 'pressShock' | 'shockNotAdvised'
+export type DefibPrompt = 'standClear' | 'pressShock' | 'shockNotAdvised' | 'analysisHalted'
 export type DefibChargePolicy = 'default' | 'wagamiA'
 export type DefibChargeOrigin = 'automatic_advised' | 'manual' | null
+export type DefibAnalysisInterference = 'cpr_compression'
+export type DefibAnalysisResult = 'shock' | 'no_shock' | 'halted'
 
 function playDefaultPrompt(prompt: DefibPrompt): void {
   const filenames: Record<DefibPrompt, string> = {
     standClear: 'stand_clear.mp3',
     pressShock: 'press_shock.mp3',
     shockNotAdvised: 'shock_not_advised.mp3',
+    analysisHalted: 'analysis_halted.mp3',
   }
   playSystemAudio(filenames[prompt])
 }
@@ -52,6 +60,7 @@ export function useDefibSequence({
   patientMode,
   rhythm = 'nsr',
   chargePolicy = 'default',
+  analysisInterference = null,
   onAnalyzeResult,
   playPrompt = playDefaultPrompt,
   playCprPrompt = playCprAudioSequence,
@@ -77,6 +86,7 @@ export function useDefibSequence({
   const durationRef = useRef<number>(0)
   // Capture rhythm at analyze time so mid-analyze changes don't affect the result
   const rhythmAtAnalyzeRef = useRef<Rhythm>(rhythm)
+  const interferenceDuringAnalyzeRef = useRef<DefibAnalysisInterference | null>(null)
   const advisedChargeRef = useRef(false)
   // Always up-to-date callback ref — avoids stale closures inside timed phases.
   // Assigned in an effect rather than during render: mutating a ref while
@@ -90,6 +100,15 @@ export function useDefibSequence({
     playPromptRef.current = playPrompt
     playCprPromptRef.current = playCprPrompt
   }, [onAnalyzeResult, playCprPrompt, playPrompt])
+
+  useEffect(() => {
+    if (
+      analysisInterference !== null &&
+      (state === 'analyzing_ecg' || state === 'analyzing_clear')
+    ) {
+      interferenceDuringAnalyzeRef.current = analysisInterference
+    }
+  }, [analysisInterference, state])
 
   const energy = resolveEnergy(energyState, patientMode)
   const usesWagamiAChargePolicy = chargePolicy === 'wagamiA'
@@ -186,6 +205,7 @@ export function useDefibSequence({
     setChargeOrigin(null)
     cancelPendingCprStart()
     rhythmAtAnalyzeRef.current = rhythm
+    interferenceDuringAnalyzeRef.current = analysisInterference
     setState('analyzing_ecg')
     setCprStartTime(null)
     setLastDeliveredJoules(null)
@@ -194,6 +214,16 @@ export function useDefibSequence({
       setState('analyzing_clear')
       runTimedPhase(ANALYZE_CLEAR_MS, () => {
         const analyzedRhythm = rhythmAtAnalyzeRef.current
+        const interference = interferenceDuringAnalyzeRef.current
+        if (interference !== null) {
+          setState('analyzing_halted')
+          onAnalyzeResultRef.current?.('halted', analyzedRhythm, interference)
+          playPromptRef.current('analysisHalted')
+          runTimedPhase(ANALYZE_RESULT_MS, () => {
+            setState('idle')
+          })
+          return
+        }
         if (isShockable(analyzedRhythm)) {
           onAnalyzeResultRef.current?.('shock', analyzedRhythm)
           if (usesWagamiAChargePolicy) {
@@ -212,7 +242,7 @@ export function useDefibSequence({
         }
       })
     })
-  }, [state, rhythm, usesWagamiAChargePolicy, runTimedPhase, cancelPendingCprStart, enterCpr, startTimedCharge])
+  }, [state, rhythm, analysisInterference, usesWagamiAChargePolicy, runTimedPhase, cancelPendingCprStart, enterCpr, startTimedCharge])
 
   const onCharge = useCallback(() => {
     const next = chargeTransition(state, usesWagamiAChargePolicy)
@@ -277,6 +307,7 @@ export function useDefibSequence({
     clearTimers()
     cancelPendingCprStart()
     advisedChargeRef.current = false
+    interferenceDuringAnalyzeRef.current = null
     setChargeOrigin(null)
     setState('idle')
     setShockCount(0)

@@ -54,13 +54,21 @@ export function useWagamiAClinicalCore({
     patientMode,
     rhythm: sourceDisplay.vitals.rhythm,
     chargePolicy: 'wagamiA',
+    analysisInterference: cprHeartRate === null ? null : 'cpr_compression',
     playPrompt: (prompt) => playWagamiADefibPrompt(locale, prompt),
     playCprPrompt: (onEnded) => playWagamiACprPrompt(locale, onEnded),
-    onAnalyzeResult(result, analyzedRhythm) {
+    onAnalyzeResult(result, analyzedRhythm, interference) {
+      const label = result === 'shock'
+        ? 'Analyze - Shock'
+        : result === 'halted'
+          ? 'Analyze - Halted'
+          : 'Analyze - No Shock'
       onStudentEvent?.({
         kind: 'analyze',
-        label: result === 'shock' ? 'Analyze - Shock' : 'Analyze - No Shock',
-        payload: { result, rhythm: analyzedRhythm },
+        label,
+        payload: result === 'halted'
+          ? { result, underlyingRhythm: analyzedRhythm, reason: interference }
+          : { result, rhythm: analyzedRhythm },
       })
     },
   })

@@ -12,7 +12,7 @@ describe('Wagami A Device Patient mode', () => {
 
   it('locks every active Analyze, Charge and shock-ready state', () => {
     const locked: DefibState[] = [
-      'analyzing_ecg', 'analyzing_clear', 'analyzing_result',
+      'analyzing_ecg', 'analyzing_clear', 'analyzing_result', 'analyzing_halted',
       'shock_advised', 'charge_prompt', 'charging', 'charged',
     ]
     for (const state of locked) expect(isWagamiAPatientModeLocked(state)).toBe(true)

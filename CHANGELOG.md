@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-09-24] [wagami-a/defib/domain/testing] — Halt CPR-contaminated rhythm analysis
+
+- Made Regular and Weak Instructor CPR artifact take precedence over the hidden underlying rhythm
+  throughout Wagami A's Analyze acquisition, including CPR that starts and stops mid-attempt.
+- Added the localized Analysis Halted state and cue, return-to-Idle timing, and guards that prevent
+  automatic charging, shock-ready prompts, No Shock classification, and post-analysis CPR entry.
+- Preserved the underlying rhythm and independent physical manual Charge path; Wagami X/Z and the
+  defibrillator-owned CPR interval are unchanged.
+- Recorded halted Analyze events with the underlying rhythm and `cpr_compression` reason across live
+  and Preview paths, with Spectator inheriting projected state.
+- Added state-machine, hook, clinical-core, live integration, localization, audio, panel, controller,
+  and evaluation-history coverage. All 209 focused tests, TypeScript, affected-file ESLint, and the
+  Next.js 16.3 Webpack production build pass. The full suite has 1,726 passing and one skipped with
+  only the same three unrelated Room-ownership/PatientInfoPanel baseline failures.
+
+## [2026-09-24] [planning/wagami-a/domain] — Define CPR-contaminated analysis
+
+- Defined compression artifact as the observed Wagami A analysis signal whenever Regular or Weak
+  Instructor CPR overlaps acquisition, without changing the underlying configured rhythm.
+- Chose a distinct Analysis Halted outcome instead of falsely recording Shock or No Shock, with a
+  fresh Analyze attempt required after compression stops.
+- Preserved physical manual charging, excluded the defibrillator-owned CPR interval and Wagami X/Z,
+  and specified live/Preview parity, evaluation history, audio, timing, and regression coverage.
+- No application code was changed in this planning entry.
+
 ## [2026-09-23] [instructor/ui/testing] — Refine scenario authoring and manual notes
 
 - Replaced active-Attempt General Notes autosave with explicit Save/Revert controls, tab-stable

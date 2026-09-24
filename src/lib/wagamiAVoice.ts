@@ -6,12 +6,14 @@ const ENGLISH_AUDIO: Record<DefibPrompt, string> = {
   standClear: 'stand_clear.mp3',
   pressShock: 'press_shock.mp3',
   shockNotAdvised: 'shock_not_advised.mp3',
+  analysisHalted: 'analysis_halted.mp3',
 }
 
 const FRENCH_PROMPTS: Record<DefibPrompt | 'performCpr', string> = {
   standClear: 'Dégagez le patient.',
   pressShock: 'Appuyez sur le bouton de choc.',
   shockNotAdvised: 'Choc non conseillé.',
+  analysisHalted: 'Analyse interrompue.',
   performCpr: 'Commencez la réanimation cardio-respiratoire.',
 }
 

@@ -139,6 +139,13 @@ describe('formatEventDetail', () => {
     expect(
       formatEventDetail({ kind: 'analyze', label: 'Analyze - Shock', payload: { result: 'shock', rhythm: 'vf' } }),
     ).toBe('{result: shock, rhythm: vf}')
+    expect(
+      formatEventDetail({
+        kind: 'analyze',
+        label: 'Analyze - Halted',
+        payload: { result: 'halted', underlyingRhythm: 'vf', reason: 'cpr_compression' },
+      }),
+    ).toBe('{result: halted, underlyingRhythm: vf, reason: cpr_compression}')
   })
 
   it('drops null entries so a manual NIBP reads as one field', () => {
