@@ -137,6 +137,65 @@ describe('AdminPage', () => {
     expect(routerReplace).not.toHaveBeenCalled()
   })
 
+  it('keeps a manual General Notes draft across tabs and blocks room transitions until resolved', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi.spyOn(window, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input)
+      if (url.endsWith('/attempt-notes') && init?.method === 'PATCH') {
+        const body = JSON.parse(String(init.body)) as { generalNotes: string }
+        return new Response(JSON.stringify({
+          attemptNotes: { attempt_version: 1, general_notes: body.generalNotes },
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(JSON.stringify({
+        session: { status: 'active', active_attempt_version: 1 },
+        participants: [],
+        events: [],
+        attemptGeneralNotes: [{ attempt_version: 1, general_notes: 'Saved note' }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+    })
+
+    render(<AdminPage session={{ code: 'ABC123', controllerToken: 'controller_token' }} />)
+    await waitFor(() => expect(screen.getByText('active')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+
+    const editor = screen.getByRole('textbox', { name: 'General Notes' })
+    await waitFor(() => expect(editor).toHaveValue('Saved note'))
+    await user.clear(editor)
+    await user.type(editor, 'Draft across tabs')
+    fireEvent.blur(editor)
+    expect(fetchMock.mock.calls.some(
+      ([url, init]) => String(url).endsWith('/attempt-notes') && init?.method === 'PATCH',
+    )).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: 'Scenarios' }))
+    await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
+    expect(screen.getByRole('textbox', { name: 'General Notes' })).toHaveValue('Draft across tabs')
+
+    await user.click(screen.getByRole('button', { name: 'New Attempt' }))
+    expect(screen.getByText('Save or revert General Notes before starting a new Attempt.'))
+      .toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/attempt'))).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: 'End Room' }))
+    expect(screen.getByText('Save or revert General Notes before ending the Room.'))
+      .toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/end'))).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: 'Revert General Notes' }))
+    expect(screen.getByRole('textbox', { name: 'General Notes' })).toHaveValue('Saved note')
+    await user.clear(screen.getByRole('textbox', { name: 'General Notes' }))
+    await user.type(screen.getByRole('textbox', { name: 'General Notes' }), 'Explicit save')
+    await user.click(screen.getByRole('button', { name: 'Save General Notes' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
+      '/api/session/ABC123/attempt-notes',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ generalNotes: 'Explicit save' }),
+      }),
+    ))
+  }, 10_000)
+
   it('keeps a displaced controller read-only and offers an explicit takeover', async () => {
     const takeControl = vi.fn()
     vi.spyOn(window, 'fetch').mockResolvedValue(new Response(

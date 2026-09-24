@@ -95,9 +95,14 @@ _Avoid_: Medication as the umbrella term, trainee attribution, Instructor change
 
 **General Notes**:
 The single editable, latest-value narrative attached to an Attempt and its Evaluation record. It
-autosaves, remains owner-editable after the Attempt, and is distinct from chronological timeline
-entries.
+changes only through an explicit instructor save, remains owner-editable after the Attempt, and is
+distinct from chronological timeline entries.
 _Avoid_: Instructor Note, Report Note, event history
+
+**General Notes draft**:
+The Instructor Console's unsaved edit to General Notes. It survives console-tab changes but does
+not become part of the Attempt or Evaluation record until Save succeeds.
+_Avoid_: General Notes, autosaved note, Instructor Note
 
 **Report Note**:
 The Instructor Console composer used to send one Instructor Note to the current Attempt. Its draft

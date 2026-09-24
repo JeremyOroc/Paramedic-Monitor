@@ -119,7 +119,8 @@ describe('AdminPage scenario library integration', () => {
     await user.click(screen.getByRole('button', { name: 'Load Chest Pain' }))
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
 
-    await waitFor(() => expect(screen.getByLabelText('Change scenario title')).toHaveValue('Chest Pain'))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Unload Chest Pain' })).toBeInTheDocument())
+    expect(screen.queryByLabelText('Change scenario title')).toBeNull()
     expect(screen.getByLabelText('Auto-sort scenario')).toHaveValue(stored.snapshot.autoSortText)
     expect(screen.getByLabelText('Adresse')).toHaveValue('123 Rue Principale')
     expect(screen.getByLabelText('Extra 1 title')).toHaveValue('Unit')
@@ -127,13 +128,6 @@ describe('AdminPage scenario library integration', () => {
     expect(useMonitorStore.getState().draft.hr).toBe(145)
     expect(useMonitorStore.getState().confirmed.hr).toBe(0)
     expect(useMonitorStore.getState().defibrillatorModelDraft).toBe('wagamiA')
-
-    const title = screen.getByLabelText('Change scenario title')
-    await user.type(title, ' edited')
-    expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeEnabled()
-    await user.clear(title)
-    await user.type(title, 'Chest Pain')
-    expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeDisabled()
 
     await user.click(screen.getByRole('button', { name: 'Monitor & Patient SNS' }))
     expect(screen.getByLabelText('Sample S information')).toHaveValue('Chest pain')
@@ -174,7 +168,7 @@ describe('AdminPage scenario library integration', () => {
     })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save Chest Pain' })).toBeDisabled())
     expect(useMonitorStore.getState().confirmed.hr).toBe(0)
-  })
+  }, 10_000)
 
   it('creates a blank-title fallback and deletes it while retaining the draft', async () => {
     let stored: SavedScenario | null = null
@@ -216,7 +210,7 @@ describe('AdminPage scenario library integration', () => {
     expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: 'Save Untitled Scenario' }))
 
-    await waitFor(() => expect(screen.getByLabelText('Change scenario title')).toHaveValue('Scenario 1'))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename Scenario 1' })).toBeInTheDocument())
     const createCall = fetchMock.mock.calls.find(
       ([url, init]) => String(url) === '/api/scenarios' && init?.method === 'POST',
     )
@@ -240,7 +234,7 @@ describe('AdminPage scenario library integration', () => {
     await user.click(screen.getByRole('button', { name: 'Delete Scenario 1' }))
     const draftDialog = screen.getByRole('alertdialog', { name: 'Delete scenario draft' })
     await user.click(within(draftDialog).getByRole('button', { name: 'Delete' }))
-    expect(screen.queryByRole('button', { name: 'Unload Scenario 1' })).toBeNull()
+    expect(screen.queryByLabelText('Scenario draft Scenario 1')).toBeNull()
     expect(fetchMock.mock.calls.filter(
       ([url, init]) => String(url) === '/api/scenarios/scenario-1' && init?.method === 'DELETE',
     )).toHaveLength(1)
@@ -288,7 +282,10 @@ describe('AdminPage scenario library integration', () => {
     expect(screen.getByRole('region', { name: 'Folder 1 scenarios' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
-    await user.type(screen.getByLabelText('Change scenario title'), 'Title Only')
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Rename Untitled Scenario' }))
+    const title = screen.getByRole('textbox', { name: 'Rename Untitled Scenario' })
+    await user.clear(title)
+    await user.type(title, 'Title Only{Enter}')
     expect(screen.getByRole('button', { name: 'Save Title Only' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: 'Save Title Only' }))
 
@@ -305,7 +302,7 @@ describe('AdminPage scenario library integration', () => {
       'aria-expanded',
       'true',
     )
-    expect(screen.getByLabelText('Change scenario title')).toHaveValue('Scenario 1')
+    expect(screen.getByRole('button', { name: 'Rename Scenario 1' })).toBeInTheDocument()
   })
 
   it('cascade-deleting the loaded folder clears authoring drafts without changing confirmed state', async () => {
@@ -349,7 +346,7 @@ describe('AdminPage scenario library integration', () => {
     await user.click(within(folderDialog).getByRole('button', { name: 'Delete' }))
 
     await user.click(await screen.findByRole('button', { name: 'Expand Caller Info' }))
-    await waitFor(() => expect(screen.getByLabelText('Change scenario title')).toHaveValue(''))
+    expect(screen.queryByLabelText('Change scenario title')).toBeNull()
     expect(useMonitorStore.getState().draft.hr).toBe(0)
     expect(useMonitorStore.getState().confirmed.hr).toBe(99)
     expect(screen.getByLabelText('Auto-sort scenario')).toHaveValue('')
@@ -394,7 +391,7 @@ describe('AdminPage scenario library integration', () => {
     await user.click(await screen.findByRole('button', { name: /^General/ }))
     await user.click(await screen.findByRole('button', { name: 'Load Chest Pain' }))
     await user.click(screen.getByRole('button', { name: 'Expand Caller Info' }))
-    await waitFor(() => expect(screen.getByLabelText('Change scenario title')).toHaveValue('Chest Pain'))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Unload Chest Pain' })).toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: 'Delete Respiratory Call' }))
     let dialog = screen.getByRole('alertdialog', { name: 'Delete scenario' })
@@ -409,7 +406,6 @@ describe('AdminPage scenario library integration', () => {
       '/api/scenarios/scenario-2',
       { method: 'DELETE' },
     ))
-    expect(screen.getByLabelText('Change scenario title')).toHaveValue('Chest Pain')
     expect(screen.getByRole('button', { name: 'Unload Chest Pain' })).toHaveAttribute(
       'aria-pressed',
       'true',

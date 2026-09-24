@@ -3,7 +3,6 @@
 import { useState, type ChangeEvent } from 'react'
 
 import { AddressAutocomplete } from '@/components/instructor/AddressAutocomplete'
-import { useCountdown } from '@/hooks/useCountdown'
 import { cn } from '@/lib/utils'
 import { useMonitorStore } from '@/store/monitorStore'
 import {
@@ -62,10 +61,6 @@ export function CallerInfoForm({
   const setCallerInfoDraft = useMonitorStore((s) => s.setCallerInfoDraft)
   const dispatchMinutes = useMonitorStore((s) => s.dispatchMinutes)
   const dispatchSeconds = useMonitorStore((s) => s.dispatchSeconds)
-  const setDispatchMinutes = useMonitorStore((s) => s.setDispatchMinutes)
-  const setDispatchSeconds = useMonitorStore((s) => s.setDispatchSeconds)
-  const dispatchCountdownLocked = useMonitorStore((s) => s.dispatch.countdownLocked)
-  const dispatchCountdownEndsAt = useMonitorStore((s) => s.dispatch.countdownEndsAt)
   const dispatchRouteDraft = useMonitorStore((s) => s.dispatchRouteDraft)
   const setDispatchRouteDraft = useMonitorStore((s) => s.setDispatchRouteDraft)
   const [extraCount, setExtraCount] = useState(() => getInitialExtraCount(callerInfoDraft))
@@ -78,7 +73,6 @@ export function CallerInfoForm({
   }
 
   const dispatchEtaPreview = formatDispatchCountdownPreview(dispatchMinutes, dispatchSeconds)
-  const liveDispatchCountdown = useCountdown(dispatchCountdownEndsAt)
 
   return (
     <section className="min-w-0 flex flex-col gap-3 border border-neutral-800 bg-neutral-950 p-4">
@@ -99,59 +93,6 @@ export function CallerInfoForm({
       </div>
       {expanded ? (
         <div id="caller-info-editor" className="grid gap-3">
-          <div
-            data-testid="caller-info-countdown-row"
-            className="grid min-w-0 gap-3 md:grid-cols-2"
-          >
-            <div className="grid min-w-0 gap-1">
-              <span className="text-xs uppercase tracking-wider text-neutral-400">
-                Dispatch countdown
-              </span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  step={1}
-                  value={dispatchMinutes === 0 ? '' : dispatchMinutes}
-                  placeholder="0"
-                  disabled={dispatchCountdownLocked}
-                  onChange={(e) => setDispatchMinutes(Number(e.target.value))}
-                  aria-label="Dispatch countdown minutes"
-                  aria-describedby={dispatchCountdownLocked ? 'dispatch-countdown-lock-status' : undefined}
-                  className={cn(
-                    'w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp',
-                    'disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-500',
-                  )}
-                />
-                <span className="text-xs uppercase tracking-wider text-neutral-500">min</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={59}
-                  step={1}
-                  value={dispatchSeconds === 0 ? '' : dispatchSeconds}
-                  placeholder="0"
-                  disabled={dispatchCountdownLocked}
-                  onChange={(e) => setDispatchSeconds(Number(e.target.value))}
-                  aria-label="Dispatch countdown seconds"
-                  aria-describedby={dispatchCountdownLocked ? 'dispatch-countdown-lock-status' : undefined}
-                  className={cn(
-                    'w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp',
-                    'disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-500',
-                  )}
-                />
-                <span className="text-xs uppercase tracking-wider text-neutral-500">sec</span>
-              </div>
-              {dispatchCountdownLocked ? (
-                <p
-                  id="dispatch-countdown-lock-status"
-                  className="font-mono text-xs font-bold uppercase tracking-wider text-pending-amber"
-                >
-                  Locked · Live {liveDispatchCountdown.formatted}
-                </p>
-              ) : null}
-            </div>
-          </div>
           <label className="grid gap-1">
             <span className="text-xs uppercase tracking-wider text-neutral-400">
               Auto-sort scenario
@@ -215,72 +156,77 @@ export function CallerInfoForm({
               </span>
             )}
           </div>
-          <div className="grid gap-2 border border-neutral-800 bg-neutral-900/40 p-3">
-            <span className="text-xs uppercase tracking-wider text-neutral-400">
-              Call / Priority / MPDS
-            </span>
-            <div className="grid gap-3 md:grid-cols-3">
-              {DISPATCH_FIELDS.map(({ field, label }) => (
-                <label key={field} className="grid gap-1">
-                  <span className="text-xs uppercase tracking-wider text-neutral-400">
-                    {label}
-                  </span>
-                  <input
-                    value={callerInfoDraft[field]}
-                    onChange={(e) => setCallerInfoDraft(field, e.target.value)}
-                    aria-label={label}
-                    className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
           <div
-            data-testid="caller-info-primary-grid"
-            className="grid min-w-0 gap-3 md:grid-cols-2"
+            data-testid="caller-info-field-grid"
+            className="grid min-w-0 gap-3 md:grid-cols-2 md:items-start"
           >
-            {PRIMARY_FIELDS.map(({ field, label, multiline }) =>
-              field === 'address' ? (
-                <AddressAutocomplete
-                  key={field}
-                  label={label}
-                  value={callerInfoDraft[field]}
-                  onChange={(value) => setCallerInfoDraft(field, value)}
-                  onSelect={(suggestion) => {
-                    setCallerInfoDraft(field, suggestion.formatted)
-                    setDispatchRouteDraft({
-                      ...dispatchRouteDraft,
-                      destinationAddress: suggestion.formatted,
-                      destination: suggestion.latLng,
-                      status: 'idle',
-                      error: '',
-                    })
-                  }}
-                />
-              ) : (
-                <label key={field} className="grid min-w-0 gap-1">
-                  <span className="text-xs uppercase tracking-wider text-neutral-400">
-                    {label}
-                  </span>
-                  {multiline ? (
-                    <textarea
-                      value={callerInfoDraft[field]}
-                      onChange={(e) => setCallerInfoDraft(field, e.target.value)}
-                      aria-label={label}
-                      rows={1}
-                      className="h-10 min-h-10 resize-y border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
-                    />
-                  ) : (
+            <div
+              data-testid="caller-info-dispatch-fields"
+              className="grid gap-2 border border-neutral-800 bg-neutral-900/40 p-3"
+            >
+              <span className="text-xs uppercase tracking-wider text-neutral-400">
+                Call / Priority / MPDS
+              </span>
+              <div className="grid gap-3">
+                {DISPATCH_FIELDS.map(({ field, label }) => (
+                  <label key={field} className="grid gap-1">
+                    <span className="text-xs uppercase tracking-wider text-neutral-400">
+                      {label}
+                    </span>
                     <input
                       value={callerInfoDraft[field]}
                       onChange={(e) => setCallerInfoDraft(field, e.target.value)}
                       aria-label={label}
                       className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
                     />
-                  )}
-                </label>
-              ),
-            )}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div data-testid="caller-info-primary-fields" className="grid min-w-0 gap-3">
+              {PRIMARY_FIELDS.map(({ field, label, multiline }) =>
+                field === 'address' ? (
+                  <AddressAutocomplete
+                    key={field}
+                    label={label}
+                    value={callerInfoDraft[field]}
+                    onChange={(value) => setCallerInfoDraft(field, value)}
+                    onSelect={(suggestion) => {
+                      setCallerInfoDraft(field, suggestion.formatted)
+                      setDispatchRouteDraft({
+                        ...dispatchRouteDraft,
+                        destinationAddress: suggestion.formatted,
+                        destination: suggestion.latLng,
+                        status: 'idle',
+                        error: '',
+                      })
+                    }}
+                  />
+                ) : (
+                  <label key={field} className="grid min-w-0 gap-1">
+                    <span className="text-xs uppercase tracking-wider text-neutral-400">
+                      {label}
+                    </span>
+                    {multiline ? (
+                      <textarea
+                        value={callerInfoDraft[field]}
+                        onChange={(e) => setCallerInfoDraft(field, e.target.value)}
+                        aria-label={label}
+                        rows={1}
+                        className="min-h-10 resize-none overflow-hidden border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white [field-sizing:content] focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                      />
+                    ) : (
+                      <input
+                        value={callerInfoDraft[field]}
+                        onChange={(e) => setCallerInfoDraft(field, e.target.value)}
+                        aria-label={label}
+                        className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
+                      />
+                    )}
+                  </label>
+                ),
+              )}
+            </div>
           </div>
           {visibleExtraFields.map(({ labelField, valueField, fallbackLabel }) => (
             <div

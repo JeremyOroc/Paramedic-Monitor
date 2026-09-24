@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   type DragEvent,
   type KeyboardEvent,
@@ -10,7 +11,9 @@ import {
 } from 'react'
 
 import { ConfirmationDialog } from '@/components/instructor/ConfirmationDialog'
+import { useCountdown } from '@/hooks/useCountdown'
 import { cn } from '@/lib/utils'
+import { useMonitorStore } from '@/store/monitorStore'
 import type {
   SavedScenario,
   SavedScenarioListResponse,
@@ -33,6 +36,7 @@ type ScenarioLibraryPanelProps = {
   onSelectedFolderChange: (folderId: string) => void
   onExpandedFolderChange: (folderId: string, expanded: boolean) => void
   onLoadScenario: (scenario: SavedScenario) => void
+  onScenarioRenamed: (scenario: SavedScenario) => void
   onUnloadScenario: () => void
   onFolderDeleted: (folderId: string) => void
   onLoadedScenarioFolderChange: (folderId: string) => void
@@ -127,6 +131,90 @@ type ScenarioRowActionsProps = {
   onDelete: () => void
 }
 
+type EditableScenarioTitleProps = {
+  title: string
+  editable: boolean
+  onCommit: (value: string) => Promise<boolean>
+}
+
+function EditableScenarioTitle({
+  title,
+  editable,
+  onCommit,
+}: EditableScenarioTitleProps) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(title)
+  const [saving, setSaving] = useState(false)
+  const cancelRef = useRef(false)
+
+  const startEditing = () => {
+    if (!editable) return
+    setValue(title)
+    cancelRef.current = false
+    setEditing(true)
+  }
+
+  const finishEditing = async () => {
+    if (cancelRef.current || saving) return
+    if (value === title) {
+      setEditing(false)
+      return
+    }
+    setSaving(true)
+    const saved = await onCommit(value)
+    setSaving(false)
+    if (saved) setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={value}
+        disabled={saving}
+        aria-label={`Rename ${title}`}
+        onClick={(event) => event.stopPropagation()}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => void finishEditing()}
+        onKeyDown={(event) => {
+          event.stopPropagation()
+          if (event.key === 'Escape') {
+            cancelRef.current = true
+            setEditing(false)
+          } else if (event.key === 'Enter') {
+            event.preventDefault()
+            event.currentTarget.blur()
+          }
+        }}
+        className="block min-h-8 w-full min-w-0 border border-cyan-bp bg-black px-2 py-1 text-sm text-white outline-none focus:ring-2 focus:ring-cyan-bp disabled:opacity-60"
+      />
+    )
+  }
+
+  if (!editable) return <span className="block truncate">{title}</span>
+
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={`Rename ${title}`}
+      title="Double-click to rename"
+      onClick={(event) => event.stopPropagation()}
+      onDoubleClick={startEditing}
+      onKeyDown={(event) => {
+        event.stopPropagation()
+        if (event.key === 'Enter' || event.key === 'F2') {
+          event.preventDefault()
+          startEditing()
+        }
+      }}
+      className="block truncate outline-none focus:ring-2 focus:ring-cyan-bp"
+    >
+      {title}
+    </span>
+  )
+}
+
 function ScenarioRowActions({
   title,
   saveDisabled,
@@ -171,7 +259,7 @@ type ScenarioDraftRowProps = {
   dirty: boolean
   action: 'idle' | 'saving' | 'deleting'
   disabled: boolean
-  onUnload: () => void
+  onTitleChange: (value: string) => void
   onSave: () => void
   onDelete: () => void
 }
@@ -181,30 +269,29 @@ function ScenarioDraftRow({
   dirty,
   action,
   disabled,
-  onUnload,
+  onTitleChange,
   onSave,
   onDelete,
 }: ScenarioDraftRowProps) {
   return (
     <div
-      role="button"
-      tabIndex={disabled ? -1 : 0}
-      aria-pressed="true"
-      aria-disabled={disabled}
-      aria-label={`Unload ${title}`}
-      onClick={disabled ? undefined : onUnload}
-      onKeyDown={(event) => {
-        if (disabled || (event.key !== 'Enter' && event.key !== ' ')) return
-        event.preventDefault()
-        onUnload()
-      }}
+      aria-label={`Scenario draft ${title}`}
       className={cn(
-        'grid min-h-11 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-center gap-1 border border-ecg-green bg-ecg-green/10 p-1 focus:outline-none focus:ring-2 focus:ring-cyan-bp',
-        disabled && 'cursor-not-allowed opacity-60',
+        'grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 border border-ecg-green bg-ecg-green/10 p-1',
+        disabled && 'opacity-60',
       )}
     >
       <div className="flex min-h-8 min-w-0 items-center gap-2 border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm text-white">
-        <span className="min-w-0 flex-1 truncate">{title}</span>
+        <div className="min-w-0 flex-1">
+          <EditableScenarioTitle
+            title={title}
+            editable={!disabled}
+            onCommit={async (value) => {
+              onTitleChange(value)
+              return true
+            }}
+          />
+        </div>
         <span className="shrink-0 font-mono text-[9px] uppercase text-pending-amber">Draft</span>
       </div>
       <ScenarioRowActions
@@ -234,6 +321,7 @@ export function ScenarioLibraryPanel({
   onSelectedFolderChange,
   onExpandedFolderChange,
   onLoadScenario,
+  onScenarioRenamed,
   onUnloadScenario,
   onFolderDeleted,
   onLoadedScenarioFolderChange,
@@ -260,6 +348,13 @@ export function ScenarioLibraryPanel({
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
   const [folderDropTarget, setFolderDropTarget] = useState<FolderDropTarget | null>(null)
   const [folderPendingDeletion, setFolderPendingDeletion] = useState<ScenarioFolder | null>(null)
+  const dispatchMinutes = useMonitorStore((state) => state.dispatchMinutes)
+  const dispatchSeconds = useMonitorStore((state) => state.dispatchSeconds)
+  const setDispatchMinutes = useMonitorStore((state) => state.setDispatchMinutes)
+  const setDispatchSeconds = useMonitorStore((state) => state.setDispatchSeconds)
+  const dispatchCountdownLocked = useMonitorStore((state) => state.dispatch.countdownLocked)
+  const dispatchCountdownEndsAt = useMonitorStore((state) => state.dispatch.countdownEndsAt)
+  const liveDispatchCountdown = useCountdown(dispatchCountdownEndsAt)
 
   const loadFolders = useCallback(async () => {
     const data = await requestJson<ScenarioFolderListResponse>('/api/scenario-folders')
@@ -555,6 +650,40 @@ export function ScenarioLibraryPanel({
     })
   }
 
+  const renameScenario = async (
+    scenario: SavedScenarioSummary,
+    title: string,
+  ): Promise<boolean> => {
+    if (!scenario.can_edit || controlsDisabled) return false
+    setStatus('working')
+    setError('')
+    try {
+      const data = await requestJson<{ scenario: SavedScenario }>(
+        `/api/scenarios/${scenario.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title }),
+        },
+      )
+      setScenariosByFolderId((current) => ({
+        ...current,
+        [scenario.folder_id]: (current[scenario.folder_id] ?? []).map((candidate) =>
+          candidate.id === scenario.id
+            ? { ...candidate, title: data.scenario.title, updated_at: data.scenario.updated_at }
+            : candidate,
+        ),
+      }))
+      onScenarioRenamed(data.scenario)
+      return true
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Unable to rename scenario')
+      return false
+    } finally {
+      setStatus('idle')
+    }
+  }
+
   const activateScenario = (event: KeyboardEvent<HTMLDivElement>, scenarioId: string) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
     event.preventDefault()
@@ -678,8 +807,58 @@ export function ScenarioLibraryPanel({
 
   return (
     <section className="min-w-0 border border-neutral-800 bg-neutral-950 p-4" aria-label="Scenarios library">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-800 pb-3">
-        <h2 className="text-sm uppercase tracking-wider text-neutral-400">Scenarios</h2>
+      <div className="grid gap-3 border-b border-neutral-800 pb-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h2 className="pt-2 text-sm uppercase tracking-wider text-neutral-400">Scenarios</h2>
+          <div className="grid min-w-0 gap-1" data-testid="scenario-dispatch-countdown">
+            <span className="text-xs uppercase tracking-wider text-neutral-400">
+              Dispatch countdown
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={dispatchMinutes === 0 ? '' : dispatchMinutes}
+                placeholder="0"
+                disabled={dispatchCountdownLocked}
+                onChange={(event) => setDispatchMinutes(Number(event.target.value))}
+                aria-label="Dispatch countdown minutes"
+                aria-describedby={dispatchCountdownLocked ? 'scenario-dispatch-countdown-lock-status' : undefined}
+                className={cn(
+                  'w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+                  'disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-500',
+                )}
+              />
+              <span className="text-xs uppercase tracking-wider text-neutral-500">min</span>
+              <input
+                type="number"
+                min={0}
+                max={59}
+                step={1}
+                value={dispatchSeconds === 0 ? '' : dispatchSeconds}
+                placeholder="0"
+                disabled={dispatchCountdownLocked}
+                onChange={(event) => setDispatchSeconds(Number(event.target.value))}
+                aria-label="Dispatch countdown seconds"
+                aria-describedby={dispatchCountdownLocked ? 'scenario-dispatch-countdown-lock-status' : undefined}
+                className={cn(
+                  'w-20 border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp',
+                  'disabled:cursor-not-allowed disabled:border-neutral-800 disabled:text-neutral-500',
+                )}
+              />
+              <span className="text-xs uppercase tracking-wider text-neutral-500">sec</span>
+            </div>
+            {dispatchCountdownLocked ? (
+              <p
+                id="scenario-dispatch-countdown-lock-status"
+                className="font-mono text-xs font-bold uppercase tracking-wider text-pending-amber"
+              >
+                Locked · Live {liveDispatchCountdown.formatted}
+              </p>
+            ) : null}
+          </div>
+        </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <button
             type="button"
@@ -749,17 +928,6 @@ export function ScenarioLibraryPanel({
         </div>
       </div>
 
-      <label className="mt-3 grid gap-1">
-        <span className="text-xs uppercase tracking-wider text-neutral-400">Change scenario title</span>
-        <input
-          value={scenarioDraftTitle}
-          onChange={(event) => onScenarioTitleChange(event.target.value)}
-          aria-label="Change scenario title"
-          placeholder="Enter scenario title"
-          className="border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-bp"
-        />
-      </label>
-
       {creatingFolder ? (
         <div className="mt-3 text-xs uppercase tracking-wider text-neutral-500">
           Creating in {newFolderLibraryKind === 'personal' ? 'My Scenarios' : 'Templates'}
@@ -807,15 +975,42 @@ export function ScenarioLibraryPanel({
         </p>
       ) : null}
 
-      <div className="mt-3 border border-neutral-800" data-testid="scenario-folder-list">
+      <div
+        className="mt-3 grid gap-3 md:grid-cols-2 md:items-start"
+        data-testid="scenario-folder-list"
+      >
         {loading && folders.length === 0 ? (
-          <p className="p-4 text-sm text-neutral-500">Loading scenarios…</p>
+          <p className="border border-neutral-800 p-4 text-sm text-neutral-500 md:col-span-2">
+            Loading scenarios…
+          </p>
         ) : (
           <>
-            <div className="border-b border-neutral-800 bg-cyan-bp/5 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-cyan-bp">
-              My Scenarios
-            </div>
-            {personalFolders.length === 0 && scenarioDraftActive && !selectedFolderId ? (
+            {([
+              {
+                kind: 'personal' as const,
+                title: 'My Scenarios',
+                scopedFolders: personalFolders,
+              },
+              {
+                kind: 'template' as const,
+                title: 'Templates',
+                scopedFolders: templateFolders,
+              },
+            ]).map(({ kind, title, scopedFolders }) => (
+              <div
+                key={kind}
+                className="min-w-0 border border-neutral-800"
+                data-testid={`${kind}-scenario-library`}
+              >
+                <div className={cn(
+                  'border-b border-neutral-800 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em]',
+                  kind === 'personal'
+                    ? 'bg-cyan-bp/5 text-cyan-bp'
+                    : 'bg-purple-etco2/5 text-purple-etco2',
+                )}>
+                  {title}
+                </div>
+            {kind === 'personal' && personalFolders.length === 0 && scenarioDraftActive && !selectedFolderId ? (
               <section className="border-b border-neutral-800">
             <div className="bg-cyan-bp/10 px-2 py-2">
               <div className="flex min-w-0 items-center gap-2">
@@ -836,21 +1031,20 @@ export function ScenarioLibraryPanel({
                 dirty={scenarioIsDirty}
                 action={scenarioAction}
                 disabled={scenarioSelectionDisabled}
-                onUnload={onDeleteDraft}
+                onTitleChange={onScenarioTitleChange}
                 onSave={() => onSaveScenario()}
                 onDelete={onDeleteDraft}
               />
             </div>
               </section>
-            ) : personalFolders.length === 0 ? (
+            ) : kind === 'personal' && personalFolders.length === 0 ? (
               <p className="border-b border-neutral-800 p-4 text-sm text-neutral-500">
                 No scenario folders. Select New Scenario to start a draft; Folder 1 will be created when you save.
               </p>
+            ) : kind === 'template' && templateFolders.length === 0 ? (
+              <p className="p-4 text-sm text-neutral-500">No shared Templates yet.</p>
             ) : null}
-            {[...personalFolders, ...templateFolders].map((folder) => {
-            const scopedFolders = folder.library_kind === 'personal'
-              ? personalFolders
-              : templateFolders
+            {scopedFolders.map((folder) => {
             const folderIndex = scopedFolders.findIndex((candidate) => candidate.id === folder.id)
             const selectedFolder = folder.id === selectedFolderId
             const expanded = expandedFolderIds.has(folder.id)
@@ -858,13 +1052,8 @@ export function ScenarioLibraryPanel({
             const loadingScenarios = loadingFolderIds.has(folder.id)
             const renaming = renamingFolderId === folder.id
             return (
-              <div key={folder.id}>
-                {folder.library_kind === 'template' && folderIndex === 0 ? (
-                  <div className="border-b border-neutral-800 bg-purple-etco2/5 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-purple-etco2">
-                    Templates
-                  </div>
-                ) : null}
               <section
+                key={folder.id}
                 draggable={!controlsDisabled && !renaming && folder.can_edit}
                 onDragStart={(event) => {
                   event.dataTransfer.setData('text/folder-id', folder.id)
@@ -978,7 +1167,7 @@ export function ScenarioLibraryPanel({
                         dirty={scenarioIsDirty}
                         action={scenarioAction}
                         disabled={scenarioSelectionDisabled}
-                        onUnload={onDeleteDraft}
+                        onTitleChange={onScenarioTitleChange}
                         onSave={() => onSaveScenario()}
                         onDelete={onDeleteDraft}
                       />
@@ -1017,7 +1206,7 @@ export function ScenarioLibraryPanel({
                             onDrop={(event) => handleScenarioDrop(event, folder.id, scenario.id)}
                             onDragEnd={() => setDropTarget(null)}
                             className={cn(
-                              'relative grid min-h-11 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-bp md:grid-cols-[auto_minmax(0,1fr)_minmax(8rem,10rem)_auto_auto]',
+                              'relative grid min-h-11 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-cyan-bp 2xl:grid-cols-[auto_minmax(0,1fr)_minmax(8rem,10rem)_auto_auto]',
                               selected
                                 ? 'border-ecg-green bg-ecg-green/10'
                                 : 'border-neutral-800 bg-neutral-950 hover:border-cyan-bp/60',
@@ -1028,10 +1217,14 @@ export function ScenarioLibraryPanel({
                           >
                             <span aria-hidden="true" title="Drag to reorder or move" className="cursor-grab font-mono text-neutral-600">⋮⋮</span>
                             <div className="min-h-8 min-w-0 border border-neutral-700 bg-neutral-900 px-2 py-1 text-sm leading-6 text-white">
-                              <span className="block truncate">{scenario.title}</span>
+                              <EditableScenarioTitle
+                                title={scenario.title}
+                                editable={!controlsDisabled && scenario.can_edit}
+                                onCommit={(value) => renameScenario(scenario, value)}
+                              />
                             </div>
                             <label
-                              className="col-start-2 row-start-2 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-1 md:col-auto md:row-auto"
+                              className="col-start-2 row-start-2 grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-1 2xl:col-auto 2xl:row-auto"
                               onClick={stopRowActivation}
                               onKeyDown={stopRowKeyboardActivation}
                             >
@@ -1055,7 +1248,7 @@ export function ScenarioLibraryPanel({
                               </select>
                             </label>
                             <div
-                              className="col-start-3 row-start-2 grid grid-cols-2 gap-1 md:col-auto md:row-auto"
+                              className="col-start-3 row-start-2 grid grid-cols-2 gap-1 2xl:col-auto 2xl:row-auto"
                               onClick={stopRowActivation}
                               onKeyDown={stopRowKeyboardActivation}
                             >
@@ -1085,7 +1278,7 @@ export function ScenarioLibraryPanel({
                               saving={selected && scenarioAction === 'saving'}
                               deleting={scenarioAction === 'deleting'}
                               saveLabel={scenario.can_edit ? 'Save' : 'Save Copy'}
-                              className="col-start-3 row-start-1 md:col-auto md:row-auto"
+                              className="col-start-3 row-start-1 2xl:col-auto 2xl:row-auto"
                               onSave={() => onSaveScenario(
                                 scenario.can_edit ? undefined : personalFolders[0]?.id ?? null,
                               )}
@@ -1098,17 +1291,10 @@ export function ScenarioLibraryPanel({
                   </div>
                 ) : null}
               </section>
-              </div>
             )
           })}
-            {templateFolders.length === 0 ? (
-              <>
-                <div className="border-b border-neutral-800 bg-purple-etco2/5 px-3 py-2 font-mono text-xs font-bold uppercase tracking-[0.18em] text-purple-etco2">
-                  Templates
-                </div>
-                <p className="p-4 text-sm text-neutral-500">No shared Templates yet.</p>
-              </>
-            ) : null}
+              </div>
+            ))}
           </>
         )}
       </div>
