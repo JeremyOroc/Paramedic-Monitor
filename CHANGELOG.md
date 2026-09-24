@@ -5,6 +5,41 @@
 
 ---
 
+## [2026-09-24] [wagami-a/ui/testing] — Make the vital alarm pulse unmistakable
+
+- Corrected the initial treatment after live QA showed that alarm text changed color but the card
+  pulse was not visibly rendering at the monitor's scale.
+- Bound the animation directly to the card's active alarm attribute with explicit cascade priority
+  and increased the red fill, inset border, and glow contrast.
+- Changed the midpoint to the normal graphite card treatment, creating a clear red-to-normal pulse
+  without fading, moving, resizing, or remounting any label, value, or unit.
+- Verified the correction on the live Wagami A monitor with simultaneous FC, SpO₂, and PNI alarms;
+  all 62 focused tests, TypeScript, and affected-file ESLint pass.
+
+## [2026-09-24] [wagami-a/ui/accessibility/testing] — Add readable vital alarm flashes
+
+- Added independent Wagami A card-level alarm pulses for FC, SpO₂, and combined PNI across live,
+  Preview, and Spectator while preserving EtCO₂ and every Wagami X/Z presentation.
+- Kept alarm labels, values, and units continuously readable in alarm red; animated only the card
+  background, border, and glow on the approved 1.9-second cycle without moving or remounting content.
+- Kept visual alarms active while audio is muted, retained existing BP-reading suppression and PNI
+  interaction, and supplied a steady red treatment for reduced-motion users.
+- Added component, screen, live, Preview, Spectator, stable-identity, mute, interaction, and CSS
+  coverage. All 62 focused tests, TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack
+  production build pass. The full suite has 1,733 passing and one skipped, with only the same three
+  unrelated Room-ownership/PatientInfoPanel baseline failures.
+
+## [2026-09-24] [planning/wagami-a/domain] — Define the vital alarm flash
+
+- Defined the Vital alarm flash as repeating per-channel Wagami A card emphasis driven by clinical
+  alarm state rather than audible playback or the shell-LED preference.
+- Chose a dedicated readable 1.9-second red border/background/glow pulse with a static reduced-motion
+  treatment instead of hiding digits, moving cards, or flashing the full screen.
+- Scoped the presentation to FC, SpO₂, and combined PNI on the shared main A display across live,
+  Preview, and Spectator while preserving secondary pages, EtCO₂, PNI interaction, and X/Z.
+- Recorded alarm lifecycle, independent multi-channel timing, BP suppression, accessibility, and
+  verification requirements. No application code was changed in this planning entry.
+
 ## [2026-09-24] [wagami-a/defib/domain/testing] — Halt CPR-contaminated rhythm analysis
 
 - Made Regular and Weak Instructor CPR artifact take precedence over the hidden underlying rhythm

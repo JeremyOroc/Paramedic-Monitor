@@ -1044,6 +1044,39 @@ landscape Preview inspection of both states pass.
   Webpack production build. The full suite's three remaining failures are unrelated established
   Room-ownership and PatientInfoPanel baselines; no Wagami A test fails.
 
+- 2026-09-24 Wagami A vital alarm flash — **programmer-approved before implementation**. On the
+  main Wagami A monitor, each active FC, SpO₂, or combined PNI alarm gives its own fixed vital card
+  an immediate, repeating visual emphasis. Keep the label, value, and unit continuously readable in
+  Wagami A alarm red while a dedicated 1.9-second animation eases the card's graphite background,
+  border, and restrained glow between a strong red treatment and the normal graphite treatment so
+  the pulse remains unmistakable at the monitor's rendered scale. Do not scale, move, resize,
+  hide, or remount card content; value changes and unrelated alarm transitions must not restart an
+  already active card's cycle. The flash follows clinical alarm state independently of device-audio
+  mute and shell-LED preference, stops immediately when that channel normalizes or turns Off, and
+  respects existing BP suppression throughout an active cuff reading. Reduced-motion presentation
+  replaces animation with a steady red card treatment. Preserve PNI button/focus/keyboard behavior,
+  the existing status-line announcement, alarm thresholds and audio, EtCO₂'s non-alarming behavior,
+  and all X/Z behavior. Apply the shared card treatment to live, Preview, and Spectator; secondary
+  Wagami A pages retain their status line and shell LED without a full-screen flash.
+
+  #### Testing
+
+  Cover alarming and normal card presentation, all three channel mappings, simultaneous alarms,
+  alarm clearing, inactive channels, muted visual continuity, BP-reading suppression and restored
+  accepted-reading alarms, PNI interactivity, reduced-motion CSS, stable card identity across value
+  and unrelated-alarm changes, live/Preview/Spectator reuse, and X/Z regressions.
+
+  **Implementation completed locally on 2026-09-24.** The shared Wagami A vital card now maps the
+  existing FC, SpO₂, and PNI alarm channels to the approved readable red card treatment across live,
+  Preview, and Spectator. The animation remains independent of audio mute, preserves PNI interaction
+  and stable card identity, and becomes a steady treatment under reduced motion. EtCO₂, X/Z, alarm
+  thresholds, audio, and BP-reading suppression are unchanged. All 62 focused tests pass together
+  with TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production build. The complete
+  suite has 1,733 passing and one skipped, with only the same three unrelated Room-ownership and
+  PatientInfoPanel baseline failures. Live rendered QA subsequently identified insufficient visual
+  contrast in the initial pulse; the corrected high-specificity treatment now visibly cycles from a
+  red-filled, red-bordered card to its normal graphite state without changing content opacity.
+
 - 2026-09-24 Wagami A CPR-contaminated analysis precedence — **programmer-approved before
   implementation; narrows the captured-start-rhythm rule for Wagami A only**. If either Regular or
   Weak Instructor CPR override overlaps any part of Wagami A's Analyze acquisition, compression

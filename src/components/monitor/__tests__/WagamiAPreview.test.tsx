@@ -27,6 +27,29 @@ describe('Wagami A Room-free clinical preview', () => {
     expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
   })
 
+  it('keeps clinical alarm cards flashing while Preview audio is muted', () => {
+    useMonitorStore.getState().reset()
+    act(() => useMonitorStore.setState((state) => ({
+      confirmed: { ...state.confirmed, hr: 150, spo2: 88 },
+      confirmedVitalActive: {
+        ...state.confirmedVitalActive,
+        hr: true,
+        spo2: true,
+      },
+    })))
+    render(<WagamiAPreview />)
+
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-pni')).not.toHaveClass('wagami-a-vital-alarm')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Couper tous les sons' }))
+
+    expect(screen.getByRole('button', { name: 'Réactiver tous les sons' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
+  })
+
   it('runs the Monitor elapsed timer with the Preview power lifecycle', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-09-22T20:19:40Z'))

@@ -6,6 +6,18 @@
 ---
 
 ## Current Phase
+**Wagami A vital alarm flash — COMPLETE LOCALLY, AWAITING ACCEPTANCE (2026-09-24).** Each alarming
+FC, SpO₂, or PNI card now receives an independent 1.9-second red border/background/glow pulse while
+its label, value, and unit remain readable. The indication continues while audio is muted, becomes a
+steady red treatment under reduced motion, and preserves existing alarm detection, BP-reading
+suppression, PNI interaction, secondary pages, X/Z behavior, Preview, and Spectator semantics. All
+62 focused tests pass; TypeScript, affected-file ESLint, and the Next.js 16.3 Webpack production
+build pass. The complete suite has 1,733 passing and one skipped, retaining only the same three
+unrelated Room-ownership/PatientInfoPanel baseline failures. Changes are local and uncommitted on
+`alarm-animation`. Live rendered QA now confirms the corrected high-contrast cycle visibly moves
+between a red-filled/red-bordered card and the normal graphite card; all 62 focused tests,
+TypeScript, and affected-file ESLint remain clean after the correction.
+
 **Wagami A CPR-contaminated analysis — COMPLETE LOCALLY, AWAITING ACCEPTANCE (2026-09-24).** Any
 Regular or Weak Instructor CPR overlap now latches the current Wagami A Analyze attempt as invalid,
 shows and announces Analysis Halted, prevents shock/no-shock classification and automatic charge,

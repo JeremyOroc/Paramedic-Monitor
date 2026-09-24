@@ -44,6 +44,29 @@ describe('Wagami A fixed live display', () => {
     expect(screen.getByRole('region', { name: 'Wagami A defibrillation status' })).toHaveTextContent('200')
   })
 
+  it('maps simultaneous clinical alarms only to the matching FC, SpO₂, and PNI cards', () => {
+    const alarming: WagamiADisplayState = { ...display, alarms: ['hr', 'spo2', 'bp'] }
+    const { rerender } = render(<WagamiAScreen display={alarming} energy={120} />)
+
+    const fcCard = screen.getByTestId('wagami-a-vital-fc')
+    expect(fcCard).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-etco2')).not.toHaveClass('wagami-a-vital-alarm')
+
+    rerender(<WagamiAScreen display={{
+      ...alarming,
+      vitals: { ...alarming.vitals, hr: 150, spo2: 98 },
+      alarms: ['hr', 'bp'],
+    }} energy={120} />)
+
+    expect(screen.getByTestId('wagami-a-vital-fc')).toBe(fcCard)
+    expect(fcCard).toHaveTextContent('150')
+    expect(fcCard).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).not.toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveClass('wagami-a-vital-alarm')
+  })
+
   it('gates the EtCO₂ card and marks its task only while inline calibration is running', () => {
     const { rerender } = render(<WagamiAScreen display={display} energy={120} etco2CalibrationStatus="idle" />)
     expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent('--')

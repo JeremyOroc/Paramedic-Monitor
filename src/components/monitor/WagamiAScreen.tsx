@@ -56,9 +56,9 @@ export function WagamiAScreen({ display, energy, defibState = 'idle', chargeProg
     <section aria-label="Wagami A live display" className="grid h-full min-h-0 w-full grid-cols-[minmax(0,1fr)_minmax(183px,21.5%)] gap-[clamp(5px,0.85cqw,13px)] overflow-hidden bg-wagami-a-screen p-[clamp(5px,0.85cqw,13px)] text-wagami-a-text">
       <div data-testid="wagami-a-main-clinical-column" className="grid min-h-0 grid-rows-[clamp(82px,11.4cqw,160px)_clamp(28px,3.1cqw,42px)_minmax(0,1fr)] gap-[clamp(3px,0.45cqw,7px)]">
         <div aria-label="Fixed A vital card strip" className="grid min-h-0 grid-cols-4 gap-[clamp(4px,0.65cqw,10px)]">
-          <WagamiAVitalCard channel="fc" label={text.heartRate} value={active.hr ? String(vitals.hr) : '--'} unit="bpm" />
-          <WagamiAVitalCard channel="spo2" label="SpO₂" value={active.spo2 ? String(vitals.spo2) : '--'} unit="%" />
-          <WagamiAVitalCard channel="pni" label={text.bloodPressure} value={pniValue} unit="mmHg" actionLabel={text.openPniSettings} onClick={onOpenNibpSettings} />
+          <WagamiAVitalCard channel="fc" label={text.heartRate} value={active.hr ? String(vitals.hr) : '--'} unit="bpm" alarming={alarms.includes('hr')} />
+          <WagamiAVitalCard channel="spo2" label="SpO₂" value={active.spo2 ? String(vitals.spo2) : '--'} unit="%" alarming={alarms.includes('spo2')} />
+          <WagamiAVitalCard channel="pni" label={text.bloodPressure} value={pniValue} unit="mmHg" alarming={alarms.includes('bp')} actionLabel={text.openPniSettings} onClick={onOpenNibpSettings} />
           <WagamiAVitalCard channel="etco2" label="EtCO₂" value={etco2Available ? String(vitals.etco2) : '--'} unit="mmHg" />
         </div>
         <div data-testid="wagami-a-monitor-metadata" className="grid min-h-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center font-mono text-[clamp(13px,1.15cqw,18px)] leading-none text-wagami-a-muted-text">

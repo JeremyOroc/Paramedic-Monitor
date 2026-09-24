@@ -67,6 +67,26 @@ describe('Wagami A live Attempt integration', () => {
     })
   })
 
+  it('shows live FC and SpO₂ alarm flashes independently of mute', () => {
+    act(() => useMonitorStore.setState((state) => ({
+      confirmed: { ...state.confirmed, hr: 150, spo2: 88 },
+      confirmedVitalActive: {
+        ...state.confirmedVitalActive,
+        hr: true,
+        spo2: true,
+      },
+    })))
+    render(<MonitorPage transportStorageScope="ABC234.participant-1.1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Couper tous les sons' }))
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
+  })
+
   it('halts shockable analysis when Instructor CPR contaminates the live signal', () => {
     vi.useFakeTimers()
     const events: StudentEventRecord[] = []

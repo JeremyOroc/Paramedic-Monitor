@@ -10,6 +10,20 @@ describe('Wagami A vital cards', () => {
     expect(screen.getByTestId('wagami-a-vital-fc')).toHaveTextContent('78')
     expect(screen.getByText('FC')).toHaveClass('text-wagami-a-ecg')
     expect(screen.getByText('bpm')).toBeInTheDocument()
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveAttribute('data-alarming', 'false')
+    expect(screen.getByTestId('wagami-a-vital-fc')).not.toHaveClass('wagami-a-vital-alarm')
+  })
+
+  it('keeps alarm content readable while the card carries the dedicated flash state', () => {
+    render(<WagamiAVitalCard channel="fc" label="FC" value="142" unit="bpm" alarming />)
+
+    const card = screen.getByTestId('wagami-a-vital-fc')
+    expect(card).toHaveAttribute('data-alarming', 'true')
+    expect(card).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByText('FC')).toHaveClass('text-wagami-a-alarm')
+    expect(screen.getByText('142')).toHaveClass('text-wagami-a-alarm')
+    expect(screen.getByText('bpm')).toHaveClass('text-wagami-a-alarm')
+    expect(screen.getByText('142')).not.toHaveClass('vital-alarm-flash')
   })
 
   it('uses the complete PNI card as an accessible settings action when enabled', () => {
@@ -18,6 +32,19 @@ describe('Wagami A vital cards', () => {
     expect(screen.getByTestId('wagami-a-vital-pni')).toHaveTextContent('118/76')
     expect(screen.getByText('118/76')).toHaveAttribute('data-value-layout', 'inline-bp')
     screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }).click()
+    expect(onClick).toHaveBeenCalledOnce()
+  })
+
+  it('preserves the complete PNI settings action while alarming', () => {
+    const onClick = vi.fn()
+    render(<WagamiAVitalCard channel="pni" label="PNI" value="82/48" unit="mmHg" alarming actionLabel="Ouvrir les réglages PNI" onClick={onClick} />)
+
+    const button = screen.getByRole('button', { name: 'Ouvrir les réglages PNI' })
+    expect(button).toHaveClass('wagami-a-vital-alarm')
+    expect(button).toHaveAttribute('data-alarming', 'true')
+    button.focus()
+    expect(button).toHaveFocus()
+    button.click()
     expect(onClick).toHaveBeenCalledOnce()
   })
 

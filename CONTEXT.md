@@ -439,6 +439,11 @@ The Scenario device's all-cues audio-suppression state. It does not acknowledge 
 or disable Wagami A's on-screen alarm indication or shell alarm LED.
 _Avoid_: Alarm mute, alarm acknowledgement, LED Off
 
+**Vital alarm flash**:
+The repeating on-screen emphasis applied to each active FC, SpO₂, or PNI alarm channel. It follows
+the clinical alarm state independently of Device-audio mute and the shell alarm LED preference.
+_Avoid_: Alarm audio, shell alarm LED pulse, alarm acknowledgement
+
 **Monitor elapsed timer**:
 The Scenario device's powered-on elapsed time. It begins at monitor power-on and returns to zero at
 power-off, independently of the Attempt, dispatch countdown, and response timer. A Room-free Preview
