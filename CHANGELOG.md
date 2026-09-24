@@ -5,6 +5,18 @@
 
 ---
 
+## [2026-09-24] [wagami-a/ui/testing] — Restore the actual alarm flash cycle
+
+- Removed important cascade priority from the animated card background, border, and glow; those
+  declarations had locked the card in its strong red frame and prevented keyframe interpolation.
+- Moved the active cards to a fresh pulse selector and keyframe name so a long-running Tailwind
+  development cache cannot keep matching the obsolete locked-red rule.
+- Retained the 1.9-second timing, readable content, mute independence, reduced-motion fallback, and
+  existing alarm-state mapping.
+- Restarted the stale local development server and sampled ten live frames across a complete cycle;
+  the FC card changed from near-normal graphite `(18, 27, 32)` to bright alarm red `(98, 54, 55)`
+  and back. All 62 focused tests, TypeScript, and affected-file ESLint pass.
+
 ## [2026-09-24] [wagami-a/ui/testing] — Make the vital alarm pulse unmistakable
 
 - Corrected the initial treatment after live QA showed that alarm text changed color but the card

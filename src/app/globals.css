@@ -808,16 +808,16 @@ body.monitor-viewport-lock {
   0%, 38% { background: var(--color-wagami-a-text); box-shadow: 0 0 9px color-mix(in srgb, var(--color-wagami-a-text) 65%, transparent); }
   55%, 100% { background: var(--color-wagami-a-alarm); box-shadow: 0 0 13px var(--color-wagami-a-alarm); }
 }
-.wagami-a-vital-alarm[data-alarming='true'] {
-  animation: wagami-a-vital-alarm-flash 1.9s ease-in-out infinite !important;
-  background-color: color-mix(in srgb, var(--color-wagami-a-alarm) 38%, var(--color-wagami-a-surface)) !important;
-  border-color: var(--color-wagami-a-alarm) !important;
+.wagami-a-vital-alarm-pulse[data-alarming='true'] {
+  animation: wagami-a-vital-alarm-cycle 1.9s ease-in-out infinite !important;
+  background-color: color-mix(in srgb, var(--color-wagami-a-alarm) 38%, var(--color-wagami-a-surface));
+  border-color: var(--color-wagami-a-alarm);
   box-shadow:
     inset 0 0 0 3px var(--color-wagami-a-alarm),
     inset 0 0 22px color-mix(in srgb, var(--color-wagami-a-alarm) 48%, transparent),
-    0 0 16px color-mix(in srgb, var(--color-wagami-a-alarm) 72%, transparent) !important;
+    0 0 16px color-mix(in srgb, var(--color-wagami-a-alarm) 72%, transparent);
 }
-@keyframes wagami-a-vital-alarm-flash {
+@keyframes wagami-a-vital-alarm-cycle {
   0%, 100% {
     background-color: color-mix(in srgb, var(--color-wagami-a-alarm) 38%, var(--color-wagami-a-surface));
     border-color: var(--color-wagami-a-alarm);
@@ -845,10 +845,10 @@ body.monitor-viewport-lock {
 .wagami-a-charge-progress::-moz-progress-bar { background: var(--color-wagami-a-pni); }
 @media (prefers-reduced-motion: reduce) {
   .wagami-a-shell-led[data-alarming='true'] { animation: none; background: var(--color-wagami-a-alarm); }
-  .wagami-a-vital-alarm[data-alarming='true'] {
+  .wagami-a-vital-alarm-pulse[data-alarming='true'] {
     animation: none !important;
-    background-color: color-mix(in srgb, var(--color-wagami-a-alarm) 26%, var(--color-wagami-a-surface)) !important;
-    border-color: var(--color-wagami-a-alarm) !important;
-    box-shadow: inset 0 0 0 2px var(--color-wagami-a-alarm) !important;
+    background-color: color-mix(in srgb, var(--color-wagami-a-alarm) 26%, var(--color-wagami-a-surface));
+    border-color: var(--color-wagami-a-alarm);
+    box-shadow: inset 0 0 0 2px var(--color-wagami-a-alarm);
   }
 }

@@ -49,10 +49,10 @@ describe('Wagami A fixed live display', () => {
     const { rerender } = render(<WagamiAScreen display={alarming} energy={120} />)
 
     const fcCard = screen.getByTestId('wagami-a-vital-fc')
-    expect(fcCard).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-etco2')).not.toHaveClass('wagami-a-vital-alarm')
+    expect(fcCard).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-etco2')).not.toHaveClass('wagami-a-vital-alarm-pulse')
 
     rerender(<WagamiAScreen display={{
       ...alarming,
@@ -62,9 +62,9 @@ describe('Wagami A fixed live display', () => {
 
     expect(screen.getByTestId('wagami-a-vital-fc')).toBe(fcCard)
     expect(fcCard).toHaveTextContent('150')
-    expect(fcCard).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-spo2')).not.toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveClass('wagami-a-vital-alarm')
+    expect(fcCard).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).not.toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-pni')).toHaveClass('wagami-a-vital-alarm-pulse')
   })
 
   it('gates the EtCO₂ card and marks its task only while inline calibration is running', () => {

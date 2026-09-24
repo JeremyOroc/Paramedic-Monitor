@@ -11,7 +11,7 @@ describe('Wagami A vital cards', () => {
     expect(screen.getByText('FC')).toHaveClass('text-wagami-a-ecg')
     expect(screen.getByText('bpm')).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-vital-fc')).toHaveAttribute('data-alarming', 'false')
-    expect(screen.getByTestId('wagami-a-vital-fc')).not.toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-fc')).not.toHaveClass('wagami-a-vital-alarm-pulse')
   })
 
   it('keeps alarm content readable while the card carries the dedicated flash state', () => {
@@ -19,7 +19,7 @@ describe('Wagami A vital cards', () => {
 
     const card = screen.getByTestId('wagami-a-vital-fc')
     expect(card).toHaveAttribute('data-alarming', 'true')
-    expect(card).toHaveClass('wagami-a-vital-alarm')
+    expect(card).toHaveClass('wagami-a-vital-alarm-pulse')
     expect(screen.getByText('FC')).toHaveClass('text-wagami-a-alarm')
     expect(screen.getByText('142')).toHaveClass('text-wagami-a-alarm')
     expect(screen.getByText('bpm')).toHaveClass('text-wagami-a-alarm')
@@ -40,7 +40,7 @@ describe('Wagami A vital cards', () => {
     render(<WagamiAVitalCard channel="pni" label="PNI" value="82/48" unit="mmHg" alarming actionLabel="Ouvrir les réglages PNI" onClick={onClick} />)
 
     const button = screen.getByRole('button', { name: 'Ouvrir les réglages PNI' })
-    expect(button).toHaveClass('wagami-a-vital-alarm')
+    expect(button).toHaveClass('wagami-a-vital-alarm-pulse')
     expect(button).toHaveAttribute('data-alarming', 'true')
     button.focus()
     expect(button).toHaveFocus()

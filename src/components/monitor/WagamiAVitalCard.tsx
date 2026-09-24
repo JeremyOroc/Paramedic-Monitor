@@ -33,7 +33,7 @@ export function WagamiAVitalCard({ channel, label, value, unit, alarming = false
   )
   const classes = cn(
     'flex h-full min-h-0 flex-col gap-1 rounded-[7px] border border-wagami-a-border bg-wagami-a-surface px-[clamp(7px,1.1cqw,17px)] py-[clamp(7px,1cqw,15px)] text-left',
-    alarming && 'wagami-a-vital-alarm',
+    alarming && 'wagami-a-vital-alarm-pulse',
     onClick && 'cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-wagami-a-pni',
   )
 

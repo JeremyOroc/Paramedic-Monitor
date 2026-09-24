@@ -16,7 +16,11 @@ build pass. The complete suite has 1,733 passing and one skipped, retaining only
 unrelated Room-ownership/PatientInfoPanel baseline failures. Changes are local and uncommitted on
 `alarm-animation`. Live rendered QA now confirms the corrected high-contrast cycle visibly moves
 between a red-filled/red-bordered card and the normal graphite card; all 62 focused tests,
-TypeScript, and affected-file ESLint remain clean after the correction.
+TypeScript, and affected-file ESLint remain clean after the correction. A follow-up fix on
+`codex/alarm-animation-pulse-fix` removes cascade priority from the animated properties and moves
+the card to a fresh selector, preventing the strong alarm frame from remaining permanently lit.
+Ten live browser samples across one 1.9-second cycle measured the card changing from near-normal
+graphite `(18, 27, 32)` to bright alarm red `(98, 54, 55)` and back.
 
 **Wagami A CPR-contaminated analysis — COMPLETE LOCALLY, AWAITING ACCEPTANCE (2026-09-24).** Any
 Regular or Weak Instructor CPR overlap now latches the current Wagami A Analyze attempt as invalid,

@@ -79,12 +79,12 @@ describe('Wagami A live Attempt integration', () => {
     render(<MonitorPage transportStorageScope="ABC234.participant-1.1" />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
-    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm-pulse')
 
     fireEvent.click(screen.getByRole('button', { name: 'Couper tous les sons' }))
-    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm-pulse')
   })
 
   it('halts shockable analysis when Instructor CPR contaminates the live signal', () => {

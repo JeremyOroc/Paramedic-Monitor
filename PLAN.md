@@ -1075,7 +1075,10 @@ landscape Preview inspection of both states pass.
   suite has 1,733 passing and one skipped, with only the same three unrelated Room-ownership and
   PatientInfoPanel baseline failures. Live rendered QA subsequently identified insufficient visual
   contrast in the initial pulse; the corrected high-specificity treatment now visibly cycles from a
-  red-filled, red-bordered card to its normal graphite state without changing content opacity.
+  red-filled, red-bordered card to its normal graphite state without changing content opacity. A
+  post-merge cascade correction keeps the animated background, border, and glow free of important
+  declarations so their keyframes can actually interpolate; the animation itself retains explicit
+  priority and uses a fresh selector to avoid stale development-cache rules.
 
 - 2026-09-24 Wagami A CPR-contaminated analysis precedence — **programmer-approved before
   implementation; narrows the captured-start-rhythm rule for Wagami A only**. If either Regular or

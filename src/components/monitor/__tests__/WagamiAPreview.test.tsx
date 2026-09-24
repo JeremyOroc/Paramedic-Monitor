@@ -39,15 +39,15 @@ describe('Wagami A Room-free clinical preview', () => {
     })))
     render(<WagamiAPreview />)
 
-    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-pni')).not.toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-pni')).not.toHaveClass('wagami-a-vital-alarm-pulse')
 
     fireEvent.click(screen.getByRole('button', { name: 'Couper tous les sons' }))
 
     expect(screen.getByRole('button', { name: 'Réactiver tous les sons' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm')
-    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm')
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm-pulse')
+    expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm-pulse')
   })
 
   it('runs the Monitor elapsed timer with the Preview power lifecycle', () => {
