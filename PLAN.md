@@ -10,6 +10,59 @@
 
 ## Current Requirement Updates
 
+- 2026-09-25 Wagami A three-second startup and blank Off display — **implemented locally; awaiting
+  programmer acceptance**. Replace Wagami A's binary visual
+  Off/On transition with `Off → Startup → Ready`. An actual Off-to-On Power press enters Startup for
+  exactly 3,000 ms. The inner display uses its existing near-black background with a large static
+  centered white `WAGAMI A` wordmark. At the bottom-left, show two small left-aligned fixed lines:
+  `For simulation purposes only` and `À des fins de simulation seulement`. Both lines remain visible
+  regardless of Device language. Do not show vitals, waveforms, status bars, menus, or other live
+  content during Startup, and do not add a fade or motion effect.
+
+  During Startup, Power is the only usable control. Pressing it again cancels immediately back to
+  Off; that cancellation records neither Power On nor Power Off. A fresh press starts a new full
+  three-second Startup. All clinical audio, alarms, alarm flashes, and clinical controls remain
+  inactive; the shell LED stays in its normal non-alarm appearance. The existing shell, outer
+  `WAGAMI A` branding, Power control, and LED remain visible. Remove the visible
+  `ALIMENTATION COUPÉE` / `POWER OFF` message so Off is a blank near-black inner display, while
+  retaining the non-visible accessible state `Wagami A powered off`.
+
+  Startup is not ready operation: the Monitor elapsed timer remains at zero, Transport remains
+  unavailable, and the Power On Evaluation event is recorded only when Startup completes. On
+  completion, begin the Monitor elapsed timer at `00:00:00`, enable normal clinical behavior, and
+  land on the main monitor using the newest confirmed Instructor state. Power-off cleanup still
+  clears any former secondary destination. Monitor Reset, New Attempt, model switching, route
+  departure, unmount, or refresh cancels the pending deadline without a delayed completion event;
+  refresh returns Off. A throttled/backgrounded browser resolves an expired absolute deadline
+  immediately when active again rather than extending Startup.
+
+  Apply this to every manually initiated Off-to-On cycle in live Wagami A and Preview. Preserve
+  Preview's initially-ready direct-entry behavior, so merely loading or remounting that route does
+  not show Startup. Live Spectator mirrors the trainee's absolute Startup deadline read-only and
+  shows only the remaining duration when joining or reconnecting mid-cycle; it never starts its own
+  independent three seconds. Announce Startup once to assistive technology as `Wagami A starting.
+  For simulation purposes only.` Keep Wagami X and Wagami Z unchanged.
+
+### Testing — Wagami A startup and blank Off display
+
+- Cover blank visible Off content plus its accessible powered-off name, retained shell controls and
+  branding, Off-to-Startup entry, exact 2,999/3,000 ms boundary, static bilingual copy, main-screen
+  release, newest live clinical state, and no animation or language-dependent disclaimer changes.
+- Cover Power-only Startup interaction, Power cancellation and fresh restart, absence of completion
+  events on cancellation, one Power On event only at Ready, zero-until-ready Monitor elapsed time,
+  Transport gating, disabled alarms/audio/clinical controls, and normal shell LED behavior.
+- Cover absolute-deadline catch-up after timer throttling, cleanup on Reset/New Attempt/model or
+  route change/unmount/refresh, no stale completion callback, and return-to-main power-cycle cleanup.
+- Cover live, manually power-cycled Preview, initially-ready Preview, and Spectator parity including
+  mid-Startup join/reconnect with remaining time. Retain explicit Wagami X/Z regressions.
+- Run focused device, live, Preview, projection, Spectator, localization, timer, accessibility, and
+  power-event tests; TypeScript; affected-file ESLint; the complete suite; the Next.js 16.3 Webpack
+  production build; and rendered live/Preview/Spectator QA at supported desktop and landscape-iPad
+  sizes.
+
+No ADR is warranted because this is a localized, reversible Wagami A lifecycle presentation and
+does not introduce a durable architectural or storage boundary.
+
 - 2026-09-24 Saved scenario title selection — **implemented locally; awaiting programmer
   acceptance**.
   Make an editable Saved scenario title follow the same Loaded scenario toggle as its surrounding

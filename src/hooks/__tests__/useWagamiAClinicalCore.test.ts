@@ -66,7 +66,31 @@ describe('Wagami A Room-free clinical core', () => {
     expect(onStudentEvent).not.toHaveBeenCalledWith(expect.objectContaining({ kind: 'analyze' }))
     expect(audio.stopAllAudio).toHaveBeenCalled()
     act(() => result.current.onPowerToggle())
+    expect(result.current.powerState).toBe('booting')
+    expect(result.current.poweredOn).toBe(false)
+    expect(onStudentEvent.mock.calls.filter(([event]) => event.kind === 'power_on')).toHaveLength(0)
+    act(() => vi.advanceTimersByTime(2999))
+    expect(result.current.poweredOn).toBe(false)
+    act(() => vi.advanceTimersByTime(1))
     expect(result.current.poweredOn).toBe(true)
+    expect(onStudentEvent.mock.calls.filter(([event]) => event.kind === 'power_on')).toHaveLength(1)
+  })
+
+  it('cancels startup on a second Power press without recording a power event', () => {
+    const onStudentEvent = vi.fn()
+    const { result } = renderHook(() => useWagamiAClinicalCore({
+      sourceDisplay: normal, cprMode: 'off', onStudentEvent,
+    }))
+
+    act(() => result.current.onPowerToggle())
+    expect(result.current.powerState).toBe('off')
+    onStudentEvent.mockClear()
+    act(() => result.current.onPowerToggle())
+    expect(result.current.powerState).toBe('booting')
+    act(() => result.current.onPowerToggle())
+    expect(result.current.powerState).toBe('off')
+    act(() => vi.advanceTimersByTime(5000))
+    expect(onStudentEvent).not.toHaveBeenCalled()
   })
 
   it('automatically charges after advice without emitting a Charge event', () => {

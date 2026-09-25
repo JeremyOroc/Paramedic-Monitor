@@ -6,6 +6,15 @@ import { useMonitorStore } from '@/store/monitorStore'
 import type { MonitorProjection } from '@/types/monitorProjection'
 import { MonitorPage, type StudentEventRecord } from '../MonitorPage'
 
+function powerOnWagamiA(keepFakeTimers = false) {
+  vi.useFakeTimers()
+  act(() => {
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    vi.advanceTimersByTime(3000)
+  })
+  if (!keepFakeTimers) vi.useRealTimers()
+}
+
 describe('Wagami A live Attempt integration', () => {
   beforeEach(() => {
     window.history.pushState({}, '', '/')
@@ -40,8 +49,24 @@ describe('Wagami A live Attempt integration', () => {
     expect(screen.getByTestId('wagami-a-live')).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-screen-off')).toBeInTheDocument()
 
+    vi.useFakeTimers()
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    expect(screen.getByTestId('wagami-a-startup-screen')).toBeInTheDocument()
+    expect(events).not.toContainEqual({ kind: 'power_on', label: 'Power On' })
+    expect(projections.at(-1)).toMatchObject({
+      powerState: 'booting',
+      powerStateEndsAt: Date.now() + 3000,
+    })
+    act(() => vi.advanceTimersByTime(2999))
+    expect(screen.getByTestId('wagami-a-startup-screen')).toBeInTheDocument()
+    act(() => useMonitorStore.setState((state) => ({
+      confirmed: { ...state.confirmed, hr: 145 },
+      confirmedVitalActive: { ...state.confirmedVitalActive, hr: true },
+    })))
+    act(() => vi.advanceTimersByTime(1))
+    vi.useRealTimers()
     expect(screen.getByTestId('wagami-a-current-mode')).toHaveTextContent('ADULTE')
+    expect(screen.getByTestId('wagami-a-vital-fc')).toHaveTextContent('145')
     expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
     expect(screen.getByLabelText('Date et heure de Montréal')).toBeInTheDocument()
     expect(screen.queryByText(/EN DIRECT|DONNÉES CONFIRMÉES/)).not.toBeInTheDocument()
@@ -67,6 +92,26 @@ describe('Wagami A live Attempt integration', () => {
     })
   })
 
+  it('cancels an unfinished startup on monitor reset without a late Power On event', () => {
+    vi.useFakeTimers()
+    const events: StudentEventRecord[] = []
+    render(
+      <MonitorPage
+        transportStorageScope="ABC234.participant-1.1"
+        onStudentEvent={(event) => events.push(event)}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    expect(screen.getByTestId('wagami-a-startup-screen')).toBeInTheDocument()
+    act(() => useMonitorStore.getState().resetMonitorVitals())
+    expect(screen.getByTestId('wagami-a-screen-off')).toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(5000))
+    expect(screen.getByTestId('wagami-a-screen-off')).toBeInTheDocument()
+    expect(events).not.toContainEqual({ kind: 'power_on', label: 'Power On' })
+    expect(events).not.toContainEqual({ kind: 'power_off', label: 'Power Off' })
+  })
+
   it('shows live FC and SpO₂ alarm flashes independently of mute', () => {
     act(() => useMonitorStore.setState((state) => ({
       confirmed: { ...state.confirmed, hr: 150, spo2: 88 },
@@ -78,7 +123,7 @@ describe('Wagami A live Attempt integration', () => {
     })))
     render(<MonitorPage transportStorageScope="ABC234.participant-1.1" />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA()
     expect(screen.getByTestId('wagami-a-vital-fc')).toHaveClass('wagami-a-vital-alarm-pulse')
     expect(screen.getByTestId('wagami-a-vital-spo2')).toHaveClass('wagami-a-vital-alarm-pulse')
 
@@ -102,7 +147,7 @@ describe('Wagami A live Attempt integration', () => {
       />,
     )
 
-    act(() => fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' })))
+    powerOnWagamiA(true)
     act(() => fireEvent.click(screen.getByRole('button', { name: 'Analyser WAGAMI A' })))
     act(() => vi.advanceTimersByTime(5000))
 
@@ -135,7 +180,7 @@ describe('Wagami A live Attempt integration', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA()
     events.length = 0
     fireEvent.click(screen.getByRole('button', { name: 'Ouvrir les réglages PNI' }))
 
@@ -157,7 +202,7 @@ describe('Wagami A live Attempt integration', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA()
     fireEvent.click(screen.getByRole('button', { name: 'Journal des signes vitaux' }))
     events.length = 0
     fireEvent.click(screen.getByRole('button', { name: '3 min' }))
@@ -186,7 +231,7 @@ describe('Wagami A live Attempt integration', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA(true)
     expect(screen.getByTestId('wagami-a-vital-etco2')).toHaveTextContent('--')
     events.length = 0
 
@@ -229,7 +274,7 @@ describe('Wagami A live Attempt integration', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA()
     fireEvent.click(screen.getByRole('button', { name: '12 dérivations' }))
     events.length = 0
     fireEvent.click(screen.getByRole('button', { name: 'Info patient' }))
@@ -269,7 +314,7 @@ describe('Wagami A live Attempt integration', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA()
     const ecg = screen.getByTestId('live-ecg-canvas')
     fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
 
@@ -292,7 +337,7 @@ describe('Wagami A live Attempt integration', () => {
 
   it('preserves A language on the full-page caller surface', () => {
     render(<MonitorPage transportStorageScope="ABC234.participant-1.1" />)
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA()
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
     fireEvent.click(screen.getByRole('button', { name: 'English' }))
     fireEvent.click(screen.getByRole('button', { name: /Back/ }))
@@ -309,7 +354,7 @@ describe('Wagami A live Attempt integration', () => {
         transportStorageScope="ABC234.participant-1.1"
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA()
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
     fireEvent.click(screen.getByRole('button', { name: 'English' }))
     fireEvent.click(screen.getByRole('button', { name: 'Off' }))
@@ -326,7 +371,7 @@ describe('Wagami A live Attempt integration', () => {
         transportStorageScope="ABC234.participant-1.2"
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    powerOnWagamiA()
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Configurer' })).toBeInTheDocument()

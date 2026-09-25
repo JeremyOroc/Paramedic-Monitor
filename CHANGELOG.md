@@ -5,6 +5,37 @@
 
 ---
 
+## [2026-09-25] [wagami-a/ui/lifecycle/accessibility/testing] — Add the three-second startup
+
+- Added a true Wagami A Off → Startup → Ready lifecycle for live and manually cycled Preview power,
+  with an absolute 3,000 ms deadline, Power-only cancellation, safe interruption cleanup, and a
+  single Power On event when Ready begins.
+- Added the static centered `WAGAMI A` startup wordmark and fixed bottom-left English/French
+  simulation disclaimer; removed visible powered-off copy while retaining an accessible blank Off
+  state.
+- Kept clinical controls, alarms, audio, Transport, and the Monitor elapsed timer inactive until
+  Ready; preserved Preview's initially-ready entry and projected the absolute deadline so Spectator
+  joins at the correct remaining time.
+- Added lifecycle, shell, live, Preview, Spectator, projection-validation, accessibility, timing,
+  cancellation, and regression coverage. All 83 focused tests pass; TypeScript and ESLint pass;
+  the Next.js 16.3 Webpack production build passes; and rendered 1280×720 QA passes. The full suite
+  has 1,744 passing and one skipped, with only the same three unrelated baseline failures.
+
+## [2026-09-25] [planning/wagami-a/domain] — Define Startup and the blank powered-off display
+
+- Defined Wagami A Startup as a distinct three-second Off-to-Ready simulator state with a centered
+  static wordmark and fixed bottom-left English/French simulation disclaimer.
+- Deferred the Monitor elapsed timer, Transport availability, alarms/audio, clinical controls, and
+  Power On Evaluation event until Ready; made Power cancellation event-free and lifecycle cleanup
+  deadline-safe.
+- Chose one absolute live deadline for Spectator remaining-time parity, preserved Preview's
+  initially-ready entry, and required the newest confirmed clinical state when Ready appears.
+- Removed visible `ALIMENTATION COUPÉE` / `POWER OFF` copy from the blank near-black Off display
+  while retaining an accessible powered-off state and the physical shell presentation.
+- Added the glossary terms, implementation requirement, and full timer, event, accessibility,
+  live/Preview/Spectator, interruption, rendered, and X/Z regression matrix. No application code
+  changed in this planning entry, and no ADR was warranted.
+
 ## [2026-09-24] [instructor/ui/accessibility/testing] — Make Saved scenario titles select scenarios
 
 - Routed editable Saved scenario title clicks through the existing load/unload behavior after a

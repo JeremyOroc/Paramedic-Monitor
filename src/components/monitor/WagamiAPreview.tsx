@@ -85,7 +85,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
   const { showCallInfo, onMonitorReady } = useWagamiACallInfoCover(workspace.view)
 
   function onPowerToggle() {
-    if (clinical.poweredOn) workspace.onDevicePowerOff()
+    if (clinical.powerState === 'on') workspace.onDevicePowerOff()
     clinical.onPowerToggle()
   }
 
@@ -133,7 +133,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
           nibpPhase={clinical.nibpPhase}
           nibpDisplayValue={clinical.nibpDisplayValue}
           bpReadingActive={clinical.nibpReadingActive}
-          poweredOn={clinical.poweredOn}
+          powerState={clinical.powerState}
           onPowerToggle={onPowerToggle}
           patientMode={clinical.patientMode}
           patientModeLocked={clinical.patientModeLocked}

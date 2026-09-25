@@ -53,6 +53,7 @@ import { useMonitorViewportLock } from '@/hooks/useMonitorViewportLock'
 import { useWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
 import { useWagamiAWorkspaceWithPreferences } from '@/hooks/useWagamiAWorkspace'
 import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
+import { useWagamiAStartup } from '@/hooks/useWagamiAStartup'
 import { useVitalTrendClock } from '@/hooks/useVitalTrendClock'
 import { createEventLogStamp, sortEventLogEntries } from '@/lib/eventLog'
 import { useMonitorStore } from '@/store/monitorStore'
@@ -171,6 +172,14 @@ export function MonitorPage({
     initialPoweredOn: devBypass,
     callerEventCount: dispatchState.callerEvents.length,
   })
+  const wagamiAStartup = useWagamiAStartup({
+    powerState: devicePowerState,
+    setPowerState: setDevicePowerState,
+    onReady: () => {
+      onStudentEvent?.({ kind: 'power_on', label: 'Power On' })
+      controller.onPowerOn()
+    },
+  })
   const {
     formatted: sessionTimer,
     elapsedSeconds: sessionElapsedSeconds,
@@ -220,6 +229,35 @@ export function MonitorPage({
     dispatchState.runId !== '' && enteredMonitorRunId === dispatchState.runId
   const showDispatchCallerPage =
     !devBypass && dispatchState.armed && !(gateSatisfied && hasEnteredCurrentDispatch)
+
+  const wagamiAStartupContextRef = useRef({
+    model: activeDefibrillatorModel,
+    monitorResetVersion,
+    showDispatchCallerPage,
+  })
+  useEffect(() => {
+    const previous = wagamiAStartupContextRef.current
+    const startupContextChanged =
+      previous.model !== activeDefibrillatorModel ||
+      previous.monitorResetVersion !== monitorResetVersion ||
+      previous.showDispatchCallerPage !== showDispatchCallerPage
+    wagamiAStartupContextRef.current = {
+      model: activeDefibrillatorModel,
+      monitorResetVersion,
+      showDispatchCallerPage,
+    }
+    const wagamiAWasOrIsActive = previous.model === 'wagamiA' || isWagamiA
+    if (wagamiAWasOrIsActive && startupContextChanged && devicePowerState === 'booting') {
+      wagamiAStartup.cancel()
+    }
+  }, [
+    activeDefibrillatorModel,
+    devicePowerState,
+    isWagamiA,
+    monitorResetVersion,
+    showDispatchCallerPage,
+    wagamiAStartup,
+  ])
 
   const standbyLockScreen = (
     <div className="flex h-full w-full items-center justify-center bg-black">
@@ -668,6 +706,7 @@ export function MonitorPage({
       model: activeDefibrillatorModel,
       surface: showDispatchCallerPage ? 'dispatch' : 'monitor',
       powerState: devicePowerState,
+      powerStateEndsAt: isWagamiA ? wagamiAStartup.startupEndsAt : null,
       date,
       time,
       sessionTimer,
@@ -748,6 +787,7 @@ export function MonitorPage({
       etco2Loaded,
       etco2Loading,
       gateSatisfied,
+      isWagamiA,
       mergedEventLog,
       nibpDisplayValue,
       nibpPhase,
@@ -760,6 +800,7 @@ export function MonitorPage({
       visibleAlarms,
       vitalLog,
       wagamiAProjection,
+      wagamiAStartup.startupEndsAt,
       defib.canAdjustEnergy,
       defib.canAnalyse,
       defib.canCharge,
@@ -801,14 +842,17 @@ export function MonitorPage({
   }
 
   const handleWagamiAPowerToggle = () => {
-    if (controller.isPoweredOn) {
+    if (devicePowerState === 'on') {
       wagamiAWorkspace.onDevicePowerOff()
       handlePowerOff()
-      setDevicePowerState('off')
+      wagamiAStartup.powerOff()
       return
     }
-    handlePowerOn()
-    setDevicePowerState('on')
+    if (devicePowerState === 'booting') {
+      wagamiAStartup.cancel()
+      return
+    }
+    wagamiAStartup.start()
   }
 
   const handleWagamiACharge = () => {
@@ -1093,7 +1137,7 @@ export function MonitorPage({
             nibpPhase={nibpPhase}
             nibpDisplayValue={nibpDisplayValue}
             bpReadingActive={isNibpReadingActive}
-            poweredOn={controller.isPoweredOn}
+            powerState={devicePowerState}
             onPowerToggle={handleWagamiAPowerToggle}
             patientMode={controller.patientMode}
             patientModeLocked={patientModeLocked}

@@ -6,6 +6,21 @@
 ---
 
 ## Current Phase
+**Wagami A three-second startup and blank Off display — COMPLETE LOCALLY, AWAITING ACCEPTANCE
+(2026-09-25).** Wagami A now uses Off → three-second Startup → Ready for every manual power-on.
+Startup shows a static centered `WAGAMI A` wordmark plus fixed English/French simulation disclaimer,
+keeps only Power usable, and delays the timer, Transport, alarms/audio, clinical controls, and Power
+On event until Ready. Power cancellation is event-free; lifecycle interruptions cancel safely;
+Preview retains initially-ready direct entry; and Spectator follows the shared absolute deadline.
+Off is now a blank near-black inner display with an accessible powered-off name.
+
+All 83 focused lifecycle, device, live, Preview, Spectator, projection, and instrumentation tests
+pass. TypeScript and ESLint pass with only 12 existing unrelated warnings. The full suite has 1,744
+passing and one skipped, retaining only the same three unrelated Room-ownership/PatientInfoPanel
+baseline failures. The Next.js 16.3 Webpack production build passes, and rendered 1280×720 QA
+confirms the blank Off state, bilingual startup layout, disabled controls, and Ready transition.
+Changes are local and uncommitted on `Simulated-purpose`; nothing was pushed or deployed.
+
 **Saved scenario title selection — COMPLETE LOCALLY, AWAITING ACCEPTANCE (2026-09-24).** Editable
 Saved scenario titles now single-click through the same load/unload path as their row after a 250 ms
 title-only disambiguation window. Double-click and F2 rename without changing the Loaded scenario;
