@@ -10,6 +10,48 @@
 
 ## Current Requirement Updates
 
+- 2026-09-24 Saved scenario title selection — **implemented locally; awaiting programmer
+  acceptance**.
+  Make an editable Saved scenario title follow the same Loaded scenario toggle as its surrounding
+  row: a single mouse click loads an unloaded scenario or unloads the Loaded scenario, including the
+  existing dirty-discard confirmation, permission, and active-Attempt guards. Preserve immediate
+  activation when clicking elsewhere on the row. Suppress native title text selection so the row's
+  loaded treatment is the visual selection signal.
+
+  Reserve a title double-click for inline rename without loading or unloading that scenario. Delay
+  title-only single-click activation by approximately 250 ms and cancel it when a double-click is
+  recognized. Double-clicking the Loaded scenario keeps it loaded; double-clicking an unloaded
+  scenario keeps it unloaded. For keyboard access, Enter or Space on the focused title toggles the
+  Loaded scenario immediately, while F2 opens inline rename. Preserve Enter/blur save and Escape
+  cancellation inside the editor, title-only persistence, Loaded-scenario baseline synchronization,
+  folder selection/expansion behavior, ownership rules, and Template permissions.
+
+### Testing — Saved scenario title selection
+
+- Cover single-click load and unload through an editable title, immediate activation elsewhere on
+  the row, the 250 ms disambiguation window, and cancellation of pending activation on double-click
+  and unmount.
+- Cover double-click rename for loaded and unloaded scenarios without changing Loaded scenario
+  state; Enter/Space activation; F2 rename; native-selection suppression; disabled/read-only
+  behavior; dirty-discard protection; rename success, failure, and cancellation; and unchanged
+  folder behavior.
+- Run focused Scenario library and Instructor integration tests, TypeScript, affected-file ESLint,
+  the production build, and rendered desktop plus landscape-iPad interaction QA.
+
+No ADR or glossary change is warranted: this is a localized, reversible interaction correction
+using the existing Loaded scenario definition.
+
+Implementation and regression coverage are complete. The Saved scenario title now delegates to
+the existing row load/unload path after a 250 ms mouse disambiguation window, cancels pending
+activation for rename and unmount, exposes pressed/disabled state to assistive technology, and
+suppresses native selection. All 81 focused component and Instructor integration tests pass,
+together with TypeScript, affected-file ESLint, and the Next.js 16.3 production build. Rendered
+1280×720 desktop and 1024×768 landscape-iPad checks confirm load, unload, loaded-state styling, and
+rename without state changes, with no browser warning or error. The complete Windows suite has
+1,729 passing, one skipped, and 11 unrelated existing baseline/environment failures: seven shell
+script spawn failures, one invite-only config parser failure, two Room-ownership failures, and one
+PatientInfoPanel class assertion.
+
 - 2026-09-23 Instructor Console scenario and authoring refinement — **implemented locally; awaiting
   programmer acceptance**. Replace active-Attempt
   General Notes autosave on Monitor & Patient SNS with an explicit Save button. Save is disabled

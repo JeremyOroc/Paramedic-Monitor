@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -254,15 +254,24 @@ describe('ScenarioLibraryPanel', () => {
     useMonitorStore.getState().reset()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('removes the standalone title field and renames an editable row inline', async () => {
     const { fetchMock } = createFetchMock()
     const onScenarioRenamed = vi.fn()
+    const onLoad = vi.fn()
     const user = userEvent.setup()
-    render(<Harness onScenarioRenamed={onScenarioRenamed} />)
+    render(<Harness onScenarioRenamed={onScenarioRenamed} onLoad={onLoad} />)
 
     expect(screen.queryByLabelText('Change scenario title')).toBeNull()
     await user.click(await screen.findByRole('button', { name: /^General/ }))
-    fireEvent.doubleClick(screen.getByRole('button', { name: 'Rename Chest Pain' }))
+    vi.useFakeTimers()
+    fireEvent.doubleClick(screen.getByRole('button', { name: 'Load Chest Pain from title' }))
+    act(() => vi.advanceTimersByTime(251))
+    expect(onLoad).not.toHaveBeenCalled()
+    vi.useRealTimers()
     const title = screen.getByRole('textbox', { name: 'Rename Chest Pain' })
     await user.clear(title)
     await user.type(title, 'Updated Chest Pain{Enter}')
@@ -276,6 +285,83 @@ describe('ScenarioLibraryPanel', () => {
     expect(onScenarioRenamed).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Updated Chest Pain',
     }))
+  })
+
+  it('single-clicks an editable title through the delayed load and unload path', async () => {
+    createFetchMock()
+    const onLoad = vi.fn()
+    const onUnload = vi.fn()
+    const user = userEvent.setup()
+    render(<Harness onLoad={onLoad} onUnload={onUnload} />)
+
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
+    const title = screen.getByRole('button', { name: 'Load Chest Pain from title' })
+    expect(title).toHaveClass('select-none')
+    await user.click(title)
+    expect(onLoad).not.toHaveBeenCalled()
+    await waitFor(() => expect(onLoad).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'scenario-1' }),
+    ))
+
+    const loadedTitle = screen.getByRole('button', { name: 'Unload Chest Pain from title' })
+    await user.click(loadedTitle)
+    expect(onUnload).not.toHaveBeenCalled()
+    await waitFor(() => expect(onUnload).toHaveBeenCalledOnce())
+  })
+
+  it('keeps a loaded scenario loaded when its title is double-clicked to rename', async () => {
+    createFetchMock()
+    const onUnload = vi.fn()
+    const user = userEvent.setup()
+    render(<Harness onUnload={onUnload} />)
+
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
+    await user.click(screen.getByRole('button', { name: 'Load Chest Pain' }))
+    const title = await screen.findByRole('button', { name: 'Unload Chest Pain from title' })
+    vi.useFakeTimers()
+    fireEvent.doubleClick(title)
+    act(() => vi.advanceTimersByTime(251))
+    expect(onUnload).not.toHaveBeenCalled()
+    expect(screen.getByRole('textbox', { name: 'Rename Chest Pain' })).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('uses Enter and Space for title activation and F2 for rename', async () => {
+    createFetchMock()
+    const onLoad = vi.fn()
+    const onUnload = vi.fn()
+    const user = userEvent.setup()
+    render(<Harness onLoad={onLoad} onUnload={onUnload} />)
+
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Load Chest Pain from title' }), {
+      key: 'Enter',
+    })
+    await waitFor(() => expect(onLoad).toHaveBeenCalledOnce())
+
+    const loadedTitle = screen.getByRole('button', { name: 'Unload Chest Pain from title' })
+    fireEvent.keyDown(loadedTitle, { key: 'F2' })
+    expect(screen.getByRole('textbox', { name: 'Rename Chest Pain' })).toBeInTheDocument()
+    fireEvent.keyDown(screen.getByRole('textbox', { name: 'Rename Chest Pain' }), { key: 'Escape' })
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Unload Chest Pain from title' }), {
+      key: ' ',
+    })
+    expect(onUnload).toHaveBeenCalledOnce()
+  })
+
+  it('cancels a pending title activation when the library unmounts', async () => {
+    createFetchMock()
+    const onLoad = vi.fn()
+    const user = userEvent.setup()
+    const view = render(<Harness onLoad={onLoad} />)
+
+    await user.click(await screen.findByRole('button', { name: /^General/ }))
+    vi.useFakeTimers()
+    fireEvent.click(screen.getByRole('button', { name: 'Load Chest Pain from title' }))
+    view.unmount()
+    act(() => vi.advanceTimersByTime(251))
+    expect(onLoad).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 
   it('places the editable and live Dispatch Countdown in the Scenarios header', () => {
@@ -316,6 +402,10 @@ describe('ScenarioLibraryPanel', () => {
 
     await user.click(row)
     fireEvent.keyDown(row, { key: 'Enter' })
+    const title = screen.getByRole('button', { name: 'Load Chest Pain from title' })
+    expect(title).toHaveAttribute('aria-disabled', 'true')
+    await user.click(title)
+    fireEvent.keyDown(title, { key: 'Enter' })
 
     expect(onLoad).not.toHaveBeenCalled()
     expect(screen.queryByRole('button', { name: 'Unload Chest Pain' })).toBeNull()
