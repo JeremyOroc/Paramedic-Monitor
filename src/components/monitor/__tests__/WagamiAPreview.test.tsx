@@ -336,6 +336,26 @@ describe('Wagami A Room-free clinical preview', () => {
     vi.useRealTimers()
   })
 
+  it('times out the EtCO₂ touch-selection ring while calibration remains active', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(30_000)
+    useMonitorStore.getState().reset()
+    render(<WagamiAPreview />)
+
+    const etco2Task = screen.getByRole('button', { name: 'EtCO₂' })
+    fireEvent.click(etco2Task)
+    expect(etco2Task).toHaveAttribute('data-navigation-selected', 'true')
+    expect(etco2Task).toHaveAttribute('aria-pressed', 'true')
+    expect(etco2Task).toHaveClass('ring-2')
+
+    act(() => vi.advanceTimersByTime(5_000))
+    expect(etco2Task).toHaveAttribute('data-navigation-selected', 'false')
+    expect(etco2Task).toHaveAttribute('aria-pressed', 'true')
+    expect(etco2Task).not.toHaveClass('ring-2')
+    expect(screen.getByRole('progressbar', { name: 'ÉTALONNAGE…' })).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
   it('keeps PNI settings open while the physical key starts and completes a reading', () => {
     vi.useFakeTimers()
     useMonitorStore.getState().reset()

@@ -1170,7 +1170,7 @@ export function MonitorPage({
               : wagamiAWorkspace.view === 'monitor'
                 ? undefined
                 : [{ id: 'back', enabled: wagamiAWorkspace.twelveLead.sentUntil === null, activate: wagamiAWorkspace.goBack }]}
-            screenContent={(selectedAction) => (
+            screenContent={(selectedAction, touchAction) => (
               <WagamiAWorkspace
                 controller={wagamiAWorkspace}
                 display={wagamiADisplay}
@@ -1187,6 +1187,7 @@ export function MonitorPage({
                 onEnergyDown={() => handleWagamiAEnergyChange('down')}
                 onEnergyUp={() => handleWagamiAEnergyChange('up')}
                 selectedAction={selectedAction}
+                onNavigationTouch={touchAction}
                 onMonitorReady={onWagamiAMonitorReady}
                 date={date}
                 time={time}

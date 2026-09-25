@@ -33,4 +33,17 @@ describe('Wagami A right task dock', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Info appel' }))
     expect(onTask).not.toHaveBeenCalled()
   })
+
+  it('reserves the pale ring for navigation selection rather than an active task', () => {
+    const onTask = vi.fn()
+    const { rerender } = render(<WagamiATaskDock onTask={onTask} activeTask="etco2" />)
+    const etco2 = screen.getByRole('button', { name: 'EtCO₂' })
+
+    expect(etco2).toHaveAttribute('data-task-active', 'true')
+    expect(etco2).toHaveAttribute('data-navigation-selected', 'false')
+    expect(etco2).not.toHaveClass('ring-2')
+
+    rerender(<WagamiATaskDock onTask={onTask} activeTask="etco2" selectedAction="etco2" />)
+    expect(etco2).toHaveClass('ring-2', 'ring-wagami-a-pni')
+  })
 })

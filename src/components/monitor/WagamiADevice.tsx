@@ -49,7 +49,7 @@ type WagamiADeviceProps = {
   onTask?: (task: WagamiATask) => void
   navigationView?: string
   secondaryActions?: ReadonlyArray<WagamiANavigationAction>
-  screenContent?: ReactNode | ((selectedAction: string | null) => ReactNode)
+  screenContent?: ReactNode | ((selectedAction: string | null, touchAction: (id: string) => void) => ReactNode)
   locale?: WagamiALocale
   shellAlarmLedEnabled?: boolean
   date?: string
@@ -90,9 +90,13 @@ export function WagamiADevice({ display, energy, defibState = 'idle', chargeProg
     if (id === 'energyUp') return { id, enabled: ready && canAdjustEnergy && !!onEnergyUp, activate: () => onEnergyUp?.() }
     return { id, enabled: ready && !!onTask && !(id === 'callInfo' && callInfoBlocked), activate: () => activateTask(id as WagamiATask) }
   })
-  const navigation = useWagamiANavigation(navigationView, navigationView === 'monitor' ? monitorActions : secondaryActions ?? [])
+  const navigation = useWagamiANavigation(
+    navigationView,
+    navigationView === 'monitor' ? monitorActions : secondaryActions ?? [],
+    { active: ready },
+  )
   const resolvedScreenContent = typeof screenContent === 'function'
-    ? screenContent(navigation.selectedId)
+    ? screenContent(navigation.selectedId, navigation.touch)
     : screenContent
   return (
     <div data-testid="wagami-a-shell" data-power-state={resolvedPowerState} className="wagami-a-shell relative aspect-[1.53] w-[min(96vw,calc(89vh*1.53))] max-w-[1500px] min-w-[920px] overflow-hidden text-wagami-a-text [container-type:inline-size]">
@@ -121,7 +125,7 @@ export function WagamiADevice({ display, energy, defibState = 'idle', chargeProg
       <div aria-hidden="true" className="wagami-a-navigation-well absolute bottom-[0.9%] left-1/2 z-10 h-[10%] w-[25%] -translate-x-1/2" />
       <nav aria-label={text.shellNavigation} className="absolute bottom-[1.8%] left-1/2 z-20 grid h-[7.1%] w-[22%] -translate-x-1/2 grid-cols-3 gap-[7%]">
         <button type="button" aria-label={text.left} disabled={!ready || !navigation.hasEnabledActions} onClick={() => navigation.move(-1)} className={NAV_KEY}><ShellIcon kind="left" /></button>
-        <button type="button" aria-label={text.enter} disabled={!ready || !navigation.selectedId} onClick={navigation.enter} className={NAV_KEY}><ShellIcon kind="enter" /></button>
+        <button type="button" aria-label={text.enter} disabled={!ready || !navigation.hasSelection} onClick={navigation.enter} className={NAV_KEY}><ShellIcon kind="enter" /></button>
         <button type="button" aria-label={text.right} disabled={!ready || !navigation.hasEnabledActions} onClick={() => navigation.move(1)} className={NAV_KEY}><ShellIcon kind="right" /></button>
       </nav>
     </div>

@@ -18,6 +18,8 @@ type LeadCellProps = {
   beatClock?: BeatClock
   readyOnStart?: boolean
   freshReveal?: boolean
+  freshRevealOrigin?: 'left' | 'synchronized'
+  freshRevealStartedAt?: number | (() => number)
   sequenceKey?: string | number
   hideLabel?: boolean
 }
@@ -32,6 +34,8 @@ export function LeadCell({
   beatClock,
   readyOnStart = false,
   freshReveal = false,
+  freshRevealOrigin = 'synchronized',
+  freshRevealStartedAt,
   sequenceKey,
   hideLabel = false,
 }: LeadCellProps) {
@@ -63,9 +67,11 @@ export function LeadCell({
         getPhaseAt: beatClock ? (nowMs, cycleMs) => beatClock.phase(nowMs, cycleMs) : undefined,
         readyOnStart,
         freshReveal,
+        freshRevealOrigin,
+        freshRevealStartedAt,
       }
     },
-    [label, beatClock, readyOnStart, freshReveal, sequenceKey],
+    [label, beatClock, readyOnStart, freshReveal, freshRevealOrigin, freshRevealStartedAt, sequenceKey],
     { occluded, onReady },
   )
 

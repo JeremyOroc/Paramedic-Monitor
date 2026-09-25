@@ -24,6 +24,60 @@ type WagamiAWaveformWorkspaceProps = {
   etco2CalibrationEndsAt?: number | null
 }
 
+type WaveformChannel = 'ecg' | 'spo2' | 'etco2'
+type WaveformConnections = Record<WaveformChannel, boolean>
+type FreshSequence = {
+  origin: 'left' | 'synchronized'
+}
+type WaveformSequenceState = {
+  boundaryKey: string | number | undefined
+  connections: WaveformConnections
+  channels: Record<WaveformChannel, FreshSequence>
+}
+
+function createWaveformSequenceState(
+  boundaryKey: string | number | undefined,
+  connections: WaveformConnections,
+): WaveformSequenceState {
+  const fresh = { origin: 'left' as const }
+  return {
+    boundaryKey,
+    connections,
+    channels: { ecg: fresh, spo2: fresh, etco2: fresh },
+  }
+}
+
+function connectionsMatch(left: WaveformConnections, right: WaveformConnections) {
+  return left.ecg === right.ecg && left.spo2 === right.spo2 && left.etco2 === right.etco2
+}
+
+function advanceWaveformSequenceState(
+  current: WaveformSequenceState,
+  boundaryKey: string | number | undefined,
+  connections: WaveformConnections,
+): WaveformSequenceState {
+  if (current.boundaryKey !== boundaryKey) {
+    return createWaveformSequenceState(boundaryKey, connections)
+  }
+
+  const channels = { ...current.channels }
+  if (!current.connections.ecg && connections.ecg) {
+    channels.ecg = {
+      origin: current.connections.spo2 ? 'synchronized' : 'left',
+    }
+  }
+  if (!current.connections.spo2 && connections.spo2) {
+    channels.spo2 = {
+      origin: current.connections.ecg ? 'synchronized' : 'left',
+    }
+  }
+  if (!current.connections.etco2 && connections.etco2) {
+    channels.etco2 = { origin: 'left' }
+  }
+
+  return { ...current, connections, channels }
+}
+
 function Etco2CalibrationProgress({ startedAt, endsAt, label }: { startedAt: number | null; endsAt: number | null; label: string }) {
   const [now, setNow] = useState(() => Date.now())
 
@@ -53,6 +107,16 @@ export function WagamiAWaveformWorkspace({ vitals, active, cprOverride = false, 
   const ecgConnected = (active.hr && vitals.rhythm !== 'off') || cprOverride
   const spo2Connected = active.spo2 && vitals.spo2_waveform !== 'off'
   const etco2Connected = etco2CalibrationStatus === 'calibrated' && active.etco2 && vitals.etco2_waveform !== 'off'
+  const connections = { ecg: ecgConnected, spo2: spo2Connected, etco2: etco2Connected }
+  const [waveformSequences, setWaveformSequences] = useState(() =>
+    createWaveformSequenceState(sequenceKey, connections),
+  )
+  const currentWaveformSequences = waveformSequences.boundaryKey === sequenceKey && connectionsMatch(waveformSequences.connections, connections)
+    ? waveformSequences
+    : advanceWaveformSequenceState(waveformSequences, sequenceKey, connections)
+  if (currentWaveformSequences !== waveformSequences) {
+    setWaveformSequences(currentWaveformSequences)
+  }
   const expected = [ecgConnected && 'ecg', spo2Connected && 'spo2', etco2Connected && 'etco2'].filter((key): key is string => !!key)
   const [generation, setGeneration] = useState({ occluded, value: 0 })
   if (generation.occluded !== occluded) {
@@ -80,19 +144,19 @@ export function WagamiAWaveformWorkspace({ vitals, active, cprOverride = false, 
   return (
     <section aria-label="Wagami A waveform workspace" className="grid min-h-0 grid-rows-[minmax(0,1.9fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] gap-[clamp(3px,0.55cqw,9px)]">
       <div className="relative min-h-0 overflow-hidden rounded-[5px] border border-wagami-a-border bg-wagami-a-screen">
-        <ECGCanvas rhythm={vitals.rhythm} hr={vitals.hr} connected={ecgConnected} cprOverride={cprOverride} palette="wagamiA" className="h-full w-full" occluded={occluded} onReady={() => reportReady('ecg')} beatClock={beatClock} readyOnStart freshReveal sequenceKey={sequenceKey} />
+        <ECGCanvas rhythm={vitals.rhythm} hr={vitals.hr} connected={ecgConnected} cprOverride={cprOverride} palette="wagamiA" className="h-full w-full" occluded={occluded} onReady={() => reportReady('ecg')} beatClock={beatClock} readyOnStart freshReveal freshRevealOrigin={currentWaveformSequences.channels.ecg.origin} sequenceKey={sequenceKey} />
         <div aria-hidden="true" className="wagami-a-grid-overlay absolute inset-0 pointer-events-none" />
         <span className="absolute left-2 top-1 z-10 font-sans text-[clamp(12px,1.3cqw,19px)] font-semibold text-wagami-a-ecg">ECG</span>
         <span className="absolute right-2 top-1 z-10 font-mono text-[clamp(9px,0.85cqw,13px)] text-wagami-a-muted-text">25 mm/s · 10 mm/mV</span>
       </div>
       <div className="relative min-h-0 overflow-hidden rounded-[5px] border border-wagami-a-border bg-wagami-a-screen">
-        <SecondaryChannel channel="spo2" hr={vitals.hr} spo2={vitals.spo2} etco2={vitals.etco2} spo2Waveform={vitals.spo2_waveform} etco2Waveform={vitals.etco2_waveform} connected={spo2Connected} showLabels={false} palette="wagamiA" occluded={occluded} onReady={() => reportReady('spo2')} readyOnStart freshReveal sequenceKey={sequenceKey} />
+        <SecondaryChannel channel="spo2" hr={vitals.hr} spo2={vitals.spo2} etco2={vitals.etco2} spo2Waveform={vitals.spo2_waveform} etco2Waveform={vitals.etco2_waveform} connected={spo2Connected} showLabels={false} palette="wagamiA" occluded={occluded} onReady={() => reportReady('spo2')} readyOnStart freshReveal freshRevealOrigin={currentWaveformSequences.channels.spo2.origin} sequenceKey={sequenceKey} />
         <div aria-hidden="true" className="wagami-a-grid-overlay absolute inset-0 pointer-events-none" />
         <span className="absolute left-2 top-1 z-10 font-sans text-[clamp(11px,1.2cqw,17px)] font-semibold text-wagami-a-spo2">SpO₂</span>
       </div>
       <div className="relative min-h-0 overflow-hidden rounded-[5px] border border-wagami-a-border bg-wagami-a-screen">
         {etco2CalibrationStatus !== 'calibrating' ? (
-          <SecondaryChannel channel="etco2" hr={vitals.hr} spo2={vitals.spo2} etco2={vitals.etco2} spo2Waveform={vitals.spo2_waveform} etco2Waveform={vitals.etco2_waveform} connected={etco2Connected} showLabels={false} palette="wagamiA" occluded={occluded} onReady={() => reportReady('etco2')} readyOnStart freshReveal sequenceKey={sequenceKey} />
+          <SecondaryChannel channel="etco2" hr={vitals.hr} spo2={vitals.spo2} etco2={vitals.etco2} spo2Waveform={vitals.spo2_waveform} etco2Waveform={vitals.etco2_waveform} connected={etco2Connected} showLabels={false} palette="wagamiA" occluded={occluded} onReady={() => reportReady('etco2')} readyOnStart freshReveal freshRevealOrigin={currentWaveformSequences.channels.etco2.origin} sequenceKey={sequenceKey} />
         ) : null}
         <div aria-hidden="true" className="wagami-a-grid-overlay absolute inset-0 pointer-events-none" />
         {etco2CalibrationStatus === 'calibrating' ? (

@@ -328,7 +328,11 @@ _Avoid_: Black line, grid line, waveform cursor
 The first presentation of a newly begun live waveform sequence, starting without historical trace
 pixels and growing only behind its Sweep erase band. It follows a true display or channel start,
 not a connected signal change or return to an established waveform surface; its trace history never
-exceeds the elapsed age of that sequence.
+exceeds the elapsed age of that sequence. Wagami A sequences that become ready together begin at the
+left edge; a later ECG or SpO2 sequence instead joins its already-running synchronized counterpart's
+Sweep erase band, while an independently started EtCO2 sequence begins at the left edge. Each local
+trainee, Preview, or Spectator display owns its sequence age rather than inheriting another display's
+elapsed sweep.
 _Avoid_: Blank waveform, loading animation, continuity reconstruction
 
 **Continuity reconstruction**:
@@ -433,6 +437,19 @@ _Avoid_: Analysis progress, phase progress, CPR progress
 A physical-style action button on Wagami A's outer housing, distinct from a touchscreen action
 or task launcher within its display.
 _Avoid_: Soft key, touchscreen button
+
+**Wagami A screen selection**:
+The currently remembered navigable action within one Wagami A Inner display view. Recent navigation
+presents it with a custom selection outline for five seconds; after that real elapsed time it remains
+remembered as a Latent screen selection without a visible custom outline. Navigable screen actions
+refresh this presentation, returning to a view restores it, and monitor power-off clears it.
+An action that becomes unavailable is forgotten rather than restored later.
+_Avoid_: Browser focus, active task, selected tile
+
+**Latent screen selection**:
+A Wagami A screen selection whose temporary custom outline has expired. It preserves the navigation
+position but cannot be activated invisibly: Enter first restores its visible selection state.
+_Avoid_: Cleared selection, browser focus, disabled action
 
 **Device-audio mute**:
 The Scenario device's all-cues audio-suppression state. It does not acknowledge a clinical alarm

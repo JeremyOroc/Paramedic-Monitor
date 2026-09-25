@@ -31,6 +31,10 @@ export type RendererOptions = {
   readyOnStart?: boolean
   /** Begin with an empty sweep and reveal only trace history earned since mount. */
   freshReveal?: boolean
+  /** Origin for a synchronized fresh reveal. `left` advances relative to the sequence boundary. */
+  freshRevealOrigin?: 'left' | 'synchronized'
+  /** Shared wall-clock boundary for related fresh reveals or a surface mounted after the boundary. */
+  freshRevealStartedAt?: number | (() => number)
   /** Runs after an occluded or suspended canvas has rebuilt its current visible sweep. */
   onReady?: () => void
 }
@@ -90,6 +94,8 @@ export function startRenderer(opts: RendererOptions): RendererController {
     initiallyOccluded = false,
     readyOnStart = false,
     freshReveal = false,
+    freshRevealOrigin = 'synchronized',
+    freshRevealStartedAt,
     onReady,
   } = opts
 
@@ -134,7 +140,10 @@ export function startRenderer(opts: RendererOptions): RendererController {
   // boundary instead of allowing Safari to join the old and new cursor anchors.
   let suppressNextIncrementalStroke = false
   let stopped = false
-  const sequenceStartedAtWall = Date.now()
+  const sequenceStartedAtWall = typeof freshRevealStartedAt === 'function'
+    ? freshRevealStartedAt()
+    : freshRevealStartedAt ?? Date.now()
+  const usesSequenceRelativeSweep = freshReveal && freshRevealOrigin === 'left'
   let signalHistory: SignalSnapshot[] = []
   let reconstructAfterResize = false
 
@@ -231,7 +240,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     cycleMul = 1 + (Math.random() - 0.5) * 2 * cycleJitter
   }
   rollJitter()
-  if (getPhaseAt) phase = getPhaseAt(Date.now(), getCycleMs())
+  if (getPhaseAt) phase = getPhaseAt(sequenceStartedAtWall, getCycleMs())
 
   const sampleWaveformAt = (waveform: WaveformDef, p: number): number => {
     const data = waveform.data
@@ -249,6 +258,8 @@ export function startRenderer(opts: RendererOptions): RendererController {
   const sweepDuration = () => Math.max(500, sweepMs)
   const synchronizedX = (now: number): number =>
     ((now % sweepDuration()) / sweepDuration()) * cssWidth
+  const sequenceRelativeX = (nowWall: number): number =>
+    (((Math.max(0, nowWall - sequenceStartedAtWall)) % sweepDuration()) / sweepDuration()) * cssWidth
 
   const eraseWidth = () => Math.max(6, cssWidth * 0.03)
 
@@ -322,7 +333,11 @@ export function startRenderer(opts: RendererOptions): RendererController {
     }
   }
 
-  const advanceSweep = (now: number, elapsedMs: number) => {
+  const advanceSweep = (now: number, elapsedMs: number, nowWall = Date.now()) => {
+    if (usesSequenceRelativeSweep) {
+      prevX = sequenceRelativeX(nowWall)
+      return
+    }
     if (synchronizeSweep) {
       prevX = synchronizedX(now)
       return
@@ -403,7 +418,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     const nowWall = Date.now()
     refreshTimeline(nowWall)
     advancePhase(elapsedMs)
-    advanceSweep(now, elapsedMs)
+    advanceSweep(now, elapsedMs, nowWall)
     prevY = yFromValue(sampleAt(phase))
     lastT = now
     lastWallT = nowWall
@@ -473,7 +488,7 @@ export function startRenderer(opts: RendererOptions): RendererController {
     if (occluded) {
       refreshTimeline(nowWall)
       advancePhase(elapsedMs)
-      advanceSweep(now, elapsedMs)
+      advanceSweep(now, elapsedMs, nowWall)
       prevY = yFromValue(sampleAt(phase))
       lastT = now
       lastWallT = nowWall
@@ -515,7 +530,10 @@ export function startRenderer(opts: RendererOptions): RendererController {
       : phase + dPhase
     let nextX: number
     let wrapped: boolean
-    if (synchronizeSweep) {
+    if (usesSequenceRelativeSweep) {
+      nextX = sequenceRelativeX(nowWall)
+      wrapped = nextX < prevX
+    } else if (synchronizeSweep) {
       nextX = synchronizedX(now)
       wrapped = nextX < prevX
     } else {
@@ -602,10 +620,13 @@ export function startRenderer(opts: RendererOptions): RendererController {
       const now = performance.now()
       const nowWall = Date.now()
       refreshTimeline(nowWall)
-      if (synchronizeSweep) prevX = synchronizedX(now)
+      advancePhase(Math.max(0, nowWall - sequenceStartedAtWall))
+      if (usesSequenceRelativeSweep) prevX = sequenceRelativeX(nowWall)
+      else if (synchronizeSweep) prevX = synchronizedX(now)
       prevY = yFromValue(sampleAt(phase))
       lastT = now
       lastWallT = nowWall
+      reconstructCurrentSweep(nowWall)
       suppressNextIncrementalStroke = true
       onReady?.()
     } else {
@@ -617,7 +638,8 @@ export function startRenderer(opts: RendererOptions): RendererController {
     rafId = requestAnimationFrame((t) => {
       lastT = t
       lastWallT = Date.now()
-      if (synchronizeSweep) prevX = synchronizedX(t)
+      if (usesSequenceRelativeSweep) prevX = sequenceRelativeX(lastWallT)
+      else if (synchronizeSweep) prevX = synchronizedX(t)
       tick(t)
     })
   }

@@ -14,6 +14,8 @@ type TwelveLeadPageProps = {
   beatClock?: BeatClock
   readyOnStart?: boolean
   freshReveal?: boolean
+  freshRevealOrigin?: 'left' | 'synchronized'
+  freshRevealStartedAt?: number | (() => number)
   sequenceKey?: string | number
   hideLabels?: boolean
 }
@@ -37,6 +39,8 @@ export function TwelveLeadPage({
   beatClock,
   readyOnStart = false,
   freshReveal = false,
+  freshRevealOrigin = 'synchronized',
+  freshRevealStartedAt,
   sequenceKey,
   hideLabels = false,
 }: TwelveLeadPageProps) {
@@ -92,6 +96,8 @@ export function TwelveLeadPage({
           beatClock={beatClock}
           readyOnStart={readyOnStart}
           freshReveal={freshReveal}
+          freshRevealOrigin={freshRevealOrigin}
+          freshRevealStartedAt={freshRevealStartedAt}
           sequenceKey={sequenceKey}
           hideLabel={hideLabels}
         />,
@@ -105,6 +111,8 @@ export function TwelveLeadPage({
           beatClock={beatClock}
           readyOnStart={readyOnStart}
           freshReveal={freshReveal}
+          freshRevealOrigin={freshRevealOrigin}
+          freshRevealStartedAt={freshRevealStartedAt}
           sequenceKey={sequenceKey}
           hideLabel={hideLabels}
         />,

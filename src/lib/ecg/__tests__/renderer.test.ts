@@ -190,6 +190,72 @@ describe('startRenderer', () => {
     stop()
   })
 
+  it('advances a left-origin fresh reveal relative to its sequence boundary', () => {
+    let now = 1000
+    let wallNow = 10_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    vi.spyOn(Date, 'now').mockImplementation(() => wallNow)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    const stop = startRenderer({
+      canvas,
+      color: '#65E5D9',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 1000,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+      readyOnStart: true,
+      freshReveal: true,
+      freshRevealOrigin: 'left',
+      freshRevealStartedAt: 10_000,
+    })
+
+    expect(ctx.stroke).not.toHaveBeenCalled()
+    rafCalls.shift()?.(now)
+    now = 1016
+    wallNow = 10_016
+    rafCalls.shift()?.(now)
+
+    expect(ctx.stroke).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(ctx.moveTo).mock.calls.at(-1)?.[0]).toBeCloseTo(0)
+    expect(vi.mocked(ctx.lineTo).mock.calls.at(-1)?.[0]).toBeCloseTo(1.6)
+    stop()
+  })
+
+  it('reconstructs only earned history when a left-origin surface mounts after its boundary', () => {
+    vi.spyOn(performance, 'now').mockReturnValue(3000)
+    vi.spyOn(Date, 'now').mockReturnValue(12_000)
+    const ctx = fakeCtx()
+    const canvas = makeCanvas()
+    vi.mocked(canvas.getContext).mockReturnValue(ctx)
+    const onReady = vi.fn()
+    const stop = startRenderer({
+      canvas,
+      color: '#65E5D9',
+      getWaveform: () => ECG_RHYTHMS.nsr,
+      getCycleMs: () => 1000,
+      sweepMs: 4000,
+      synchronizeSweep: true,
+      cycleJitter: 0,
+      ampJitter: 0,
+      readyOnStart: true,
+      freshReveal: true,
+      freshRevealOrigin: 'left',
+      freshRevealStartedAt: 10_000,
+      onReady,
+    })
+
+    const reconstructedX = vi.mocked(ctx.lineTo).mock.calls.map(([x]) => Number(x))
+    expect(onReady).toHaveBeenCalledOnce()
+    expect(reconstructedX.length).toBeGreaterThan(0)
+    expect(Math.max(...reconstructedX)).toBeLessThanOrEqual(200)
+    expect(Math.min(...reconstructedX)).toBeGreaterThanOrEqual(0)
+    stop()
+  })
+
   it('rebuilds only earned fresh-sweep history and keeps hidden signal changes at their cursor boundary', () => {
     let now = 1000
     let wallNow = 10_000
