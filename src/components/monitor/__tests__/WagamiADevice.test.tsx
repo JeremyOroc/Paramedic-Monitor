@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { DEFAULT_VITALS } from '@/types/vitals'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
@@ -15,6 +15,10 @@ const display: WagamiADisplayState = {
 }
 
 describe('Wagami A approved v3 shell controls', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('shows sound waves when audio is on and a crossed speaker when muted', () => {
     const onMute = vi.fn()
     const props = { display, energy: 120, poweredOn: true, onPowerToggle: vi.fn(), onMute }
@@ -87,6 +91,26 @@ describe('Wagami A approved v3 shell controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Entrée' }))
     expect(onTask).toHaveBeenCalledTimes(1)
     expect(onTask).toHaveBeenCalledWith('configure')
+  })
+
+  it('hides the custom selection after five seconds while keeping latent Enter available', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(10_000)
+    const onTask = vi.fn()
+    render(<WagamiADevice display={display} energy={120} poweredOn onPowerToggle={() => {}} onTask={onTask} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Droite' }))
+    expect(screen.getByTestId('a-screen-mock')).toHaveAttribute('data-selection', 'twelveLead')
+    act(() => vi.advanceTimersByTime(5_000))
+    expect(screen.getByTestId('a-screen-mock')).toHaveAttribute('data-selection', '')
+
+    const enter = screen.getByRole('button', { name: 'Entrée' })
+    expect(enter).toBeEnabled()
+    fireEvent.click(enter)
+    expect(screen.getByTestId('a-screen-mock')).toHaveAttribute('data-selection', 'twelveLead')
+    expect(onTask).not.toHaveBeenCalled()
+    fireEvent.click(enter)
+    expect(onTask).toHaveBeenCalledExactlyOnceWith('twelveLead')
   })
 
   it('removes Call Info from the physical navigation ring during a charge', () => {

@@ -42,6 +42,7 @@ type WagamiAWorkspaceProps = {
   onEnergyDown: () => void
   onEnergyUp: () => void
   selectedAction?: string | null
+  onNavigationTouch?: (id: string) => void
   readOnly?: boolean
   onMonitorReady?: () => void
   date?: string
@@ -162,6 +163,7 @@ export function WagamiAWorkspace({
   onEnergyDown,
   onEnergyUp,
   selectedAction,
+  onNavigationTouch,
   readOnly = false,
   onMonitorReady,
   date,
@@ -192,11 +194,32 @@ export function WagamiAWorkspace({
       : controller.etco2Status
   const [eventPage, setEventPage] = useState(1)
   const [vitalPage, setVitalPage] = useState(1)
+  const [initialWaveformBoundaryStartedAt] = useState(Date.now)
+  const waveformBoundaryRef = useRef({
+    key: waveformSequenceKey,
+    startedAt: initialWaveformBoundaryStartedAt,
+  })
+  useLayoutEffect(() => {
+    if (waveformBoundaryRef.current.key === waveformSequenceKey) return
+    waveformBoundaryRef.current = { key: waveformSequenceKey, startedAt: Date.now() }
+  }, [waveformSequenceKey])
+  const getWaveformBoundaryStartedAt = useCallback(
+    () => waveformBoundaryRef.current.startedAt,
+    [],
+  )
   const patientInfoButtonRef = useRef<HTMLButtonElement>(null)
   const priorPatientInfoOpen = useRef(controller.twelveLead.patientInfoOpen)
   const clinicalStatus = { patientMode, alarms: display.alarms, locale: controller.preferences.locale }
   const callInfoBlocked = isWagamiACallInfoBlocked(defibState)
   const [beatClock] = useState(() => createBeatClock(Date.now()))
+  const activateNavigableAction = (id: string, fallback: () => void) => {
+    if (onNavigationTouch) {
+      onNavigationTouch(id)
+      return
+    }
+    fallback()
+  }
+  const goBack = () => activateNavigableAction('back', controller.goBack)
   const signalKey = `${display.vitals.rhythm}:${display.active.hr ? 'on' : 'off'}`
   const priorSignalKey = useRef(signalKey)
   useLayoutEffect(() => {
@@ -246,7 +269,7 @@ export function WagamiAWorkspace({
 
   if (pageView === 'medications') {
     content = (
-      <ViewFrame title={text.medicationsTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
+      <ViewFrame title={text.medicationsTitle} onBack={goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_56px] gap-2 p-3">
           <div className="grid min-h-0 grid-cols-4 grid-rows-3 gap-2">
             {ALL_MEDICATIONS.map((medication) => {
@@ -279,7 +302,7 @@ export function WagamiAWorkspace({
     const page = Math.min(eventPage, totalPages)
     const entries = controller.medicationEvents.slice((page - 1) * MEDICATION_LOG_PAGE_SIZE, page * MEDICATION_LOG_PAGE_SIZE)
     content = (
-      <ViewFrame title={text.eventLog} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
+      <ViewFrame title={text.eventLog} onBack={goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full grid-rows-[minmax(0,1fr)_52px] p-4">
           {entries.length ? <ul className="grid content-start gap-1">{entries.map((entry) => <li key={`${entry.occurredAtMs}-${entry.medication}`} className="grid grid-cols-[1fr_auto] border-b border-wagami-a-border px-3 py-2"><span>{entry.medication}</span><time className="font-mono text-wagami-a-muted-text">{entry.time}</time></li>)}</ul> : <p className="text-wagami-a-muted-text">{text.noEvents}</p>}
           <Pagination page={page} totalPages={totalPages} setPage={setEventPage} text={text} />
@@ -291,7 +314,7 @@ export function WagamiAWorkspace({
     const page = Math.min(vitalPage, totalPages)
     const entries = vitalLog.slice((page - 1) * VITAL_LOG_PAGE_SIZE, page * VITAL_LOG_PAGE_SIZE)
     content = (
-      <ViewFrame title={text.vitalLogTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
+      <ViewFrame title={text.vitalLogTitle} onBack={goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_clamp(52px,5.7cqw,72px)_52px] gap-[clamp(4px,0.6cqw,8px)] p-[clamp(8px,1cqw,14px)]">
           <VitalLogTable entries={entries} text={text} />
           <VitalLogIntervalBand interval={controller.preferences.vitalLogInterval} readOnly={readOnly} onChange={controller.setVitalLogInterval} text={text} />
@@ -301,7 +324,7 @@ export function WagamiAWorkspace({
     )
   } else if (pageView === 'configure') {
     content = (
-      <ViewFrame title={text.configureTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
+      <ViewFrame title={text.configureTitle} onBack={goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full content-center gap-3 p-6">
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.patientModeLabel}</span><strong data-testid="wagami-a-configure-mode" className="rounded border border-wagami-a-border bg-wagami-a-surface-raised px-2 py-1 text-wagami-a-text">{patientMode === 'adult' ? text.adult : patientMode === 'pediatric' ? text.pediatric : text.neonate}</strong></div>
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.language}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.preferences.locale === 'fr'} disabled={readOnly} onClick={() => controller.setLocale('fr')}>{text.french}</Toggle><Toggle active={controller.preferences.locale === 'en'} disabled={readOnly} onClick={() => controller.setLocale('en')}>{text.english}</Toggle></div></div>
@@ -311,7 +334,7 @@ export function WagamiAWorkspace({
     )
   } else if (pageView === 'nibpSettings') {
     content = (
-      <ViewFrame title={text.pniTitle} onBack={controller.goBack} backLabel={text.back} {...clinicalStatus}>
+      <ViewFrame title={text.pniTitle} onBack={goBack} backLabel={text.back} {...clinicalStatus}>
         <div className="grid h-full content-center gap-4 p-8">
           <div className="grid grid-cols-[1fr_auto] items-center rounded border border-wagami-a-border bg-wagami-a-surface p-4"><span>{text.pniMode}</span><div className="grid grid-cols-2 gap-1"><Toggle active={controller.nibpMode === 'manual'} onClick={() => controller.setNibpMode('manual')}>{text.manual}</Toggle><Toggle active={controller.nibpMode === 'automatic'} onClick={() => controller.setNibpMode('automatic')}>{text.automatic}</Toggle></div></div>
           <fieldset disabled={controller.nibpMode !== 'automatic'} className="rounded border border-wagami-a-border bg-wagami-a-surface p-4 disabled:opacity-50"><legend className="px-2">{text.interval}</legend><div className="grid grid-cols-6 gap-2">{NIBP_AUTO_INTERVALS.map((interval) => <Toggle key={interval} active={controller.nibpAutoInterval === interval} onClick={() => controller.setNibpAutoInterval(interval)}>{interval} {text.minutes}</Toggle>)}</div></fieldset>
@@ -344,10 +367,10 @@ export function WagamiAWorkspace({
           canAdjustEnergy={canAdjustEnergy}
           onTask={(task) => {
             if (task === 'callInfo' && callInfoBlocked) return
-            controller.openTask(task)
+            activateNavigableAction(task, () => controller.openTask(task))
           }}
-          onEnergyDown={onEnergyDown}
-          onEnergyUp={onEnergyUp}
+          onEnergyDown={() => activateNavigableAction('energyDown', onEnergyDown)}
+          onEnergyUp={() => activateNavigableAction('energyUp', onEnergyUp)}
           onOpenNibpSettings={readOnly ? undefined : () => controller.setView('nibpSettings')}
           locale={controller.preferences.locale}
           callInfoDisabled={callInfoBlocked}
@@ -369,14 +392,14 @@ export function WagamiAWorkspace({
           aria-hidden={revealed !== 'twelveLead' ? true : undefined}
           className={cn('absolute inset-0 z-10', revealed !== 'twelveLead' && 'invisible pointer-events-none')}
         >
-          <ViewFrame title={text.twelveLeadTitle} onBack={controller.goBack} backLabel={text.back} backDisabled={controller.twelveLead.sentUntil !== null} {...clinicalStatus}>
+          <ViewFrame title={text.twelveLeadTitle} onBack={goBack} backLabel={text.back} backDisabled={controller.twelveLead.sentUntil !== null} {...clinicalStatus}>
             <div className="relative grid h-full min-h-0 grid-rows-[minmax(0,1fr)_clamp(52px,6cqw,80px)]">
               <div
                 data-testid="wagami-a-twelve-lead-content"
                 aria-hidden={controller.twelveLead.patientInfoOpen || controller.twelveLead.transmissionOpen ? true : undefined}
                 className="relative min-h-0"
               >
-                <TwelveLeadPage rhythm={display.vitals.rhythm} hr={display.vitals.hr} occluded={twelveLeadOccluded} onReady={revealTwelveLead} beatClock={beatClock} readyOnStart freshReveal sequenceKey={waveformSequenceKey} hideLabels={controller.twelveLead.captureState !== 'idle' || controller.twelveLead.printOpen} />
+                <TwelveLeadPage rhythm={display.vitals.rhythm} hr={display.vitals.hr} occluded={twelveLeadOccluded} onReady={revealTwelveLead} beatClock={beatClock} readyOnStart freshReveal freshRevealOrigin="left" freshRevealStartedAt={getWaveformBoundaryStartedAt} sequenceKey={waveformSequenceKey} hideLabels={controller.twelveLead.captureState !== 'idle' || controller.twelveLead.printOpen} />
                 {controller.twelveLead.captureState === 'acquiring' ? (
                   <div role="status" className="absolute inset-0 grid place-items-center bg-wagami-a-screen/90 font-sans text-xl font-bold text-wagami-a-pni">{text.acquiring}</div>
                 ) : null}
@@ -402,10 +425,10 @@ export function WagamiAWorkspace({
                   locale={controller.preferences.locale}
                   selectedAction={selectedAction}
                   readOnly={readOnly}
-                  onDecreaseAge={controller.decreasePatientAge}
-                  onIncreaseAge={controller.increasePatientAge}
-                  onSelectSex={controller.selectPatientSex}
-                  onDone={controller.closePatientInfo}
+                  onDecreaseAge={() => activateNavigableAction('patientAgeDown', controller.decreasePatientAge)}
+                  onIncreaseAge={() => activateNavigableAction('patientAgeUp', controller.increasePatientAge)}
+                  onSelectSex={(sex) => activateNavigableAction(sex === 'M' ? 'patientSexM' : 'patientSexF', () => controller.selectPatientSex(sex))}
+                  onDone={() => activateNavigableAction('patientInfoDone', controller.closePatientInfo)}
                 />
               ) : null}
 

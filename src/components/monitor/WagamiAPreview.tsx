@@ -89,7 +89,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
     clinical.onPowerToggle()
   }
 
-  const screenContent = (selectedAction: string | null) => (
+  const screenContent = (selectedAction: string | null, touchAction: (id: string) => void) => (
     <WagamiAWorkspace
       controller={workspace}
       display={clinical.display}
@@ -106,6 +106,7 @@ export function WagamiAPreview({ callerInfoVariant = 'assignment' }: WagamiAPrev
       onEnergyDown={clinical.onEnergyDown}
       onEnergyUp={clinical.onEnergyUp}
       selectedAction={selectedAction}
+      onNavigationTouch={touchAction}
       onMonitorReady={onMonitorReady}
       date={montrealClock.date}
       time={montrealClock.time}

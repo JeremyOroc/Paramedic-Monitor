@@ -730,7 +730,14 @@ PatientInfoPanel baseline failures.
   are power-on, Monitor Reset, New Attempt, a full reload or newly mounted local display, channel
   Off-to-On, and the first 12-lead opening after those boundaries. Connected rhythm, rate, waveform,
   and CPR transitions retain old history ahead of the band and replace it only behind the band.
-  Begin fresh traces at the current synchronized sweep position so related lanes stay aligned. Show
+  On Wagami A Ready, begin every enabled fresh trace at the left edge. A later Off-to-On ECG or SpO2
+  trace begins at the left when neither synchronized counterpart is running, but joins the current
+  Sweep erase band when the other synchronized trace is already running; EtCO2 remains independent
+  and always begins at the left. An Instructor-console toggle becomes a live boundary only after the
+  normal Save and Send confirmation. ECG and SpO2 enabled together by one Send begin together at the
+  left. Monitor Reset, New Attempt, full reload, and the initially-ready Room-free Preview use the
+  same left-origin rule. A newly mounted Spectator owns a new local left-origin sequence rather than
+  inheriting the trainee display's exact sweep age; its later navigation preserves that local age. Show
   the 12-lead grid and labels immediately with blank canvases; closing Capture, Print, or Transmission
   overlays restores that established grid through Continuity reconstruction.
   A partial first sweep owns only the history earned by its elapsed sequence age: leaving and
@@ -753,9 +760,11 @@ PatientInfoPanel baseline failures.
 ### Testing — Wagami A Fresh sweep reveal
 
 Cover blank initial canvases, trace growth only behind the Sweep erase band, established per-channel
-speeds, synchronized all-lead growth, immediate non-live content, capture availability, continuity
-re-entry, Preview/live/Spectator parity, and explicit X/Z isolation. Add renderer-level deterministic
-pixel/readiness coverage plus Wagami A workspace and 12-lead integration regressions.
+speeds, common left-origin growth at Ready, left-origin independent-channel starts, synchronized-cursor
+joins for a later ECG or SpO2 counterpart, synchronized all-lead growth, immediate non-live content,
+capture availability, continuity re-entry, Preview/live/Spectator parity, and explicit X/Z isolation.
+Add renderer-level deterministic pixel/readiness coverage plus Wagami A workspace and 12-lead
+integration regressions.
 
 **Completed locally 2026-09-22.** Wagami A now distinguishes a genuine Fresh sweep from Continuity
 reconstruction. ECG, SpO2, EtCO2, and all live 12-lead traces begin blank at the synchronized cursor,
@@ -766,6 +775,13 @@ Preview, and Spectator paths. Focused tests, TypeScript, affected-file ESLint (z
 existing warning), the Next.js 16.3 Webpack production build, and rendered power-on/live-12-lead
 Preview checks pass. The full suite retains only the same three unrelated Room-ownership and
 PatientInfoPanel baseline failures.
+
+**Left-origin amendment completed locally 2026-09-25.** Fresh Wagami A sequences now advance from a
+sequence-relative left edge at Ready, Reset, New Attempt, reload, initial Preview, and local Spectator
+mount. ECG or SpO2 enabled after its synchronized counterpart is already running retains the explicit
+current-cursor join; channels enabled together begin together at the left, and EtCO2 remains
+independent. A deferred first Live 12-lead mount reconstructs only the history earned since the local
+display boundary. Connected-signal and navigation continuity remain unchanged.
 
 - 2026-09-22 Wagami A waveform continuity across navigation — **programmer-confirmed and
   implemented locally**. Every temporary Wagami A destination,
@@ -1551,16 +1567,40 @@ the six right-dock launchers, touchscreen energy, and contextual secondary-view 
 visible cyclic selection and Enter activation. Keep unsupported clinical actions disabled until
 A4/A5 and keep X/Z intact. The `/?dev=3` preview stays Room-free.
 
+The 2026-09-25 selection-visibility amendment keeps one remembered selection per view but shows its
+custom outline only for five seconds of real elapsed time after Left, Right, Enter, or a navigable
+screen tap/click. Browser suspension does not pause that deadline. After expiry the selection becomes
+latent: Left/Right moves from it and reveals the adjacent action, while the first Enter only reveals
+the remembered action without activating it. Returning through a deliberate navigation action
+reveals that view's remembered selection with a fresh deadline; power-off clears every remembered
+selection. The white custom outline identifies selection only, never a continuing active task such
+as EtCO2 calibration. Native browser focus remains independently visible for accessibility. Shell
+controls, pointer movement, Instructor changes, and passive clinical or waveform updates do not
+refresh the selection deadline. If a remembered action becomes unavailable, forget it rather than
+restoring it if the action later returns. A navigable touchscreen tap/click has an explicit target,
+so it activates immediately and shows that selection for five seconds; only hardware Enter on a
+latent selection uses the reveal-first, activate-second behavior.
+
 #### Testing
 
 Test shell-button order/placement, Shock separation, original icon provenance, no duplicate
 touch actions, read-only PNI/defib displays, focus wrap/order/skip-disabled behavior, Enter
-single activation, secondary-view selection restoration, interaction guards, default French
-labels, and 1024px landscape fit. Full bilingual localization and its tests belong to A5.
+single activation, secondary-view selection restoration, five-second real-time outline expiry,
+latent Left/Right/Enter behavior, navigable touch synchronization, power-off cleanup, active-task
+separation, unavailable-action cleanup, native focus visibility, touch-versus-latent-Enter behavior,
+interaction guards, default French labels, and 1024px landscape fit. Full bilingual localization and
+its tests belong to A5.
 Rendered concept approval is a prerequisite, not a code test. A3.1 focused tests and
 rendered desktop QA pass. The programmer accepted A3 as done, including its A3.1 amendment,
 and instructed that A4 be left for a collaborator on another device. This is rendered design
 acceptance, not real-iPad validation or qualified IP clearance.
+
+**Transient-selection amendment completed locally 2026-09-25.** Wagami A now hides its custom
+selection outline after five seconds of real inactivity while retaining a valid latent selection.
+Hardware Enter reveals before activating, Left/Right continues from the latent position, navigable
+touch activates immediately, returning to a view restores the outline, power-off clears all
+selections, and unavailable actions are forgotten. Active-task state and native browser focus remain
+separate from the temporary outline.
 
 ### A4 — Functional Clinical Core (COMPLETE 2026-09-15)
 

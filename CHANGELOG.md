@@ -5,6 +5,49 @@
 
 ---
 
+## [2026-09-25] [wagami-a/ui/waveforms/navigation/accessibility/testing] — Start fresh sweeps left and expire selection outlines
+
+- Added sequence-relative Fresh sweep origins so enabled Wagami A ECG, SpO2, EtCO2, and Live
+  12-lead traces grow from the left after Ready and genuine reset boundaries, including history-aware
+  first 12-lead entry and independent local Preview/Spectator timelines.
+- Preserved the confirmed exception for ECG or SpO2 enabled after its synchronized counterpart is
+  already running: the new lane begins blank at that current sweep cursor without erasing the
+  established lane. Connected changes and covered-page continuity remain uninterrupted.
+- Added a five-second real-time custom-selection window with per-view latent memory, reveal-before-
+  activate hardware Enter, continued Left/Right navigation, immediate explicit touch activation,
+  view-return restoration, unavailable-action cleanup, and power-off clearing.
+- Removed active EtCO2 calibration from the selection-ring styling while retaining semantic active
+  state and native focus-visible accessibility treatment.
+- Added renderer, hook, component, Preview, and lifecycle regressions. All 147 focused tests,
+  TypeScript, full ESLint with the same 12 unrelated warnings, the Next.js 16.3 Webpack build, and
+  rendered 1280×720 Preview interaction QA pass with a clean console.
+
+## [2026-09-25] [planning/wagami-a/domain] — Close waveform and selection edge cases
+
+- Extended left-origin Fresh sweep starts to Monitor Reset, New Attempt, reload, initially-ready
+  Preview, and each newly mounted local Spectator; retained independent per-display sequence age and
+  background continuity after mount.
+- Required ECG and SpO2 enabled together by one Send to begin together at the left, while preserving
+  the agreed current-cursor join only when one synchronized counterpart is already running.
+- Made unavailable remembered actions expire permanently, kept explicit touch activation immediate,
+  and limited reveal-before-activate behavior to hardware Enter on a latent selection.
+- Completed the glossary, plan, status, and test-contract edge cases. Application code remains
+  unchanged pending final programmer confirmation; no ADR is warranted.
+
+## [2026-09-25] [planning/wagami-a/domain] — Define waveform origins and transient selection
+
+- Defined common left-origin Fresh sweep reveals when Wagami A becomes Ready, independent left-origin
+  EtCO2 starts, and synchronized-cursor joins when ECG or SpO2 is enabled after its counterpart is
+  already running; ordinary connected signal changes and hidden-view continuity remain uninterrupted.
+- Defined a five-second real-time custom screen-selection outline driven only by navigable screen
+  interactions, with remembered latent position, reveal-before-activate Enter behavior, view-return
+  restoration, power-off cleanup, and background-time expiry.
+- Separated temporary screen selection from active-task styling and native browser focus, preserving
+  accessibility focus while allowing operations such as EtCO2 calibration to continue without a
+  persistent white task-tile outline.
+- Added glossary, plan, status, and testing requirements. Application code has not changed in this
+  planning entry, and no ADR is warranted for these localized reversible presentation rules.
+
 ## [2026-09-25] [wagami-a/ui/lifecycle/accessibility/testing] — Add the three-second startup
 
 - Added a true Wagami A Off → Startup → Ready lifecycle for live and manually cycled Preview power,

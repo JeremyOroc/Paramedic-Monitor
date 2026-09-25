@@ -27,6 +27,8 @@ type ECGCanvasProps = {
   beatClock?: BeatClock
   readyOnStart?: boolean
   freshReveal?: boolean
+  freshRevealOrigin?: 'left' | 'synchronized'
+  freshRevealStartedAt?: number | (() => number)
   sequenceKey?: string | number
 }
 
@@ -41,6 +43,8 @@ function LiveECGCanvas({
   beatClock,
   readyOnStart = false,
   freshReveal = false,
+  freshRevealOrigin = 'synchronized',
+  freshRevealStartedAt,
   sequenceKey,
 }: Omit<ECGCanvasProps, 'connected'>) {
   const color = palette === 'wagamiA' ? WAGAMI_A_COLORS.ecg : COLORS.ecgGreen
@@ -73,8 +77,10 @@ function LiveECGCanvas({
       getPhaseAt: beatClock ? (nowMs, cycleMs) => beatClock.phase(nowMs, cycleMs) : undefined,
       readyOnStart,
       freshReveal,
+      freshRevealOrigin,
+      freshRevealStartedAt,
     }),
-    [color, beatClock, palette, readyOnStart, freshReveal, sequenceKey],
+    [color, beatClock, palette, readyOnStart, freshReveal, freshRevealOrigin, freshRevealStartedAt, sequenceKey],
     { occluded, onReady },
   )
 
@@ -104,6 +110,8 @@ export function ECGCanvas({
   beatClock,
   readyOnStart = false,
   freshReveal = false,
+  freshRevealOrigin = 'synchronized',
+  freshRevealStartedAt,
   sequenceKey,
 }: ECGCanvasProps) {
   if (!connected && !cprOverride) {
@@ -135,6 +143,8 @@ export function ECGCanvas({
       beatClock={beatClock}
       readyOnStart={readyOnStart}
       freshReveal={freshReveal}
+      freshRevealOrigin={freshRevealOrigin}
+      freshRevealStartedAt={freshRevealStartedAt}
       sequenceKey={sequenceKey}
     />
   )

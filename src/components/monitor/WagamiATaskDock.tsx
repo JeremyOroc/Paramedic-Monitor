@@ -47,7 +47,7 @@ export function WagamiATaskDock({ onTask, selectedAction, activeTask = null, loc
           className={cn(
             'grid min-h-[44px] min-w-0 place-content-center justify-items-center gap-[clamp(3px,0.55cqw,8px)] rounded-[6px] border border-wagami-a-border bg-wagami-a-surface-raised px-1.5 py-1 text-wagami-a-pni',
             'enabled:hover:bg-wagami-a-surface enabled:active:brightness-125 focus-visible:outline-2 focus-visible:outline-wagami-a-pni disabled:cursor-not-allowed disabled:opacity-45',
-            (selectedAction === key || activeTask === key) && 'ring-2 ring-inset ring-wagami-a-pni bg-wagami-a-surface',
+            selectedAction === key && 'ring-2 ring-inset ring-wagami-a-pni bg-wagami-a-surface',
           )}
         >
           <TaskIcon task={key} />

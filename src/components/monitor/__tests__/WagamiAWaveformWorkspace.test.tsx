@@ -1,20 +1,24 @@
 import { act, fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { DEFAULT_VITALS } from '@/types/vitals'
 import { WagamiAWaveformWorkspace } from '../WagamiAWaveformWorkspace'
 
 vi.mock('../ECGCanvas', () => ({
-  ECGCanvas: ({ palette, rhythm, connected, cprOverride, onReady, readyOnStart, freshReveal, sequenceKey }: { palette: string; rhythm: string; connected: boolean; cprOverride: boolean; onReady?: () => void; readyOnStart?: boolean; freshReveal?: boolean; sequenceKey?: string | number }) => <div data-testid="a-ecg-mock" data-palette={palette} data-rhythm={rhythm} data-connected={String(connected)} data-cpr-override={String(cprOverride)} data-ready-on-start={String(readyOnStart)} data-fresh-reveal={String(freshReveal)} data-sequence-key={sequenceKey}><button type="button" onClick={onReady}>ECG ready</button></div>,
+  ECGCanvas: ({ palette, rhythm, connected, cprOverride, onReady, readyOnStart, freshReveal, freshRevealOrigin, freshRevealStartedAt, sequenceKey }: { palette: string; rhythm: string; connected: boolean; cprOverride: boolean; onReady?: () => void; readyOnStart?: boolean; freshReveal?: boolean; freshRevealOrigin?: string; freshRevealStartedAt?: number; sequenceKey?: string | number }) => <div data-testid="a-ecg-mock" data-palette={palette} data-rhythm={rhythm} data-connected={String(connected)} data-cpr-override={String(cprOverride)} data-ready-on-start={String(readyOnStart)} data-fresh-reveal={String(freshReveal)} data-fresh-origin={freshRevealOrigin} data-fresh-started-at={freshRevealStartedAt} data-sequence-key={sequenceKey}><button type="button" onClick={onReady}>ECG ready</button></div>,
 }))
 vi.mock('../SecondaryChannel', () => ({
-  SecondaryChannel: ({ channel, palette, connected, onReady, readyOnStart, freshReveal, sequenceKey }: { channel: string; palette: string; connected: boolean; onReady?: () => void; readyOnStart?: boolean; freshReveal?: boolean; sequenceKey?: string | number }) => <div data-testid={`a-${channel}-mock`} data-palette={palette} data-connected={String(connected)} data-ready-on-start={String(readyOnStart)} data-fresh-reveal={String(freshReveal)} data-sequence-key={sequenceKey}><button type="button" onClick={onReady}>{channel} ready</button></div>,
+  SecondaryChannel: ({ channel, palette, connected, onReady, readyOnStart, freshReveal, freshRevealOrigin, freshRevealStartedAt, sequenceKey }: { channel: string; palette: string; connected: boolean; onReady?: () => void; readyOnStart?: boolean; freshReveal?: boolean; freshRevealOrigin?: string; freshRevealStartedAt?: number; sequenceKey?: string | number }) => <div data-testid={`a-${channel}-mock`} data-palette={palette} data-connected={String(connected)} data-ready-on-start={String(readyOnStart)} data-fresh-reveal={String(freshReveal)} data-fresh-origin={freshRevealOrigin} data-fresh-started-at={freshRevealStartedAt} data-sequence-key={sequenceKey}><button type="button" onClick={onReady}>{channel} ready</button></div>,
 }))
 
 const vitals = { ...DEFAULT_VITALS }
 const active = { hr: true, bp_sys: true, bp_dia: true, etco2: true, spo2: true }
 
 describe('Wagami A live waveform workspace', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('uses A palette on three reused live renderers without a touchscreen mute action', () => {
     render(<WagamiAWaveformWorkspace vitals={vitals} active={active} sequenceKey={7} />)
 
@@ -27,6 +31,42 @@ describe('Wagami A live waveform workspace', () => {
     }
     expect(screen.queryByRole('button', { name: 'Couper tous les sons' })).not.toBeInTheDocument()
     expect(screen.queryByTestId('wagami-a-clinical-status-line')).not.toBeInTheDocument()
+  })
+
+  it('starts a common sequence at the left and joins a later SpO₂ channel to the running cursor', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(10_000)
+    const initiallyDisconnected = { ...active, spo2: false }
+    const { rerender } = render(
+      <WagamiAWaveformWorkspace vitals={vitals} active={initiallyDisconnected} sequenceKey={1} />,
+    )
+
+    expect(screen.getByTestId('a-ecg-mock')).toHaveAttribute('data-fresh-origin', 'left')
+    act(() => vi.advanceTimersByTime(750))
+    rerender(<WagamiAWaveformWorkspace vitals={vitals} active={active} sequenceKey={1} />)
+
+    expect(screen.getByTestId('a-spo2-mock')).toHaveAttribute('data-fresh-origin', 'synchronized')
+  })
+
+  it('starts channels enabled together and independent EtCO₂ sequences at the left', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(20_000)
+    const allDisconnected = { ...active, hr: false, spo2: false, etco2: false }
+    const { rerender } = render(
+      <WagamiAWaveformWorkspace vitals={vitals} active={allDisconnected} sequenceKey={1} />,
+    )
+
+    act(() => vi.advanceTimersByTime(500))
+    rerender(<WagamiAWaveformWorkspace vitals={vitals} active={active} sequenceKey={1} />)
+    for (const channel of ['ecg', 'spo2', 'etco2']) {
+      expect(screen.getByTestId(`a-${channel}-mock`)).toHaveAttribute('data-fresh-origin', 'left')
+    }
+
+    act(() => vi.advanceTimersByTime(500))
+    rerender(<WagamiAWaveformWorkspace vitals={vitals} active={active} sequenceKey={2} />)
+    for (const channel of ['ecg', 'spo2', 'etco2']) {
+      expect(screen.getByTestId(`a-${channel}-mock`)).toHaveAttribute('data-fresh-origin', 'left')
+    }
   })
 
   it('disconnects the ECG renderer when the confirmed FC channel is inactive', () => {

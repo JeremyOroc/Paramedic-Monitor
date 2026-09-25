@@ -38,6 +38,8 @@ type SecondaryChannelProps = {
   palette?: 'wagamiX' | 'wagamiA'
   readyOnStart?: boolean
   freshReveal?: boolean
+  freshRevealOrigin?: 'left' | 'synchronized'
+  freshRevealStartedAt?: number | (() => number)
   sequenceKey?: string | number
 }
 
@@ -53,6 +55,8 @@ function LiveSecondaryCanvas({
   palette,
   readyOnStart = false,
   freshReveal = false,
+  freshRevealOrigin = 'synchronized',
+  freshRevealStartedAt,
   sequenceKey,
 }: Pick<
   SecondaryChannelProps,
@@ -67,6 +71,8 @@ function LiveSecondaryCanvas({
   | 'palette'
   | 'readyOnStart'
   | 'freshReveal'
+  | 'freshRevealOrigin'
+  | 'freshRevealStartedAt'
   | 'sequenceKey'
 >) {
   const isEtco2 = channel === 'etco2'
@@ -105,9 +111,11 @@ function LiveSecondaryCanvas({
         },
         readyOnStart,
         freshReveal,
+        freshRevealOrigin,
+        freshRevealStartedAt,
       }
     },
-    [isEtco2, color, readyOnStart, freshReveal, sequenceKey],
+    [isEtco2, color, readyOnStart, freshReveal, freshRevealOrigin, freshRevealStartedAt, sequenceKey],
     { occluded, onReady },
   )
 
@@ -141,6 +149,8 @@ export function SecondaryChannel({
   palette = 'wagamiX',
   readyOnStart = false,
   freshReveal = false,
+  freshRevealOrigin = 'synchronized',
+  freshRevealStartedAt,
   sequenceKey,
 }: SecondaryChannelProps) {
   const isEtco2 = channel === 'etco2'
@@ -195,6 +205,8 @@ export function SecondaryChannel({
           palette={palette}
           readyOnStart={readyOnStart}
           freshReveal={freshReveal}
+          freshRevealOrigin={freshRevealOrigin}
+          freshRevealStartedAt={freshRevealStartedAt}
           sequenceKey={sequenceKey}
         />
       ) : palette === 'wagamiA' ? (

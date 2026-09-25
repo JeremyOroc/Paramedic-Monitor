@@ -6,6 +6,26 @@
 ---
 
 ## Current Phase
+**Wagami A left-origin fresh sweep and transient screen selection — COMPLETE LOCALLY, AWAITING
+ACCEPTANCE (2026-09-25).** Wagami A now uses left-origin waveform starts when the device
+becomes Ready, with independent EtCO2 starts at the left and a later ECG or SpO2 channel joining an
+already-running synchronized counterpart's sweep cursor. Connected signal changes and navigation
+retain continuity. Reset, New Attempt, reload, initially-ready Preview, and newly mounted local
+Spectator sequences begin at the left; Spectator retains its own sequence age. The custom
+screen-selection outline now has a specified five-second real-time
+visibility window, after which its remembered position becomes latent; the first latent Enter only
+reveals it, Left/Right continues from it, deliberate view return reveals it, and power-off clears it.
+Only navigable screen interactions refresh the deadline. Active tasks and native browser focus no
+longer share this temporary selection presentation. Unavailable actions are forgotten, while an
+explicit touchscreen target still activates immediately.
+
+The 147-test Wagami A, waveform, 12-lead, navigation, live, Preview, and Spectator regression set
+passes. TypeScript and full ESLint pass with only the same 12 unrelated warnings. The Next.js 16.3
+Webpack production build passes; the default Turbopack build reaches a known sandbox-only helper-port
+restriction after font access succeeds. Rendered 1280×720 Preview QA confirms left-edge power-on ECG
+and SpO2 growth, five-second EtCO2 outline expiry while calibration remains active, reveal-before-
+activate latent Enter behavior, no framework overlay, and an empty warning/error console.
+
 **Wagami A three-second startup and blank Off display — COMPLETE LOCALLY, AWAITING ACCEPTANCE
 (2026-09-25).** Wagami A now uses Off → three-second Startup → Ready for every manual power-on.
 Startup shows a static centered `WAGAMI A` wordmark plus fixed English/French simulation disclaimer,
