@@ -1,5 +1,5 @@
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { act, render, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { MonitorProjection } from '@/types/monitorProjection'
 import { DEFAULT_CALLER_INFO } from '@/types/callerInfo'
@@ -7,7 +7,10 @@ import { DEFAULT_VITALS } from '@/types/vitals'
 import { SpectatorMonitor } from '../SpectatorMonitor'
 
 describe('SpectatorMonitor A2 model boundary', () => {
+  afterEach(() => vi.useRealTimers())
+
   it('mirrors Wagami A Call Info across the spectator canvas without a shell or live actions', () => {
+    vi.useFakeTimers()
     const projection = {
       model: 'wagamiA',
       powerState: 'on',
@@ -49,16 +52,31 @@ describe('SpectatorMonitor A2 model boundary', () => {
 
     expect(screen.getByTestId('wagami-a-call-info-page')).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-shell').parentElement).toHaveClass('invisible')
-    const ecg = screen.getByTestId('live-ecg-canvas')
+    expect(screen.getByTestId('live-ecg-canvas')).toBeInTheDocument()
     expect(screen.getByTestId('assignment-dashboard')).toBeInTheDocument()
     expect(within(screen.getByTestId('wagami-a-call-info-page')).getByTestId('wagami-a-clinical-status-line')).toHaveTextContent('MODE ADULTE · ALARME · FC')
     expect(screen.getByRole('button', { name: /Retour/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Transport' })).toBeDisabled()
 
+    rerender(<SpectatorMonitor projection={{
+      ...projection,
+      powerState: 'booting',
+      powerStateEndsAt: Date.now() + 1250,
+      wagamiA: { ...projection.wagamiA!, view: 'monitor' },
+    }} embedded />)
+    expect(screen.getByTestId('wagami-a-startup-screen')).toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(1249))
+    expect(screen.getByTestId('wagami-a-startup-screen')).toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(1))
+    expect(screen.getByTestId('wagami-a-current-mode')).toHaveTextContent('ADULTE')
+    const readyEcg = screen.getByTestId('live-ecg-canvas')
+
     const calibrationStartedAt = Date.now() - 22_500
     const calibrationEndsAt = Date.now() + 22_500
     rerender(<SpectatorMonitor projection={{
       ...projection,
+      powerState: 'on',
+      powerStateEndsAt: null,
       wagamiA: {
         ...projection.wagamiA!,
         view: 'monitor',
@@ -67,7 +85,7 @@ describe('SpectatorMonitor A2 model boundary', () => {
         etco2CalibrationEndsAt: calibrationEndsAt,
       },
     }} embedded />)
-    expect(screen.getByTestId('live-ecg-canvas')).toBe(ecg)
+    expect(screen.getByTestId('live-ecg-canvas')).toBe(readyEcg)
     expect(screen.getByTestId('wagami-a-shell').parentElement).not.toHaveClass('invisible')
     expect(screen.getByLabelText('Date et heure de Montréal')).toHaveTextContent('2026-09-22 20:19:40')
     expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:07:23')

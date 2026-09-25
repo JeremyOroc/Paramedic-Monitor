@@ -117,7 +117,7 @@ describe('Wagami A approved v3 shell controls', () => {
     expect(onPatientModeCycle).toHaveBeenCalledTimes(1)
   })
 
-  it('shows an alarm LED state and a genuine powered-off screen', () => {
+  it('shows an alarm LED state, a bilingual startup, and a blank powered-off screen', () => {
     const { rerender } = render(<WagamiADevice display={{ ...display, alarms: ['hr'] }} energy={120} poweredOn onPowerToggle={() => {}} />)
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-alarming', 'true')
 
@@ -126,7 +126,17 @@ describe('Wagami A approved v3 shell controls', () => {
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-alarming', 'false')
 
     rerender(<WagamiADevice display={{ ...display, alarms: ['hr'] }} energy={120} poweredOn={false} onPowerToggle={() => {}} />)
-    expect(screen.getByTestId('wagami-a-screen-off')).toHaveTextContent('ALIMENTATION COUPÉE')
+    expect(screen.getByTestId('wagami-a-screen-off')).toHaveAccessibleName('Wagami A powered off')
+    expect(screen.getByTestId('wagami-a-screen-off')).toBeEmptyDOMElement()
+    expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-alarming', 'false')
+
+    rerender(<WagamiADevice display={{ ...display, alarms: ['hr'] }} energy={120} powerState="booting" onPowerToggle={() => {}} canAnalyse onAnalyse={() => {}} />)
+    expect(screen.getByRole('status', { name: 'Wagami A starting. For simulation purposes only.' })).toBeInTheDocument()
+    expect(screen.getByText('WAGAMI A', { selector: '[aria-hidden="true"]' })).toBeInTheDocument()
+    expect(screen.getByText('For simulation purposes only')).toBeInTheDocument()
+    expect(screen.getByText('À des fins de simulation seulement')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Analyser WAGAMI A' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Alimentation WAGAMI A' })).toBeEnabled()
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-alarming', 'false')
   })
 

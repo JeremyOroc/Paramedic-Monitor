@@ -30,6 +30,7 @@ import { ACQUIRE_MS } from '@/hooks/useMonitorController'
 import { useCPRTimer } from '@/hooks/useCPRTimer'
 import { normalizeWagamiAPreferences } from '@/hooks/useWagamiAPreferences'
 import { useWagamiACallInfoCover } from '@/hooks/useWagamiACallInfoCover'
+import { useProjectedWagamiAPowerState } from '@/hooks/useWagamiAStartup'
 import { cn } from '@/lib/utils'
 import type { MonitorProjection } from '@/types/monitorProjection'
 import type { WagamiAWorkspaceController } from '@/hooks/useWagamiAWorkspace'
@@ -71,6 +72,10 @@ type SpectatorMonitorProps = {
 export function SpectatorMonitor({ projection, embedded = false }: SpectatorMonitorProps) {
   const controller = projection.controller
   const defib = projection.defib
+  const projectedPowerState = useProjectedWagamiAPowerState(
+    projection.powerState,
+    projection.powerStateEndsAt ?? null,
+  )
   const defibProgress = useProjectedDefibProgress(defib)
   const wagamiAChargeProgress = defib.state === 'charged' ? 1 : defib.state === 'charging' ? defibProgress : 0
   const cprTimer = useCPRTimer(defib.state === 'cpr' ? defib.cprStartTime : null)
@@ -183,7 +188,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
           defibState={defib.state}
           chargeProgress={wagamiAChargeProgress}
           chargeOrigin={defib.chargeOrigin ?? null}
-          poweredOn={projection.powerState === 'on'}
+          powerState={projectedPowerState}
           onPowerToggle={noop}
           patientMode={state.patientMode}
           muted={controller.isMuted}

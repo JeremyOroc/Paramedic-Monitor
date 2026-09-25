@@ -27,6 +27,7 @@ export type MonitorProjection = {
   model: DefibrillatorModel
   surface: 'dispatch' | 'monitor'
   powerState: PowerState
+  powerStateEndsAt?: number | null
   date: string
   time: string
   sessionTimer: string

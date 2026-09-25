@@ -7,6 +7,7 @@ import { useCPRTimer } from '@/hooks/useCPRTimer'
 import { useDefibAudio } from '@/hooks/useDefibAudio'
 import { useDefibSequence } from '@/hooks/useDefibSequence'
 import { useNibpReading, type NibpSnapshot } from '@/hooks/useNibpReading'
+import { useWagamiAStartup } from '@/hooks/useWagamiAStartup'
 import {
   playCprMetronome,
   setAudioMuted,
@@ -19,6 +20,7 @@ import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
 import { playWagamiACprPrompt, playWagamiADefibPrompt } from '@/lib/wagamiAVoice'
 import type { WagamiALocale } from '@/types/wagamiA'
 import { getCprHeartRate, type CprMode, type PatientMode } from '@/types/vitals'
+import type { PowerState } from '@/components/monitor/DeviceShell'
 
 export type WagamiAClinicalEvent = {
   kind: string
@@ -42,13 +44,19 @@ export function useWagamiAClinicalCore({
   onStudentEvent,
   onAcceptBpReading,
 }: Options) {
-  const [poweredOn, setPoweredOn] = useState(true)
+  const [powerState, setPowerState] = useState<PowerState>('on')
+  const poweredOn = powerState === 'on'
   const [patientMode, setPatientMode] = useState<PatientMode>('adult')
   const [muted, setMuted] = useState(false)
   const [acceptedBp, setAcceptedBp] = useState<NibpSnapshot | null>(null)
   const shockPressedRef = useRef(false)
   const wasMutedRef = useRef(muted)
   const cprHeartRate = getCprHeartRate(cprMode)
+  const startup = useWagamiAStartup({
+    powerState,
+    setPowerState,
+    onReady: () => onStudentEvent?.({ kind: 'power_on', label: 'Power On' }),
+  })
 
   const defib = useDefibSequence({
     patientMode,
@@ -145,7 +153,7 @@ export function useWagamiAClinicalCore({
   }, [])
 
   function onPowerToggle() {
-    if (poweredOn) {
+    if (powerState === 'on') {
       onStudentEvent?.({ kind: 'power_off', label: 'Power Off' })
       stopAllAudio()
       nibp.cancelReading()
@@ -154,11 +162,14 @@ export function useWagamiAClinicalCore({
       setAudioMuted(false)
       setMuted(false)
       setAcceptedBp(null)
-      setPoweredOn(false)
+      startup.powerOff()
       return
     }
-    onStudentEvent?.({ kind: 'power_on', label: 'Power On' })
-    setPoweredOn(true)
+    if (powerState === 'booting') {
+      startup.cancel()
+      return
+    }
+    startup.start()
   }
 
   function onAnalyse() {
@@ -229,6 +240,8 @@ export function useWagamiAClinicalCore({
 
   return {
     poweredOn,
+    powerState,
+    startupEndsAt: startup.startupEndsAt,
     patientMode,
     patientModeLocked,
     muted,

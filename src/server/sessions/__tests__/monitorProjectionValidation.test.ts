@@ -46,6 +46,8 @@ describe('monitor projection validation', () => {
       alarms: [], mergedEventLog: [], vitalLog: [],
     }
     expect(isMonitorProjection(projection)).toBe(true)
+    expect(isMonitorProjection({ ...projection, powerStateEndsAt: 1_795_000_003_000 })).toBe(true)
+    expect(isMonitorProjection({ ...projection, powerStateEndsAt: 'soon' })).toBe(false)
   })
 
   it('accepts semantic Wagami A view state and rejects a pixel payload in its place', () => {

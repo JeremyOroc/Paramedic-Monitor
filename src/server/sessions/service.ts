@@ -80,6 +80,11 @@ export function isMonitorProjection(value: unknown): value is MonitorProjection 
     typeof projection.capturedAt === 'string' &&
     (projection.model === 'wagamiX' || projection.model === 'wagamiZ' || projection.model === 'wagamiA') &&
     (projection.surface === 'dispatch' || projection.surface === 'monitor') &&
+    (
+      projection.powerStateEndsAt === undefined ||
+      projection.powerStateEndsAt === null ||
+      (typeof projection.powerStateEndsAt === 'number' && Number.isFinite(projection.powerStateEndsAt))
+    ) &&
     isRecord(projection.controller) &&
     isRecord(projection.confirmed) &&
     isRecord(projection.confirmedVitalActive) &&

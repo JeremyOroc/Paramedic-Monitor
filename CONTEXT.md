@@ -525,6 +525,17 @@ by its Spectator view for the current Attempt. It does not change instructor-con
 state or the language of other Scenario devices.
 _Avoid_: Scenario language, instructor language, Account language
 
+**Wagami A startup**:
+The transient simulator state entered by an actual Wagami A Off-to-On action before the device is
+ready for clinical operation. It is neither the Wagami A powered-off display nor ready operation and
+does not advance the Monitor elapsed timer.
+_Avoid_: Splash page, powered-on monitor, Wagami Z boot
+
+**Wagami A powered-off display**:
+The blank inactive inner display shown while Wagami A has no power. It contains no visible status
+message and is distinct from Wagami A startup.
+_Avoid_: ALIMENTATION COUPÉE screen, POWER OFF screen, startup screen
+
 **Resting vital layout**:
 The Wagami X main-view placement used after power-on and before the first accepted physical Analyze or Charge action. FC, PNI, EtCO2, and SpO2 occupy four equal cells in the fixed bottom region; collapsing that region temporarily uses the defib vital layout.
 _Avoid_: Apply Electrodes screen, default status bar

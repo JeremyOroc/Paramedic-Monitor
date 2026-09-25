@@ -1,11 +1,12 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useMonitorStore } from '@/store/monitorStore'
 import { WagamiAPreview } from '../WagamiAPreview'
 
 describe('Wagami A Room-free clinical preview', () => {
   beforeEach(() => window.localStorage.clear())
+  afterEach(() => vi.useRealTimers())
 
   it('shows simulated data with A4 clinical actions and all A5 tasks enabled', () => {
     useMonitorStore.getState().reset()
@@ -73,6 +74,8 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
     act(() => vi.advanceTimersByTime(2000))
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    expect(screen.getByTestId('wagami-a-startup-screen')).toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(3000))
     expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:00')
     act(() => vi.advanceTimersByTime(1000))
     expect(screen.getByLabelText('Temps écoulé du moniteur')).toHaveTextContent('00:00:01')
@@ -106,6 +109,7 @@ describe('Wagami A Room-free clinical preview', () => {
   })
 
   it('edits 12-lead Patient Information with physical navigation and preserves it through power-off', () => {
+    vi.useFakeTimers()
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
 
@@ -124,6 +128,7 @@ describe('Wagami A Room-free clinical preview', () => {
     expect(screen.queryByRole('dialog', { name: 'Informations patient' })).not.toBeInTheDocument()
     expect(useMonitorStore.getState().patientInfo).toEqual({ age: 41, sex: 'F' })
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    act(() => vi.advanceTimersByTime(3000))
     fireEvent.click(screen.getByRole('button', { name: '12 dérivations' }))
     fireEvent.click(screen.getByRole('button', { name: 'Info patient' }))
     expect(screen.getByLabelText('Âge')).toHaveTextContent('41')
@@ -215,6 +220,7 @@ describe('Wagami A Room-free clinical preview', () => {
     expect(screen.getByRole('button', { name: 'Info appel' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    act(() => vi.advanceTimersByTime(3000))
     fireEvent.click(screen.getByRole('button', { name: 'Charge WAGAMI A' }))
     expect(screen.getByRole('button', { name: 'Info appel' })).toBeDisabled()
     act(() => vi.advanceTimersByTime(4000))
@@ -223,6 +229,7 @@ describe('Wagami A Room-free clinical preview', () => {
   })
 
   it('switches language and shell LED, preserving both through a power cycle', () => {
+    vi.useFakeTimers()
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
     fireEvent.click(screen.getByRole('button', { name: 'Configurer' }))
@@ -236,6 +243,7 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: /Back/ }))
     fireEvent.click(screen.getByRole('button', { name: 'WAGAMI A power' }))
     fireEvent.click(screen.getByRole('button', { name: 'WAGAMI A power' }))
+    act(() => vi.advanceTimersByTime(3000))
     expect(screen.getByRole('button', { name: 'Call Info' })).toBeInTheDocument()
     expect(screen.getByTestId('wagami-a-shell-led')).toHaveAttribute('data-enabled', 'false')
     fireEvent.click(screen.getByRole('button', { name: 'Vital Log' }))
@@ -281,6 +289,7 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
     act(() => vi.advanceTimersByTime(0))
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    act(() => vi.advanceTimersByTime(3000))
     fireEvent.click(screen.getByRole('button', { name: 'Journal des signes vitaux' }))
     const resetVitalLogView = screen.getByRole('heading', { name: 'Journal des signes vitaux' }).closest('section')
     expect(resetVitalLogView).not.toBeNull()
@@ -374,6 +383,7 @@ describe('Wagami A Room-free clinical preview', () => {
   })
 
   it('locks Patient mode during Analyze and resets the process on Power-off', () => {
+    vi.useFakeTimers()
     useMonitorStore.getState().reset()
     render(<WagamiAPreview />)
     fireEvent.click(screen.getByRole('button', { name: 'Analyser WAGAMI A' }))
@@ -382,6 +392,8 @@ describe('Wagami A Room-free clinical preview', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
     expect(screen.getByTestId('wagami-a-screen-off')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Alimentation WAGAMI A' }))
+    expect(screen.getByTestId('wagami-a-startup-screen')).toBeInTheDocument()
+    act(() => vi.advanceTimersByTime(3000))
     expect(screen.getByRole('region', { name: 'Wagami A live display' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Changer le mode patient/ })).toBeEnabled()
   })
