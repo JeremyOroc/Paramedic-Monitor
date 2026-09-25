@@ -6,6 +6,21 @@
 ---
 
 ## Current Phase
+**Saved scenario title selection — COMPLETE LOCALLY, AWAITING ACCEPTANCE (2026-09-24).** Editable
+Saved scenario titles now single-click through the same load/unload path as their row after a 250 ms
+title-only disambiguation window. Double-click and F2 rename without changing the Loaded scenario;
+Enter/Space toggle immediately. Native title selection is suppressed, pending activation is cleaned
+up, pressed/disabled semantics are exposed, and existing dirty-discard, permission, active-Attempt,
+draft, Template, and folder behavior is preserved.
+
+All 81 focused component and Instructor integration tests pass. TypeScript, affected-file ESLint,
+and the Next.js 16.3 production build pass. Rendered 1280×720 desktop and 1024×768 landscape-iPad
+interaction QA passes with no browser warning or error. The complete Windows suite has 1,729
+passing, one skipped, and 11 unrelated existing baseline/environment failures: seven shell-script
+spawn failures, one invite-only config parser failure, two Room-ownership failures, and one
+PatientInfoPanel class assertion. Changes are local and uncommitted on `Scenario-click-fix`;
+nothing was pushed or deployed.
+
 **Wagami A vital alarm flash — COMPLETE LOCALLY, AWAITING ACCEPTANCE (2026-09-24).** Each alarming
 FC, SpO₂, or PNI card now receives an independent 1.9-second red border/background/glow pulse while
 its label, value, and unit remain readable. The indication continues while audio is muted, becomes a

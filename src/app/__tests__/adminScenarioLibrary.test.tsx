@@ -210,7 +210,7 @@ describe('AdminPage scenario library integration', () => {
     expect(screen.getByRole('button', { name: 'Save Untitled Scenario' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: 'Save Untitled Scenario' }))
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Rename Scenario 1' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Unload Scenario 1 from title' })).toBeInTheDocument())
     const createCall = fetchMock.mock.calls.find(
       ([url, init]) => String(url) === '/api/scenarios' && init?.method === 'POST',
     )
@@ -302,7 +302,7 @@ describe('AdminPage scenario library integration', () => {
       'aria-expanded',
       'true',
     )
-    expect(screen.getByRole('button', { name: 'Rename Scenario 1' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Unload Scenario 1 from title' })).toBeInTheDocument()
   })
 
   it('cascade-deleting the loaded folder clears authoring drafts without changing confirmed state', async () => {

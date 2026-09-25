@@ -134,21 +134,50 @@ type ScenarioRowActionsProps = {
 type EditableScenarioTitleProps = {
   title: string
   editable: boolean
+  selected?: boolean
+  activationDisabled?: boolean
+  onActivate?: () => void
   onCommit: (value: string) => Promise<boolean>
 }
+
+const TITLE_SINGLE_CLICK_DELAY_MS = 250
 
 function EditableScenarioTitle({
   title,
   editable,
+  selected = false,
+  activationDisabled = false,
+  onActivate,
   onCommit,
 }: EditableScenarioTitleProps) {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(title)
   const [saving, setSaving] = useState(false)
   const cancelRef = useRef(false)
+  const clickTimerRef = useRef<number | null>(null)
+  const activateRef = useRef(onActivate)
+  const activationDisabledRef = useRef(activationDisabled)
+
+  const cancelPendingActivation = useCallback(() => {
+    if (clickTimerRef.current === null) return
+    window.clearTimeout(clickTimerRef.current)
+    clickTimerRef.current = null
+  }, [])
+
+  useEffect(() => {
+    activateRef.current = onActivate
+  }, [onActivate])
+
+  useEffect(() => cancelPendingActivation, [cancelPendingActivation])
+
+  useEffect(() => {
+    activationDisabledRef.current = activationDisabled
+    if (activationDisabled) cancelPendingActivation()
+  }, [activationDisabled, cancelPendingActivation])
 
   const startEditing = () => {
     if (!editable) return
+    cancelPendingActivation()
     setValue(title)
     cancelRef.current = false
     setEditing(true)
@@ -191,24 +220,55 @@ function EditableScenarioTitle({
     )
   }
 
-  if (!editable) return <span className="block truncate">{title}</span>
+  if (!editable && !onActivate) {
+    return <span className="block select-none truncate">{title}</span>
+  }
+
+  const activateImmediately = () => {
+    cancelPendingActivation()
+    if (!activationDisabledRef.current) activateRef.current?.()
+  }
+
+  const scheduleActivation = () => {
+    cancelPendingActivation()
+    if (activationDisabledRef.current) return
+    clickTimerRef.current = window.setTimeout(() => {
+      clickTimerRef.current = null
+      if (!activationDisabledRef.current) activateRef.current?.()
+    }, TITLE_SINGLE_CLICK_DELAY_MS)
+  }
 
   return (
     <span
       role="button"
       tabIndex={0}
-      aria-label={`Rename ${title}`}
-      title="Double-click to rename"
-      onClick={(event) => event.stopPropagation()}
-      onDoubleClick={startEditing}
+      aria-label={onActivate
+        ? `${selected ? 'Unload' : 'Load'} ${title} from title`
+        : `Rename ${title}`}
+      aria-pressed={onActivate ? selected : undefined}
+      aria-disabled={activationDisabled || undefined}
+      title={onActivate ? 'Click to load or unload · Double-click to rename' : 'Double-click to rename'}
+      onClick={(event) => {
+        event.stopPropagation()
+        if (onActivate) scheduleActivation()
+      }}
+      onDoubleClick={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        cancelPendingActivation()
+        startEditing()
+      }}
       onKeyDown={(event) => {
         event.stopPropagation()
-        if (event.key === 'Enter' || event.key === 'F2') {
+        if (onActivate && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault()
+          activateImmediately()
+        } else if (event.key === 'F2' || (!onActivate && event.key === 'Enter')) {
           event.preventDefault()
           startEditing()
         }
       }}
-      className="block truncate outline-none focus:ring-2 focus:ring-cyan-bp"
+      className="block select-none truncate outline-none focus:ring-2 focus:ring-cyan-bp"
     >
       {title}
     </span>
@@ -1220,6 +1280,11 @@ export function ScenarioLibraryPanel({
                               <EditableScenarioTitle
                                 title={scenario.title}
                                 editable={!controlsDisabled && scenario.can_edit}
+                                selected={selected}
+                                activationDisabled={scenarioSelectionDisabled}
+                                onActivate={scenario.can_edit
+                                  ? () => void loadScenario(scenario.id)
+                                  : undefined}
                                 onCommit={(value) => renameScenario(scenario, value)}
                               />
                             </div>

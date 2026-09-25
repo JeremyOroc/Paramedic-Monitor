@@ -5,6 +5,32 @@
 
 ---
 
+## [2026-09-24] [instructor/ui/accessibility/testing] — Make Saved scenario titles select scenarios
+
+- Routed editable Saved scenario title clicks through the existing load/unload behavior after a
+  250 ms title-only delay, while preserving immediate row-body activation and every existing guard.
+- Kept double-click and F2 dedicated to inline rename without changing Loaded scenario state; added
+  immediate Enter/Space activation, pending-timer cleanup, pressed/disabled semantics, and native
+  selection suppression.
+- Updated component and Instructor integration coverage for mouse timing, keyboard access,
+  disabled state, cleanup, and post-save loaded-state labels. All 81 focused tests, TypeScript,
+  affected-file ESLint, and the production build pass.
+- Passed rendered 1280×720 and 1024×768 interaction QA with an empty browser warning/error log. The
+  complete Windows suite has 1,729 passing, one skipped, and only 11 unrelated existing
+  baseline/environment failures.
+
+## [2026-09-24] [planning/instructor/ui] — Define Saved scenario title selection
+
+- Made single-click title activation follow the existing Saved scenario load/unload behavior while
+  preserving immediate activation elsewhere on the row.
+- Reserved double-click and F2 for rename without changing the Loaded scenario; assigned
+  Enter/Space to keyboard load/unload and chose a 250 ms title-only disambiguation delay.
+- Preserved dirty-discard protection, permissions, active-Attempt locking, rename persistence,
+  Loaded-scenario baseline synchronization, and all folder behavior.
+- Required native text-selection suppression plus focused component, integration, timing,
+  accessibility, permission, and rendered interaction coverage. No application code changed in
+  this planning entry, and no ADR or glossary change was warranted.
+
 ## [2026-09-24] [wagami-a/ui/testing] — Restore the actual alarm flash cycle
 
 - Removed important cascade priority from the animated card background, border, and glow; those
