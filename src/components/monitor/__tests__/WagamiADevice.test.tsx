@@ -81,6 +81,21 @@ describe('Wagami A approved v3 shell controls', () => {
     expect(onPowerToggle).toHaveBeenCalledTimes(1)
   })
 
+  it('switches from viewport sizing to container sizing only when requested', () => {
+    const props = { display, energy: 120, poweredOn: true, onPowerToggle: vi.fn() }
+    const { rerender } = render(<WagamiADevice {...props} />)
+
+    const shell = screen.getByTestId('wagami-a-shell')
+    expect(shell).toHaveAttribute('data-fit', 'viewport')
+    expect(shell).toHaveClass('w-[min(96vw,calc(89vh*1.53))]', 'min-w-[920px]')
+    expect(shell).not.toHaveClass('wagami-a-shell-container-fit')
+
+    rerender(<WagamiADevice {...props} fit="container" />)
+    expect(shell).toHaveAttribute('data-fit', 'container')
+    expect(shell).toHaveClass('wagami-a-shell-container-fit')
+    expect(shell).not.toHaveClass('w-[min(96vw,calc(89vh*1.53))]', 'min-w-[920px]')
+  })
+
   it('cycles enabled task focus and Enter activates the selected task once', () => {
     const onTask = vi.fn()
     render(<WagamiADevice display={display} energy={120} poweredOn onPowerToggle={() => {}} onTask={onTask} />)

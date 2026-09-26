@@ -9,6 +9,7 @@ import { WAGAMI_A_MONITOR_ACTION_ORDER, type WagamiANavigationAction } from '@/l
 import { isWagamiACallInfoBlocked } from '@/lib/wagamiACallInfo'
 import type { WagamiADisplayState } from '@/lib/wagamiAPreviewState'
 import { getWagamiAText } from '@/lib/wagamiALocalization'
+import { cn } from '@/lib/utils'
 import type { WagamiALocale } from '@/types/wagamiA'
 import type { PowerState } from './DeviceShell'
 import { WagamiAScreen } from './WagamiAScreen'
@@ -55,6 +56,7 @@ type WagamiADeviceProps = {
   date?: string
   time?: string
   sessionTimer?: string
+  fit?: 'viewport' | 'container'
 }
 
 const SIDE_KEY = 'wagami-a-shell-control absolute z-20 grid w-[5.4%] min-w-[44px] place-content-center justify-items-center rounded-[10px] border-2 border-wagami-a-border bg-wagami-a-surface-raised font-sans text-[clamp(9px,0.95cqw,14px)] font-bold leading-tight text-wagami-a-text disabled:cursor-not-allowed enabled:hover:brightness-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wagami-a-pni'
@@ -73,7 +75,7 @@ function ShellIcon({ kind, muted = false }: { kind: 'power' | 'analyze' | 'shock
   return <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[45%] w-[45%] fill-current"><path d={kind === 'left' ? 'M16 3 5 12l11 9z' : 'M8 3v18l11-9z'} /></svg>
 }
 
-export function WagamiADevice({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', bpReadingActive = false, poweredOn, powerState, onPowerToggle, patientMode = 'adult', patientModeLocked = false, muted = false, canAnalyse = false, canCharge = false, canShock = false, canReadBP = false, canAdjustEnergy = false, onAnalyse, onCharge, onShock, onMute, onPatientModeCycle, onReadBP, onEnergyDown, onEnergyUp, onTask, navigationView = 'monitor', secondaryActions, screenContent, locale = 'fr', shellAlarmLedEnabled = true, date, time, sessionTimer }: WagamiADeviceProps) {
+export function WagamiADevice({ display, energy, defibState = 'idle', chargeProgress = 0, chargeOrigin = null, cprTime, cprOverride = false, nibpPhase = 'idle', nibpDisplayValue = '', bpReadingActive = false, poweredOn, powerState, onPowerToggle, patientMode = 'adult', patientModeLocked = false, muted = false, canAnalyse = false, canCharge = false, canShock = false, canReadBP = false, canAdjustEnergy = false, onAnalyse, onCharge, onShock, onMute, onPatientModeCycle, onReadBP, onEnergyDown, onEnergyUp, onTask, navigationView = 'monitor', secondaryActions, screenContent, locale = 'fr', shellAlarmLedEnabled = true, date, time, sessionTimer, fit = 'viewport' }: WagamiADeviceProps) {
   const text = getWagamiAText(locale)
   const resolvedPowerState: PowerState = powerState ?? (poweredOn ? 'on' : 'off')
   const ready = resolvedPowerState === 'on'
@@ -99,7 +101,17 @@ export function WagamiADevice({ display, energy, defibState = 'idle', chargeProg
     ? screenContent(navigation.selectedId, navigation.touch)
     : screenContent
   return (
-    <div data-testid="wagami-a-shell" data-power-state={resolvedPowerState} className="wagami-a-shell relative aspect-[1.53] w-[min(96vw,calc(89vh*1.53))] max-w-[1500px] min-w-[920px] overflow-hidden text-wagami-a-text [container-type:inline-size]">
+    <div
+      data-testid="wagami-a-shell"
+      data-power-state={resolvedPowerState}
+      data-fit={fit}
+      className={cn(
+        'wagami-a-shell relative aspect-[1.53] overflow-hidden text-wagami-a-text [container-type:inline-size]',
+        fit === 'container'
+          ? 'wagami-a-shell-container-fit'
+          : 'w-[min(96vw,calc(89vh*1.53))] max-w-[1500px] min-w-[920px]',
+      )}
+    >
       <div aria-hidden="true" className="wagami-a-shell-inner absolute inset-[1.4%]" />
       <div aria-hidden="true" className="wagami-a-shell-grip absolute left-[1.8%] top-[47%] h-[22%] w-[2.1%]" />
       <div aria-hidden="true" className="wagami-a-shell-grip absolute right-[1.8%] top-[41%] h-[24%] w-[2.1%]" />

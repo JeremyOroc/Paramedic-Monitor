@@ -464,6 +464,12 @@ export function EmbeddedSpectatorPanel({
   }
 
   const envelope = data?.projection ?? null
+  const useWagamiAFullscreenShellFit = Boolean(
+    mode === 'fullscreen' &&
+    envelope?.projection.model === 'wagamiA' &&
+    envelope.projection.surface !== 'dispatch' &&
+    envelope.projection.wagamiA?.view !== 'callInfo',
+  )
   const lastSeenAt = data?.participant.last_seen_at ?? participant.last_seen_at
   const deviceConnected = isConnected(lastSeenAt, now)
   const availability = resolveSpectatorAvailability({
@@ -557,6 +563,7 @@ export function EmbeddedSpectatorPanel({
         data-spectator-corner={corner}
         data-spectator-drag-state="idle"
         data-spectator-mode={mode}
+        data-wagami-a-fullscreen-fit={useWagamiAFullscreenShellFit ? 'true' : undefined}
         className={cn(
           'spectator-mode-player flex min-w-0 flex-col overflow-hidden bg-black',
           mode === 'docked' && 'spectator-mode-docked relative h-[480px]',
@@ -570,7 +577,8 @@ export function EmbeddedSpectatorPanel({
             mode === 'floating'
               ? 'grid grid-cols-[minmax(0,1fr)_36px_minmax(0,1fr)] gap-2 px-12 text-[9px]'
               : 'flex gap-3 px-3 text-[10px]',
-            mode === 'fullscreen' && 'pr-14',
+            mode === 'fullscreen' && !useWagamiAFullscreenShellFit && 'pr-14',
+            useWagamiAFullscreenShellFit && 'spectator-wagami-a-fullscreen-header',
           )}
         >
           <strong
@@ -611,6 +619,20 @@ export function EmbeddedSpectatorPanel({
           {mode !== 'floating' && showUpdatedAt ? (
             <span className="shrink-0 text-neutral-600">{updatedLabel}</span>
           ) : null}
+          {useWagamiAFullscreenShellFit ? (
+            <div className="flex shrink-0 gap-2" data-testid="wagami-a-fullscreen-controls">
+              <ModeButton label="Stop spectating" onClick={() => void stopSpectating()}>
+                <StopIcon />
+              </ModeButton>
+              <ModeButton
+                label="Exit spectator fullscreen"
+                buttonRef={exitFullscreenButtonRef}
+                onClick={() => void exitFullscreen()}
+              >
+                <FullscreenIcon exit />
+              </ModeButton>
+            </div>
+          ) : null}
           {mode === 'floating' ? (
             <button
               ref={dragHandleRef}
@@ -633,15 +655,30 @@ export function EmbeddedSpectatorPanel({
         <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">
           {fullscreenError || spectatorAvailabilityAnnouncement(availability)}
         </p>
-        <div className="spectator-availability-surface relative min-h-0 flex-1 overflow-hidden">
+        <div
+          className={cn(
+            'spectator-availability-surface relative min-h-0 flex-1 overflow-hidden',
+            useWagamiAFullscreenShellFit && 'spectator-wagami-a-fullscreen-surface',
+          )}
+        >
           {envelope ? (
             <div
               inert
               aria-label="Read-only device monitor"
               className="embedded-spectator-viewport pointer-events-none relative h-full w-full select-none overflow-hidden"
             >
-              <div className="embedded-spectator-canvas h-[753px] w-[1024px] overflow-hidden bg-black">
-                <SpectatorMonitor embedded projection={envelope.projection} />
+              <div
+                data-testid="embedded-spectator-canvas"
+                className={cn(
+                  'embedded-spectator-canvas h-[753px] w-[1024px] overflow-hidden bg-black',
+                  useWagamiAFullscreenShellFit && 'embedded-spectator-canvas-wagami-a-fullscreen',
+                )}
+              >
+                <SpectatorMonitor
+                  embedded
+                  projection={envelope.projection}
+                  wagamiAFullscreenFit={useWagamiAFullscreenShellFit}
+                />
               </div>
             </div>
           ) : (
@@ -709,7 +746,7 @@ export function EmbeddedSpectatorPanel({
           </>
         ) : null}
 
-        {mode === 'fullscreen' ? (
+        {mode === 'fullscreen' && !useWagamiAFullscreenShellFit ? (
           <>
             <div className="absolute right-3 top-3 z-20">
               <ModeButton label="Stop spectating" onClick={() => void stopSpectating()}>

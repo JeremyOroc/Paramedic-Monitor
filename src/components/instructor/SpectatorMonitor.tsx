@@ -67,9 +67,14 @@ function useProjectedDefibProgress(defib: MonitorProjection['defib']) {
 type SpectatorMonitorProps = {
   projection: MonitorProjection
   embedded?: boolean
+  wagamiAFullscreenFit?: boolean
 }
 
-export function SpectatorMonitor({ projection, embedded = false }: SpectatorMonitorProps) {
+export function SpectatorMonitor({
+  projection,
+  embedded = false,
+  wagamiAFullscreenFit = false,
+}: SpectatorMonitorProps) {
   const controller = projection.controller
   const defib = projection.defib
   const projectedPowerState = useProjectedWagamiAPowerState(
@@ -180,7 +185,12 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
       simulated: false,
     }
     return (
-      <div className="relative grid h-full w-full place-items-center overflow-hidden bg-wagami-a-backdrop">
+      <div
+        className={cn(
+          'relative grid h-full w-full place-items-center overflow-hidden bg-wagami-a-backdrop',
+          wagamiAFullscreenFit && 'wagami-a-fullscreen-fit-container',
+        )}
+      >
         <div aria-hidden={showWagamiACallInfo ? true : undefined} className={cn(showWagamiACallInfo && 'invisible pointer-events-none')}>
         <WagamiADevice
           display={display}
@@ -212,6 +222,7 @@ export function SpectatorMonitor({ projection, embedded = false }: SpectatorMoni
           date={projection.date}
           time={projection.time}
           sessionTimer={projection.sessionTimer}
+          fit={wagamiAFullscreenFit ? 'container' : 'viewport'}
           screenContent={
             <WagamiAWorkspace
               readOnly

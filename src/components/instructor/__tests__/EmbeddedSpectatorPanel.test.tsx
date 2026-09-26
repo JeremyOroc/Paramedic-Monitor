@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 
@@ -15,11 +15,17 @@ vi.mock('@/components/instructor/SpectatorMonitor', () => ({
   SpectatorMonitor: ({
     projection,
     embedded,
+    wagamiAFullscreenFit,
   }: {
     projection: { model: string }
     embedded?: boolean
+    wagamiAFullscreenFit?: boolean
   }) => (
-    <div data-testid="projected-monitor" data-embedded={String(embedded)}>
+    <div
+      data-testid="projected-monitor"
+      data-embedded={String(embedded)}
+      data-wagami-a-fullscreen-fit={String(wagamiAFullscreenFit)}
+    >
       {projection.model}
     </div>
   ),
@@ -481,6 +487,63 @@ describe('EmbeddedSpectatorPanel', () => {
     render(<EmbeddedSpectatorPanel code="ABC123" participant={participant} {...modeProps} />)
 
     expect(await screen.findByText('Wagami A')).toBeInTheDocument()
+  })
+
+  it('gives only shell-bearing Wagami A fullscreen a full-surface canvas and header controls', async () => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
+      projection: {
+        updatedAt: new Date().toISOString(),
+        projection: {
+          model: 'wagamiA',
+          surface: 'monitor',
+          wagamiA: { view: 'monitor' },
+        },
+      },
+    }), { status: 200 }))
+
+    render(<SpectatorHarness initialMode="fullscreen" />)
+
+    const player = screen.getByLabelText('Spectating Alice')
+    expect(await screen.findByTestId('projected-monitor')).toHaveAttribute(
+      'data-wagami-a-fullscreen-fit',
+      'true',
+    )
+    expect(player).toHaveAttribute('data-wagami-a-fullscreen-fit', 'true')
+    expect(screen.getByTestId('embedded-spectator-canvas')).toHaveClass(
+      'embedded-spectator-canvas-wagami-a-fullscreen',
+    )
+    const controls = screen.getByTestId('wagami-a-fullscreen-controls')
+    expect(controls.closest('header')).toBeInTheDocument()
+    expect(within(controls).getByRole('button', { name: 'Stop spectating' })).toBeEnabled()
+    expect(within(controls).getByRole('button', { name: 'Exit spectator fullscreen' })).toBeEnabled()
+  })
+
+  it.each([
+    ['Wagami A Call Info', { model: 'wagamiA', surface: 'monitor', wagamiA: { view: 'callInfo' } }],
+    ['Wagami A dispatch', { model: 'wagamiA', surface: 'dispatch', wagamiA: { view: 'monitor' } }],
+    ['Wagami Z', { model: 'wagamiZ', surface: 'monitor' }],
+  ])('retains the fixed fullscreen canvas for %s', async (_label, projection) => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response(JSON.stringify({
+      session: { status: 'active', active_attempt_version: 1 },
+      participant: { nickname: 'Alice', last_seen_at: new Date().toISOString() },
+      projection: { updatedAt: new Date().toISOString(), projection },
+    }), { status: 200 }))
+
+    render(<SpectatorHarness initialMode="fullscreen" />)
+
+    expect(await screen.findByTestId('projected-monitor')).toHaveAttribute(
+      'data-wagami-a-fullscreen-fit',
+      'false',
+    )
+    expect(screen.getByLabelText('Spectating Alice')).not.toHaveAttribute(
+      'data-wagami-a-fullscreen-fit',
+    )
+    expect(screen.getByTestId('embedded-spectator-canvas')).not.toHaveClass(
+      'embedded-spectator-canvas-wagami-a-fullscreen',
+    )
+    expect(screen.queryByTestId('wagami-a-fullscreen-controls')).toBeNull()
   })
 
   it('keeps the final frame and shows its timestamp after the room ends', async () => {
