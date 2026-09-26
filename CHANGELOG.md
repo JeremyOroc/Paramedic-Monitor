@@ -5,6 +5,54 @@
 
 ---
 
+## [2026-09-26] [wagami-a/ui/spectator/testing] — Maximize the fullscreen physical shell
+
+- Replaced Wagami A's native-Fullscreen-only fixed 1024×753 breakpoint scale with a full-surface
+  spectator canvas and continuous container-relative fit for the complete 1.53-aspect Physical shell.
+- Kept the identity/model/status header reserved, grouped Stop and Exit inside it for shell-bearing A
+  projections, and honored browser safe-area insets without adding decorative device margins.
+- Preserved the fixed canvas and established controls for Docked, Floating, shell-free Wagami A
+  Dispatch/Call Info, Wagami X, and Wagami Z.
+- Added model/state boundary, header-control, shell-fit, and CSS regressions. All 42 focused tests,
+  TypeScript, full ESLint with the same 12 unrelated warnings, and the Next.js 16.3 Webpack production
+  build pass. The full suite reaches 1,761 passing and one skipped with only the same three documented
+  unrelated baseline failures. Rendered 1920×1080, 1440×900, and 1024×768 QA confirms maximum
+  containment and zero overflow.
+
+## [2026-09-26] [planning/wagami-a/spectator] — Keep fullscreen control relocation A-only
+
+- Corrected the fullscreen chrome wording before implementation: Stop and Exit move into the header
+  only while a shell-bearing Wagami A projection uses the new fullscreen fit. Shell-free Wagami A,
+  Wagami X, Wagami Z, and dispatch presentations retain their established corner controls.
+
+## [2026-09-26] [planning/wagami-a/spectator/domain] — Complete fullscreen-fit design interview
+
+- Kept Wagami A's shell-free Dispatch and Call Info presentations unchanged while applying the
+  maximum proportional shell fit to Off, Startup, Monitor, and shell-contained secondary views.
+- Limited clearance to browser safe-area insets with no decorative margin, so the centered shell
+  reaches its limiting safe edge and only aspect-ratio letterboxing remains.
+- Confirmed delivery on the current `wagami-a-spectate-fix` branch without switching or pushing
+  elsewhere. The full design tree is settled and awaits the programmer's implementation confirmation;
+  no ADR is warranted for this reversible, model-scoped presentation correction.
+
+## [2026-09-26] [planning/wagami-a/spectator] — Keep fullscreen chrome clear of the shell
+
+- Retained the Fullscreen Spectator's dedicated trainee/model/status header and moved both permanent
+  Stop and Exit controls into that reserved row so neither can cover the maximized Wagami A shell.
+- Set rendered fullscreen acceptance at 1920×1080, 1440×900, and 1024×768, spanning wide desktop,
+  taller desktop, and the supported landscape iPad-class aspect ratio.
+- Application code remains unchanged while the remaining shell-free state, safe-area, and delivery
+  boundaries are interviewed.
+
+## [2026-09-26] [planning/wagami-a/spectator/domain] — Define fullscreen shell-fit boundary
+
+- Scoped the reported fullscreen sizing problem to the Instructor Console's native Fullscreen
+  Spectator and to Wagami A only; Docked, Floating, dispatch, Wagami X, and Wagami Z remain unchanged.
+- Defined the desired result as the largest proportional fit of the complete Wagami A Physical shell,
+  with letterboxing allowed and cropping, stretching, or Inner-display-only expansion rejected.
+- Added the Wagami A fullscreen geometry regression requirement. Application code remains unchanged
+  while the remaining header, control-clearance, and display-validation decisions are interviewed.
+
 ## [2026-09-25] [wagami-a/ui/waveforms/navigation/accessibility/testing] — Start fresh sweeps left and expire selection outlines
 
 - Added sequence-relative Fresh sweep origins so enabled Wagami A ECG, SpO2, EtCO2, and Live

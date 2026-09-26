@@ -84,7 +84,9 @@ describe('SpectatorMonitor A2 model boundary', () => {
         etco2CalibrationStartedAt: calibrationStartedAt,
         etco2CalibrationEndsAt: calibrationEndsAt,
       },
-    }} embedded />)
+    }} embedded wagamiAFullscreenFit />)
+    expect(screen.getByTestId('wagami-a-shell')).toHaveAttribute('data-fit', 'container')
+    expect(screen.getByTestId('wagami-a-shell').closest('.wagami-a-fullscreen-fit-container')).toBeInTheDocument()
     expect(screen.getByTestId('live-ecg-canvas')).toBe(readyEcg)
     expect(screen.getByTestId('wagami-a-shell').parentElement).not.toHaveClass('invisible')
     expect(screen.getByLabelText('Date et heure de Montréal')).toHaveTextContent('2026-09-22 20:19:40')

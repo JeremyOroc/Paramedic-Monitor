@@ -218,7 +218,8 @@ _Avoid_: Picture-in-picture, separate window, detached stream
 
 **Fullscreen Spectator**:
 The same Embedded Spectator occupying browser-native fullscreen and returning to its prior Docked or
-Floating mode when fullscreen ends.
+Floating mode when fullscreen ends. For Wagami A, it maximizes the complete Physical shell within
+the available fullscreen surface while preserving the shell's proportions and allowing letterboxing.
 _Avoid_: Expanded preview, CSS fullscreen
 
 **Scenario device projection**:

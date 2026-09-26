@@ -4029,6 +4029,19 @@ Enter, and Space button behavior. The monitor canvas remains inert and uniformly
 black letterboxing in every mode; it must never crop, stretch, or internally reflow. Mode transitions
 use a 160–200ms fade/scale motion that is removed for `prefers-reduced-motion`.
 
+For Wagami A alone, Fullscreen Spectator maximizes the complete Physical shell continuously against
+the available fullscreen surface rather than retaining the fixed breakpoint scale or sizing the shell
+from the outer browser viewport. Preserve the shell's aspect ratio and all of its controls; letterbox
+the unmatched axis instead of cropping, stretching, or switching to the Inner display alone. Docked,
+Floating, Wagami X, Wagami Z, and dispatch presentation remain unchanged by this refinement. The
+reserved header remains outside the fitted device surface, and its grouped Stop and Exit controls
+must not obscure the shell. Use only browser safe-area insets around the device surface: do not add a
+decorative margin, and let the shell meet whichever safe dimension limits its proportional fit. This
+fit applies to shell-bearing Off, Startup, Monitor, and secondary-view states. Wagami A's initial
+Dispatch and reopened Call Info presentations retain their established shell-free composition.
+Grouping Stop and Exit in the reserved header is part of this Wagami A shell-fit state only; all
+other Fullscreen Spectator presentations retain their established corner controls.
+
 #### Testing
 - Projection coverage for every trainee-visible surface and local/timed state that affects it.
 - Host authorization, room/participant isolation, freshness/version ordering, and lifecycle behavior.
@@ -4051,6 +4064,9 @@ use a 160–200ms fade/scale motion that is removed for `prefers-reduced-motion`
 - Compact containment checks for dispatch, Wagami X, and Wagami Z in the Embedded Spectator at the
   supported Instructor Console viewports, with uniform scaling, allowed letterboxing, no internal
   reflow, and no clipping or escape from the right panel.
+- Wagami A Fullscreen Spectator geometry coverage verifies continuous maximum containment of the
+  complete Physical shell without crop, stretch, or viewport-relative sizing leakage at 1920×1080,
+  1440×900, and 1024×768.
 - Polling tests verify exactly one selected participant is requested, obsolete requests cannot replace
   a newly selected trainee, and Stop Spectating halts projection polling.
 - Load coverage for 30 connected trainees and eight concurrently polling Spectator views.
@@ -4062,6 +4078,13 @@ use a 160–200ms fade/scale motion that is removed for `prefers-reduced-motion`
   containment, quadrant selection, all four safe-area anchors, Escape/pointer/resize/mode cancellation,
   primary-pointer filtering, keyboard adjacency, live announcements, corner lifecycle retention and
   Stop/reload reset, target feedback, snap animation, and reduced-motion behavior.
+
+**Wagami A Fullscreen Spectator fit completed locally (2026-09-26):** Shell-bearing Wagami A
+projections now bypass the fixed 1024×753 breakpoint-scaled canvas only in native Fullscreen and use
+continuous container-relative containment for the complete Physical shell. The reserved header owns
+the A-only Stop and Exit controls, safe-area insets are honored, and the excluded models, modes, and
+shell-free states retain their prior rendering. Focused tests, TypeScript, ESLint, the Webpack
+production build, and rendered 1920×1080, 1440×900, and 1024×768 geometry QA pass.
 
 **Standalone milestone — COMPLETE AND DEPLOYED (2026-09-03):** An instructor can observe one
 trainee's live simulator state in a separate, inert page without changing either the trainee's state

@@ -6,6 +6,22 @@
 ---
 
 ## Current Phase
+**Wagami A Fullscreen Spectator maximum fit — COMPLETE LOCALLY (2026-09-26).** The Instructor
+Console's native Fullscreen Spectator now maximizes the complete Wagami A Physical shell
+proportionally inside a continuous container-sized surface below its retained identity/model/status
+header. Stop and Exit sit together in that header so they cannot obscure the shell. Only browser
+safe-area insets constrain the fit; unmatched space remains black letterboxing, with no crop,
+stretch, Inner-display-only expansion, or decorative margin. The change is Wagami A/fullscreen only:
+Docked, Floating, dispatch, Call Info, Wagami X, and Wagami Z retain their fixed-canvas presentation.
+
+All 42 focused Spectator, Wagami A device, semantic-projection, and CSS contract tests pass.
+TypeScript passes, full ESLint reports zero errors and the same 12 unrelated warnings, and the
+Next.js 16.3 Webpack production build passes. The full suite has 1,761 passing and one skipped, with
+only the same three documented unrelated Room-ownership/PatientInfoPanel baseline failures. Rendered
+QA at 1920×1080, 1440×900, and 1024×768 confirms maximum proportional fit, an unobstructed shell,
+and zero viewport overflow. The completed batch remains local on `wagami-a-spectate-fix`; nothing
+was pushed.
+
 **Wagami A left-origin fresh sweep and transient screen selection — COMPLETE LOCALLY, AWAITING
 ACCEPTANCE (2026-09-25).** Wagami A now uses left-origin waveform starts when the device
 becomes Ready, with independent EtCO2 starts at the left and a later ECG or SpO2 channel joining an
